@@ -134,6 +134,7 @@ import MessageReactionOverlay from '@/components/molecules/messageReactionOverla
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
 import VideoMessagePlayer from '@/components/molecules/videoMessage/VideoMessagePlayer';
 import VideoMessageTile from '@/components/molecules/videoMessage/VideoMessageTile';
@@ -7092,26 +7093,28 @@ function Conversation({ navigation, route }) {
       ]}
       >
         {!shouldRenderAccessoryAfterToolbar ? accessoryBlock : null}
-        <VoiceComposerZone
-          actif={canRecordVoiceNote}
-          onError={handleVoiceError}
-          onSend={sendVoiceNote}
-          onUnavailable={handleVoiceUnavailable}
-          visible={isVoiceNotesEnabled
-            && !String(props.text || '').trim()
-            && !pendingMediaDraft?.asset?.uri}
-        >
-          <InputToolbar
-            {...props}
-            containerStyle={[
-              ApplicationStyle.noBorderTop,
-              { backgroundColor: Colors.transparent, paddingHorizontal: 0, paddingVertical: 0 },
-            ]}
-            primaryStyle={{ alignItems: 'center' }}
-            renderActions={renderActions}
-            renderComposer={renderComposer}
-          />
-        </VoiceComposerZone>
+        <TourTarget id="ch-input">
+          <VoiceComposerZone
+            actif={canRecordVoiceNote}
+            onError={handleVoiceError}
+            onSend={sendVoiceNote}
+            onUnavailable={handleVoiceUnavailable}
+            visible={isVoiceNotesEnabled
+              && !String(props.text || '').trim()
+              && !pendingMediaDraft?.asset?.uri}
+          >
+            <InputToolbar
+              {...props}
+              containerStyle={[
+                ApplicationStyle.noBorderTop,
+                { backgroundColor: Colors.transparent, paddingHorizontal: 0, paddingVertical: 0 },
+              ]}
+              primaryStyle={{ alignItems: 'center' }}
+              renderActions={renderActions}
+              renderComposer={renderComposer}
+            />
+          </VoiceComposerZone>
+        </TourTarget>
         {shouldRenderAccessoryAfterToolbar ? accessoryBlock : null}
       </View>
     );
@@ -7402,60 +7405,62 @@ function Conversation({ navigation, route }) {
           withDefaultMargin={false}
         />
 
-        <TouchableOpacity
-          accessibilityHint={peutOuvrirLaGestionDuGroupe
-            ? t('conversation.header.openGroupHint', 'Ouvre les infos du groupe')
-            : undefined}
-          accessibilityRole={peutOuvrirLaGestionDuGroupe ? 'button' : 'header'}
-          activeOpacity={peutOuvrirLaGestionDuGroupe ? 0.7 : 1}
-          disabled={!peutOuvrirLaGestionDuGroupe}
-          onPress={handleOpenGroupManagement}
-          style={stylesDuFil.identiteDuFil}
-        >
-          {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
-          <View testID="fil-de-la-ville-ecusson">
-            <EcussonDuFil
-              chat={chatData}
-              espaceVille={route?.params?.espace === 'ville'}
-              routeChatType={route?.params?.chatType || null}
-              taille={38}
-            />
-          </View>
-          {chatData && !filDeLaVille.estFil ? (
-            <AvatarDuFil
-              chat={chatData}
-              meId={userData?.documentId || ''}
-              size={estUnTeteATete(chatData?.type) ? 36 : 38}
-            />
-          ) : null}
+        <TourTarget id="ch-info" style={{ flex: 1 }}>
+          <TouchableOpacity
+            accessibilityHint={peutOuvrirLaGestionDuGroupe
+              ? t('conversation.header.openGroupHint', 'Ouvre les infos du groupe')
+              : undefined}
+            accessibilityRole={peutOuvrirLaGestionDuGroupe ? 'button' : 'header'}
+            activeOpacity={peutOuvrirLaGestionDuGroupe ? 0.7 : 1}
+            disabled={!peutOuvrirLaGestionDuGroupe}
+            onPress={handleOpenGroupManagement}
+            style={stylesDuFil.identiteDuFil}
+          >
+            {/* COLL-C4A3 (planche 47) — un fil de la Ville porte son icône ou son écusson. */}
+            <View testID="fil-de-la-ville-ecusson">
+              <EcussonDuFil
+                chat={chatData}
+                espaceVille={route?.params?.espace === 'ville'}
+                routeChatType={route?.params?.chatType || null}
+                taille={38}
+              />
+            </View>
+            {chatData && !filDeLaVille.estFil ? (
+              <AvatarDuFil
+                chat={chatData}
+                meId={userData?.documentId || ''}
+                size={estUnTeteATete(chatData?.type) ? 36 : 38}
+              />
+            ) : null}
 
-          <View style={stylesDuFil.titres}>
-            {/* FINITIONS13-COLL (04/10) — le canal de la Ville tient sur deux lignes (T13,
-                C2_3a : « Dirigeants des clu… »). */}
-            <Text
-              numberOfLines={filDeLaVille.estFil ? 2 : 1}
-              style={[TITRE_DU_FIL, { color: Colors.neutral00 }]}
-              testID="conversation-titre"
-            >
-              {title}
-            </Text>
-            {sousTitreDeLEnTete ? (
+            <View style={stylesDuFil.titres}>
+              {/* FINITIONS13-COLL (04/10) — le canal de la Ville tient sur deux lignes (T13,
+                  C2_3a : « Dirigeants des clu… »). */}
               <Text
                 numberOfLines={filDeLaVille.estFil ? 2 : 1}
-                style={[
-                  SOUS_TITRE_DU_FIL,
-                  quelquUnEcrit
-                    ? stylesDuFil.sousTitreQuiEcrit
-                    : null,
-                  { color: quelquUnEcrit ? Colors.primary500 : withAlpha(Colors.neutral00, 0.6) },
-                ]}
-                testID="conversation-sous-titre"
+                style={[TITRE_DU_FIL, { color: Colors.neutral00 }]}
+                testID="conversation-titre"
               >
-                {sousTitreDeLEnTete}
+                {title}
               </Text>
-            ) : null}
-          </View>
-        </TouchableOpacity>
+              {sousTitreDeLEnTete ? (
+                <Text
+                  numberOfLines={filDeLaVille.estFil ? 2 : 1}
+                  style={[
+                    SOUS_TITRE_DU_FIL,
+                    quelquUnEcrit
+                      ? stylesDuFil.sousTitreQuiEcrit
+                      : null,
+                    { color: quelquUnEcrit ? Colors.primary500 : withAlpha(Colors.neutral00, 0.6) },
+                  ]}
+                  testID="conversation-sous-titre"
+                >
+                  {sousTitreDeLEnTete}
+                </Text>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+        </TourTarget>
 
         {/* COLL-C4A2 — un fil de la Ville : « Qui est dans ce canal » remplace le menu ⋮ (la
             liste se calcule, elle ne se tient pas à la main). */}

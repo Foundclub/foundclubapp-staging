@@ -95,7 +95,7 @@ const LOST_WAIT_MS = 1500;
 const SELECT_SHEET_ID = 'select.sheet';
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
 // où est la barre (elle recouvre le contenu), quand elle est à l'écran.
-const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
+const DOCK_IDS = ['dock.home', 'dock.messages', 'dock.planning', 'dock.teams'];
 // En-têtes ancrés (flèche Retour des piles, rangées du haut) : la bulle « en
 // haut » et la jauge se posent dessous (décision d'Adel 4- A, 28/10).
 const HEADER_IDS = ['header.back', 'screen.header'];

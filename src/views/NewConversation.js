@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useMemo, useRef, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, FlatList, Image, Platform, SectionList, StyleSheet, Text, TextInput, TouchableOpacity,
@@ -8,6 +10,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import {
   AUTORISATIONS_PAR_DEFAUT,
   autorisationsModifiees,
@@ -30,6 +33,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminsDuGroupe from '@/views/chat/AdminsDuGroupe';
 import AutorisationsDuGroupe from '@/views/chat/AutorisationsDuGroupe';
@@ -45,6 +49,8 @@ import { ouvrirConversationDeLaVille } from '@/services/collectivite/collectivit
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
+
+import { useTour } from '@/context/useTour';
 
 const newConversationLogger = createLogger('new-conversation');
 const isFlagEnabled = (rawValue, defaultValue = false) => {
@@ -308,6 +314,13 @@ function NewConversation({ navigation, route }) {
     [pagesDeLaVille],
   );
   const isLoading = modeVille ? contactsDeLaVille.isLoading : chargementDesMembres;
+  // Guide Dirigeant·e, B3 : un club neuf n'a pas de quoi faire un groupe ; le guide doit le savoir.
+  const { currentStep: tourStep } = useTour();
+  const membresManquants = Boolean(tourStep?.checksMembers && !isLoading
+    && !modeVille && (/** @type {any} */ (users)?.length || 0) < 2);
+  useEffect(() => {
+    if (membresManquants) emitGuidanceInteraction('conversation.members.few');
+  }, [membresManquants]);
   const usersError = modeVille ? contactsDeLaVille.error : erreurDesMembres;
   const refetch = modeVille ? contactsDeLaVille.refetch : relireLesMembres;
   /** @type {Record<string, string>} */
@@ -533,6 +546,7 @@ function NewConversation({ navigation, route }) {
           : await startWhisperChat(participants);
         if (chat && shouldCreateGroup) {
           await completerLeGroupe(chat.documentId);
+          emitGuidanceAction('conversation.group.created');
         }
         if (chat) {
           navigation.replace(RouteNames.Conversation, { chatId: chat.documentId });
@@ -842,23 +856,28 @@ function NewConversation({ navigation, route }) {
                 <GlyphIcon color={Colors.primary900} name="camera" size={14} />
               </View>
             </TouchableOpacity>
-            <TextInput
-              accessibilityLabel={t(
-                'newConversation.groupNamePlaceholder',
-                'Nom du groupe (facultatif)',
-              )}
-              autoFocus
-              maxLength={40}
-              onChangeText={setNomDuGroupe}
-              placeholder={t('newConversation.groupNamePlaceholder', 'Nom du groupe (facultatif)')}
-              placeholderTextColor={withAlpha(Colors.neutral00, 0.5)}
-              style={[
-                stylesDuChoix.champNom,
-                { borderBottomColor: Colors.primary500, color: Colors.neutral00 },
-              ]}
-              testID="nouveau-groupe-nom"
-              value={nomDuGroupe}
-            />
+            <TourTarget id="grp-name">
+              <TextInput
+                accessibilityLabel={t(
+                  'newConversation.groupNamePlaceholder',
+                  'Nom du groupe (facultatif)',
+                )}
+                autoFocus
+                maxLength={40}
+                onChangeText={setNomDuGroupe}
+                placeholder={t(
+                  'newConversation.groupNamePlaceholder',
+                  'Nom du groupe (facultatif)',
+                )}
+                placeholderTextColor={withAlpha(Colors.neutral00, 0.5)}
+                style={[
+                  stylesDuChoix.champNom,
+                  { borderBottomColor: Colors.primary500, color: Colors.neutral00 },
+                ]}
+                testID="nouveau-groupe-nom"
+                value={nomDuGroupe}
+              />
+            </TourTarget>
           </View>
           <Text style={[stylesDuChoix.aide, { color: withAlpha(Colors.neutral00, 0.6) }]}>
             {modeVille
@@ -877,33 +896,35 @@ function NewConversation({ navigation, route }) {
           </Text>
           {/* 🛡️ MSG1BA (§3.15) — les autorisations (et les admins), des la creation. Pas
               pour un groupe de la Ville (MSG-VILLE-NOUVELLE) : le serveur ne les tient pas. */}
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={() => setPageAutorisations(true)}
-            style={[
-              stylesDuChoix.ligneAutorisations,
-              { backgroundColor: Colors.primary800 },
-              modeVille ? stylesDuChoix.cache : null,
-            ]}
-            testID="nouveau-groupe-autorisations"
-          >
-            <GlyphIcon color={Colors.primary500} name="shieldCheck" size={22} />
-            <View style={stylesDuChoix.barreTextes}>
-              <Text style={[stylesDuChoix.ligneNom, { color: Colors.neutral00 }]}>
-                {t('conversation.groupPermissions.title', 'Autorisations du groupe')}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}
-              >
-                {`${resumeDesAutorisations(autorisations, t)} · ${t('newConversation.adminsCount', {
-                  count: adminsChoisis.length + 1,
-                  defaultValue: '{{count}} admins',
-                })}`}
-              </Text>
-            </View>
-            <GlyphIcon color={withAlpha(Colors.neutral00, 0.5)} name="chevronRight" size={20} />
-          </TouchableOpacity>
+          <TourTarget id="grp-perms">
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => setPageAutorisations(true)}
+              style={[
+                stylesDuChoix.ligneAutorisations,
+                { backgroundColor: Colors.primary800 },
+                modeVille ? stylesDuChoix.cache : null,
+              ]}
+              testID="nouveau-groupe-autorisations"
+            >
+              <GlyphIcon color={Colors.primary500} name="shieldCheck" size={22} />
+              <View style={stylesDuChoix.barreTextes}>
+                <Text style={[stylesDuChoix.ligneNom, { color: Colors.neutral00 }]}>
+                  {t('conversation.groupPermissions.title', 'Autorisations du groupe')}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}
+                >
+                  {`${resumeDesAutorisations(autorisations, t)} · ${t('newConversation.adminsCount', {
+                    count: adminsChoisis.length + 1,
+                    defaultValue: '{{count}} admins',
+                  })}`}
+                </Text>
+              </View>
+              <GlyphIcon color={withAlpha(Colors.neutral00, 0.5)} name="chevronRight" size={20} />
+            </TouchableOpacity>
+          </TourTarget>
           <Text style={[stylesDuChoix.titreDeSection, { color: withAlpha(Colors.neutral00, 0.6) }]}>
             {t('newConversation.membersCount', {
               count: nombreChoisi + 1,
@@ -1118,9 +1139,9 @@ function NewConversation({ navigation, route }) {
 
       {/* User List */}
       {etape === 'choix' ? (
-        <View style={Alignments.fill}>
+        <TourTarget id="conv-list" style={Alignments.fill}>
           {userListContent}
-        </View>
+        </TourTarget>
       ) : null}
 
       {/* 🧾 MSG1A (§3.15) — la barre du bas : ce qui va se passer, puis le bouton. */}
@@ -1142,59 +1163,71 @@ function NewConversation({ navigation, route }) {
               {appelALAction.sous}
             </Text>
           </View>
-          <TouchableOpacity
-            accessibilityRole="button"
-            disabled={isCreating}
-            onPress={vaVersLeNom ? () => setEtape('nom') : handleCreate}
-            style={[
-              stylesDuChoix.pilule,
-              { backgroundColor: Colors.primary500 },
-              isCreating ? stylesDuChoix.piluleEteinte : null,
-            ]}
-            testID="nouvelle-discussion-valider"
-          >
-            <Text
-              style={[stylesDuChoix.piluleTexte, { color: Colors.primary900 }]}
+          <TourTarget id="conv-next">
+            <TouchableOpacity
+              accessibilityRole="button"
+              disabled={isCreating}
+              onPress={vaVersLeNom
+                ? () => {
+                  emitGuidanceInteraction('conversation.step.name');
+                  setEtape('nom');
+                }
+                : handleCreate}
+              style={[
+                stylesDuChoix.pilule,
+                { backgroundColor: Colors.primary500 },
+                isCreating ? stylesDuChoix.piluleEteinte : null,
+              ]}
+              testID="nouvelle-discussion-valider"
             >
-              {appelALAction.bouton}
-            </Text>
-            {appelALAction.suivant ? (
-              <GlyphIcon color={Colors.primary900} name="chevronRight" size={18} />
-            ) : null}
-          </TouchableOpacity>
+              <Text
+                style={[stylesDuChoix.piluleTexte, { color: Colors.primary900 }]}
+              >
+                {appelALAction.bouton}
+              </Text>
+              {appelALAction.suivant ? (
+                <GlyphIcon color={Colors.primary900} name="chevronRight" size={18} />
+              ) : null}
+            </TouchableOpacity>
+          </TourTarget>
         </View>
       ) : null}
       {etape === 'nom' ? (
-        <View
-          style={[
-            stylesDuChoix.barre,
-            { backgroundColor: Colors.chatBar, borderTopColor: withAlpha(Colors.neutral00, 0.06) },
-          ]}
-        >
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityState={{ disabled: nombreChoisi < 2 || isCreating }}
-            disabled={nombreChoisi < 2 || isCreating}
-            onPress={handleCreate}
+        <TourTarget id="grp-create">
+          <View
             style={[
-              stylesDuChoix.pilule,
-              stylesDuChoix.piluleLarge,
-              { backgroundColor: Colors.primary500 },
-              nombreChoisi < 2 || isCreating ? stylesDuChoix.piluleEteinte : null,
+              stylesDuChoix.barre,
+              {
+                backgroundColor: Colors.chatBar,
+                borderTopColor: withAlpha(Colors.neutral00, 0.06),
+              },
             ]}
-            testID="nouveau-groupe-creer"
           >
-            <Text
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityState={{ disabled: nombreChoisi < 2 || isCreating }}
+              disabled={nombreChoisi < 2 || isCreating}
+              onPress={handleCreate}
               style={[
-                stylesDuChoix.piluleTexte,
-                stylesDuChoix.piluleTexteLarge,
-                { color: Colors.primary900 },
+                stylesDuChoix.pilule,
+                stylesDuChoix.piluleLarge,
+                { backgroundColor: Colors.primary500 },
+                nombreChoisi < 2 || isCreating ? stylesDuChoix.piluleEteinte : null,
               ]}
+              testID="nouveau-groupe-creer"
             >
-              {t('newConversation.createGroup', 'Créer le groupe')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <Text
+                style={[
+                  stylesDuChoix.piluleTexte,
+                  stylesDuChoix.piluleTexteLarge,
+                  { color: Colors.primary900 },
+                ]}
+              >
+                {t('newConversation.createGroup', 'Créer le groupe')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TourTarget>
       ) : null}
 
       {/* 🖼️🛡️ MSG1BA (§3.15) — la feuille photo, les autorisations et les admins (montes

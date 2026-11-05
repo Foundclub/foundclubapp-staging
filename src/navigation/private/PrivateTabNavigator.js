@@ -209,6 +209,7 @@ function PrivateTabNavigator() {
             icon: Images.envelope,
             label: t('menu.chat'),
             renderTabBarIcon,
+            tourTargetId: 'dock.messages',
             visualLabel: t('menuDock.chat', 'Messages'),
           }),
         }}
