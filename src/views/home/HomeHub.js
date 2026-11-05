@@ -37,6 +37,7 @@ import {
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getDefaultRecruitmentTab, getRecruitmentRoleMode } from '@/domains/search/recruitmentFlow';
 import {
+  getAddEventEntryLock,
   getCollectiviteOffer,
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
@@ -597,14 +598,16 @@ function HomeHubContent({ auth, navigation, route }) {
   // doit le dire ICI, au lieu de laisser remplir le wizard entier pour refuser a
   // la fin (STRATEGIE_PAYWALL_2026_08_01 §2.3). Le juge est partage avec la
   // liste des equipes : une seule regle, un seul endroit.
+  const { currentStep: tourCurrentStep } = useTour();
   const addEventLock = useMemo(
-    () => getSubscriptionEntryPointLock({
+    () => getAddEventEntryLock({
+      // M3 du guide Entraîneur ne crée qu'un entraînement : le match offert ne l'ouvre pas.
+      eventOnly: tourCurrentStep?.missionId === 'coach_m3',
       freeUsageSummary,
-      quotaType: 'EVENT_PUBLISH',
       roleKey,
       subscriptionAccessLevel,
     }),
-    [freeUsageSummary, roleKey, subscriptionAccessLevel],
+    [freeUsageSummary, roleKey, subscriptionAccessLevel, tourCurrentStep?.missionId],
   );
   const addAdLock = useMemo(
     () => getSubscriptionEntryPointLock({
@@ -1604,7 +1607,6 @@ function HomeHubContent({ auth, navigation, route }) {
   }), [t]);
 
   // Surbrillance de la carte « Ajouter un événement » pendant la semi-étape du tour.
-  const { currentStep: tourCurrentStep } = useTour();
   const highlightAddEventCard = tourCurrentStep?.id === 'coach_find_event_card';
 
   // Badges d'offre informatifs sur les cartes du hub (handoff 12).
