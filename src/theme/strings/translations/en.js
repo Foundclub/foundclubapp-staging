@@ -21538,7 +21538,7 @@ export default {
       unlimited: 'Unlimited',
     },
     entryPointHints: {
-      eventPublish: 'Your free event is already live — unlock the Team plan',
+      eventPublish: 'Your free events are already live — unlock the Team plan',
       freeTeam: 'Your free creation has been used — unlock the Team plan',
       matchPublish: 'Your free match is already live — unlock the Team plan',
       recruitmentAdPublish: 'Your free listing is already live — unlock the Team plan',
@@ -22026,7 +22026,7 @@ export default {
       title: '{{label}}: free quota used up',
     },
     exhaustedBody: {
-      eventPublish: 'Your free event is already live. Go unlimited: training sessions, matches, tournaments…',
+      eventPublish: 'Your free events are already live. Go unlimited: training sessions, matches, tournaments…',
       freeTeam: 'Your 1st team stays active. Unlock the Team plan to create more.',
       recruitmentAdPublish: 'Your free listing is already live. Recruit without limits with the Team plan.',
     },
@@ -22956,7 +22956,7 @@ export default {
       fallback: 'Error',
     },
     events: {
-      emptyBody: 'Your 1st event is free — training, match…',
+      emptyBody: 'Your first events are free — training, match…',
       emptyCreate: 'Create',
       emptyTitle: 'No events planned',
     },
@@ -26330,7 +26330,7 @@ export default {
       },
       free: {
         bullet1: '1 free team',
-        bullet2: '1 free event and 1 free ad',
+        bullet2: '2 free events and 1 free ad',
         bullet3: 'Unlimited chat, forever',
         kicker: 'Today',
         title: 'Start for free',

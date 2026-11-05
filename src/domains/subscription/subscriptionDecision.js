@@ -1960,7 +1960,7 @@ const ENTRY_POINT_EXHAUSTED_HINTS = {
   get EVENT_PUBLISH() {
     return i18next.t(
       'subscriptionDecision.entryPointHints.eventPublish',
-      "Ton événement gratuit est déjà en ligne — débloque l'offre Équipe",
+      "Tes événements gratuits sont déjà en ligne — débloque l'offre Équipe",
     );
   },
   get FREE_TEAM() {

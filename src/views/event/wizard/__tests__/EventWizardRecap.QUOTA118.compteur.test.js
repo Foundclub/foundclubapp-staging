@@ -241,3 +241,13 @@ test('QUOTA-118-2 — une equipe avec sa ligne lit SA ligne, pas la somme des eq
     total: 1,
   });
 });
+
+// QUOTA-EVENT-2 (Adel « QG1- B », 05/11) : 2 événements offerts ; le match reste à 1 (ci-dessus).
+test('QUOTA-EVENT-2 — une equipe sans ligne a ses 2 evenements offerts', async () => {
+  expect(await compteurTransmis({ documentId: 'type-detection', name: 'Detection' }, 'equipe-2')).toEqual({
+    beforeRemaining: 2,
+    consumedCount: 1,
+    quotaType: 'EVENT_PUBLISH',
+    total: 2,
+  });
+});
