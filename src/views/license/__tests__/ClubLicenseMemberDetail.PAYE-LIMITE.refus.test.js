@@ -7,6 +7,7 @@ import { displayErrorAlert } from '@/utils/errors/displayError';
 
 import ClubLicenseMemberDetail from '../ClubLicenseMemberDetail';
 
+// Le VRAI client react-query de l app, avec et sans son filet global d alertes.
 const { createFoundClubQueryClient } = require('@/app/queryClient');
 
 // PAYE-LIMITE (05/11, contre-recette du chef) — fiche perimee : le serveur refuse le montant.
