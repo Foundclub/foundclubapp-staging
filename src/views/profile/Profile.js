@@ -177,8 +177,11 @@ function Profile({ navigation, route }) {
   const isGuideInProgress = Boolean(tour.isGuide && tour.isTourActive);
   // Le guide en cours, sinon celui du rôle. Coach devenu dirigeant en créant son club (« Moi »)
   // : il retrouve son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
+  const roleGuideKey = getGuideKeyForRole(currentRoleKey);
+  const canStartRoleGuide = /** @type {any} */ (getTourProfile(roleGuideKey))
+    ?.canStart?.(userData) ?? true;
   const guideKey = (tour.isGuide && tour.profileKey)
-    || getGuideKeyForRole(currentRoleKey)
+    || (canStartRoleGuide ? roleGuideKey : null)
     || (currentRoleKey === 'president' && tour.hasGuideHistory ? 'coach' : null);
   const guideProfile = /** @type {any} */ (getTourProfile(guideKey));
   /**

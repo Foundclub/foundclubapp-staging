@@ -150,7 +150,7 @@ const signalMeta = (signal) => {
  * @returns {import('react').ReactElement}
  */
 export function TourProvider({ children }) {
-  const { userData } = /** @type {any} */ (useAuth());
+  const { subscriptionAccessLevel, userData } = /** @type {any} */ (useAuth());
   const userId = userData?.documentId || null;
 
   const [tourState, setTourState] = useState(/** @type {any} */ (null));
@@ -402,6 +402,7 @@ export function TourProvider({ children }) {
   ) => {
     const profile = getTourProfile(profileKey);
     if (!profile || profile.steps.length === 0) return false;
+    if (profile.canStart && !profile.canStart(userData)) return false;
     // Sur le site, TourBanner n'est pas monté (audit 2026-07-31 §4.5) : un tour v2 baladerait
     // l'utilisateur de page en page sans instruction ni porte de sortie. Refuser ⇒ Welcome navigue
     // vers l'accueil (son chemin `!started`). Le guide à missions a sa couche (T3-GUIDE-SITE).
@@ -414,7 +415,9 @@ export function TourProvider({ children }) {
       const before = tourStateRef.current;
       enterGuideStep({
         created: {},
-        flags: typeof profile.buildFlags === 'function' ? profile.buildFlags({ userData }) : {},
+        flags: typeof profile.buildFlags === 'function'
+          ? profile.buildFlags({ subscriptionAccessLevel, userData })
+          : {},
         gauge: 0,
         missionStatus: {},
         profileKey,
@@ -432,7 +435,7 @@ export function TourProvider({ children }) {
         .filter((/** @type {string} */ key) => preStartSignalsRef.current[key])
         .map((/** @type {string} */ key) => [key, preStartSignalsRef.current[key]]));
       const flags = typeof profile.buildFlags === 'function'
-        ? profile.buildFlags({ created, userData })
+        ? profile.buildFlags({ created, subscriptionAccessLevel, userData })
         : {};
       // FIN-GUIDE, point 1 : ce qui est déjà fait est validé dès le départ.
       const doneAtStart = getMission(
@@ -889,6 +892,7 @@ export function TourProvider({ children }) {
     && !tourState
     && !guideDone
     && offerGuideKey
+    && (/** @type {any} */ (getTourProfile(offerGuideKey))?.canStart?.(userData) ?? true)
     && /** @type {any} */ (getTourProfile(offerGuideKey))
       ?.isOfferDate?.(userData?.onboardingCompletedAt)
     && ![getOfferDeclinedKey, getGuideDoneKey, getBonusLaterKey, getStorageKey]
