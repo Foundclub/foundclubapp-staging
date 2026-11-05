@@ -547,7 +547,9 @@ export function TourProvider({ children }) {
     const { current } = tourStateRef;
     const profile = getTourProfile(current?.profileKey);
     const step = profile?.steps?.[current?.stepIndex ?? -1];
-    if (!current || current.status !== 'active' || !step?.subMission || !step.passable) return;
+    // `refused` : l'écran vient de refuser (droit tombé en route), la partie se passe aussi.
+    const canSkip = step?.passable || step?.refused;
+    if (!current || current.status !== 'active' || !step?.subMission || !canSkip) return;
     const skipped = {
       ...current,
       skippedSubMissions: [...(current.skippedSubMissions || []), step.subMission],

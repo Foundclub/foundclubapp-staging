@@ -2137,11 +2137,18 @@ function ClubDetails({ navigation, route }) {
     ? t('clubDetails.hub.membership.ownerOnly', 'Dirigeant')
     : t('clubDetails.hub.membership.coachAllowed', 'Délégation');
 
+  useEffect(() => {
+    if (!hubSection) return undefined;
+    return () => emitGuidanceInteraction('club.section.closed');
+  }, [hubSection]);
+
   const openClubHubSection = useCallback((sectionName) => {
     // `push` empile une seconde instance de l'ecran : le retour ramene donc au
     // hub. `navigate` se contenterait de changer les parametres de l'ecran
     // courant, et le bouton retour quitterait le club.
     const params = { clubId, section: sectionName };
+    // Guide : même nom de route pour le hub et ses sections, seul ce signal les distingue.
+    emitGuidanceInteraction(`club.section.${sectionName}`);
     if (typeof navigation.push === 'function') {
       navigation.push(RouteNames.Club, params);
       return;
@@ -3325,6 +3332,7 @@ function ClubDetails({ navigation, route }) {
             </ClubCompactHeader>
           ) : null}
           {!isClubSubPage && !enTeteCompact ? (
+            <TourTarget id="club.card">
             <View style={[
               ApplicationStyle.borderRadius24,
               ApplicationStyle.backgroundColor.primary700,
@@ -3339,15 +3347,10 @@ function ClubDetails({ navigation, route }) {
             ]}
             >
               {canEdit ? (
+                <TourTarget id="club.edit" style={[Alignments.absolute, { right: 16, top: 16, zIndex: 10 }]}>
                 <TouchableOpacity
                   onPress={handleEditClub}
-                  style={[
-                    Alignments.absolute,
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Spaces.gap[8],
-                    { right: 16, top: 16, zIndex: 10 },
-                  ]}
+                  style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
                 >
                   <Image
                     source={Images.edit}
@@ -3360,6 +3363,7 @@ function ClubDetails({ navigation, route }) {
                     {t('clubDetails.actions.editInfo') || 'Modifier'}
                   </Text>
                 </TouchableOpacity>
+                </TourTarget>
               ) : null}
               <View style={{ marginTop: 16, zIndex: 1 }} testID="fiche-club-ecusson">
                 <ClubLogoMark
@@ -3531,6 +3535,7 @@ function ClubDetails({ navigation, route }) {
                 ) : null}
               </View>
             </View>
+            </TourTarget>
           ) : null}
 
           {/* ANNUAIRE-E1 — « À propos » (décision d'Adel du 29/09 : A) : le texte officiel de
@@ -3650,13 +3655,15 @@ function ClubDetails({ navigation, route }) {
                 />
               )}
               <ClubHubGroup label={t('clubDetails.hub.groups.manage', 'Gérer')}>
-                <ClubHubRow
-                  icon={Images.stadium}
-                  label={t('facilityList.title', 'Installations')}
-                  onPress={handleOpenFacilityList}
-                  value={facilitiesLoading ? '…' : compteDesInstallations.affiche}
-                  valueLabel={facilitiesLoading ? undefined : compteDesInstallations.dit}
-                />
+                <TourTarget id="club.m.facilities">
+                  <ClubHubRow
+                    icon={Images.stadium}
+                    label={t('facilityList.title', 'Installations')}
+                    onPress={handleOpenFacilityList}
+                    value={facilitiesLoading ? '…' : compteDesInstallations.affiche}
+                    valueLabel={facilitiesLoading ? undefined : compteDesInstallations.dit}
+                  />
+                </TourTarget>
                 <ClubHubRow
                   divider
                   icon={Images.trophy}
@@ -3664,13 +3671,15 @@ function ClubDetails({ navigation, route }) {
                   onPress={() => openClubHubSection('sports')}
                   value={String(clubSportsCount)}
                 />
-                <ClubHubRow
-                  divider
-                  icon={Images.check}
-                  label={t('clubDetails.titles.sponsors')}
-                  onPress={() => openClubHubSection('partners')}
-                  value={String(clubSponsorsCount)}
-                />
+                <TourTarget id="club.m.partners">
+                  <ClubHubRow
+                    divider
+                    icon={Images.check}
+                    label={t('clubDetails.titles.sponsors')}
+                    onPress={() => openClubHubSection('partners')}
+                    value={String(clubSponsorsCount)}
+                  />
+                </TourTarget>
                 <ClubHubRow
                   divider
                   icon={Images.shield}
@@ -4015,16 +4024,18 @@ function ClubDetails({ navigation, route }) {
                       {t('clubDetails.titles.sponsors')}
                     </Text>
                     {canEdit ? (
-                      <Button
-                        accessibilityLabel={t(
-                          'clubDetails.a11y.addSponsor',
-                          'Ajouter un partenaire',
-                        )}
-                        icon="plus"
-                        isOption
-                        onPress={handleCreateSponsor}
-                        variant="Primary"
-                      />
+                      <TourTarget id="club.partners.add">
+                        <Button
+                          accessibilityLabel={t(
+                            'clubDetails.a11y.addSponsor',
+                            'Ajouter un partenaire',
+                          )}
+                          icon="plus"
+                          isOption
+                          onPress={handleCreateSponsor}
+                          variant="Primary"
+                        />
+                      </TourTarget>
                     ) : null}
                   </View>
                   {/* D34 ecran 07 : les partenaires defilaient horizontalement, */}

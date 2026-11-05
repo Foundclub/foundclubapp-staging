@@ -16,7 +16,9 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { seasonSlotErrorMessage } from '@/domains/seasonSlot/seasonSlotDisplay';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { reportTourField } from '@/domains/tour/tourTargetRegistry';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -391,6 +393,10 @@ function FacilityForm() {
     control,
     name: ['name', 'type', 'address', 'maxSlots', 'plateauxActifs', 'plateaux'],
   });
+  // Guide Dirigeant : « Suivant » attend ces champs obligatoires (la saisie vit dans ce formulaire).
+  useEffect(() => { reportTourField('facility.name', Boolean(String(nomSaisi || '').trim())); }, [nomSaisi]);
+  useEffect(() => { reportTourField('facility.type', Boolean(typeChoisi)); }, [typeChoisi]);
+  useEffect(() => { reportTourField('facility.address', Boolean(adresseSaisie)); }, [adresseSaisie]);
   const plateauxPossibles = isCollectiviteMode && Number(equipesALaFois || 1) >= 2;
   const [feuilleTypeOuverte, setFeuilleTypeOuverte] = useState(false);
   // Un refus du serveur, dit au-dessus du bouton (design P4-form, ecran 5) : plus de fenetre.
@@ -625,7 +631,13 @@ function FacilityForm() {
         }
         await updateFacility(facilityDocumentId, formattedData);
       } else if (contextClubId) {
-        await createFacility({ ...formattedData, club: contextClubId });
+        const created = /** @type {any} */ (
+          await createFacility({ ...formattedData, club: contextClubId })
+        );
+        // L'id porté par le signal : le guide vise ensuite LA carte de cette installation.
+        emitGuidanceAction('facility.created', {
+          facilityId: created?.data?.documentId || created?.documentId,
+        });
       } else if (contextCmId) {
         await createFacility({ ...formattedData, multisportClub: contextCmId });
       } else {
@@ -1380,8 +1392,8 @@ function FacilityForm() {
               <>
                 {/* TUTOE-2 : ancres invisibles du guide (M3, ajout d'un lieu). */}
                 <TourTarget id="facility.name" style={Spaces.gap[16]}>
-                  {blocNom}
-                  {blocTypeDuClub}
+                  <TourTarget id="facility.field.name">{blocNom}</TourTarget>
+                  <TourTarget id="facility.field.type">{blocTypeDuClub}</TourTarget>
                 </TourTarget>
                 <TourTarget id="facility.address">{blocAdresse}</TourTarget>
                 <TourTarget id="facility.conflict">{blocConflit}</TourTarget>

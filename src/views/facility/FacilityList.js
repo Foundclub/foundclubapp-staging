@@ -54,6 +54,7 @@ import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import PlanningDesInstallations from '@/components/organisms/planning/PlanningDesInstallations';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
@@ -1186,6 +1187,7 @@ function FacilityList() {
 
   // COLL-C2C (02/10) — l ajout en pointille (D34) : en pied de liste, ou sous « Au club ».
   const boutonAjouter = (
+    <TourTarget id="facility.add">
     <TouchableOpacity
       accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
       accessibilityRole="button"
@@ -1209,6 +1211,7 @@ function FacilityList() {
         {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
       </Text>
     </TouchableOpacity>
+    </TourTarget>
   );
 
   // COLL-C2C — la tete d un groupe : son titre, son nombre, puis UNE ligne : ce qu on y fait.
@@ -1467,6 +1470,7 @@ function FacilityList() {
   ) : null;
 
   const etatVide = (
+    <TourTarget id="facility.add">
     <EmptyState
       actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
       description={isCollectiviteMode
@@ -1482,6 +1486,7 @@ function FacilityList() {
       onAction={handleCreate}
       title={t('facilityList.empty.title', 'Aucune installation')}
     />
+    </TourTarget>
   );
 
   // COLL-C2B (02/10) — la Ville : une liste (une colonne sur telephone, trois sur ordinateur),

@@ -3,6 +3,8 @@ import {
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+import { isTourFieldValid } from '@/domains/tour/tourTargetRegistry';
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
 
 import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';
@@ -376,6 +378,22 @@ describe('FacilityForm — ce que le formulaire accepte et refuse (Joi)', () => 
     // Joi bloque en amont de handleSave : ni requete, ni alerte.
     expect(createFacility).not.toHaveBeenCalled();
     expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  it('guide : la création dit son id, et les champs obligatoires se signalent', async () => {
+    const signaux = [];
+    const stop = subscribeToGuidanceSignals((signal) => signaux.push(signal));
+    const arbre = await monterEcran();
+    expect(isTourFieldValid('facility.name')).toBe(false);
+    await remplirLeMinimumValide();
+    expect(isTourFieldValid('facility.name')).toBe(true);
+    expect(isTourFieldValid('facility.address')).toBe(true);
+
+    await appuyerSur(arbre, 'Créer');
+    stop();
+
+    expect(signaux.find((signal) => signal.key === 'facility.created'))
+      .toMatchObject({ facilityId: 'fac-9' });
   });
 
   it('nom + adresse geocodee : la creation part avec la charge attendue', async () => {

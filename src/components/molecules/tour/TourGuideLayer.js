@@ -331,15 +331,16 @@ function TourGuideLayer() {
   useEffect(() => {
     setSheetIndex(0);
     setRefusalKey(null);
-  }, [sheetAnchor]);
+  }, [currentStep?.id, sheetAnchor]);
   const sheetBubble = sheetGuide
     ? sheetGuide.bubbles[Math.min(sheetIndex, sheetGuide.bubbles.length - 1)]
     : null;
-  const isSheetRefused = Boolean(sheetGuide?.refused && sheetGuide.refused.key === refusalKey);
+  const refusedBubble = sheetGuide?.refused || currentStep?.refused || null;
+  const isRefused = Boolean(refusedBubble && refusedBubble.key === refusalKey);
   let variant = sheetBubble
     ? { targets: [sheetBubble[0]], text: sheetBubble[1]() }
     : resolved;
-  if (isSheetRefused) variant = { targets: [], text: sheetGuide.refused.text() };
+  if (isRefused) variant = { targets: [], text: refusedBubble.text() };
   // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
   // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
   // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
@@ -563,7 +564,7 @@ function TourGuideLayer() {
 
   const isBonus = Boolean(missionPosition?.isBonus);
   const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
-  const hasMoreSheetBubbles = Boolean(sheetGuide) && !isSheetRefused
+  const hasMoreSheetBubbles = Boolean(sheetGuide) && !isRefused
     && sheetIndex < sheetGuide.bubbles.length - 1;
   const hasMoreBubbles = hasMoreSheetBubbles
     || (Boolean(bubbleTexts) && subIndex < bubbleTexts.length - 1);
@@ -908,7 +909,7 @@ function TourGuideLayer() {
               {scrollHint}
             </Text>
           ) : null}
-          {currentStep.passable && !isLost ? (
+          {(currentStep.passable || (isRefused && currentStep.refused)) && !isLost ? (
             <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
               <TouchableOpacity
                 accessibilityRole="button"

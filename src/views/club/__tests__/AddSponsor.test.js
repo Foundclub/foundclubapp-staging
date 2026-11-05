@@ -1,6 +1,7 @@
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { updateClub } from '@/services/club/clubService';
 import { updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 
@@ -107,6 +108,13 @@ jest.mock('@/services/club/clubQueries', () => ({
 }));
 
 jest.mock('@/services/club/clubService', () => ({ updateClub: jest.fn() }));
+jest.mock('@/domains/subscription/subscriptionDecision', () => ({
+  extractSubscriptionDecisionFromError: (error) => error?.decision || null,
+}));
+jest.mock(
+  '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet',
+  () => function PaywallMock() { return null; },
+);
 
 jest.mock('@/services/multisportClub/multisportClubService', () => ({
   getMultisportClubById: jest.fn(),
@@ -378,6 +386,31 @@ describe('AddSponsor — ce qui part sur le reseau', () => {
     expect(charge.sponsor).toHaveLength(2);
     expect(charge.sponsor[0]).toEqual({ title: 'Elseve' });
     expect(charge.sponsor[1]).toMatchObject({ logo: LOGO, title: 'Nike' });
+  });
+
+  it('guide : le partenaire ajouté se signale', async () => {
+    const signaux = [];
+    const stop = subscribeToGuidanceSignals((signal) => signaux.push(signal));
+    const arbre = await monterEcran();
+    await saisirNom('Nike');
+    await choisirLogo();
+
+    await appuyerSur(arbre, 'Ajouter');
+    stop();
+
+    expect(signaux.map((signal) => signal.key)).toContain('sponsor.created');
+  });
+
+  it('sans offre Club : la feuille d achat, plus l alerte muette', async () => {
+    /** @type {any} */ (updateClub).mockRejectedValueOnce({ decision: { paywall: 'SPONSOR' } });
+    const arbre = await monterEcran();
+    await saisirNom('Nike');
+    await choisirLogo();
+
+    await appuyerSur(arbre, 'Ajouter');
+
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(arbre.root.findAll((node) => node.props.isVisible === true)).not.toHaveLength(0);
   });
 
   // Ces 4 champs font echouer Strapi avec « Document not found » s'ils partent

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { withAlpha } from '@/theme/colors';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
@@ -20,6 +21,7 @@ import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -200,6 +202,7 @@ function ClubEdit({ navigation, route }) {
       );
     },
     onSuccess: () => {
+      emitGuidanceAction('club.updated');
       refetch();
       navigation.goBack();
     },
@@ -386,6 +389,7 @@ function ClubEdit({ navigation, route }) {
         <View
           style={[Alignments.justifySpaceBetween, Alignments.fill]}
         >
+          <TourTarget clipChildren id="clubEdit.viewport" style={Alignments.fill}>
           <ScrollView
             contentContainerStyle={[
               Spaces.gap[24],
@@ -397,6 +401,7 @@ function ClubEdit({ navigation, route }) {
               {/* CORR-SOCLE (30/10, point 5) : 24 + 24 au-dessus de l'avatar ; l'écran pose
                   déjà 24. */}
               {/* REPRISE-PLACE (01/11, point 5) : le « + » dépasse de 12 px, touchait la barre. */}
+              <TourTarget id="clubEdit.logo">
               <View style={[Alignments.row, Spaces.paddingTop[12]]}>
                 <SelectAvatar
                   containerStyle={{
@@ -416,7 +421,9 @@ function ClubEdit({ navigation, route }) {
                   size={LOGO_PREVIEW_HEIGHT}
                 />
               </View>
+              </TourTarget>
 
+              <TourTarget id="clubEdit.name">
               <Controller
                 control={control}
                 name="name"
@@ -438,7 +445,9 @@ function ClubEdit({ navigation, route }) {
                   />
                 )}
               />
+              </TourTarget>
 
+              <TourTarget id="clubEdit.email">
               <Controller
                 control={control}
                 name="email"
@@ -462,7 +471,9 @@ function ClubEdit({ navigation, route }) {
                   />
                 )}
               />
+              </TourTarget>
 
+              <TourTarget id="clubEdit.phone">
               <Controller
                 control={control}
                 name="phoneNumber"
@@ -485,9 +496,11 @@ function ClubEdit({ navigation, route }) {
                   />
                 )}
               />
+              </TourTarget>
 
               {/* R17-ADRESSE (19/10) — plus de texte libre : la saisie des lieux publics. Le */}
               {/* point enregistré suit l'adresse ; introuvable, le lieu se place sur la carte. */}
+              <TourTarget id="clubEdit.address">
               <Controller
                 control={control}
                 name="address"
@@ -503,6 +516,7 @@ function ClubEdit({ navigation, route }) {
                   />
                 )}
               />
+              </TourTarget>
 
               <Controller
                 control={control}
@@ -598,6 +612,7 @@ function ClubEdit({ navigation, route }) {
                     'Choisis si toutes les demandes doivent être traitées par le dirigeant, ou si les entraîneurs peuvent être autorisés à gérer celles de leur équipe.',
                   )}
                 </Text>
+                <TourTarget id="clubEdit.delegation">
                 <Controller
                   control={control}
                   name="membershipRequestManagementMode"
@@ -666,6 +681,7 @@ function ClubEdit({ navigation, route }) {
                     </View>
                   )}
                 />
+                </TourTarget>
               </View>
 
               {/* LOT EQUIPES (Q3 et Q5, demande d Adel du 28/08) — CE QUE LE */}
@@ -673,6 +689,7 @@ function ClubEdit({ navigation, route }) {
               {/* Pose juste apres son frere « Demandes d adhesion » : meme famille, */}
               {/* meme proprietaire, meme endroit — on ne cree pas un 2e tiroir de */}
               {/* reglages ailleurs dans l app. */}
+              <TourTarget id="clubEdit.teamCreation">
               <View style={[Spaces.gap[12]]}>
                 <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                   {t('clubEdit.teamCreation.title', "Création d'équipes")}
@@ -761,10 +778,13 @@ function ClubEdit({ navigation, route }) {
                   </View>
                 </View>
               </View>
+              </TourTarget>
             </View>
           </ScrollView>
+          </TourTarget>
 
           <View style={[Spaces.marginBottom[16]]}>
+            <TourTarget id="clubEdit.save">
             <Button
               disabled={!clubData}
               isLoading={updateClubMutation.isPending}
@@ -772,6 +792,7 @@ function ClubEdit({ navigation, route }) {
               title={t('common.actions.save') || 'Enregistrer'}
               variant="Primary"
             />
+            </TourTarget>
             <View style={[Spaces.marginTop[8]]}>
               <Button
                 onPress={() => navigation.goBack()}
