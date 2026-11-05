@@ -300,18 +300,262 @@ const PART_FACILITIES = [
   },
 ];
 
+// Reprise de ④ : la liste des installations, où est la carte de celle créée en ③.
+const facilityListTarget = {
+  params: (/** @type {any} */ context) => ({ clubId: context?.userData?.club?.documentId }),
+  routeName: RouteNames.FacilityList,
+};
+
+/**
+ * Une bulle sur le planning de l'installation, avec ses événements d'exemple.
+ * @param {any} step - Étape (ses `get` sont gardés).
+ * @returns {any} Étape complétée.
+ */
+const planningStep = (step) => Object.defineProperties(
+  {
+    missionId: MISSION_ID,
+    resumeFrom: 'm1-fplan',
+    subMission: 'facilities',
+    tourExample: 'planning',
+    when: hasClubPlan,
+  },
+  Object.getOwnPropertyDescriptors(step),
+);
+
+const PART_PLANNING = [
+  {
+    advanceOn: { key: 'facility.planning.opened', type: 'interaction' },
+    id: 'm1-fplan',
+    missionId: MISSION_ID,
+    navTarget: facilityListTarget,
+    resumeFrom: 'm1-fplan',
+    subMission: 'facilities',
+    targetsFor: (/** @type {any} */ context) => {
+      const facilityId = context?.created?.['facility.created']?.facilityId;
+      return facilityId ? [`facility.plan.${facilityId}`] : [];
+    },
+    get text() { return t('m1-fplan', '④ Ton installation est créée. Ouvre son planning.'); },
+    when: hasClubPlan,
+  },
+  planningStep({
+    bubblePlacement: 'top',
+    id: 'm1-pdemo',
+    get nextLabel() { return t('next', 'Suivant'); },
+    targets: ['planning.grid'],
+    get text() {
+      return t(
+        'm1-pdemo',
+        'Ton planning est encore vide : on y a mis quelques événements d’exemple pour te '
+          + 'montrer. Ils disparaissent à la fin du guide.',
+      );
+    },
+    veil: false,
+  }),
+  planningStep({
+    id: 'm1-pcap',
+    get nextLabel() { return t('next', 'Suivant'); },
+    targets: ['planning.capacity'],
+    get text() {
+      return t(
+        'm1-pcap',
+        'La capacité : combien d’équipes peuvent jouer en même temps, le moment le plus chargé '
+          + 'et les places encore libres.',
+      );
+    },
+  }),
+  planningStep({
+    advanceOn: { key: 'facility.planning.filter', type: 'interaction' },
+    id: 'm1-pchips',
+    targets: ['planning.chips'],
+    get text() {
+      return t(
+        'm1-pchips',
+        'Choisis l’installation affichée. « Toutes installations » regroupe tout ton club : '
+          + 'touche-le.',
+      );
+    },
+  }),
+  planningStep({
+    advanceOn: { key: 'planning.period.next', type: 'interaction' },
+    id: 'm1-parrows',
+    targets: ['planning.head'],
+    get text() {
+      return t('m1-parrows', 'Les flèches changent de période. Essaie → pour voir la suite.');
+    },
+  }),
+  planningStep({
+    bubblePlacement: 'top',
+    id: 'm1-pempty',
+    get nextLabel() { return t('next', 'Suivant'); },
+    targets: ['planning.grid'],
+    get text() {
+      return t(
+        'm1-pempty',
+        'Une période sans événement s’affiche comme ça. Les créneaux de tes coachs apparaîtront '
+          + 'ici automatiquement.',
+      );
+    },
+    veil: false,
+  }),
+  planningStep({
+    advanceOn: { key: 'planning.view.month', type: 'interaction' },
+    id: 'm1-pview',
+    targets: ['planning.views'],
+    get text() {
+      return t('m1-pview', 'Change d’affichage : Semaine, 3 jours ou Mois. Touche « Mois ».');
+    },
+  }),
+  planningStep({
+    bubblePlacement: 'top',
+    id: 'm1-pmonth',
+    get nextLabel() { return t('understood', 'Compris'); },
+    targets: ['planning.grid'],
+    get text() {
+      return t(
+        'm1-pmonth',
+        'En vue Mois, un point signale chaque jour où l’installation est occupée.',
+      );
+    },
+    veil: false,
+  }),
+  {
+    advanceOn: { key: RouteNames.FacilityList, type: 'route' },
+    id: 'm1-pb1',
+    missionId: MISSION_ID,
+    resumeFrom: 'm1-fplan',
+    subMission: 'facilities',
+    targets: ['header.back'],
+    get text() { return t('m1-pb1', 'Reviens à tes installations.'); },
+    veil: false,
+    when: hasClubPlan,
+  },
+  {
+    advanceOn: { key: RouteNames.Club, type: 'route' },
+    id: 'm1-fback',
+    missionId: MISSION_ID,
+    resumeFrom: 'm1-poster',
+    subMission: 'facilities',
+    targets: ['header.back'],
+    get text() { return t('m1-fback', 'Puis retourne sur la fiche du club.'); },
+    veil: false,
+    when: hasClubPlan,
+  },
+];
+
+const PART_POSTER = [
+  {
+    advanceOn: { key: RouteNames.VisualShowcase, type: 'route' },
+    id: 'm1-poster',
+    missionId: MISSION_ID,
+    navTarget: clubHubTarget,
+    resumeFrom: 'm1-poster',
+    targets: ['club.poster'],
+    get text() { return t('m1-poster', '⑤ Dernière étape : l’affiche « Rejoindre le club ».'); },
+  },
+  {
+    advanceOn: { key: 'poster.model', type: 'interaction' },
+    id: 'm1-pmodel',
+    missionId: MISSION_ID,
+    resumeFrom: 'm1-poster',
+    targets: ['poster.model'],
+    get text() { return t('m1-pmodel', 'Choisis un modèle : Écusson ou Famille.'); },
+  },
+  {
+    bubblePlacement: 'top',
+    id: 'm1-pposter',
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-poster',
+    targets: ['poster.preview'],
+    get text() {
+      return t(
+        'm1-pposter',
+        'Voici ton affiche : le nom du club, ton sport et le QR code qui mène à ton club. Tu '
+          + 'pourras changer de modèle à tout moment.',
+      );
+    },
+    veil: false,
+  },
+  {
+    advanceOn: { key: 'poster.text.opened', type: 'interaction' },
+    id: 'm1-ptext',
+    missionId: MISSION_ID,
+    resumeFrom: 'm1-poster',
+    targets: ['poster.text'],
+    get text() {
+      return t(
+        'm1-ptext',
+        'Tu peux aussi adapter les textes de l’affiche. Touche « Personnaliser le texte ».',
+      );
+    },
+  },
+  {
+    bubblePlacement: 'top',
+    id: 'm1-pfields',
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-poster',
+    targets: ['poster.fields'],
+    get text() {
+      return t(
+        'm1-pfields',
+        'Change le titre, l’accroche, les sports ou le texte sous le QR code. Laisse vide pour '
+          + 'garder le texte proposé.',
+      );
+    },
+    // Les champs restent saisissables : le cadre n'intercepte aucune touche.
+    veil: false,
+  },
+  {
+    // ponytail: si l'affiche ne se fabrique pas, le bouton reste grisé et la bulle attend ;
+    // sortie : « Réessayer » de l'écran, ou la pause du guide.
+    advanceOn: { key: 'poster.share.returned', type: 'interaction' },
+    bubblePlacement: 'top',
+    id: 'm1-pshare',
+    missionId: MISSION_ID,
+    resumeFrom: 'm1-poster',
+    targets: ['poster.share'],
+    get text() {
+      return t(
+        'm1-pshare',
+        'Le QR code mène directement à ton club. Partage l’affiche, ou imprime-la pour le '
+          + 'club-house.',
+      );
+    },
+  },
+  {
+    bubblePlacement: 'top',
+    id: 'm1-psent',
+    missionId: MISSION_ID,
+    get nextLabel() { return t('m1-psent-next', 'C’est envoyé'); },
+    resumeFrom: 'm1-poster',
+    targets: ['poster.share'],
+    get text() {
+      return t('m1-psent', 'Tu peux la partager encore, ou continuer quand c’est fait.');
+    },
+    veil: false,
+  },
+  {
+    advanceOn: { key: RouteNames.Club, type: 'route' },
+    completesMission: true,
+    id: 'm1-pclose',
+    missionId: MISSION_ID,
+    resumeFrom: 'm1-poster',
+    targets: ['poster.close'],
+    get text() {
+      return t(
+        'm1-pclose',
+        'Envoyée ! Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, '
+          + 'ferme-la avec la croix.',
+      );
+    },
+  },
+];
+
 export const M1_STEPS = [
   ...PART_INFOS,
   ...PART_PARTNERS,
   ...PART_FACILITIES,
-  // Provisoire, le temps du lot L3 (④ planning, ⑤ affiche). Le guide reste éteint jusque-là.
-  {
-    completesMission: true,
-    id: 'm1-end',
-    missionId: MISSION_ID,
-    get nextLabel() { return t('next', 'Suivant'); },
-    resumeFrom: 'm1-end',
-    targets: [],
-    get text() { return t('m1-end', 'Ton club est en place.'); },
-  },
+  ...PART_PLANNING,
+  ...PART_POSTER,
 ];

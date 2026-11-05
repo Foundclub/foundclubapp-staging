@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useAuth from '@/domains/auth/useAuth';
 import { phraseCreneauxEtSeances } from '@/domains/collectivite/collectiviteAccueil';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
@@ -432,6 +433,8 @@ function FacilityList() {
       return;
     }
 
+    // Guide : même nom de route que la fiche, seul ce signal dit le planning.
+    emitGuidanceInteraction('facility.planning.opened');
     // NAVMORTE : l ecran est aussi monte a la RACINE, ou Club n existe pas.
     navigateToStackScreenOrScreen(navigation, {
       params: {
@@ -702,13 +705,13 @@ function FacilityList() {
         </TouchableOpacity>
 
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-          <View style={{ flex: 1 }}>
+          <TourTarget id={`facility.plan.${item.documentId || item.id}`} style={{ flex: 1 }}>
             <Button
               onPress={() => handleOpenPlanning(item)}
               title={t('facilityList.actions.openPlanning', 'Voir le planning')}
               variant="Primary"
             />
-          </View>
+          </TourTarget>
           {isEditable ? (
             <Button
               onPress={() => handleEdit(item)}
@@ -1366,14 +1369,14 @@ function FacilityList() {
           </View>
         ) : null}
         <View style={[Alignments.row, { gap: 8 }]}>
-          <View style={{ flex: 1 }}>
+          <TourTarget id={`facility.plan.${item.documentId || item.id}`} style={{ flex: 1 }}>
             <Button
               onPress={() => handleOpenPlanning(item)}
               size="sm"
               title={t('facilityList.actions.openPlanning', 'Voir le planning')}
               variant="Secondary"
             />
-          </View>
+          </TourTarget>
           <View style={{ flex: 1 }}>
             <Button
               onPress={() => ouvrirDemandeALaVille(navigation, {

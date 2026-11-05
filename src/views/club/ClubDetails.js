@@ -3608,11 +3608,13 @@ function ClubDetails({ navigation, route }) {
 
           {/* ECRAN18-ENTETE — sur ordinateur, l'affiche est déjà dans l'en-tête compact. */}
           {canEdit && clubId && !isClubSubPage && !enTeteCompact ? (
-            <Button
-              onPress={handleOpenClubPoster}
-              title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
-              variant="Secondary"
-            />
+            <TourTarget id="club.poster">
+              <Button
+                onPress={handleOpenClubPoster}
+                title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
+                variant="Secondary"
+              />
+            </TourTarget>
           ) : null}
 
           {/* R17-INVITER (19/10, REC17-009) — la Ville qui ouvre la fiche depuis « Ajouter un

@@ -95,3 +95,35 @@ export const exampleMembershipRequest = ({ coachFirstName } = {}) => {
  * @returns {boolean} Vrai pour l'exemple.
  */
 export const isExampleRequest = (item) => Boolean(item?.meta?.example);
+
+const EXAMPLE_EVENT_PREFIX = 'tour-example-event-';
+
+/**
+ * Guide Dirigeant·e, M1 ④ : trois événements de la semaine en cours, pour un planning encore vide.
+ * Jamais envoyés ; `isExamplePlanningEvent` empêche d'ouvrir leur fiche.
+ * @param {{ facility?: any, now?: Date }} [context] - Installation affichée, et date du jour.
+ * @returns {any[]} Événements bruts du planning.
+ */
+export const examplePlanningEvents = ({ facility = null, now = new Date() } = {}) => (
+  [[0, 18, 'U13'], [2, 19, 'Seniors'], [4, 17, 'U9']].map(([dayOffset, hour, team]) => {
+    const start = new Date(now);
+    // Lundi de la semaine en cours, comme la grille.
+    start.setDate(now.getDate() - ((now.getDay() + 6) % 7) + Number(dayOffset));
+    start.setHours(Number(hour), 0, 0, 0);
+    return {
+      documentId: `${EXAMPLE_EVENT_PREFIX}${dayOffset}`,
+      endAt: new Date(start.getTime() + 90 * 60000).toISOString(),
+      facility,
+      kind: 'event',
+      startAt: start.toISOString(),
+      title: i18next.t('tourExamples.planning.title', 'Exemple · {{team}}', { team }),
+    };
+  })
+);
+
+/**
+ * @param {any} event - Événement du planning.
+ * @returns {boolean} Vrai pour un événement d'exemple du guide.
+ */
+export const isExamplePlanningEvent = (event) => String(event?.documentId || '')
+  .startsWith(EXAMPLE_EVENT_PREFIX);

@@ -34,12 +34,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { getEventShowcaseShareIntro } from '@/domains/visuals/eventShowcaseTemplate';
 import { isLongWait } from '@/domains/visuals/renderProgress';
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
 import useTheme from '@/theme/themeContext';
 
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import Input from '@/components/molecules/input/Input';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
@@ -274,6 +276,8 @@ export default function EventPublishedShowcase({ navigation, route }) {
       setDownloadError(downloadErrorText(e));
     } finally {
       setBusyAction(null);
+      // Guide Dirigeant : au retour de la feuille de partage, que l'envoi soit fait ou non.
+      if (key === 'share') emitGuidanceInteraction('poster.share.returned');
     }
   };
 
@@ -342,7 +346,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
         <Text style={styles.title}>{titleText}</Text>
         <Text style={styles.subtitle}>{subtitleText}</Text>
 
-        <View style={styles.variantRow}>
+        <TourTarget id="poster.model" style={styles.variantRow}>
           {variants.map(({ key, label }) => {
             const active = key === variant;
             return (
@@ -353,7 +357,10 @@ export default function EventPublishedShowcase({ navigation, route }) {
                 activeOpacity={0.85}
                 hitSlop={ApplicationStyle.hitSlop.min44From32}
                 key={key}
-                onPress={() => setVariant(key)}
+                onPress={() => {
+                  emitGuidanceInteraction('poster.model');
+                  setVariant(key);
+                }}
                 style={[styles.variantChip, active && styles.variantChipActive]}
               >
                 <Text style={[styles.variantChipText, active && styles.variantChipTextActive]}>
@@ -362,9 +369,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </TourTarget>
 
-        <View style={[styles.preview, { width: previewWidth }]}>
+        <TourTarget id="poster.preview" style={[styles.preview, { width: previewWidth }]}>
           {previewUri ? (
             <Image resizeMode="contain" source={{ uri: previewUri }} style={styles.previewImage} />
           ) : null}
@@ -424,26 +431,31 @@ export default function EventPublishedShowcase({ navigation, route }) {
               </TouchableOpacity>
             </View>
           ) : null}
-        </View>
+        </TourTarget>
 
         <View style={styles.editor}>
-          <TouchableOpacity
-            accessibilityLabel={t('showcase.customize', 'Personnaliser le texte')}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: editorOpen }}
-            activeOpacity={0.85}
-            hitSlop={ApplicationStyle.hitSlop.min44From40}
-            onPress={() => setEditorOpen((open) => !open)}
-            style={styles.editorToggle}
-          >
-            <Text style={styles.editorToggleText}>
-              {t('showcase.customize', 'Personnaliser le texte')}
-            </Text>
-            <Text style={styles.editorToggleChevron}>{editorOpen ? '−' : '+'}</Text>
-          </TouchableOpacity>
+          <TourTarget id="poster.text">
+            <TouchableOpacity
+              accessibilityLabel={t('showcase.customize', 'Personnaliser le texte')}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: editorOpen }}
+              activeOpacity={0.85}
+              hitSlop={ApplicationStyle.hitSlop.min44From40}
+              onPress={() => {
+                if (!editorOpen) emitGuidanceInteraction('poster.text.opened');
+                setEditorOpen((open) => !open);
+              }}
+              style={styles.editorToggle}
+            >
+              <Text style={styles.editorToggleText}>
+                {t('showcase.customize', 'Personnaliser le texte')}
+              </Text>
+              <Text style={styles.editorToggleChevron}>{editorOpen ? '−' : '+'}</Text>
+            </TouchableOpacity>
+          </TourTarget>
 
           {editorOpen ? (
-            <View style={styles.editorBody}>
+            <TourTarget id="poster.fields" style={styles.editorBody}>
               <Text style={styles.editorHint}>
                 {t(
                   'showcase.customizeHint',
@@ -474,7 +486,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
               >
                 <Text style={styles.resetBtnText}>{t('showcase.reset', 'Réinitialiser')}</Text>
               </TouchableOpacity>
-            </View>
+            </TourTarget>
           ) : null}
         </View>
 
@@ -486,26 +498,28 @@ export default function EventPublishedShowcase({ navigation, route }) {
               c'est le seul qu'Adel a demandé de garder tel quel. Sa ligne
               d'explication dit ce que la plateforme fait VRAIMENT (leçon L20 :
               sur Android le fichier est enregistré puis ouvert, pas envoyé). */}
-          <ShowcaseAction
-            busy={busyAction === 'share'}
-            busyColor={Colors.primary900}
-            disabled={busyAction != null || posterUnavailable}
-            hint={saveThenOpen
-              ? t(
-                'showcase.saveHint',
-                'Elle part dans ta galerie photo, telle que tu la vois. '
-                + 'Tu choisis ensuite l’application qui l’ouvre.',
-              )
-              : t(
-                'showcase.shareHint',
-                'L’image part telle que tu la vois. Dans la fenêtre de partage, '
-                + 'tu peux aussi l’enregistrer dans ton téléphone.',
-              )}
-            label={t('showcase.sharePoster', 'Partager l’affiche')}
-            onPress={() => runDownload('share', () => shareVisual(shareMessage, chooserTitle))}
-            styles={styles}
-            variant="primary"
-          />
+          <TourTarget id="poster.share">
+            <ShowcaseAction
+              busy={busyAction === 'share'}
+              busyColor={Colors.primary900}
+              disabled={busyAction != null || posterUnavailable}
+              hint={saveThenOpen
+                ? t(
+                  'showcase.saveHint',
+                  'Elle part dans ta galerie photo, telle que tu la vois. '
+                  + 'Tu choisis ensuite l’application qui l’ouvre.',
+                )
+                : t(
+                  'showcase.shareHint',
+                  'L’image part telle que tu la vois. Dans la fenêtre de partage, '
+                  + 'tu peux aussi l’enregistrer dans ton téléphone.',
+                )}
+              label={t('showcase.sharePoster', 'Partager l’affiche')}
+              onPress={() => runDownload('share', () => shareVisual(shareMessage, chooserTitle))}
+              styles={styles}
+              variant="primary"
+            />
+          </TourTarget>
 
           {/* AC02 — LE DÉPLIANT. Toujours visible, y compris quand l'affiche
               n'a pas pu être fabriquée : c'est lui qui garantit que les deux
@@ -638,7 +652,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
         onPress={closeScreen}
         style={[styles.closeBtn, { right: SCREEN_PADDING, top: insets.top + 8 }]}
       >
-        <Text style={styles.closeBtnText}>×</Text>
+        <TourTarget id="poster.close" style={styles.closeTarget}>
+          <Text style={styles.closeBtnText}>×</Text>
+        </TourTarget>
       </TouchableOpacity>
     </KeyboardAvoidingView>
   );
@@ -830,6 +846,10 @@ const makeStyles = (Colors) => StyleSheet.create({
     position: 'absolute',
     width: CLOSE_BTN_SIZE,
     zIndex: 2,
+  },
+  // Le cadre du guide prend toute la pastille, pas seulement le ×.
+  closeTarget: {
+    alignItems: 'center', height: CLOSE_BTN_SIZE, justifyContent: 'center', width: CLOSE_BTN_SIZE,
   },
   // neutral00 sur primary800 : ~14:1 (AAA). Hauteur de ligne alignée sur la
   // pastille pour que le × soit centré et non posé sur sa ligne de base.

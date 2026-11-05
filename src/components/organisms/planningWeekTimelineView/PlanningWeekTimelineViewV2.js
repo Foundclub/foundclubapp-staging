@@ -30,6 +30,7 @@ import {
   etiquetteDuPlanning,
   installationDuPlanning,
 } from '@/domains/collectivite/evenementDeLaVille';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import { motDuBlocTouche } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -1576,7 +1577,10 @@ function PlanningWeekTimelineView({
   const timelineBody = (
     <View style={styles.container}>
       {showHeader ? (
-        <View style={[styles.headerSpacing, compactFullscreen ? styles.compactHeaderSpacing : null]}>
+        <TourTarget
+          id="planning.head"
+          style={[styles.headerSpacing, compactFullscreen ? styles.compactHeaderSpacing : null]}
+        >
           <View
             style={[
               styles.headerCard,
@@ -1619,7 +1623,7 @@ function PlanningWeekTimelineView({
               />
             </TouchableOpacity>
           </View>
-        </View>
+        </TourTarget>
       ) : null}
 
       <View

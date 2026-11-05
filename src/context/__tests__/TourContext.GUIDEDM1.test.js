@@ -261,18 +261,44 @@ describe('le catalogue de M1 ne promet rien que le code n’ait', () => {
     'views/club/AddSponsor.js',
     'views/facility/FacilityList.js',
     'views/facility/FacilityForm.js',
+    'views/event/EventPublishedShowcase.js',
+    'components/organisms/planning/ClubFacilityPlanningContainer.js',
+    'components/organisms/planningWeekTimelineView/PlanningWeekTimelineViewV2.js',
     'views/home/HomeHub.js',
     'components/molecules/wizardStepLayout/WizardStepLayout.js',
     'components/atoms/headerBackButton/HeaderBackButton.js',
   ].map(src).join('\n');
 
-  it('chaque ancre de ①②③ est posée dans un écran', () => {
+  it('chaque ancre de M1 est posée dans un écran', () => {
     const anchors = M1.flatMap((step) => step.targets || [])
-      .filter((id) => !id.startsWith('home.card.') && !id.startsWith('planning.')
-        && !id.startsWith('poster.') && !id.startsWith('facility.plan')
-        && !id.startsWith('club.poster'));
+      .filter((id) => !id.startsWith('home.card.'));
     expect(anchors.length).toBeGreaterThan(15);
     anchors.forEach((id) => expect([id, SOURCES.includes(`"${id}"`)]).toEqual([id, true]));
+  });
+
+  it('④ puis ⑤ : le pack dans l’ordre, la mission se valide à la croix', () => {
+    const ids = M1.map((step) => step.id);
+    const fin = ids.slice(ids.indexOf('m1-fplan'));
+    expect(fin).toEqual([
+      'm1-fplan', 'm1-pdemo', 'm1-pcap', 'm1-pchips', 'm1-parrows', 'm1-pempty', 'm1-pview',
+      'm1-pmonth', 'm1-pb1', 'm1-fback', 'm1-poster', 'm1-pmodel', 'm1-pposter', 'm1-ptext',
+      'm1-pfields', 'm1-pshare', 'm1-psent', 'm1-pclose',
+    ]);
+    expect(M1.filter((step) => step.completesMission).map((step) => step.id)).toEqual(['m1-pclose']);
+  });
+
+  it('④ vise la carte de L’installation créée, sinon aucune', () => {
+    const step = M1.find((candidate) => candidate.id === 'm1-fplan');
+    expect(step.targetsFor({ created: { 'facility.created': { facilityId: 'f-9' } } }))
+      .toEqual(['facility.plan.f-9']);
+    expect(step.targetsFor({ created: {} })).toEqual([]);
+  });
+
+  it('les exemples s’arrêtent en quittant le planning', () => {
+    const withExample = M1.filter((step) => step.tourExample === 'planning').map((s) => s.id);
+    expect(withExample).toEqual([
+      'm1-pdemo', 'm1-pcap', 'm1-pchips', 'm1-parrows', 'm1-pempty', 'm1-pview', 'm1-pmonth',
+    ]);
   });
 
   it('aucun id d’étape en double (reprise par id)', () => {
