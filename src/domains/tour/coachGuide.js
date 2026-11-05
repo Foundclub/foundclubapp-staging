@@ -706,7 +706,8 @@ const STEPS = [
     get text() {
       return t(
         'm3-when-free',
-        'Touche la date et les heures, puis Suivant. Répéter chaque semaine demande l’offre Équipe.',
+        'Touche la date et les heures, puis Suivant. Répéter chaque semaine demande '
+          + 'l’offre Équipe.',
       );
     },
     veil: false,
@@ -1197,9 +1198,9 @@ export const COACH_GUIDE = Object.freeze({
   /**
    * Situation au départ, figée pour tout le guide (un club rejoint en route ne
    * doit pas faire sauter la suite de la branche « sans club »).
-   * @param {{ created?: Record<string, any>; subscriptionAccessLevel?: string; userData: any }}
-   *   context - Personne connectée, son niveau d'offre, et ce
-   *   qu'elle vient de créer (profil pas encore relu, FIN-GUIDE point 2).
+   * @param {any} context - Personne connectée (`userData`), son niveau d'offre
+   *   (`subscriptionAccessLevel`), et ce qu'elle vient de créer (profil pas encore relu, FIN-GUIDE
+   *   point 2).
    * @returns {{ firstName: string; hadClub: boolean; hadTeam: boolean; isFreePlan: boolean;
    *   joinPending: boolean }} Drapeaux.
    */

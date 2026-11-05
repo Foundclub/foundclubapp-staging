@@ -1,9 +1,10 @@
 import { COACH_GUIDE } from '@/domains/tour/coachGuide';
 import { isStepAvailable } from '@/domains/tour/tourGuideEngine';
 
-// M3 GRATUIT (05/11, suite de la réflexion sur le quota du guide) : une série d'un compte gratuit ne
-// pose que les dates offertes, le reste est refusé et une feuille s'ouvre en pleine mission. La bulle
-// n'invite donc plus à répéter ; la feuille « Répéter » reste à l'écran, le serveur juge toujours.
+// M3 GRATUIT (05/11, suite de la réflexion sur le quota du guide) : une série d'un compte
+// gratuit ne pose que les dates offertes, le reste est refusé et une feuille s'ouvre en pleine
+// mission. La bulle n'invite donc plus à répéter ; la feuille « Répéter » reste à l'écran, le
+// serveur juge toujours.
 
 const step = (id) => COACH_GUIDE.steps.find((candidate) => candidate.id === id);
 const context = (flags) => ({ created: {}, flags, missionStatus: {} });
@@ -19,7 +20,8 @@ describe('le drapeau, lu au départ', () => {
     ['CLUB_UNVERIFIED', false],
     [undefined, false],
   ])('niveau %s : gratuit = %s', (subscriptionAccessLevel, attendu) => {
-    expect(COACH_GUIDE.buildFlags({ subscriptionAccessLevel, userData: {} }).isFreePlan).toBe(attendu);
+    const flags = COACH_GUIDE.buildFlags({ subscriptionAccessLevel, userData: {} });
+    expect(flags.isFreePlan).toBe(attendu);
   });
 });
 
