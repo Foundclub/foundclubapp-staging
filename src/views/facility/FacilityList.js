@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import i18next from 'i18next';
 import {
-  useCallback, useLayoutEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,7 +20,7 @@ import {
   View,
 } from 'react-native';
 
-import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useAuth from '@/domains/auth/useAuth';
 import { phraseCreneauxEtSeances } from '@/domains/collectivite/collectiviteAccueil';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
@@ -39,6 +39,7 @@ import {
 import {
   extractSubscriptionDecisionFromError,
   formatCollectiviteOfferedBy,
+  isClubFreeSlotTaken,
 } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -203,7 +204,7 @@ function FacilityList() {
   } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const { userData } = useAuth();
+  const { getSubscriptionAccessLevelForClub, subscriptionAccessLevel, userData } = useAuth();
   const { sceneBottomInset } = useBottomDockLayout();
 
   // 🏛️ COLLECTIVITES 1c — MODE COLLECTIVITE (route CollectiviteInstallations) : la liste est
@@ -248,6 +249,15 @@ function FacilityList() {
     }));
   }, [facilityContext, isCollectiviteMode]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
+  // GUIDE-D-QUOTA-CLUB : la place offerte du club déjà prise, le guide le dit avant le formulaire.
+  // Seules les installations À LUI comptent : le gymnase de la Ville ne prend pas sa place.
+  const isFreeFacilityTaken = !isCollectiviteMode && Boolean(contextClubId) && isClubFreeSlotTaken(
+    facilities.filter((/** @type {any} */ facility) => !facility?.isShared).length,
+    getSubscriptionAccessLevelForClub?.(contextClubId) || subscriptionAccessLevel,
+  );
+  useEffect(() => {
+    if (isFreeFacilityTaken) emitGuidanceAction('facility.free.taken');
+  }, [isFreeFacilityTaken]);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const isDesktop = useIsDesktop();
 

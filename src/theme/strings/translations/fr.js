@@ -22416,8 +22416,8 @@ export default {
         title: 'Publication d’événement limitée',
       },
       facility: {
-        description: 'La gestion des installations du club est réservée à l’offre Club.',
-        title: 'Installations réservées',
+        description: 'La première installation est offerte. Les suivantes demandent l’offre Club.',
+        title: 'Installations du club',
       },
       match: {
         // eslint-disable-next-line max-len
@@ -22430,8 +22430,8 @@ export default {
         title: 'Publication recrutement limitée',
       },
       sponsor: {
-        description: 'La gestion des sponsors du club est réservée à l’offre Club.',
-        title: 'Sponsors réservés',
+        description: 'Le premier partenaire est offert. Les suivants demandent l’offre Club.',
+        title: 'Partenaires du club',
       },
       team: {
         description: 'La création d’équipe demande une offre active.{{requiredPlanSuffix}}',
@@ -25478,14 +25478,15 @@ export default {
       'm1-edit': 'Pour les personnaliser, touche « Modifier ».',
       'm1-email': 'L’email de contact du club.',
       'm1-fac': '3/5 · Tes installations : stade, gymnase, salle…',
-      'm1-fac-visit': '3/5 · Tes installations et leur planning se créent ici, avec l’offre Club.',
+      'm1-fac-taken': 'Ton installation offerte est déjà là : la suivante demande l’offre Club. '
+        + 'Passe cette partie.',
       'm1-facadd': 'Ajoute une installation.',
       'm1-fback': 'Puis retourne sur la fiche du club.',
       'm1-ff2': 'Conflit de créneaux : à valider, ou réservé tout de suite. Capacité : équipes en '
         + 'même temps. Couleur : son repère.',
       'm1-ff3': 'Tout est bon ? Crée l’installation.',
-      'm1-ff3-refused': 'Sans offre Club, pas d’installation : ferme l’offre et passe cette '
-        + 'partie.',
+      'm1-ff3-refused': 'Ton offre gratuite compte déjà son installation : la suivante demande '
+        + 'l’offre Club. Ferme l’offre et passe cette partie.',
       'm1-ffaddr': 'Son adresse (obligatoire) : touche le champ, tape-la, choisis-la dans la '
         + 'liste, puis « Sélectionner ».',
       'm1-ffaddr-guard': 'Choisis d’abord l’adresse de l’installation.',
@@ -25501,8 +25502,8 @@ export default {
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
       'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
-      'm1-partners-visit': '2/5 · Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur '
-        + 'tes cartes équipe et la page du club.',
+      'm1-partners-taken': 'Ton partenaire offert est déjà là : le suivant demande l’offre Club. '
+        + 'Passe cette partie.',
       'm1-pb1': 'Reviens à tes installations.',
       'm1-pback': 'Reviens sur la fiche du club.',
       'm1-pcap': 'La capacité : combien d’équipes peuvent jouer en même temps, le moment le plus '
@@ -25518,8 +25519,8 @@ export default {
       'm1-pfields': 'Change le titre, l’accroche, les sports ou le texte sous le QR code. Laisse '
         + 'vide pour garder le texte proposé.',
       'm1-pform': 'Son logo, son nom et le lien de son site, puis « Ajouter le partenaire ».',
-      'm1-pform-refused': 'Sans offre Club, pas de partenaire : ferme l’offre et passe cette '
-        + 'partie.',
+      'm1-pform-refused': 'Ton offre gratuite compte déjà son partenaire : le suivant demande '
+        + 'l’offre Club. Ferme l’offre et passe cette partie.',
       'm1-phone': 'Le téléphone du club.',
       'm1-pmodel': 'Choisis un modèle : Écusson ou Famille.',
       'm1-pmonth': 'En vue Mois, un point signale chaque jour où l’installation est occupée.',
@@ -28025,7 +28026,7 @@ export default {
         title: 'Pilote tout le club',
       },
       free: {
-        bullet1: '1 équipe offerte',
+        bullet1: '1 équipe, 1 installation, 1 partenaire offerts',
         bullet2: '1 événement et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",

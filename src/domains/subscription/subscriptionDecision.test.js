@@ -108,9 +108,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des installations du club est réservée à l’offre Club.'
+      description: 'La première installation est offerte. Les suivantes demandent l’offre Club.'
         + ' Offre conseillée : Club.',
-      title: 'Installations réservées',
+      title: 'Installations du club',
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,
@@ -119,9 +119,9 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['CLUB'],
     })).toEqual({
       ctaLabel: 'Voir mon abonnement',
-      description: 'La gestion des sponsors du club est réservée à l’offre Club.'
+      description: 'Le premier partenaire est offert. Les suivants demandent l’offre Club.'
         + ' Offre conseillée : Club.',
-      title: 'Sponsors réservés',
+      title: 'Partenaires du club',
     });
     expect(getSubscriptionPaywallContent({
       allowed: false,

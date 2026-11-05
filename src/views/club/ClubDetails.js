@@ -44,6 +44,7 @@ import {
   extractSubscriptionDecisionFromError,
   formatCollectiviteOfferedBy,
   getCollectiviteOffer,
+  isClubFreeSlotTaken,
 } from '@/domains/subscription/subscriptionDecision';
 import useParentTeams from '@/domains/team/useParentTeams';
 import { withAlpha } from '@/theme/colors';
@@ -318,10 +319,12 @@ function ClubDetails({ navigation, route }) {
     entitlementsSummary,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    getSubscriptionAccessLevelForClub,
     hasClubAccess,
     inviteTrainer,
     isClubMember,
     refetchUserData,
+    subscriptionAccessLevel,
     USER_ROLES,
     userData,
   } = useAuth();
@@ -2149,12 +2152,21 @@ function ClubDetails({ navigation, route }) {
     const params = { clubId, section: sectionName };
     // Guide : même nom de route pour le hub et ses sections, seul ce signal les distingue.
     emitGuidanceInteraction(`club.section.${sectionName}`);
+    // GUIDE-D-QUOTA-CLUB : le partenaire offert déjà là, le guide le dit avant le formulaire.
+    if (sectionName === 'partners' && isClubFreeSlotTaken(
+      clubSponsorsCount,
+      getSubscriptionAccessLevelForClub?.(clubId) || subscriptionAccessLevel,
+    )) {
+      emitGuidanceAction('sponsor.free.taken');
+    }
     if (typeof navigation.push === 'function') {
       navigation.push(RouteNames.Club, params);
       return;
     }
     navigation.navigate(RouteNames.Club, params);
-  }, [clubId, navigation]);
+  }, [
+    clubId, clubSponsorsCount, getSubscriptionAccessLevelForClub, navigation, subscriptionAccessLevel,
+  ]);
 
   // ST-VUES3-ORDI — la colonne de droite de la planche ordinateur : les trois chiffres qui se
   // touchent (comme « Gestion du club » d'un club omnisport), puis « Les équipes ».

@@ -21574,8 +21574,8 @@ export default {
         title: 'Event publishing limited',
       },
       facility: {
-        description: 'Managing club facilities is reserved for the Club plan.',
-        title: 'Facilities reserved',
+        description: 'The first facility is free. The next ones need the Club plan.',
+        title: 'Club facilities',
       },
       match: {
         description: "You've reached the free limit for publishing matches.{{requiredPlanSuffix}}",
@@ -21586,8 +21586,8 @@ export default {
         title: 'Recruitment publishing limited',
       },
       sponsor: {
-        description: 'Managing club sponsors is reserved for the Club plan.',
-        title: 'Sponsors reserved',
+        description: 'The first partner is free. The next ones need the Club plan.',
+        title: 'Club partners',
       },
       team: {
         description: 'Creating a team requires an active plan.{{requiredPlanSuffix}}',
@@ -24419,13 +24419,15 @@ export default {
       'm1-edit': 'To personalize them, tap “Edit”.',
       'm1-email': 'The club’s contact email.',
       'm1-fac': '3/5 · Your facilities: stadium, gym, hall…',
-      'm1-fac-visit': '3/5 · Your facilities and their schedule are created here, with the Club plan.',
+      'm1-fac-taken': 'Your free facility is already here: the next one needs the Club plan. Skip '
+        + 'this part.',
       'm1-facadd': 'Add a facility.',
       'm1-fback': 'Then return to the club page.',
       'm1-ff2': 'Slot conflicts: to approve, or booked straight away. Capacity: teams at the same '
         + 'time. Color: its marker.',
       'm1-ff3': 'All good? Create the facility.',
-      'm1-ff3-refused': 'No facility without the Club plan: close the offer and skip this part.',
+      'm1-ff3-refused': 'Your free plan already has its facility: the next one needs the Club '
+        + 'plan. Close the offer and skip this part.',
       'm1-ffaddr': 'Its address (required): tap the field, type it, choose it from the list, then '
         + '“Select”.',
       'm1-ffaddr-guard': 'First choose the facility address.',
@@ -24440,8 +24442,8 @@ export default {
       'm1-padd': 'Add your first partner with “+”.',
       'm1-parrows': 'The arrows change the period. Try the right one.',
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
-      'm1-partners-visit': '2/5 · Your partners are added here, with the Club plan: their logo on '
-        + 'your team cards and the club page.',
+      'm1-partners-taken': 'Your free partner is already here: the next one needs the Club plan. '
+        + 'Skip this part.',
       'm1-pb1': 'Go back to your facilities.',
       'm1-pback': 'Go back to the club page.',
       'm1-pcap': 'Capacity: how many teams can play at the same time, the busiest moment and the '
@@ -24457,7 +24459,8 @@ export default {
       'm1-pfields': 'Change the title, the tagline, the sports or the text under the QR code. '
         + 'Leave blank to keep the suggested text.',
       'm1-pform': 'Their logo, name and website link, then “Add the partner”.',
-      'm1-pform-refused': 'No partner without the Club plan: close the offer and skip this part.',
+      'm1-pform-refused': 'Your free plan already has its partner: the next one needs the Club '
+        + 'plan. Close the offer and skip this part.',
       'm1-phone': 'The club’s phone number.',
       'm1-pmodel': 'Choose a style: Crest or Family.',
       'm1-pmonth': 'In Month view, a dot marks each day the facility is in use.',
@@ -26329,7 +26332,7 @@ export default {
         title: 'Manage the whole club',
       },
       free: {
-        bullet1: '1 free team',
+        bullet1: '1 free team, facility and partner',
         bullet2: '1 free event and 1 free ad',
         bullet3: 'Unlimited chat, forever',
         kicker: 'Today',

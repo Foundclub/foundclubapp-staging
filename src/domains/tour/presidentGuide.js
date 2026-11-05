@@ -74,7 +74,7 @@ export const PRESIDENT_GUIDE = Object.freeze({
    * Situation au départ, figée pour tout le guide.
    * @param {{ subscriptionAccessLevel?: string; userData: any }} context - Personne connectée.
    * @returns {{ firstName: string; hasClubPlan: boolean }} Drapeaux. `hasClubPlan` : l'offre Club
-   *   (ou le cadeau de bienvenue) ouvre ce club ; sinon ②③④ et M2 sont montrés, pas joués.
+   *   (ou le cadeau de bienvenue) ouvre ce club ; sinon M2 est montré, pas joué.
    */
   buildFlags: ({ subscriptionAccessLevel, userData }) => ({
     firstName: String(userData?.firstname || userData?.firstName || ''),

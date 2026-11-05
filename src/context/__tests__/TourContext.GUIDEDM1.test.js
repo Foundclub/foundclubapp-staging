@@ -235,20 +235,85 @@ describe('③ les installations, avec l’offre Club', () => {
   });
 });
 
-describe('sans offre Club (décision 1, A)', () => {
-  it('② et ③ sont montrés au bouton, jamais joués', () => {
-    mockAuth.subscriptionAccessLevel = 'FREE';
+describe('sans offre Club (Adel « 77- C » : le premier de chaque est offert)', () => {
+  beforeEach(() => { mockAuth.subscriptionAccessLevel = 'FREE'; });
+
+  it('② et ③ se jouent pour de vrai, jusqu’au planning de l’installation créée', () => {
     start();
     playPartOne();
-    expectStep('m1-partners-visit');
-    expect(tour.currentStep.targets).toEqual(['club.m.partners']);
+    expectStep('m1-partners');
+    interaction('club.section.partners');
+    expectStep('m1-padd');
+    route(RouteNames.AddSponsor);
+    expectStep('m1-pform');
+    action('sponsor.created');
+    expectStep('m1-pback');
+    interaction('club.section.closed');
+    expectStep('m1-fac');
+    route(RouteNames.FacilityList);
+    expectStep('m1-facadd');
+    route(RouteNames.FacilityForm);
+    expectStep('m1-ffname');
+    ['facility.name', 'facility.type', 'facility.address']
+      .forEach((field) => reportTourField(field, true));
     next();
-    expectStep('m1-fac-visit');
-    expect(tour.currentStep.targets).toEqual(['club.m.facilities']);
     next();
-    const ids = PRESIDENT_GUIDE.steps.map((step) => step.id);
-    expect(ids.indexOf(stepId())).toBeGreaterThan(ids.indexOf('m1-fac-visit'));
-    expect(['m1-padd', 'm1-pform', 'm1-facadd', 'm1-ff3']).not.toContain(stepId());
+    next();
+    expectStep('m1-ff2');
+    next();
+    expectStep('m1-ff3');
+    action('facility.created', { facilityId: 'f-9' });
+    expectStep('m1-fplan');
+    expect(tour.currentStep.targetsFor(tour)).toEqual(['facility.plan.f-9']);
+  });
+
+  it('l’installation offerte déjà là : on le dit AVANT le formulaire, et la partie se passe', () => {
+    start();
+    playPartOne();
+    act(() => { tour.skipSubMission(); });
+    expectStep('m1-fac');
+    route(RouteNames.FacilityList);
+    action('facility.free.taken');
+    expectStep('m1-fac-taken');
+    expect(tour.currentStep.targets).toEqual(['facility.add']);
+    expect(tour.currentStep.text).toMatch(/déjà là/);
+    act(() => { tour.skipSubMission(); });
+    expectStep('m1-poster');
+    expect(tour.missionStatus.president_m1).not.toBe('blocked');
+  });
+
+  it('le signal peut précéder l’écran : le résultat ne change pas', () => {
+    start();
+    playPartOne();
+    act(() => { tour.skipSubMission(); });
+    action('facility.free.taken');
+    expectStep('m1-fac-taken');
+    route(RouteNames.FacilityList);
+    expectStep('m1-fac-taken');
+  });
+
+  it('le partenaire offert déjà là : pareil, avec le geste qui ouvre la section', () => {
+    start();
+    playPartOne();
+    act(() => {
+      emitGuidanceInteraction('club.section.partners');
+      emitGuidanceAction('sponsor.free.taken');
+    });
+    expectStep('m1-partners-taken');
+    expect(tour.currentStep.text).toMatch(/déjà là/);
+    act(() => { tour.skipSubMission(); });
+    expectStep('m1-fac');
+  });
+
+  it('rien de pris : le dirigeant ne voit jamais les étapes « déjà là »', () => {
+    const ids = PRESIDENT_GUIDE.steps
+      .filter((step) => ['m1-fac-taken', 'm1-partners-taken'].includes(step.id));
+    expect(ids).toHaveLength(2);
+    ids.forEach((step) => {
+      expect(step.when({ created: {}, flags: {} })).toBe(false);
+      expect(step.lookOnly).toBe(true);
+      expect(step.passable).toBe(true);
+    });
   });
 });
 

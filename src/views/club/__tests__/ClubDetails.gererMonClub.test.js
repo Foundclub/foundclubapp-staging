@@ -5,6 +5,8 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ClubResultsBoard from '@/views/multisportClub/components/ClubResultsBoard';
 import WeekendResultsCard from '@/views/multisportClub/components/WeekendResultsCard';
 
+import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
+
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 
 import { leaveClub } from '@/services/auth/authService';
@@ -43,6 +45,12 @@ let mockIsDesktop = false;
 // une Ville offre CE club. Vide par defaut : les autres temoins n'ont pas d'encart.
 /** @type {any[]} */
 let mockEntitlementsSummary = [];
+/** @type {string} */
+let mockAccessLevel = 'FREE';
+jest.mock('@/domains/guidance/guidanceRuntime', () => ({
+  ...jest.requireActual('@/domains/guidance/guidanceRuntime'),
+  emitGuidanceAction: jest.fn(),
+}));
 // ST-VUES3-ORDI — la planche ordinateur du hub (`ClubResultsBoard`) lit le bilan de chaque
 // équipe : ces deux services importent le client HTTP, qui refuse de se charger sans `API_URL`.
 jest.mock('@/services/matchStats/matchStatsService', () => ({
@@ -180,6 +188,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
     // doublure le dit plutot que de le supposer.
     isClubMember: (/** @type {string} */ id) => mockHasClubAccess(id),
     refetchUserData: jest.fn(),
+    subscriptionAccessLevel: mockAccessLevel,
     USER_ROLES: { coach: 'coach', player: 'player', president: 'president' },
     userData: mockUserData,
   }),
@@ -538,6 +547,7 @@ const boutonDeConfirmation = (index = 0) => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockHasClubAccess.mockReturnValue(true);
+  mockAccessLevel = 'FREE';
   mockInstallations = [];
 
   mockUserData = {
@@ -1662,5 +1672,34 @@ describe('Guide Dirigeant·e, M2 et M3 : les ancres de la fiche', () => {
     expect(ancres(monter())).toEqual(expect.arrayContaining(['club.m.staff', 'club.m.teams']));
     expect(ancres(monter('staff'))).toEqual(expect.arrayContaining(['staff-add-coach']));
     expect(ancres(monter('teams'))).toEqual(expect.arrayContaining(['teams-create']));
+  });
+});
+
+describe('GUIDE-D-QUOTA-CLUB — le partenaire offert deja la, dit au guide', () => {
+  const ouvrir = (/** @type {any} */ libelle) => {
+    const arbre = monter();
+    act(() => { pressableAvecTexte(arbre, libelle).props.onPress(); });
+  };
+
+  it('club gratuit qui a deja un partenaire : le signal part', () => {
+    ouvrir('Partenaires, 2');
+    expect(emitGuidanceAction).toHaveBeenCalledWith('sponsor.free.taken');
+  });
+
+  it('club gratuit sans partenaire : aucun signal', () => {
+    mockClubQuery.data = { ...CLUB, sponsor: [] };
+    ouvrir('Partenaires, 0');
+    expect(emitGuidanceAction).not.toHaveBeenCalledWith('sponsor.free.taken');
+  });
+
+  it('avec l offre Club : aucun signal', () => {
+    mockAccessLevel = 'CLUB';
+    ouvrir('Partenaires, 2');
+    expect(emitGuidanceAction).not.toHaveBeenCalledWith('sponsor.free.taken');
+  });
+
+  it('une autre section : aucun signal', () => {
+    ouvrir('Sports, 1');
+    expect(emitGuidanceAction).not.toHaveBeenCalledWith('sponsor.free.taken');
   });
 });

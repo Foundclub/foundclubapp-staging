@@ -148,7 +148,7 @@ describe('une étape à lire ne laisse aucun toucher à sa cible', () => {
   });
 
   it.each([
-    'm1-info', 'm1-partners-visit', 'm1-fac-visit', 'm2-visit-add', 'm4-card2', 'b1-sum', 'b2-info',
+    'm1-info', 'm1-partners-taken', 'm1-fac-taken', 'm2-visit-add', 'm4-card2', 'b1-sum', 'b2-info',
   ])('%s est marquée à lire', (id) => {
     expect(step(id).lookOnly).toBe(true);
   });

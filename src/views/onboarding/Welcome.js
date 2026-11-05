@@ -149,7 +149,7 @@ function Welcome({ navigation }) {
       accentColor: Colors.success500,
       borderColor: withAlpha(Colors.neutral00, 0.14),
       bullets: [
-        t('welcome.subscription.free.bullet1', '1 équipe offerte'),
+        t('welcome.subscription.free.bullet1', '1 équipe, 1 installation, 1 partenaire offerts'),
         // « 1 match » est retire : un match EST un type d'evenement, l'annoncer
         // a part survendait le quota gratuit.
         t('welcome.subscription.free.bullet2', '1 événement et 1 annonce offerts'),

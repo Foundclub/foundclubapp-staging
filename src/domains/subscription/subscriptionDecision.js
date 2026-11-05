@@ -784,10 +784,10 @@ export const getSubscriptionPaywallContent = (decision) => {
         description: withRequiredPlan(
           i18next.t(
             'subscriptionDecision.paywall.facility.description',
-            'La gestion des installations du club est réservée a l offre Club.',
+            'La première installation est offerte. Les suivantes demandent l’offre Club.',
           ),
         ),
-        title: i18next.t('subscriptionDecision.paywall.facility.title', 'Installations réservées'),
+        title: i18next.t('subscriptionDecision.paywall.facility.title', 'Installations du club'),
       };
     case 'match-limit':
       return {
@@ -821,10 +821,10 @@ export const getSubscriptionPaywallContent = (decision) => {
         description: withRequiredPlan(
           i18next.t(
             'subscriptionDecision.paywall.sponsor.description',
-            'La gestion des sponsors du club est réservée a l offre Club.',
+            'Le premier partenaire est offert. Les suivants demandent l’offre Club.',
           ),
         ),
-        title: i18next.t('subscriptionDecision.paywall.sponsor.title', 'Sponsors reserves'),
+        title: i18next.t('subscriptionDecision.paywall.sponsor.title', 'Partenaires du club'),
       };
     case 'team-limit':
       return {
@@ -1226,6 +1226,18 @@ export const getSubscriptionRequiredScope = (decision) => (
  */
 export const hasActiveClubOffer = (subscriptionAccessLevel) => (
   subscriptionAccessLevel === 'CLUB' || subscriptionAccessLevel === 'CLUB_UNVERIFIED'
+);
+
+/**
+ * GUIDE-D-QUOTA-CLUB (Adel « 77- C », 05/11) : la place offerte d'un club (1 installation,
+ * 1 partenaire) est-elle déjà prise ? Le serveur reste seul juge ; ceci sert à prévenir AVANT de
+ * faire remplir un formulaire.
+ * @param {number} ownedCount - Ce que le club possède déjà, à lui.
+ * @param {string | null | undefined} subscriptionAccessLevel - Niveau d'offre de ce club.
+ * @returns {boolean} Vrai si le suivant demande l'offre Club.
+ */
+export const isClubFreeSlotTaken = (ownedCount, subscriptionAccessLevel) => (
+  ownedCount >= 1 && !hasActiveClubOffer(subscriptionAccessLevel)
 );
 
 /**
