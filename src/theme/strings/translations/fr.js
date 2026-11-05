@@ -22376,7 +22376,7 @@ export default {
       unlimited: 'Illimité',
     },
     entryPointHints: {
-      eventPublish: "Ton événement gratuit est déjà en ligne — débloque l'offre Équipe",
+      eventPublish: "Tes événements gratuits sont déjà en ligne — débloque l'offre Équipe",
       freeTeam: "Ta création gratuite est utilisée — débloque l'offre Équipe",
       matchPublish: "Ton match gratuit est déjà en ligne — débloque l'offre Équipe",
       recruitmentAdPublish: "Ton annonce gratuite est déjà en ligne — débloque l'offre Équipe",
@@ -22893,7 +22893,7 @@ export default {
     },
     exhaustedBody: {
       // eslint-disable-next-line max-len
-      eventPublish: "Ton événement gratuit est déjà en ligne. Passe à l'illimité : entraînements, matchs, tournois…",
+      eventPublish: "Tes événements gratuits sont déjà en ligne. Passe à l'illimité : entraînements, matchs, tournois…",
       freeTeam: "Ta 1ʳᵉ équipe reste active. Débloque l'offre Équipe pour en créer d'autres.",
       // eslint-disable-next-line max-len
       recruitmentAdPublish: "Ton annonce gratuite est déjà en ligne. Recrute sans limite avec l'offre Équipe.",
@@ -24129,7 +24129,7 @@ export default {
       fallback: 'Erreur',
     },
     events: {
-      emptyBody: 'Ton 1ᵉʳ événement est offert — entraînement, match…',
+      emptyBody: 'Tes premiers événements sont offerts — entraînement, match…',
       emptyCreate: 'Créer',
       emptyTitle: 'Aucun événement prévu',
     },
@@ -28027,7 +28027,7 @@ export default {
       },
       free: {
         bullet1: '1 équipe, 1 installation, 1 partenaire offerts',
-        bullet2: '1 événement et 1 annonce offerts',
+        bullet2: '2 événements et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",
         title: 'Commence sans payer',

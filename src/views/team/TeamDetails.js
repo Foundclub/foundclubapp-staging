@@ -3548,7 +3548,7 @@ function TeamDetails({ navigation, route }) {
                         <Text style={[Fonts.p4, Fonts.neutral400, { marginTop: 2 }]}>
                           {t(
                             'teamDetails.events.emptyBody',
-                            'Ton 1ᵉʳ événement est offert — entraînement, match…',
+                            'Tes premiers événements sont offerts — entraînement, match…',
                           )}
                         </Text>
                       </View>

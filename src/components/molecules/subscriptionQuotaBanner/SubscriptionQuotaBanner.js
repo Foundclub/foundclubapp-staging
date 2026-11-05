@@ -30,7 +30,7 @@ import { RouteNames } from '@/navigation/routeNames';
 const exhaustedBodyByQuotaType = (t) => ({
   EVENT_PUBLISH: t(
     'subscriptionQuotaBanner.exhaustedBody.eventPublish',
-    "Ton événement gratuit est déjà en ligne. Passe à l'illimité : "
+    "Tes événements gratuits sont déjà en ligne. Passe à l'illimité : "
       + 'entraînements, matchs, tournois…',
   ),
   FREE_TEAM: t(
