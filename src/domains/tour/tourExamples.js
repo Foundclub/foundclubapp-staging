@@ -116,7 +116,9 @@ export const examplePlanningEvents = ({ facility = null, now = new Date() } = {}
       facility,
       kind: 'event',
       startAt: start.toISOString(),
-      title: i18next.t('tourExamples.planning.title', 'Exemple · {{team}}', { team }),
+      title: i18next.t('tourExamples.planning.title', 'Exemple · {{team}}', {
+        team, ...SANS_ECHAPPEMENT,
+      }),
     };
   })
 );

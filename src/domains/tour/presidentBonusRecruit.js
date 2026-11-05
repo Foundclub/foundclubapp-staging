@@ -42,7 +42,7 @@ export const B4_MISSION = {
   gaugeStep: 0,
   id: 'president_b4',
   locked: false,
-  get title() { return t('missions.b4', 'Recruter'); },
+  get title() { return t('missionTitles.b4', 'Recruter'); },
 };
 
 export const B4_STEPS = [

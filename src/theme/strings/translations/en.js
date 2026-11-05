@@ -24417,8 +24417,8 @@ export default {
       'm1-deleg': 'Who accepts players into teams: only you, or each coach for their team.',
       'm1-edit': 'To personalize them, tap “Edit”.',
       'm1-email': 'The club’s contact email.',
-      'm1-fac': '③ Your facilities: stadium, gym, hall…',
-      'm1-fac-visit': '③ Your facilities and their schedule are created here, with the Club plan.',
+      'm1-fac': '3/5 · Your facilities: stadium, gym, hall…',
+      'm1-fac-visit': '3/5 · Your facilities and their schedule are created here, with the Club plan.',
       'm1-facadd': 'Add a facility.',
       'm1-fback': 'Then return to the club page.',
       'm1-ff2': 'Slot conflicts: to approve, or booked straight away. Capacity: teams at the same '
@@ -24432,14 +24432,14 @@ export default {
       'm1-ffname-guard': 'First give the facility a name.',
       'm1-fftype': 'Its type (required): stadium, gym, hall…',
       'm1-fftype-guard': 'First choose the facility type.',
-      'm1-fplan': '④ Your facility is created. Open its schedule.',
-      'm1-info': '① Your club card: logo, name, address, phone, email. This is what players see.',
+      'm1-fplan': '4/5 · Your facility is created. Open its schedule.',
+      'm1-info': '1/5 · Your club card: logo, name, address, phone, email. This is what players see.',
       'm1-logo': 'Your logo: tap it to choose an image from your phone.',
       'm1-name': 'The club name, as it appears everywhere. Correct it if needed.',
       'm1-padd': 'Add your first partner with “+”.',
-      'm1-parrows': 'The arrows change the period. Try → to see what’s next.',
-      'm1-partners': '② Your partners. Open “Our partners”.',
-      'm1-partners-visit': '② Your partners are added here, with the Club plan: their logo on '
+      'm1-parrows': 'The arrows change the period. Try the right one.',
+      'm1-partners': '2/5 · Your partners. Open “Our partners”.',
+      'm1-partners-visit': '2/5 · Your partners are added here, with the Club plan: their logo on '
         + 'your team cards and the club page.',
       'm1-pb1': 'Go back to your facilities.',
       'm1-pback': 'Go back to the club page.',
@@ -24460,7 +24460,7 @@ export default {
       'm1-phone': 'The club’s phone number.',
       'm1-pmodel': 'Choose a style: Crest or Family.',
       'm1-pmonth': 'In Month view, a dot marks each day the facility is in use.',
-      'm1-poster': '⑤ Last step: the “Join the club” poster.',
+      'm1-poster': '5/5 · Last step: the “Join the club” poster.',
       'm1-pposter': 'Here is your poster: the club name, your sport and the QR code leading to '
         + 'your club. You can change the style at any time.',
       'm1-psent': 'You can share it again, or continue when you’re done.',
@@ -24470,7 +24470,7 @@ export default {
       'm1-ptext': 'You can also adapt the poster’s text. Tap “Customize the text”.',
       'm1-pview': 'Change the view: Week, 3 days or Month. Tap “Month”.',
       'm1-save': 'Save.',
-      'm2-add': 'Tap “+” next to “Our coaches / instructors”.',
+      'm2-add': 'Tap the “+” next to your coaches.',
       'm2-back': 'Back in the app, on Staff. Return to your club page: tap the arrow, or swipe '
         + 'from the left edge.',
       'm2-fields': 'Their number (required) and first name. An account is created for this '
@@ -24478,7 +24478,7 @@ export default {
       'm2-fields-required': 'First give their number.',
       'm2-invite': 'Added to the club! Tap “Invite”: your messaging app opens with the message '
         + 'ready. Send it, then come back here.',
-      'm2-role': 'The “Coach / Instructor” role is already selected. Keep it.',
+      'm2-role': 'The right role is already selected. Keep it.',
       'm2-send': 'Tap “Send the invitation”: their account is created.',
       'm2-sms': 'Send the text from your messaging app, then come back here. It’s up to you to '
         + 'send it: the app doesn’t.',
@@ -24499,7 +24499,7 @@ export default {
       'm4-card2': 'Careful: this request is FAKE, this person doesn’t exist. A coach you add is '
         + 'already a member: only those who sign up by themselves arrive here.',
       'm4-filter': 'Requests to join the club arrive in the “Club” filter. Tap it.',
-      missions: {
+      missionTitles: {
         b1: 'Launch a dues campaign',
         b2: 'Your club’s channel',
         b3: 'Create a group',

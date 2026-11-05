@@ -23,14 +23,14 @@ export const BONUS_MESSAGES_MISSIONS = {
     gaugeStep: 0,
     id: 'president_b2',
     locked: false,
-    get title() { return t('missions.b2', 'Le canal de ton club'); },
+    get title() { return t('missionTitles.b2', 'Le canal de ton club'); },
   },
   b3: {
     estimatedSeconds: 25,
     gaugeStep: 0,
     id: 'president_b3',
     locked: false,
-    get title() { return t('missions.b3', 'Créer un groupe'); },
+    get title() { return t('missionTitles.b3', 'Créer un groupe'); },
   },
 };
 

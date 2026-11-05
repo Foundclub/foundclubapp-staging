@@ -24,7 +24,7 @@ export const M4_MISSIONS = [
     gaugeStep: 25,
     id: 'president_m4',
     locked: true,
-    get title() { return t('missions.m4', 'Gérer les demandes'); },
+    get title() { return t('missionTitles.m4', 'Gérer les demandes'); },
   },
 ];
 

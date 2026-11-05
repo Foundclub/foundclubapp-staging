@@ -25476,8 +25476,8 @@ export default {
         + 'pour son équipe.',
       'm1-edit': 'Pour les personnaliser, touche « Modifier ».',
       'm1-email': 'L’email de contact du club.',
-      'm1-fac': '③ Tes installations : stade, gymnase, salle…',
-      'm1-fac-visit': '③ Tes installations et leur planning se créent ici, avec l’offre Club.',
+      'm1-fac': '3/5 · Tes installations : stade, gymnase, salle…',
+      'm1-fac-visit': '3/5 · Tes installations et leur planning se créent ici, avec l’offre Club.',
       'm1-facadd': 'Ajoute une installation.',
       'm1-fback': 'Puis retourne sur la fiche du club.',
       'm1-ff2': 'Conflit de créneaux : à valider, ou réservé tout de suite. Capacité : équipes en '
@@ -25492,15 +25492,15 @@ export default {
       'm1-ffname-guard': 'Donne d’abord un nom à l’installation.',
       'm1-fftype': 'Son type (obligatoire) : stade, gymnase, salle…',
       'm1-fftype-guard': 'Choisis d’abord le type de l’installation.',
-      'm1-fplan': '④ Ton installation est créée. Ouvre son planning.',
-      'm1-info': '① La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que '
+      'm1-fplan': '4/5 · Ton installation est créée. Ouvre son planning.',
+      'm1-info': '1/5 · La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que '
         + 'voient les joueur·se·s.',
       'm1-logo': 'Ton logo : touche-le pour choisir une image de ton téléphone.',
       'm1-name': 'Le nom du club, tel qu’il apparaît partout. Corrige-le si besoin.',
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
-      'm1-parrows': 'Les flèches changent de période. Essaie → pour voir la suite.',
-      'm1-partners': '② Tes partenaires. Ouvre « Nos partenaires ».',
-      'm1-partners-visit': '② Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur '
+      'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
+      'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
+      'm1-partners-visit': '2/5 · Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur '
         + 'tes cartes équipe et la page du club.',
       'm1-pb1': 'Reviens à tes installations.',
       'm1-pback': 'Reviens sur la fiche du club.',
@@ -25522,7 +25522,7 @@ export default {
       'm1-phone': 'Le téléphone du club.',
       'm1-pmodel': 'Choisis un modèle : Écusson ou Famille.',
       'm1-pmonth': 'En vue Mois, un point signale chaque jour où l’installation est occupée.',
-      'm1-poster': '⑤ Dernière étape : l’affiche « Rejoindre le club ».',
+      'm1-poster': '5/5 · Dernière étape : l’affiche « Rejoindre le club ».',
       'm1-pposter': 'Voici ton affiche : le nom du club, ton sport et le QR code qui mène à ton '
         + 'club. Tu pourras changer de modèle à tout moment.',
       'm1-psent': 'Tu peux la partager encore, ou continuer quand c’est fait.',
@@ -25533,7 +25533,7 @@ export default {
         + '».',
       'm1-pview': 'Change d’affichage : Semaine, 3 jours ou Mois. Touche « Mois ».',
       'm1-save': 'Enregistre.',
-      'm2-add': 'Touche « + » à côté de « Nos coachs / profs ».',
+      'm2-add': 'Touche le « + » à côté de tes coachs.',
       'm2-back': 'De retour dans l’app, sur Staff. Reviens sur la fiche de ton club : touche la '
         + 'flèche, ou glisse ton doigt depuis le bord gauche.',
       'm2-fields': 'Son numéro (requis) et son prénom. Un compte est créé à ce numéro, et le SMS, '
@@ -25541,7 +25541,7 @@ export default {
       'm2-fields-required': 'Donne d’abord son numéro.',
       'm2-invite': 'Ajouté·e au club ! Touche « Inviter » : ta messagerie s’ouvre avec le message '
         + 'prêt. Envoie-le, puis reviens ici.',
-      'm2-role': 'Le rôle « Coach / Prof » est déjà choisi. Garde-le.',
+      'm2-role': 'Le bon rôle est déjà choisi. Garde-le.',
       'm2-send': 'Touche « Envoyer l’invitation » : son compte est créé.',
       'm2-sms': 'Envoie le SMS depuis ta messagerie, puis reviens ici. C’est à toi de l’envoyer : '
         + 'l’app ne le fait pas.',
@@ -25563,7 +25563,7 @@ export default {
         + 'que tu ajoutes est déjà membre : seuls ceux qui s’inscrivent seuls arrivent ici.',
       'm4-filter': 'Les demandes pour rejoindre le club arrivent dans le filtre « Club ». '
         + 'Touche-le.',
-      missions: {
+      missionTitles: {
         b1: 'Lancer une campagne de cotisation',
         b2: 'Le canal de ton club',
         b3: 'Créer un groupe',

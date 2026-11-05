@@ -21,7 +21,7 @@ export const M1_MISSION = {
   gaugeStep: 25,
   id: MISSION_ID,
   locked: true,
-  get title() { return t('missions.m1', 'Gérer ton club'); },
+  get title() { return t('missionTitles.m1', 'Gérer ton club'); },
 };
 
 /**
@@ -80,7 +80,7 @@ const PART_INFOS = [
     get text() {
       return t(
         'm1-info',
-        '① La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que voient les '
+        '1/5 · La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que voient les '
           + 'joueur·se·s.',
       );
     },
@@ -136,7 +136,7 @@ const PART_PARTNERS = [
     get text() {
       return t(
         'm1-partners-visit',
-        '② Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur tes cartes équipe et '
+        '2/5 · Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur tes cartes équipe et '
           + 'la page du club.',
       );
     },
@@ -151,7 +151,7 @@ const PART_PARTNERS = [
     resumeFrom: 'm1-partners',
     subMission: 'partners',
     targets: ['club.m.partners'],
-    get text() { return t('m1-partners', '② Tes partenaires. Ouvre « Nos partenaires ».'); },
+    get text() { return t('m1-partners', '2/5 · Tes partenaires. Ouvre « Nos partenaires ».'); },
     when: hasClubPlan,
   },
   {
@@ -214,7 +214,7 @@ const PART_FACILITIES = [
     get text() {
       return t(
         'm1-fac-visit',
-        '③ Tes installations et leur planning se créent ici, avec l’offre Club.',
+        '3/5 · Tes installations et leur planning se créent ici, avec l’offre Club.',
       );
     },
     when: noClubPlan,
@@ -229,7 +229,7 @@ const PART_FACILITIES = [
     resumeFrom: 'm1-fac',
     subMission: 'facilities',
     targets: ['club.m.facilities'],
-    get text() { return t('m1-fac', '③ Tes installations : stade, gymnase, salle…'); },
+    get text() { return t('m1-fac', '3/5 · Tes installations : stade, gymnase, salle…'); },
     when: hasClubPlan,
   },
   {
@@ -334,7 +334,7 @@ const PART_PLANNING = [
       const facilityId = context?.created?.['facility.created']?.facilityId;
       return facilityId ? [`facility.plan.${facilityId}`] : [];
     },
-    get text() { return t('m1-fplan', '④ Ton installation est créée. Ouvre son planning.'); },
+    get text() { return t('m1-fplan', '4/5 · Ton installation est créée. Ouvre son planning.'); },
     when: hasClubPlan,
   },
   planningStep({
@@ -380,7 +380,7 @@ const PART_PLANNING = [
     id: 'm1-parrows',
     targets: ['planning.head'],
     get text() {
-      return t('m1-parrows', 'Les flèches changent de période. Essaie → pour voir la suite.');
+      return t('m1-parrows', 'Les flèches changent de période. Essaie celle de droite.');
     },
   }),
   planningStep({
@@ -450,7 +450,7 @@ const PART_POSTER = [
     navTarget: clubHubTarget,
     resumeFrom: 'm1-poster',
     targets: ['club.poster'],
-    get text() { return t('m1-poster', '⑤ Dernière étape : l’affiche « Rejoindre le club ».'); },
+    get text() { return t('m1-poster', '5/5 · Dernière étape : l’affiche « Rejoindre le club ».'); },
   },
   {
     advanceOn: { key: 'poster.model', type: 'interaction' },

@@ -59,7 +59,7 @@ export const B1_MISSION = {
   gaugeStep: 0,
   id: 'president_b1',
   locked: false,
-  get title() { return t('missions.b1', 'Lancer une campagne de cotisation'); },
+  get title() { return t('missionTitles.b1', 'Lancer une campagne de cotisation'); },
 };
 
 export const B1_STEPS = [

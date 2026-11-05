@@ -33,7 +33,7 @@ export const B5_MISSION = {
   gaugeStep: 0,
   id: 'president_b5',
   locked: false,
-  get title() { return t('missions.b5', 'Rechercher, en un coup d’œil'); },
+  get title() { return t('missionTitles.b5', 'Rechercher, en un coup d’œil'); },
 };
 
 export const B5_STEPS = [

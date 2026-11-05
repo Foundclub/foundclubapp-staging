@@ -77,7 +77,7 @@ export const M2M3_MISSIONS = [
       get 'paywall.club-licensee-limit'() { return coachRefused(); },
       get 'paywall.club-roles-manage-required'() { return coachRefused(); },
     },
-    get title() { return t('missions.m2', 'Inviter tes coachs'); },
+    get title() { return t('missionTitles.m2', 'Inviter tes coachs'); },
   },
   {
     gaugeStep: 25,
@@ -87,7 +87,7 @@ export const M2M3_MISSIONS = [
       get 'paywall.club-tier-team-limit'() { return teamRefused(); },
       get 'paywall.team-limit'() { return teamRefused(); },
     },
-    get title() { return t('missions.m3', 'Créer tes équipes'); },
+    get title() { return t('missionTitles.m3', 'Créer tes équipes'); },
   },
 ];
 
@@ -116,7 +116,7 @@ const M2_STEPS = [
     missionId: 'president_m2',
     resumeFrom: 'm2-staff',
     targets: ['staff-add-coach'],
-    get text() { return t('m2-add', 'Touche « + » à côté de « Nos coachs / profs ».'); },
+    get text() { return t('m2-add', 'Touche le « + » à côté de tes coachs.'); },
     when: toInvite,
   }, COACH_PART),
   extendStep({
@@ -127,7 +127,7 @@ const M2_STEPS = [
     resumeFrom: 'm2-staff',
     targets: ['cf-role'],
     // « Coach / Prof » est déjà actif : le toucher ne changerait rien, on avance au bouton.
-    get text() { return t('m2-role', 'Le rôle « Coach / Prof » est déjà choisi. Garde-le.'); },
+    get text() { return t('m2-role', 'Le bon rôle est déjà choisi. Garde-le.'); },
     when: toInvite,
   }, COACH_PART),
   extendStep({
