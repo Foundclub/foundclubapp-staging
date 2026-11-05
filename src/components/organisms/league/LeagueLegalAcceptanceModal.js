@@ -6,7 +6,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -202,12 +202,19 @@ function LeagueLegalAcceptanceModal({
     }
   }, [isVisible]);
 
+  /** @type {import('react-native').ViewStyle[]} */
   const checkableWrapperStyle = [
     ApplicationStyle.borderWidth0,
     ApplicationStyle.backgroundColor.transparent,
     Spaces.padding[0],
     Alignments.rowReverse,
-    { flex: 0, width: '100%' },
+    {
+      // LEAGUE-CADRE-SITE : dans un navigateur, `flex: 0` vaut `flex-basis: 0%`, donc 0 px de haut.
+      ...(Platform.OS === 'web'
+        ? { flexBasis: 'auto', flexGrow: 0, flexShrink: 0 }
+        : { flex: 0 }),
+      width: '100%',
+    },
   ];
 
   const handleAccept = useCallback(() => {
