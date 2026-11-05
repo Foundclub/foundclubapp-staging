@@ -25437,6 +25437,7 @@ export default {
       'b5-fr': 'Matchs amicaux : trouve un adversaire, ou publie ton annonce.',
       'b5-pr': 'Profils : les joueur·se·s et coachs ouverts au recrutement.',
       'b5-re': 'Réservations : les créneaux de terrains à réserver près de toi.',
+      bonusDetail: 'Cotisation, canal, groupe, recrutement, recherche',
       'c-stop': 'Rien n’est parti. Une vraie campagne ajoute les membres concernés, et tu suis '
         + 'ensuite qui a payé dans les cotisations.',
       c1: 'Choisis le type : le nom se remplit tout seul. Puis la période, et Suivant.',

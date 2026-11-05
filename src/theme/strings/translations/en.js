@@ -24381,6 +24381,7 @@ export default {
       'b5-fr': 'Friendly matches: find an opponent, or post your ad.',
       'b5-pr': 'Profiles: players and coaches open to recruitment.',
       'b5-re': 'Bookings: pitch slots to book near you.',
+      bonusDetail: 'Dues, channel, group, recruiting, search',
       'c-stop': 'Nothing was sent. A real campaign adds the members concerned, and you then '
         + 'follow who has paid in the dues.',
       c1: 'Choose the type: the name fills in by itself. Then the period, and Next.',

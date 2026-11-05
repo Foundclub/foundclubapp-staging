@@ -684,7 +684,9 @@ export function TourProvider({ children }) {
     const { current } = tourStateRef;
     if (!current) return;
     clearSuccessTimer();
-    setTourState({ ...current, reward: null, status: 'paused' });
+    setTourState({
+      ...current, pausedRoute: lastRouteRef.current, reward: null, status: 'paused',
+    });
   }, []);
 
   const resumeTour = useCallback((/** @type {{ pop?: boolean }} */ options = {}) => {
@@ -697,14 +699,17 @@ export function TourProvider({ children }) {
     if (isGuideProfile(profile)) {
       // Après un relancement de l'app, une étape au milieu d'un tunnel reprend
       // au début du tunnel (le brouillon est perdu) : `resumeFrom`. Une pause
-      // dans la même séance revient à l'étape en pause (décision du chef, 27/10).
+      // dans la même séance revient à l'étape en pause (décision du chef, 27/10), sauf si l'écran
+      // a changé entre-temps : sa bulle parlerait d'un écran où l'on n'est plus (chef, 05/11).
       const step = profile.steps[current.stepIndex];
       // L1 GUIDE-ATTENTE : l'attente est finie (club accepté ou demande refusée)
       // ⇒ la mission repart de `resumeFrom`, comme après un relancement. Plus
       // généralement, une étape que la situation a rendue caduque pendant la
       // pause (demande d'adhésion faite entre-temps, GUIDE-FINITIONS-2 n° 2).
       const waitOver = !isStepAvailable(step, guideContext(current));
-      const resumeIndex = (current.restored || waitOver) && step?.resumeFrom
+      const hasLeftScreen = Boolean(current.pausedRoute)
+        && current.pausedRoute !== lastRouteRef.current;
+      const resumeIndex = (current.restored || waitOver || hasLeftScreen) && step?.resumeFrom
         ? indexOfStep(profile, step.resumeFrom)
         : -1;
       let index = resumeIndex === -1 ? current.stepIndex : resumeIndex;
@@ -713,7 +718,7 @@ export function TourProvider({ children }) {
         index = nextAvailableIndex(profile, index, guideContext(current));
       }
       const nextState = {
-        ...current, restored: false, status: 'active', stepIndex: index,
+        ...current, pausedRoute: null, restored: false, status: 'active', stepIndex: index,
       };
       historyRef.current = [{ index, route: null, stepRoute: current.stepRoute || null }];
       setTourState(nextState);

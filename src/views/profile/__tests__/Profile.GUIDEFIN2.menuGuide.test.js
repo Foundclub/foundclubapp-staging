@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Profile from '../Profile';
@@ -18,6 +18,17 @@ let mockTour;
 jest.mock('@/views/complexe/components/EntreeComplexe', () => () => null);
 
 jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+// Le vrai guide Dirigeant, même interrupteur éteint : sans lui, le catalogue rend l'ancien tour.
+jest.mock('@/domains/tour/tourCatalog', () => {
+  const actual = jest.requireActual('@/domains/tour/tourCatalog');
+  const { PRESIDENT_GUIDE } = jest.requireActual('@/domains/tour/presidentGuide');
+  return {
+    ...actual,
+    getTourProfile: (key) => (key === 'president' && mockTour?.profileKey === 'president'
+      ? PRESIDENT_GUIDE
+      : actual.getTourProfile(key)),
+  };
+});
 
 // MSG-SUPPORT (20/10) — « Écrire à l'assistance » ouvre MA conversation avec l'équipe
 // (le serveur la crée à la première ouverture) : doublure du service, pas de réseau.
@@ -228,6 +239,39 @@ const styleDe = (noeud) => Object.assign({}, ...[noeud.props.style].flat(5).filt
 const rangeeDe = (libelle) => arbre.root.findAllByType(TouchableOpacity)
   .find((n) => n.findAllByType(Text).some((x) => aplatirTexte(x.props.children) === libelle));
 
+// 360×640 (05/11) : le menu s'ouvrait sous le bord de l'écran, rien ne semblait bouger au toucher.
+describe('le menu du guide s’ouvre sous les yeux', () => {
+  const liste = () => arbre.root.findByType(ScrollView);
+  const grandit = () => act(() => { liste().props.onContentSizeChange(360, 1200); });
+
+  it('à l’ouverture, la liste défile une fois, une fois le menu posé', async () => {
+    mockTour = tourDe({ hasGuideHistory: true });
+    await monter();
+    const defile = liste().instance.scrollToEnd;
+    defile.mockClear();
+    await toucher('Guide entraîneur·e');
+    grandit();
+    expect(defile).toHaveBeenCalledTimes(1);
+    grandit();
+    expect(defile).toHaveBeenCalledTimes(1);
+  });
+
+  it('témoin : à la fermeture, et sans menu, elle ne bouge pas', async () => {
+    mockTour = tourDe({ hasGuideHistory: true });
+    await monter();
+    const defile = liste().instance.scrollToEnd;
+    defile.mockClear();
+    grandit();
+    expect(defile).not.toHaveBeenCalled();
+    await toucher('Guide entraîneur·e');
+    grandit();
+    defile.mockClear();
+    await toucher('Guide entraîneur·e');
+    grandit();
+    expect(defile).not.toHaveBeenCalled();
+  });
+});
+
 describe('N10 — le menu du guide se distingue des rangées', () => {
   it('ses choix sont en retrait, la rangée du guide non', async () => {
     mockTour = tourDe({ hasGuideHistory: true });
@@ -263,8 +307,18 @@ describe('L1 — Mon compte d’un dirigeant', () => {
   it('guide Dirigeant : pas de « Revoir », ce profil n’a pas de visite', async () => {
     mockTour = tourDe({ hasGuideHistory: true, isGuide: true, profileKey: 'president' });
     await monter({ name: 'President', type: 'president' });
-    await toucher('Guide entraîneur·e');
+    await toucher('Guide dirigeant·e');
     expect(rangeeDe('Revoir le guide sans rien créer')).toBeUndefined();
+  });
+
+  it('guide Dirigeant : « Faire un bonus » dit ses bonus, pas ceux du coach', async () => {
+    mockTour = tourDe({ hasGuideHistory: true, isGuide: true, profileKey: 'president' });
+    await monter({ name: 'President', type: 'president' });
+    await toucher('Guide dirigeant·e');
+    const textes = arbre.root.findAllByType(Text).map((x) => aplatirTexte(x.props.children));
+    expect(textes).toContain('Faire un bonus');
+    expect(textes).not.toContain('Voir qui vient, puis convoquer pour un match');
+    expect(textes.some((texte) => String(texte).includes('Cotisation'))).toBe(true);
   });
 
   it('témoin : dirigeant sans guide joué, pas de rangée pour l’instant', async () => {

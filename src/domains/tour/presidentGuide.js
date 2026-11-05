@@ -66,6 +66,9 @@ const FULL_SCREEN_TEXTS = {
 
 export const PRESIDENT_GUIDE = Object.freeze({
   accountLabelKey: 'profile.actions.presidentGuide',
+  get bonusDetail() {
+    return t('bonusDetail', 'Cotisation, canal, groupe, recrutement, recherche');
+  },
   bonusFromMission: B1_MISSION.id,
   /**
    * Situation au départ, figée pour tout le guide.

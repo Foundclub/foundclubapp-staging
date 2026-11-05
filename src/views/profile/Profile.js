@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -174,6 +175,9 @@ function Profile({ navigation, route }) {
   const tour = useTour();
   // GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : guide déjà lancé ⇒ petit menu.
   const [isGuideChoiceOpen, setIsGuideChoiceOpen] = useState(false);
+  // Petit écran : le menu s'ouvrait sous le bord. La liste y va, une fois le menu posé.
+  const listeRef = useRef(/** @type {any} */ (null));
+  const menuVientDOuvrirRef = useRef(false);
   const isGuideInProgress = Boolean(tour.isGuide && tour.isTourActive);
   // Le guide en cours, sinon celui du rôle. Coach devenu dirigeant en créant son club (« Moi »)
   // : il retrouve son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
@@ -1171,9 +1175,16 @@ function Profile({ navigation, route }) {
       icon: Images.flag,
       key: 'coachGuide',
       label: t(guideProfile?.accountLabelKey, 'Guide entraîneur·e'),
-      onPress: () => (tour.hasGuideHistory
-        ? setIsGuideChoiceOpen((ouvert) => !ouvert)
-        : tour.startTour(guideKey)),
+      onPress: () => {
+        if (!tour.hasGuideHistory) {
+          tour.startTour(guideKey);
+          return;
+        }
+        setIsGuideChoiceOpen((ouvert) => {
+          menuVientDOuvrirRef.current = !ouvert;
+          return !ouvert;
+        });
+      },
     }] : []),
     ...(guideKey && isGuideSupported() && isGuideChoiceOpen
       && tour.hasGuideHistory ? [
@@ -1202,7 +1213,7 @@ function Profile({ navigation, route }) {
           onPress: () => chooseGuide(() => tour.startTour(guideKey, {
             fromMission: guideProfile?.bonusFromMission,
           })),
-          value: t(
+          value: guideProfile?.bonusDetail || t(
             'profile.coachGuide.bonusDetail',
             'Voir qui vient, puis convoquer pour un match',
           ),
@@ -1491,6 +1502,12 @@ function Profile({ navigation, route }) {
           contentContainerStyle={{
             flexGrow: 1, gap: 18, paddingBottom: 8, paddingTop: 20,
           }}
+          onContentSizeChange={() => {
+            if (!menuVientDOuvrirRef.current) return;
+            menuVientDOuvrirRef.current = false;
+            listeRef.current?.scrollToEnd({ animated: true });
+          }}
+          ref={listeRef}
           refreshControl={(
             <RefreshControl
               onRefresh={() => {
