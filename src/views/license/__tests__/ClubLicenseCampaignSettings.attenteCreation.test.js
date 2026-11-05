@@ -386,8 +386,8 @@ describe('T03 — le modele a telecharger ne rallonge que ceux qui en posent un'
 });
 
 // Recette L10 : « Prix par défaut » restait à zéro, puis « Montant obligatoire ». Le champ partait
-// de la VALEUR « 0,00 » : un chiffre tapé au bout donnait « 0,002 », ramené à « 0,00 » par la limite
-// de 2 décimales. Le témoin tape comme un clavier : la valeur affichée, plus la touche.
+// de la VALEUR « 0,00 » : un chiffre tapé au bout donnait « 0,002 », ramené à « 0,00 » par la
+// limite de 2 décimales. Le témoin tape comme un clavier : la valeur affichée, plus la touche.
 describe('recette L10 — le montant saisi arrive jusqu à la validation', () => {
   afterEach(() => { jest.restoreAllMocks(); });
 
@@ -397,7 +397,10 @@ describe('recette L10 — le montant saisi arrive jusqu à la validation', () =>
     let arbre;
     await act(async () => {
       arbre = renderer.create(
-        <ClubLicenseCampaignSettings navigation={navigationFigee} route={{ params: { clubId: 'c' } }} />,
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
       );
     });
     await act(async () => { propsDuTunnel.onSkip(); });
