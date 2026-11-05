@@ -336,6 +336,17 @@ describe('Guide Dirigeant·e, B4 : « Publier » ne part pas pendant le bonus', 
     expect(signaux.map((signal) => signal.key)).not.toContain('ad.publish.example');
   });
 
+  it('récap incomplet : grisé hors guide, jamais pendant le bonus (la bulle fait toucher)', () => {
+    mockEtatCourant = { ...ETAT_UN_POSTE, team: null };
+    monterLeRecap();
+    expect(mockProprietesEtape[mockProprietesEtape.length - 1].isNextDisabled).toBe(true);
+    act(() => arbre.unmount());
+    arbre = null;
+    mockTour = { currentStep: { simulatesAd: true }, tourStatus: 'active' };
+    monterLeRecap();
+    expect(mockProprietesEtape[mockProprietesEtape.length - 1].isNextDisabled).toBe(false);
+  });
+
   it('hors guide : la vraie publication', async () => {
     monterLeRecap();
     await publierLeRecap();

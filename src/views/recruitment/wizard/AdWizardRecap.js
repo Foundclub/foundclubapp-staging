@@ -169,6 +169,7 @@ function AdWizardRecap({ navigation }) {
   const { showBanner } = useAppFeedback();
   const { dispatch, state } = useAdWizard();
   const { currentStep: tourStep, tourStatus } = useTour();
+  const isAdSimulated = tourStatus === 'active' && Boolean(tourStep?.simulatesAd);
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState('');
@@ -459,7 +460,7 @@ function AdWizardRecap({ navigation }) {
 
   const handleSubmit = async () => {
     // Guide Dirigeant·e, B4 : simulation, le geste est désarmé tant que le bonus est à l'écran.
-    if (tourStatus === 'active' && tourStep?.simulatesAd) {
+    if (isAdSimulated) {
       emitGuidanceInteraction('ad.publish.example');
       return;
     }
@@ -580,7 +581,7 @@ function AdWizardRecap({ navigation }) {
   return (
     <>
       <WizardStepLayout
-        isNextDisabled={!isReadyToSubmit || isSubmitting}
+        isNextDisabled={(!isReadyToSubmit && !isAdSimulated) || isSubmitting}
         isNextLoading={isSubmitting}
         nextLabel={t('adWizardRecap.submit.label', "Publier l'annonce")}
         onBack={() => navigation.goBack()}
