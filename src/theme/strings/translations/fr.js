@@ -1938,6 +1938,11 @@ export default {
 
     // Authorization errors
     FORBIDDEN: 'Accès refusé.',
+    // PAYE-LIMITE : refus du serveur sur un montant, lus par le filet global de l'app.
+    LICENSE_AMOUNT_EXCEEDS_REMAINING:
+      "Ce montant dépasse ce qu'il reste à payer sur cette cotisation.",
+    LICENSE_REFUND_EXCEEDS_REFUNDABLE:
+      "Ce montant dépasse ce qu'il reste à rembourser sur ce paiement.",
     // Repli quand un écran n'héberge pas encore la feuille de vente : le refus est bien un
     // refus d'abonnement, pas un refus de droits — les deux ne se disent pas pareil.
     SUBSCRIPTION_PERMISSION_DENIED: "Cette action nécessite une offre FoundClub active. Rends-toi dans Mon abonnement pour l'activer.",
@@ -3814,6 +3819,7 @@ export default {
   clubLicenseMemberDetail: {
     actionModal: {
       amountInvalid: 'Indique un montant supérieur à 0, sans dépasser ce qui peut être remboursé.',
+      amountInvalidPayment: 'Indique un montant supérieur à 0, sans dépasser le reste à payer.',
       amountPlaceholder: 'Montant en euros',
       noteOptional: 'Note optionnelle',
       paymentMethod: 'Moyen de paiement',

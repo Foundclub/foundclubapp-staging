@@ -1938,6 +1938,8 @@ export default {
     INVALID_FIELD_FORMAT: 'Invalid field format.',
     INVALID_FILE_TYPE: 'Invalid file type.',
     INVALID_TOKEN: 'Invalid authentication token.',
+    LICENSE_AMOUNT_EXCEEDS_REMAINING: 'This amount is more than what is left to pay on this fee.',
+    LICENSE_REFUND_EXCEEDS_REFUNDABLE: 'This amount is more than what can still be refunded on this payment.',
     MANAGER_TRAINER_CLUB_POLICY_ERROR: 'Violation of the club coaches and managers policy.',
     MANAGER_WITH_CLUB_POLICY_ERROR: 'Violation of the managers-with-club policy.',
     MEMBER_ROLE_INVALID_REQUEST: 'This role request is incomplete. Please try again.',
@@ -3494,6 +3496,7 @@ export default {
   clubLicenseMemberDetail: {
     actionModal: {
       amountInvalid: 'Enter an amount above 0, not more than what can be refunded.',
+      amountInvalidPayment: 'Enter an amount above 0, not more than what is left to pay.',
       amountPlaceholder: 'Amount in euros',
       noteOptional: 'Optional note',
       paymentMethod: 'Payment method',

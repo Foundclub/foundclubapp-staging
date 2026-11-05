@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { TextInput } from 'react-native';
+import { Alert, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ClubLicenseMemberDetail from '../ClubLicenseMemberDetail';
@@ -113,9 +113,9 @@ const cotisation = (extra = {}) => ({
 /** @type {any} */
 let arbre = null;
 
-const monter = () => {
+const monter = (extra = {}, params = {}) => {
   mockCotisationRequete = {
-    data: cotisation(), isError: false, isLoading: false, refetch: jest.fn(),
+    data: cotisation(extra), isError: false, isLoading: false, refetch: jest.fn(),
   };
   act(() => {
     arbre = renderer.create(
@@ -123,7 +123,7 @@ const monter = () => {
         navigation={{ goBack: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() }}
         route={{
           params: {
-            assignmentId: 'assign-BH11', campaignId: 'camp-BH11', canManageLicenses: true, scope: 'manager',
+            assignmentId: 'assign-BH11', campaignId: 'camp-BH11', canManageLicenses: true, scope: 'manager', ...params,
           },
         }}
       />,
@@ -193,5 +193,82 @@ describe('BH11 — la modale d action de la fiche membre', () => {
     const valider = dernierBouton('Valider');
     act(() => { valider.onPress(); valider.onPress(); });
     expect(mockMutationFigee.mutate).toHaveBeenCalledTimes(1);
+  });
+});
+
+// PAYE-LIMITE (04/11, ligne M0157) — « A payé » n a de sens que s il reste quelque chose
+// a encaisser. Le refus vit au serveur (admin, license-manual-payment-cap-PAYE-LIMITE) ;
+// l ecran ne propose pas un geste qui serait refuse, et dit pourquoi s il l est quand meme.
+describe('PAYE-LIMITE — « A payé » s arrete au reste a payer', () => {
+  const SOLDEE = {
+    amountDueCents: 25000,
+    amountPaidCents: 25000,
+    amountRemainingCents: 0,
+    payments: [{
+      amountCents: 25000, documentId: 'pay-1', method: 'cash', refundedAmountCents: 0, status: 'confirmed',
+    }],
+    status: 'paid',
+  };
+  const textes = () => arbre.root.findAllByType(Text).map((n) => [n.props.children].flat().join(''));
+
+  beforeEach(() => {
+    mockBoutons.length = 0;
+    mockMutationFigee.mutate.mockReset();
+  });
+
+  afterEach(() => {
+    if (arbre) act(() => arbre.unmount());
+    arbre = null;
+    jest.restoreAllMocks();
+  });
+
+  test('cotisation soldee : pas de bouton « A payé », « Rembourser » reste la', () => {
+    monter(SOLDEE);
+    expect(dernierBouton('A payé')).toBeUndefined();
+    expect(dernierBouton('Rembourser')).toBeDefined();
+  });
+
+  test('cotisation soldee : le lien de la liste n ouvre pas la fenetre d encaissement', () => {
+    monter(SOLDEE, { openPaymentModal: true });
+    expect(dernierBouton('Valider')).toBeUndefined();
+  });
+
+  test('montant superieur au reste : rien ne part, et le message parle du reste a payer', () => {
+    monter();
+    appuyer('A payé');
+    saisirMontant('70,01');
+    appuyer('Valider');
+    expect(mockMutationFigee.mutate).not.toHaveBeenCalled();
+    expect(textes()).toContain('Indique un montant supérieur à 0, sans dépasser le reste à payer.');
+  });
+
+  test('exactement le reste : le paiement part, et le champ n est pas pre-rempli', () => {
+    monter();
+    appuyer('A payé');
+    const champ = arbre.root.findAll((n) => n.type === TextInput && n.props.keyboardType === 'decimal-pad')[0];
+    expect(champ.props.value).toBe('');
+    saisirMontant('70');
+    appuyer('Valider');
+    expect(mockMutationFigee.mutate).toHaveBeenCalledTimes(1);
+    expect(mockMutationFigee.mutate.mock.calls[0][0]).toMatchObject({ amountCents: 7000 });
+  });
+
+  test('le serveur refuse quand meme (fiche perimee) : une seule alerte, celle du filet global', () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockMutationFigee.mutate.mockImplementation((_, options) => {
+      options.onError?.({ details: { code: 'LICENSE_AMOUNT_EXCEEDS_REMAINING' }, message: 'refus' });
+    });
+    monter();
+    appuyer('A payé');
+    saisirMontant('70');
+    appuyer('Valider');
+    expect(alerte).not.toHaveBeenCalled();
+  });
+
+  test('le remboursement garde son plafond et son pre-remplissage', () => {
+    monter(SOLDEE);
+    appuyer('Rembourser');
+    const champ = arbre.root.findAll((n) => n.type === TextInput && n.props.keyboardType === 'decimal-pad')[0];
+    expect(champ.props.value).toBe('250');
   });
 });
