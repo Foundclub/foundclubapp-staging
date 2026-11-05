@@ -79,6 +79,9 @@ import {
 
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');
+// Montant à éditer : zéro reste vide, le champ montre son indice. Une VALEUR « 0,00 » bloquait la
+// saisie : la touche tapée au bout tombe au-delà de 2 décimales (`normalizeAmountInput`).
+const centsToAmountInput = (value) => (value ? centsToEuro(value) : '');
 const parseIsoDateValue = (value) => {
   const normalized = String(value || '').trim();
   if (!normalized) return null;
@@ -420,7 +423,7 @@ const createDocumentRequestDraft = (documentRequest = {}) => ({
 });
 const referenceKey = (value) => String(value?.documentId || value?.id || value || '');
 const createPricingRuleDraft = (pricingRule = {}) => ({
-  amount: centsToEuro(pricingRule.amountCents || 0),
+  amount: centsToAmountInput(pricingRule.amountCents),
   categoryKey: referenceKey(pricingRule.category),
   isWaiver: pricingRule.isWaiver === true,
   label: pricingRule.label || '',
@@ -2124,7 +2127,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     || (campaignId ? todayIsoDateValue : getCurrentSeasonRange().endDate));
   const [internalNote, setInternalNote] = useState(campaign?.internalNote || '');
   const [currency, setCurrency] = useState(String(campaign?.currency || 'EUR').toUpperCase());
-  const [amount, setAmount] = useState(campaign?.defaultAmountCents ? centsToEuro(campaign.defaultAmountCents) : (eventCampaignDefaults?.amount || centsToEuro(0)));
+  const [amount, setAmount] = useState(campaign?.defaultAmountCents ? centsToEuro(campaign.defaultAmountCents) : (eventCampaignDefaults?.amount || ''));
   const [overdueAfterDate, setOverdueAfterDate] = useState(campaign?.dueDate || '');
   const [allowInstallments, setAllowInstallments] = useState(Boolean(campaign?.allowInstallments));
   const [installmentCount, setInstallmentCount] = useState(String(campaign?.installmentCount || 3));
@@ -2192,7 +2195,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       setSeasonLabelManuallyEdited(false);
       setStartDate(eventCampaignDefaults.startDate || todayIsoDateValue);
       setEndDate(eventCampaignDefaults.endDate || todayIsoDateValue);
-      setAmount(eventCampaignDefaults.amount || centsToEuro(0));
+      setAmount(eventCampaignDefaults.amount || '');
       setTargetConfig(eventCampaignDefaults.targetConfig);
       // BH11 P5-13 : les dates de l evenement sont des dates libres.
       setPeriodMode('custom');
@@ -2215,7 +2218,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       && campaign.endDate === currentSeason.endDate ? 'season' : 'custom');
     setInternalNote(campaign.internalNote || '');
     setCurrency(String(campaign.currency || 'EUR').toUpperCase());
-    setAmount(centsToEuro(campaign.defaultAmountCents || 0));
+    setAmount(centsToAmountInput(campaign.defaultAmountCents));
     setOverdueAfterDate(campaign.dueDate || '');
     setAllowInstallments(Boolean(campaign.allowInstallments));
     setInstallmentCount(String(campaign.installmentCount || 3));
