@@ -30,7 +30,6 @@ import {
   etiquetteDuPlanning,
   installationDuPlanning,
 } from '@/domains/collectivite/evenementDeLaVille';
-import TourTarget from '@/components/molecules/tour/TourTarget';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import formatViewerChildrenNames from '@/domains/event/viewerChildren';
 import { motDuBlocTouche } from '@/domains/facilityClosure/facilityClosureDisplay';
@@ -40,6 +39,7 @@ import useTheme from '@/theme/themeContext';
 
 import Hachures from '@/components/atoms/hachures/Hachures';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { etatDeLaDemande } from '@/utils/planning/installationPlanningViews';

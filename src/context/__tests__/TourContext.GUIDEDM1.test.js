@@ -284,7 +284,8 @@ describe('le catalogue de M1 ne promet rien que le code n’ait', () => {
       'm1-pmonth', 'm1-pb1', 'm1-fback', 'm1-poster', 'm1-pmodel', 'm1-pposter', 'm1-ptext',
       'm1-pfields', 'm1-pshare', 'm1-psent', 'm1-pclose',
     ]);
-    expect(M1.filter((step) => step.completesMission).map((step) => step.id)).toEqual(['m1-pclose']);
+    expect(M1.filter((step) => step.completesMission).map((step) => step.id))
+      .toEqual(['m1-pclose']);
   });
 
   it('④ vise la carte de L’installation créée, sinon aucune', () => {
