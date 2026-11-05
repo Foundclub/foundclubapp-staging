@@ -2165,7 +2165,8 @@ function ClubDetails({ navigation, route }) {
     }
     navigation.navigate(RouteNames.Club, params);
   }, [
-    clubId, clubSponsorsCount, getSubscriptionAccessLevelForClub, navigation, subscriptionAccessLevel,
+    clubId, clubSponsorsCount, getSubscriptionAccessLevelForClub, navigation,
+    subscriptionAccessLevel,
   ]);
 
   // ST-VUES3-ORDI — la colonne de droite de la planche ordinateur : les trois chiffres qui se
