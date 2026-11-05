@@ -25394,8 +25394,6 @@ export default {
       title: 'Mon profil',
     },
     president: {
-      'a-stop': 'Rien n’est parti. Une vraie annonce passe en ligne, et les candidatures arrivent '
-        + 'sur sa fiche, avec une affiche à partager.',
       a1: 'Tu recrutes des joueur·se·s ou un coach ?',
       a2: 'L’équipe qui recrute.',
       a3: 'Active le poste qui te manque (au foot, par exemple « Ailier gauche »), puis Suivant.',
@@ -25405,9 +25403,11 @@ export default {
       a5v: 'Cette annonce a une validation : choisis comment, puis Suivant.',
       a6: 'Facultatif : les idées à inclure t’aident. Tu peux passer.',
       a7: 'Relis ton annonce, puis touche le bouton : simulation, rien ne sera publié.',
+      'b1-camp': 'Touche « A payé » quand un membre règle en espèces, ou « Relancer » pour lui envoyer un rappel.',
       'b1-card': 'Les cotisations du club se gèrent ici. Ouvre-les.',
       'b1-new': 'Lance une campagne. C’est une simulation : rien ne sera envoyé.',
       'b1-new-setup': 'Touche « Continuer ». C’est une simulation : rien ne sera envoyé.',
+      'b1-open': 'Ta campagne est ouverte : les membres concernés sont ajoutés automatiquement.',
       'b1-sum': 'En un coup d’œil : ce qui est encaissé, ce qui reste, les retards.',
       'b1-sum-new': 'Ton club n’a pas encore de campagne : tout part d’ici. Ce résumé se remplira '
         + 'avec la première.',
@@ -25429,6 +25429,7 @@ export default {
         + 'Suivant.',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
         + 'depuis le même bouton. On continue.',
+      'b4-cand': 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et tu peux en faire une affiche à partager.',
       'b4-card': 'Ouvre « Recruter ». C’est une simulation : rien ne sera publié.',
       'b4-dock': 'Bonus suivant : recruter. Retourne à l’accueil.',
       'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
@@ -25438,8 +25439,6 @@ export default {
       'b5-pr': 'Profils : les joueur·se·s et coachs ouverts au recrutement.',
       'b5-re': 'Réservations : les créneaux de terrains à réserver près de toi.',
       bonusDetail: 'Cotisation, canal, groupe, recrutement, recherche',
-      'c-stop': 'Rien n’est parti. Une vraie campagne ajoute les membres concernés, et tu suis '
-        + 'ensuite qui a payé dans les cotisations.',
       c1: 'Choisis le type : le nom se remplit tout seul. Puis la période, et Suivant.',
       c2: 'Le montant par membre. Un tarif différent ? Ajoute une règle dans cet écran. Puis '
         + 'Suivant.',
@@ -25576,6 +25575,7 @@ export default {
         m4: 'Gérer les demandes',
       },
       next: 'Suivant',
+      ok: 'OK',
       open: {
         cta: "C'est parti",
         gauge: '{{count}} missions pour le mettre en route. Chacune fait monter ta jauge de 25 %.',
@@ -25652,6 +25652,30 @@ export default {
     },
   },
   tourExamples: {
+    ad: {
+      candidates: 'Candidatures (0)',
+      example: 'Exemple',
+      online: 'EN LIGNE',
+      position: 'Ailier gauche',
+    },
+    campaign: {
+      filterAll: 'Tous',
+      filterOverdue: 'En retard',
+      filterPartial: 'Partiel',
+      filterPending: 'En attente',
+      memberTeam: 'Senior',
+      name: 'Cotisation licences',
+      paid: 'Encaissé',
+      reminded: 'Une vraie relance partirait ici : rien n’est envoyé à ce membre.',
+      search: 'Rechercher un membre',
+      settled: 'Réglé',
+      statusPaid: 'Payé',
+      subtitle: 'Détail complet de la campagne {{name}}.',
+      tabMembers: 'Membres',
+      tabOverview: 'Vue d’ensemble',
+      tabPayments: 'Paiements',
+      title: 'Cotisations',
+    },
     match: {
       label: 'Exemple · contre US Monpeyroux',
       nonePlaced: 'Place au moins un joueur sur le terrain.',

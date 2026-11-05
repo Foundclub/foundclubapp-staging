@@ -24338,8 +24338,6 @@ export default {
       title: 'My profile',
     },
     president: {
-      'a-stop': 'Nothing was sent. A real ad goes online, and applications arrive on its page, '
-        + 'with a poster to share.',
       a1: 'Are you recruiting players or a coach?',
       a2: 'The team that’s recruiting.',
       a3: 'Turn on the position you’re missing (in football, “Left winger” for example), then '
@@ -24350,9 +24348,11 @@ export default {
       a5v: 'This ad needs approval: choose how, then Next.',
       a6: 'Optional: the suggested ideas can help. You can skip this.',
       a7: 'Read your ad, then tap the button: simulation, nothing will be published.',
+      'b1-camp': 'Tap “Paid” when a member pays in cash, or “Remind” to send them a reminder.',
       'b1-card': 'Your club’s dues are managed here. Open them.',
       'b1-new': 'Launch a campaign. It’s a simulation: nothing will be sent.',
       'b1-new-setup': 'Tap “Continue”. It’s a simulation: nothing will be sent.',
+      'b1-open': 'Your campaign is open: the members concerned are added automatically.',
       'b1-sum': 'At a glance: what’s collected, what’s left, what’s late.',
       'b1-sum-new': 'Your club has no campaign yet: it all starts here. This summary fills up '
         + 'with the first one.',
@@ -24373,6 +24373,7 @@ export default {
       'b3-sel': 'One member: a one-to-one chat. Several: a group. Tick at least 2, then Next.',
       'b3-whisper': 'That’s a one-to-one chat. For a group, tick at least 2 people from the same '
         + 'button. Let’s continue.',
+      'b4-cand': 'Your example ad is online. Applications arrive here, and you can turn it into a poster to share.',
       'b4-card': 'Open “Recruit”. It’s a simulation: nothing will be published.',
       'b4-dock': 'Next bonus: recruiting. Go back to the home screen.',
       'b5-back': 'One last look: go back to the home screen.',
@@ -24382,8 +24383,6 @@ export default {
       'b5-pr': 'Profiles: players and coaches open to recruitment.',
       'b5-re': 'Bookings: pitch slots to book near you.',
       bonusDetail: 'Dues, channel, group, recruiting, search',
-      'c-stop': 'Nothing was sent. A real campaign adds the members concerned, and you then '
-        + 'follow who has paid in the dues.',
       c1: 'Choose the type: the name fills in by itself. Then the period, and Next.',
       c2: 'The amount per member. A different rate? Add a rule on this screen. Then Next.',
       c3: 'Turn on the accepted payment methods. HelloAsso collects online once connected. Then '
@@ -24512,6 +24511,7 @@ export default {
         m4: 'Manage requests',
       },
       next: 'Next',
+      ok: 'OK',
       open: {
         cta: 'Let’s go',
         gauge: '{{count}} missions to get it going. Each one raises your gauge by 25%.',
@@ -24588,6 +24588,30 @@ export default {
     },
   },
   tourExamples: {
+    ad: {
+      candidates: 'Applications (0)',
+      example: 'Example',
+      online: 'ONLINE',
+      position: 'Left winger',
+    },
+    campaign: {
+      filterAll: 'All',
+      filterOverdue: 'Overdue',
+      filterPartial: 'Partial',
+      filterPending: 'Pending',
+      memberTeam: 'Senior',
+      name: 'Membership fees',
+      paid: 'Collected',
+      reminded: 'A real reminder would go out here: nothing is sent to this member.',
+      search: 'Search for a member',
+      settled: 'Settled',
+      statusPaid: 'Paid',
+      subtitle: 'Full details of the {{name}} campaign.',
+      tabMembers: 'Members',
+      tabOverview: 'Overview',
+      tabPayments: 'Payments',
+      title: 'Fees',
+    },
     match: {
       label: 'Example · vs US Monpeyroux',
       nonePlaced: 'Place at least one player on the pitch.',
