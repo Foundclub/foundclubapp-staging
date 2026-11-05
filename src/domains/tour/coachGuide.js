@@ -1181,7 +1181,7 @@ export const COACH_GUIDE = Object.freeze({
    * FIN-GUIDE, point 1 : déjà coach d'une équipe ⇒ mission 1 validée, au départ ou dès que le
    * profil relu le dit (demande acceptée, guide gardé sur le téléphone).
    * @param {any} ctx - Contexte du guide.
-   * @returns {{ goto: string; missionId: string } | null} Mission à valider, étape qui suit.
+   * @returns {{ flags: any; goto: string; missionId: string } | null} Mission, étape qui suit.
    */
   liveMission: (ctx) => (hadTeam(ctx) || trainsTeamInClub(ctx?.userData)
     ? { flags: { hadTeam: true }, goto: 'm2-card', missionId: 'coach_m1' }

@@ -366,7 +366,7 @@ function TourFullScreen({ kind }) {
           {t(`tourCatalog.${guideKey}.close.subtitle`, 'Bonne saison !')}
         </Text>
         <View style={{ rowGap: 8 }}>
-          {real.map((label) => (
+          {real.map((/** @type {string} */ label) => (
             <View
               key={String(label)}
               style={{
