@@ -588,6 +588,7 @@ function EventWizardLogistics({ navigation, route }) {
       isRecurrent: effectiveIsRecurrent,
       // DATESDABORD (26/10) : « Sauf vacances scolaires », et les périodes de la zone lues.
       exceptHolidays: Boolean(effectiveIsRecurrent && saufVacances && vacancesDeLaZone),
+      exceptHolidaysChoix: choixSaufVacances,
       holidayPeriods: effectiveIsRecurrent && saufVacances && vacancesDeLaZone
         ? vacancesDeLaZone.periods
         : [],
@@ -624,8 +625,9 @@ function EventWizardLogistics({ navigation, route }) {
   // l'installation dit à chaque horaire si le créneau est libre ou déjà pris ; une fermeture de la
   // Ville, ou une place pas encore lue, retient « Suivant ». Une adresse extérieure ne se juge pas.
   const [jugement, setJugement] = useState(
-    /** @type {{ attente: boolean, bloque: boolean, vacances: any }} */ ({
-      attente: false, bloque: false, vacances: null,
+    // eslint-disable-next-line max-len
+    /** @type {{ attente: boolean, bloque: boolean, saufVacancesDuCreneau: boolean, vacances: any }} */ ({
+      attente: false, bloque: false, saufVacancesDuCreneau: false, vacances: null,
     }),
   );
   const recevoirLeJugement = useCallback(
@@ -635,7 +637,13 @@ function EventWizardLogistics({ navigation, route }) {
   // 🗓️ DATESDABORD (26/10, Adel : « sauf vacances » sur la récurrence) — la case, quand la zone
   // de l'installation choisie est connue ; les séances des vacances ne partent pas (la série se
   // déplie dans l'app : `createReccurrentEventPayload`).
-  const [saufVacances, setSaufVacances] = useState(Boolean(state.exceptHolidays));
+  // VACANCES-REPETE (04/11, M0707) : sur un créneau « sauf vacances » de la Ville, elle arrive
+  // cochée ; le choix du coach, s'il y touche, l'emporte et tient au retour sur l'étape.
+  const [choixSaufVacances, setChoixSaufVacances] = useState(
+    /** @type {boolean | null} */ (state.exceptHolidaysChoix ?? null),
+  );
+  const saufVacances = choixSaufVacances
+    ?? (jugement.saufVacancesDuCreneau || Boolean(state.exceptHolidays));
   const vacancesDeLaZone = avecJugementPossible(state) ? jugement.vacances : null;
   const avecJugement = Boolean(state.facility) && showSingleDateTimeFields;
   const suivantRetenu = avecJugement && (jugement.attente || jugement.bloque);
@@ -691,7 +699,7 @@ function EventWizardLogistics({ navigation, route }) {
               sansRepetition={isTournament}
               vacances={vacancesDeLaZone ? {
                 actif: saufVacances,
-                onBasculer: () => setSaufVacances((avant) => !avant),
+                onBasculer: () => setChoixSaufVacances(!saufVacances),
                 zone: vacancesDeLaZone.label || '',
               } : null}
               // DATESDABORD (« 6- B ») : la place de l'installation choisie, juste sous les heures.

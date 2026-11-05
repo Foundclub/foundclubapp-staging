@@ -5,6 +5,10 @@ import {
   raisonDeRelireLaDecision,
   RELECTURES_APRES_DELAI_MS,
 } from '@/domains/collectivite/collectiviteDemandes';
+import { isoWeekdayOf } from '@/domains/seasonSlot/seasonSlotDisplay';
+import { vacancesDeLaPage } from '@/domains/seasonSlot/seasonSlotHolidays';
+
+import { previewFacilitySeasonSlot } from '@/services/seasonSlot/seasonSlotService';
 
 import {
   approveFacilityOverrideRequest,
@@ -18,7 +22,6 @@ import {
   getCollectiviteRequests,
   getFacilities,
   getFacility,
-  getFacilityPlanning,
   getOccupancy,
   getPendingFacilityOverrideRequests,
   getSentFacilityOverrideRequests,
@@ -106,19 +109,33 @@ export const useGetClubVilleFacilitiesWithSlots = (clubId, options = {}) => useQ
 });
 
 /**
- * 🗓️ DATESDABORD (26/10) — les vacances scolaires de la zone d'une installation sur une période (le
- * planning, `meta.holidays`, R17-QUAND-2) : la case « Sauf vacances scolaires » d'une série.
- * Lecture tolérante : une panne ne coûte que la case.
+ * 🗓️ DATESDABORD (26/10) — les vacances scolaires de la zone d'une installation sur une période
+ * (R17-QUAND-2) : la case « Sauf vacances scolaires » d'une série.
+ * VACANCES-REPETE (04/11, M0707) : lues dans l'aperçu des créneaux, même droit de lecture que le
+ * planning : le planning refuse plus de 31 jours, et une série plus longue n'avait aucune case.
+ * Les heures et le jour sont ceux que l'aperçu exige ; ils ne changent rien à la zone.
  * @param {string | null} facilityId - L'installation.
  * @param {{ from: string, to: string } | null} periode - AAAA-MM-JJ.
  * @returns {import('@tanstack/react-query').UseQueryResult<any>} La lecture.
  */
 export const useGetFacilityHolidays = (facilityId, periode) => useQuery({
   enabled: Boolean(facilityId && periode?.from && periode?.to),
-  queryFn: () => getFacilityPlanning(String(facilityId), /** @type {any} */ (periode)),
+  queryFn: () => previewFacilitySeasonSlot(String(facilityId), {
+    endTime: '09:00',
+    startTime: '08:00',
+    validFrom: periode?.from,
+    validUntil: periode?.to,
+    weekday: isoWeekdayOf(new Date(`${periode?.from}T12:00:00`)),
+  }),
   queryKey: ['planning', 'vacances', facilityId, periode?.from, periode?.to],
   retry: false,
-  select: (reponse) => reponse?.meta?.holidays || null,
+  // L'aperçu rend les vacances jusqu'à la fin de la saison : seules celles de la période comptent.
+  select: (reponse) => {
+    const zone = reponse?.data?.holidays;
+    return zone
+      ? { ...zone, periods: vacancesDeLaPage(zone, periode?.from || '', periode?.to || '') }
+      : null;
+  },
   staleTime: 300_000,
 });
 

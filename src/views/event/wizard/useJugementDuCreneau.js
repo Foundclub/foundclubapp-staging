@@ -1,8 +1,14 @@
 import { format } from 'date-fns';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { closureRefusalText } from '@/domains/facilityClosure/facilityClosureDisplay';
-import { clubSlotParts, creneauDeLaSeance } from '@/domains/seasonSlot/clubInstallations';
+import {
+  clubSlotParts,
+  creneauDeLaSeance,
+  creneauSaufVacancesDeLaSeance,
+} from '@/domains/seasonSlot/clubInstallations';
+import { periodesGardeesDuCreneau } from '@/domains/seasonSlot/seasonSlotHolidays';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import {
@@ -52,7 +58,8 @@ export const fenetreDeLaSeance = (jour, debut, fin) => {
  *   bloque: boolean, creneau: { dedans: boolean, texte: string } | null, enLecture: boolean,
  *   enPanne: boolean, fermeture: string | null,
  *   mairie: string | null, prevention: { pris: boolean, texte: string } | null,
- *   relire: () => any, vacances: { label?: string, periods: any[] } | null,
+ *   relire: () => any, saufVacancesDuCreneau: boolean,
+ *   vacances: { label?: string, periods: any[] } | null,
  * }} Ce que l'étape dit et ce qui bloque « Suivant ».
  */
 const useJugementDuCreneau = (etat, {
@@ -126,17 +133,33 @@ const useJugementDuCreneau = (etat, {
       to: format(new Date(etat?.recurrenceEndDate || date), 'yyyy-MM-dd'),
     }
     : null;
-  const lesVacances = useGetFacilityHolidays(installation, periode).data;
-  const vacances = installation && periode && Array.isArray(lesVacances?.periods)
-    && lesVacances.periods.length
-    ? lesVacances
+  const lectureDesVacances = useGetFacilityHolidays(installation, periode);
+  const lesVacances = lectureDesVacances.data;
+  // VACANCES-REPETE (04/11, M0707) : répéter sur un créneau « sauf vacances » de la Ville suit sa
+  // règle ; les périodes que le créneau garde (décochées par la Ville) ne retirent rien.
+  const creneauSaufVacances = gymnaseDeLaVille && periode && fenetre.start
+    ? creneauSaufVacancesDeLaSeance(gymnaseDeLaVille.clubSeasonSlots, {
+      start: fenetre.start,
+      teamId: etat?.team?.documentId || null,
+    })
     : null;
+  const avecPeriode = Boolean(installation && periode);
+  const vacances = useMemo(() => {
+    if (!avecPeriode || !Array.isArray(lesVacances?.periods)) return null;
+    const gardees = periodesGardeesDuCreneau(creneauSaufVacances, lesVacances.periods);
+    const periods = lesVacances.periods
+      .filter((/** @type {any} */ periode_) => !gardees.includes(periode_.key));
+    return periods.length ? { ...lesVacances, periods } : null;
+  }, [avecPeriode, creneauSaufVacances, lesVacances]);
+  // Une règle de la Ville à suivre ne se perd pas en silence : on attend de connaître ses dates.
+  const vacancesEnPanne = Boolean(avecPeriode && creneauSaufVacances && lectureDesVacances.isError);
+  const vacancesEnLecture = Boolean(avecPeriode && lectureDesVacances.isFetching);
 
   const lue = place.data?.data || null;
   const bloque = Boolean(installation && lue?.blocked);
-  const enPanne = Boolean(installation && place.isError);
+  const enPanne = Boolean(installation && (place.isError || vacancesEnPanne));
   const enLecture = Boolean(installation && !enPanne && (
-    !fenetre.start || !fenetre.end || place.isFetching || place.isLoading
+    !fenetre.start || !fenetre.end || place.isFetching || place.isLoading || vacancesEnLecture
   ));
   const occupation = installation && !bloque && !enLecture && !enPanne && lue
     ? { ...lue, isShared: Boolean(etat?.facilityShared) }
@@ -180,7 +203,11 @@ const useJugementDuCreneau = (etat, {
     fermeture: bloque ? closureRefusalText(t, lue?.closure || null, lue?.facility?.name) : null,
     mairie,
     prevention,
-    relire: () => place.refetch(),
+    relire: () => {
+      if (vacancesEnPanne) lectureDesVacances.refetch();
+      return place.refetch();
+    },
+    saufVacancesDuCreneau: Boolean(creneauSaufVacances),
     vacances,
   };
 };

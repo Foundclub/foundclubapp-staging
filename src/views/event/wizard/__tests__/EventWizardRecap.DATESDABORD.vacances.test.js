@@ -19,6 +19,8 @@ const mockDonneesDeLaSerie = /** @type {any[]} */ ([]);
 const mockCreerEnLot = jest.fn();
 const mockAnnoncerLaSerie = jest.fn();
 const mockAlerte = jest.fn();
+/** VACANCES-REPETE : la vraie série dépliée, au lieu de la doublure. */
+let mockVraieSerie = false;
 
 // COLL-R-APP-CREATION (13/10) — « la mairie décidera ? » a son propre témoin
 // (useMairieDecideALaCreation.CRA4.test.js) : ici, la mairie ne décide pas.
@@ -96,6 +98,10 @@ jest.mock('@/domains/event/useEvent', () => ({
   default: () => ({
     createReccurrentEventPayload: (/** @type {any} */ donnees) => {
       mockDonneesDeLaSerie.push(donnees);
+      if (mockVraieSerie) {
+        return jest.requireActual('@/domains/event/eventUseCases')
+          .createReccurrentEventPayload(donnees);
+      }
       return Array.from({ length: donnees?.exceptHolidays ? 8 : 12 }, () => ({
         name: '', recurrenceGroupId: 'serie-1', team: 'equipe-1',
       }));
@@ -268,6 +274,15 @@ describe('DATESDABORD — le récapitulatif d une série « sauf vacances scolai
   test('le récapitulatif dit les séances prévues et celles retirées pendant les vacances', () => {
     const textes = afficherLeRecap(ETAT);
     expect(textes).toContain('Sauf vacances scolaires : 4 séances retirées');
+  });
+
+  // VACANCES-REPETE (04/11, M0707) : le compte vient de la vraie série. Les mercredis du 13/10 au
+  // 22/12/2027 sont 11 ; un seul, le 27/10, tombe à la Toussaint.
+  test('la vraie série : le récapitulatif compte la séance retirée', () => {
+    mockVraieSerie = true;
+    const textes = afficherLeRecap(ETAT);
+    mockVraieSerie = false;
+    expect(textes).toContain('Sauf vacances scolaires : 1 séance retirée');
   });
 
   test('sans la case : pas de ligne « sauf vacances »', () => {
