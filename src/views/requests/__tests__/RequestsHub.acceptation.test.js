@@ -1,10 +1,14 @@
 import { QueryClient } from '@tanstack/react-query';
 import {
-  Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput,
+  Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, TextInput,
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
+
+import apiClient from '@/services/client';
 import {
+  acceptClubMembershipRequest,
   rejectClubMembershipRequest,
 } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { refuseFacilityOverrideRequest } from '@/services/facility/facilityService';
@@ -104,6 +108,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
     clubVerificationSummary: null,
     userData: {
       documentId: 'u-coach',
+      ...mockAuthExtra,
       trainedTeams: [{ documentId: 'team-1', name: 'U15 Maison' }],
     },
   }),
@@ -491,5 +496,135 @@ describe('Y04 — accepter une demande : la fenetre, la vitesse, et l echec', ()
     await act(async () => { await confirmer.onPress(); });
     expect(refuser).toHaveBeenCalledTimes(1);
     expect(refuser).toHaveBeenCalledWith(demande.meta.requestId);
+  });
+});
+
+/** Étape du guide lue par l'écran : l'exemple est porté par l'étape, pas par la route. */
+let mockTour = {};
+let mockAuthExtra = {};
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+
+describe('Guide Dirigeant·e, M4 : la demande d exemple, zéro écriture', () => {
+  const ETAPE = {
+    created: {},
+    currentStep: { id: 'm4-accept', tourExample: 'membershipRequest' },
+    tourStatus: 'active',
+  };
+  const carteExemple = (tree) => tree.root.findAll(
+    (node) => typeof node.props?.onPrimaryPress === 'function'
+      && node.props?.item?.id === 'tour-example-request',
+    { deep: true },
+  )[0];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockClientDeTest = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mockAuthExtra = { club: { documentId: 'club-1' } };
+  });
+
+  afterEach(async () => {
+    mockTour = {};
+    mockAuthExtra = {};
+    if (arbreMonte) {
+      await act(async () => { arbreMonte.unmount(); });
+      arbreMonte = null;
+    }
+    mockClientDeTest.clear();
+  });
+
+  it('hors de l étape du guide, aucun exemple', async () => {
+    const tree = await monterLeHub([DEMANDE_EQUIPE]);
+    expect(carteExemple(tree)).toBeUndefined();
+    await act(async () => { tree.unmount(); });
+    mockTour = { ...ETAPE, tourStatus: 'paused' };
+    const pause = await monterLeHub([]);
+    expect(carteExemple(pause)).toBeUndefined();
+  });
+
+  it('l étape l ajoute en tête au rendu, sans toucher aux demandes ni au cache', async () => {
+    mockTour = ETAPE;
+    const setQueryData = jest.spyOn(mockClientDeTest, 'setQueryData');
+    const tree = await monterLeHub([DEMANDE_EQUIPE]);
+    expect(carteExemple(tree)).toBeDefined();
+    const liste = tree.root.findAll(
+      (node) => Array.isArray(node.props?.data) && node.props?.keyExtractor,
+    )[0];
+    expect(liste.props.data.map((item) => item.id))
+      .toEqual(['tour-example-request', DEMANDE_EQUIPE.id]);
+    expect(setQueryData).not.toHaveBeenCalled();
+  });
+
+  it('accepter l exemple : aucun appel, le signal, et la fenêtre dit que c est faux', async () => {
+    mockTour = ETAPE;
+    const alert = jest.spyOn(Alert, 'alert');
+    const invalidate = jest.spyOn(mockClientDeTest, 'invalidateQueries');
+    const tree = await monterLeHub([]);
+    const carte = carteExemple(tree);
+    await act(async () => { await carte.props.onPrimaryPress(carte.props.item); });
+
+    expect(acceptClubMembershipRequest).not.toHaveBeenCalled();
+    expect(apiClient.post).not.toHaveBeenCalled();
+    expect(apiClient.put).not.toHaveBeenCalled();
+    expect(apiClient.delete).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(alert).not.toHaveBeenCalled();
+    expect(emitGuidanceAction).not.toHaveBeenCalled();
+    expect(emitGuidanceInteraction).toHaveBeenCalledWith('membershipRequest.accepted.example');
+    const rendu = collecterTexte(tree.toJSON()).join(' | ');
+    expect(rendu).toContain('personne n’a rejoint');
+    expect(rendu).toContain('« Équipe »');
+    alert.mockRestore();
+  });
+
+  it('refuser l exemple : aucun appel non plus, et la mission avance', async () => {
+    mockTour = ETAPE;
+    const tree = await monterLeHub([]);
+    const carte = carteExemple(tree);
+    await act(async () => { await carte.props.onSecondaryPress(carte.props.item); });
+    expect(rejectClubMembershipRequest).not.toHaveBeenCalled();
+    expect(apiClient.post).not.toHaveBeenCalled();
+    expect(emitGuidanceInteraction).toHaveBeenCalledWith('membershipRequest.accepted.example');
+  });
+
+  it('l étape finie, l exemple disparaît', async () => {
+    mockTour = ETAPE;
+    const tree = await monterLeHub([]);
+    expect(carteExemple(tree)).toBeDefined();
+    mockTour = {
+      created: {},
+      currentStep: { id: 'palier', kind: 'milestone' },
+      tourStatus: 'active',
+    };
+    await act(async () => {
+      tree.update(<RequestsHub navigation={navigation} route={{ params: {} }} />);
+    });
+    expect(carteExemple(tree)).toBeUndefined();
+  });
+
+  it('le coach de M2 s appelle Karim : l exemple prend le prénom de repli', async () => {
+    mockTour = { ...ETAPE, created: { 'staff.invited': { firstName: 'Karim' } } };
+    const tree = await monterLeHub([]);
+    expect(carteExemple(tree).props.item.meta.requesterName).toBe('Sami Benali');
+  });
+
+  it('les ancres du guide sont posées : filtre Club et carte d exemple', async () => {
+    mockTour = ETAPE;
+    const tree = await monterLeHub([]);
+    const ids = tree.root
+      .findAll((node) => typeof node.props?.id === 'string' && node.props?.children)
+      .map((node) => node.props.id);
+    expect(ids).toEqual(expect.arrayContaining(['rf-club', 'req-card']));
+  });
+
+  it('le filtre Club déjà actif : le toucher valide quand même l étape', async () => {
+    const tree = await monterLeHub([]);
+    const puce = () => tree.root.findAll(
+      (node) => node.props?.accessibilityLabel === 'Club' && node.props?.onPress,
+    )[0];
+    await act(async () => { puce().props.onPress(); });
+    expect(emitGuidanceInteraction).toHaveBeenCalledWith('requests.filter.club');
+    emitGuidanceInteraction.mockClear();
+    await act(async () => { puce().props.onPress(); });
+    expect(emitGuidanceInteraction).toHaveBeenCalledWith('requests.filter.club');
   });
 });

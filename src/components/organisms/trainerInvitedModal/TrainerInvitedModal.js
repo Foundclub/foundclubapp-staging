@@ -37,6 +37,7 @@ function TrainerInvitedModal({
         })
         : t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT })}
       titre={t('addCoach.alerts.success.title')}
+      tourTargetId="ok-sheet"
     />
   );
 }

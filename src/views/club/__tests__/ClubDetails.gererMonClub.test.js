@@ -1645,3 +1645,22 @@ describe('ClubDetails — retirer UN partenaire, jamais ses voisins (SPONSOR)', 
     expect(/** @type {any} */ (updateClub).mock.calls[0][0].clearSponsors).toBeFalsy();
   });
 });
+
+describe('Guide Dirigeant·e, M2 et M3 : les ancres de la fiche', () => {
+  /**
+   * Les ancres posées dans l'arbre.
+   * @param {any} arbre - Arbre rendu.
+   * @returns {string[]} Leurs ids.
+   */
+  const ancres = (arbre) => arbre.root
+    .findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.id === 'string' && noeud.props?.children
+    ))
+    .map((/** @type {any} */ noeud) => noeud.props.id);
+
+  it('les rangées sur le hub, les boutons sur leur sous-page', () => {
+    expect(ancres(monter())).toEqual(expect.arrayContaining(['club.m.staff', 'club.m.teams']));
+    expect(ancres(monter('staff'))).toEqual(expect.arrayContaining(['staff-add-coach']));
+    expect(ancres(monter('teams'))).toEqual(expect.arrayContaining(['teams-create']));
+  });
+});

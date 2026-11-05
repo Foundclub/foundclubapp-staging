@@ -27,6 +27,7 @@ import {
   REQUEST_HUB_FILTERS,
 } from '@/domains/requests/requestMappers';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { exampleMembershipRequest, isExampleRequest } from '@/domains/tour/tourExamples';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -34,6 +35,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import RequestFeedItem from '@/components/molecules/requestFeedItem/RequestFeedItem';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -77,6 +79,7 @@ import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError'
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
 import { useClubScope } from '@/context/ClubScopeContext';
+import { useTour } from '@/context/useTour';
 
 const isValidFilter = (value) => REQUEST_HUB_FILTERS.includes(value);
 
@@ -298,18 +301,31 @@ function RequestsHub({ navigation, route }) {
     emitGuidanceInteraction(`requests.filter.${activeFilter}`);
   }, [activeFilter]);
 
+  // Guide Dirigeant·e, M4 : l'exemple existe le temps de ses étapes, au rendu, hors du cache. La
+  // carte s'ouvre au doigt, sans paramètre de route : c'est l'étape qui le porte.
+  const {
+    created: tourCreated, currentStep: tourStep, tourStatus,
+  } = useTour();
+  const coachFirstName = tourCreated?.['staff.invited']?.firstName;
+  const exampleItem = useMemo(() => (
+    tourStatus === 'active' && tourStep?.tourExample === 'membershipRequest'
+      ? exampleMembershipRequest({ coachFirstName })
+      : null
+  ), [coachFirstName, tourStatus, tourStep?.tourExample]);
+
   const filteredItems = useMemo(() => {
     const items = requestsQuery?.data?.items || [];
     const settled = new Set(settledItemIds);
     const visibleItems = settled.size > 0
       ? items.filter((item) => !settled.has(item?.id))
       : items;
-    return (
-      activeFilter === 'all'
-        ? visibleItems
-        : visibleItems.filter((item) => item?.type === activeFilter)
-    );
-  }, [activeFilter, requestsQuery?.data?.items, settledItemIds]);
+    const shown = activeFilter === 'all'
+      ? visibleItems
+      : visibleItems.filter((item) => item?.type === activeFilter);
+    return exampleItem && (activeFilter === 'all' || activeFilter === 'club')
+      ? [exampleItem, ...shown]
+      : shown;
+  }, [activeFilter, exampleItem, requestsQuery?.data?.items, settledItemIds]);
 
   // Y04 — la liste des demandes deja tranchees ne grandit pas indefiniment :
   // des que la relecture les a fait disparaitre de la reponse, on les oublie.
@@ -512,6 +528,23 @@ function RequestsHub({ navigation, route }) {
     if (!itemId) return;
     const action = actionPosition === 'primary' ? item?.actions?.primary : item?.actions?.secondary;
     if (!action) return;
+
+    // Guide Dirigeant·e, M4 : aucun appel. La fenêtre dit ce que la bulle ne pourrait pas lui dire
+    // (un `Modal` passe devant le guide), et l'étape se valide au geste.
+    if (isExampleRequest(item)) {
+      if (action === 'accept') {
+        setCelebration({
+          message: t(
+            'requestsHub.example.accepted',
+            'C’était un exemple : personne n’a rejoint ton club. Les joueur·se·s qui veulent '
+              + 'rejoindre une équipe arrivent ici aussi, dans le filtre « Équipe ».',
+          ),
+          title: t('requestsHub.celebration.title', 'Félicitations'),
+        });
+      }
+      emitGuidanceInteraction('membershipRequest.accepted.example');
+      return;
+    }
 
     const requestId = item?.meta?.requestId;
     const eventId = item?.meta?.eventId;
@@ -1324,27 +1357,32 @@ function RequestsHub({ navigation, route }) {
           {filterChips.map((chip) => {
             const isActive = chip.key === activeFilter;
             return (
-              <TouchableOpacity
-                accessibilityLabel={chip.label}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-                key={chip.key}
-                onPress={() => setActiveFilter(chip.key)}
-                style={[
-                  ApplicationStyle.borderRadius24,
-                  ApplicationStyle.borderWidth1,
-                  Spaces.paddingHorizontal[12],
-                  Spaces.paddingVertical[8],
-                  {
-                    backgroundColor: isActive ? Colors.primary500 : 'rgba(11, 63, 80, 0.6)',
-                    borderColor: isActive ? Colors.primary500 : `${Colors.primary500}66`,
-                  },
-                ]}
-              >
-                <Text style={[Fonts.p3Bold, isActive ? Fonts.primary900 : Fonts.primary100]}>
-                  {chip.label}
-                </Text>
-              </TouchableOpacity>
+              <TourTarget id={`rf-${chip.key}`} key={chip.key}>
+                <TouchableOpacity
+                  accessibilityLabel={chip.label}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  onPress={() => {
+                    // Déjà actif, l'effet du filtre ne repart pas ; le guide attend le geste.
+                    if (isActive) emitGuidanceInteraction(`requests.filter.${chip.key}`);
+                    setActiveFilter(chip.key);
+                  }}
+                  style={[
+                    ApplicationStyle.borderRadius24,
+                    ApplicationStyle.borderWidth1,
+                    Spaces.paddingHorizontal[12],
+                    Spaces.paddingVertical[8],
+                    {
+                      backgroundColor: isActive ? Colors.primary500 : 'rgba(11, 63, 80, 0.6)',
+                      borderColor: isActive ? Colors.primary500 : `${Colors.primary500}66`,
+                    },
+                  ]}
+                >
+                  <Text style={[Fonts.p3Bold, isActive ? Fonts.primary900 : Fonts.primary100]}>
+                    {chip.label}
+                  </Text>
+                </TouchableOpacity>
+              </TourTarget>
             );
           })}
         </View>
@@ -1422,17 +1460,20 @@ function RequestsHub({ navigation, route }) {
               tintColor={Colors.primary500}
             />
           )}
-          renderItem={({ item }) => (
-            <RequestFeedItem
-              isBusy={processingItemId === item.id}
-              item={item}
-              onChatPress={setConversationItem}
-              onEventPress={handleEventPress}
-              onPrimaryPress={handlePrimaryPress}
-              onRequesterPress={handleRequesterPress}
-              onSecondaryPress={handleSecondaryPress}
-            />
-          )}
+          renderItem={({ item }) => {
+            const card = (
+              <RequestFeedItem
+                isBusy={processingItemId === item.id}
+                item={item}
+                onChatPress={setConversationItem}
+                onEventPress={handleEventPress}
+                onPrimaryPress={handlePrimaryPress}
+                onRequesterPress={handleRequesterPress}
+                onSecondaryPress={handleSecondaryPress}
+              />
+            );
+            return isExampleRequest(item) ? <TourTarget id="req-card">{card}</TourTarget> : card;
+          }}
           showsVerticalScrollIndicator={false}
         />
       </WithDataWrapper>

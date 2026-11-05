@@ -3671,20 +3671,24 @@ function ClubDetails({ navigation, route }) {
                   onPress={() => openClubHubSection('partners')}
                   value={String(clubSponsorsCount)}
                 />
-                <ClubHubRow
-                  divider
-                  icon={Images.shield}
-                  label={t('clubDetails.titles.teams')}
-                  onPress={() => openClubHubSection('teams')}
-                  value={String(sortedClubTeams.length)}
-                />
-                <ClubHubRow
-                  divider
-                  icon={Images.users}
-                  label={t('clubDetails.hub.rows.staff', 'Staff')}
-                  onPress={() => openClubHubSection('staff')}
-                  value={clubStaffSummary}
-                />
+                <TourTarget id="club.m.teams">
+                  <ClubHubRow
+                    divider
+                    icon={Images.shield}
+                    label={t('clubDetails.titles.teams')}
+                    onPress={() => openClubHubSection('teams')}
+                    value={String(sortedClubTeams.length)}
+                  />
+                </TourTarget>
+                <TourTarget id="club.m.staff">
+                  <ClubHubRow
+                    divider
+                    icon={Images.users}
+                    label={t('clubDetails.hub.rows.staff', 'Staff')}
+                    onPress={() => openClubHubSection('staff')}
+                    value={clubStaffSummary}
+                  />
+                </TourTarget>
                 {/* LOT RÔLES (2026-09-28) — donner un rôle à chaque membre :
                     joueur ou entraîneur d'une équipe, co-dirigeant. */}
                 <ClubHubRow
@@ -4204,27 +4208,32 @@ function ClubDetails({ navigation, route }) {
                       ))
                     }
                     {canCreateClubTeam ? (
-                      <TouchableOpacity
-                        accessibilityLabel={t('clubDetails.actions.createTeam', 'Créer une équipe')}
-                        accessibilityRole="button"
-                        onPress={handleCreateTeam}
-                        style={[
-                          Alignments.alignCenter,
-                          Alignments.justifyCenter,
-                          {
-                            backgroundColor: withAlpha(Colors.primary500, 0.06),
-                            borderColor: withAlpha(Colors.primary500, 0.4),
-                            borderRadius: 16,
-                            borderStyle: 'dashed',
-                            borderWidth: 1.5,
-                            minHeight: 52,
-                          },
-                        ]}
-                      >
-                        <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-                          {`+ ${t('clubDetails.actions.createTeam', 'Créer une équipe')}`}
-                        </Text>
-                      </TouchableOpacity>
+                      <TourTarget id="teams-create">
+                        <TouchableOpacity
+                          accessibilityLabel={t(
+                            'clubDetails.actions.createTeam',
+                            'Créer une équipe',
+                          )}
+                          accessibilityRole="button"
+                          onPress={handleCreateTeam}
+                          style={[
+                            Alignments.alignCenter,
+                            Alignments.justifyCenter,
+                            {
+                              backgroundColor: withAlpha(Colors.primary500, 0.06),
+                              borderColor: withAlpha(Colors.primary500, 0.4),
+                              borderRadius: 16,
+                              borderStyle: 'dashed',
+                              borderWidth: 1.5,
+                              minHeight: 52,
+                            },
+                          ]}
+                        >
+                          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                            {`+ ${t('clubDetails.actions.createTeam', 'Créer une équipe')}`}
+                          </Text>
+                        </TouchableOpacity>
+                      </TourTarget>
                     ) : null}
                   </View>
                 </View>
@@ -4274,16 +4283,18 @@ function ClubDetails({ navigation, route }) {
                         {t('clubDetails.titles.coachs')}
                       </Text>
                       {canEdit ? (
-                        <Button
-                          accessibilityLabel={t(
-                            'clubDetails.a11y.addCoach',
-                            'Ajouter un entraîneur',
-                          )}
-                          icon="plus"
-                          isOption
-                          onPress={handleCreateCoach}
-                          variant="Primary"
-                        />
+                        <TourTarget id="staff-add-coach">
+                          <Button
+                            accessibilityLabel={t(
+                              'clubDetails.a11y.addCoach',
+                              'Ajouter un entraîneur',
+                            )}
+                            icon="plus"
+                            isOption
+                            onPress={handleCreateCoach}
+                            variant="Primary"
+                          />
+                        </TourTarget>
                       ) : null}
                     </View>
                     <View
