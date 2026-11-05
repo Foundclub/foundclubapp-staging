@@ -492,8 +492,9 @@ describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', ()
 });
 
 // Recette L10 : « Prix par défaut » restait à zéro, puis « Montant obligatoire ». Le champ partait
-// de la VALEUR « 0,00 » : un chiffre tapé au bout donnait « 0,002 », ramené à « 0,00 » par la limite
-// de 2 décimales. Le témoin tape comme un clavier : la valeur affichée, plus la touche.
+// de la VALEUR « 0,00 » : un chiffre tapé au bout donnait « 0,002 », ramené à « 0,00 » par la
+// limite de 2 décimales. Le témoin tape comme un clavier : la valeur affichée, plus la touche.
+const C2 = { id: 'c2', simulatesCampaign: true };
 describe('recette L10 — le montant saisi arrive jusqu à la validation', () => {
   afterEach(() => {
     mockTourEtat = { currentStep: null, tourStatus: null };
@@ -502,8 +503,8 @@ describe('recette L10 — le montant saisi arrive jusqu à la validation', () =>
 
   it.each([
     ['hors du guide', { currentStep: null, tourStatus: null }],
-    ['guide actif', { currentStep: { id: 'c2', simulatesCampaign: true }, tourStatus: 'active' }],
-    ['guide en pause', { currentStep: { id: 'c2', simulatesCampaign: true }, tourStatus: 'paused' }],
+    ['guide actif', { currentStep: C2, tourStatus: 'active' }],
+    ['guide en pause', { currentStep: C2, tourStatus: 'paused' }],
   ])('%s : 250 reste dans le champ, et Suivant passe', async (_cas, etat) => {
     mockTourEtat = etat;
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -511,7 +512,10 @@ describe('recette L10 — le montant saisi arrive jusqu à la validation', () =>
     let arbre;
     await act(async () => {
       arbre = renderer.create(
-        <ClubLicenseCampaignSettings navigation={navigationFigee} route={{ params: { clubId: 'c' } }} />,
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
       );
     });
     await act(async () => { propsDuTunnel.onSkip(); });
