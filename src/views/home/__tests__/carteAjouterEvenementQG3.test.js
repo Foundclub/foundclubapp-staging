@@ -3,9 +3,10 @@ import { join } from 'path';
 
 import { getAddEventEntryLock } from '@/domains/subscription/subscriptionDecision';
 
-// QG3 (Adel, 05/11/2026) : la carte « Ajouter un événement » de l'accueil ouvre AUSSI les matchs. Elle
-// reste ouverte tant qu'il reste un match offert, même une fois les événements offerts épuisés. Le tunnel
-// dit alors, dès son entrée, que les événements sont épuisés (bandeau de `EventWizardType`).
+// QG3 (Adel, 05/11/2026) : la carte « Ajouter un événement » de l'accueil ouvre AUSSI les
+// matchs. Elle reste ouverte tant qu'il reste un match offert, même une fois les événements
+// offerts épuisés. Le tunnel dit alors, dès son entrée, que les événements sont épuisés
+// (bandeau de `EventWizardType`).
 // Exception : M3 du guide Entraîneur ne peut créer qu'un entraînement, elle garde le verrou.
 
 const ligne = (quotaType, limit, used) => ({
