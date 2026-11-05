@@ -916,10 +916,13 @@ function NewConversation({ navigation, route }) {
                   numberOfLines={1}
                   style={[stylesDuChoix.ligneSous, { color: withAlpha(Colors.neutral00, 0.58) }]}
                 >
-                  {`${resumeDesAutorisations(autorisations, t)} · ${t('newConversation.adminsCount', {
-                    count: adminsChoisis.length + 1,
-                    defaultValue: '{{count}} admins',
-                  })}`}
+                  {`${resumeDesAutorisations(autorisations, t)} · ${t(
+                    'newConversation.adminsCount',
+                    {
+                      count: adminsChoisis.length + 1,
+                      defaultValue: '{{count}} admins',
+                    },
+                  )}`}
                 </Text>
               </View>
               <GlyphIcon color={withAlpha(Colors.neutral00, 0.5)} name="chevronRight" size={20} />

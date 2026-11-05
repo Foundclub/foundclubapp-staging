@@ -1,9 +1,9 @@
 import { homeTarget } from '@/domains/tour/guideCommon';
 import t from '@/domains/tour/presidentText';
 
-import { RESERVATIONS_SUR_ACCUEIL } from '@/config/fonctionsMasquees';
-
 import { RouteNames } from '@/navigation/routeNames';
+
+import { RESERVATIONS_SUR_ACCUEIL } from '@/config/fonctionsMasquees';
 
 /**
  * Guide Dirigeant·e, bonus B5 « Rechercher » : une visite, aucun geste. L'accueil a 5 cases depuis

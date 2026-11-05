@@ -227,7 +227,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 
   it('LE TEMOIN : une fois publiee, c est l annonce qui est au premier plan', async () => {
     monterLeRecap();
-    await publierLeRecap();
+    await publier();
 
     const routes = pileDemandee();
     const dessus = routes[routes.length - 1];
@@ -241,7 +241,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 
   it('🔒 LE VERROU : le tunnel a QUITTE la pile, le retour n y ramene pas', async () => {
     monterLeRecap();
-    await publierLeRecap();
+    await publier();
 
     // C'est l'acquis D81. Sans ca, un seul « Retour » reposait le doigt sur
     // « Publier l'annonce » d'une annonce DEJA publiee — et on la publiait
@@ -252,7 +252,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 
   it('et ce retour mene a l accueil, jamais dans le vide', async () => {
     monterLeRecap();
-    await publierLeRecap();
+    await publier();
 
     // L'accueil reste SOUS l'annonce : la fleche retour a donc une
     // destination. Une pile reduite a la seule annonce laisserait un ecran
@@ -263,7 +263,7 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
   it('plusieurs postes : on atterrit sur la premiere annonce, jamais sur l accueil', async () => {
     mockEtatCourant = ETAT_DEUX_POSTES;
     monterLeRecap();
-    await publierLeRecap();
+    await publier();
 
     // Un brief a plusieurs postes cree UNE annonce PAR poste. Il n'existe pas
     // d'ecran « mes annonces » dans `routeNames.js` : on montre la premiere,
@@ -278,14 +278,14 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
     // comportement a un ecran vide.
     mockReponseCreation = { pasDIdentifiant: true };
     monterLeRecap();
-    await publierLeRecap();
+    await publier();
 
     expect(nomsDeLaPile()).toEqual(['HomeTab']);
   });
 
   it('sans parent, on retombe sur l ANCIEN comportement plutot que sur rien', async () => {
     monterLeRecap({ avecParent: false });
-    await publierLeRecap();
+    await publier();
 
     // Dernier recours : mieux vaut l'accueil qu'un ecran fige.
     expect(dernierRecours).toHaveBeenCalled();
