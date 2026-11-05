@@ -306,6 +306,10 @@ function RecrutementListContent({
   const [adsPourMoiTotal, setAdsPourMoiTotal] = useState(0);
   const [pourMoiPage, setPourMoiPage] = useState(1);
   const [pourMoiHasMore, setPourMoiHasMore] = useState(false);
+  // RECRUT-BOUCLE — après un échec, le bout de liste ne redemande plus rien : l'indicateur de
+  // chargement change la hauteur de la liste, qui redit « bout de liste » à chaque tour
+  // (172 appels en 10 s). Seul un geste relance : « Réessayer » ou tirer pour rafraîchir.
+  const [suiteEnPanne, setSuiteEnPanne] = useState(false);
 
   // Une page d'annonces. La recherche du serveur des qu'il y a quelque chose a
   // chercher (texte, filtres, public choisi, criteres « Pour moi ») ; la liste
@@ -359,6 +363,7 @@ function RecrutementListContent({
         append ? prev + base.annonces.length : base.annonces.length,
       ));
       if (page === 1) {
+        setSuiteEnPanne(false);
         setAdsPourMoi(pourMoi ? pourMoi.annonces : []);
         setAdsPourMoiTotal(pourMoi ? totalDuServeur(pourMoi.meta, pourMoi.annonces.length) : 0);
         setPourMoiHasMore(Number(pourMoi?.meta?.pagination?.pageCount) > 1);
@@ -370,6 +375,7 @@ function RecrutementListContent({
       setAdsPage(page);
     } catch (error) {
       console.error('[RecrutementListContent] Error fetching ads:', error);
+      setSuiteEnPanne(true);
       // Une page suivante ratee ne condamne pas les pages deja affichees :
       // seule la premiere page decide de l'etat « injoignable ».
       if (!append) {
@@ -405,8 +411,9 @@ function RecrutementListContent({
       setPourMoiPage(page);
     } catch (error) {
       // Comme la liste complete : une page suivante ratee ne condamne pas celles
-      // deja affichees. Elle reste « a charger » : un nouveau defilement la redemande.
+      // deja affichees. Elle reste « a charger » : « Réessayer », en bas, la redemande.
       console.error('[RecrutementListContent] Error fetching more ads for me:', error);
+      setSuiteEnPanne(true);
     } finally {
       setAdsLoadingMore(false);
     }
@@ -415,8 +422,7 @@ function RecrutementListContent({
   // Load more ads Handler
   // « Pour moi » d'abord, jusqu'au bout ; la liste complete (« Autres annonces »)
   // ensuite : la rubrique reste EN BAS.
-  const handleLoadMoreAds = useCallback(() => {
-    if (adsLoadingMore) return;
+  const chargerLaSuite = useCallback(() => {
     if (pourMoiActif && pourMoiHasMore) {
       chargerPlusPourMoi();
       return;
@@ -426,13 +432,17 @@ function RecrutementListContent({
     }
   }, [
     adsHasMore,
-    adsLoadingMore,
     adsPage,
     chargerPlusPourMoi,
     fetchAdsForPlayer,
     pourMoiActif,
     pourMoiHasMore,
   ]);
+
+  const handleLoadMoreAds = useCallback(() => {
+    if (adsLoadingMore || suiteEnPanne) return;
+    chargerLaSuite();
+  }, [adsLoadingMore, chargerLaSuite, suiteEnPanne]);
 
   // Fetch my applications (for players)
   const fetchMyApplications = useCallback(async (isRefresh = false) => {
@@ -1244,6 +1254,18 @@ function RecrutementListContent({
         <View style={[Spaces.paddingVertical[16], { alignItems: 'center' }]}>
           <ActivityIndicator color={Colors.primary500} />
         </View>
+      ) : null}
+      {suiteEnPanne && !adsLoadingMore && !adsUnreachable ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => {
+            setSuiteEnPanne(false);
+            chargerLaSuite();
+          }}
+          style={[Spaces.paddingVertical[16], { alignItems: 'center', minHeight: 44 }]}
+        >
+          <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>{UNREACHABLE_ACTION}</Text>
+        </TouchableOpacity>
       ) : null}
       {isAuthenticated ? (
         <CarteMePrevenir

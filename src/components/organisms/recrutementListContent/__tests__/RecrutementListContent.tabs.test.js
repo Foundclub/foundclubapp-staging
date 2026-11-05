@@ -659,6 +659,64 @@ describe('RecrutementListContent — serveur injoignable (L42)', () => {
     journalErreur.mockRestore();
   });
 
+  // RECRUT-BOUCLE (recette du train 4) : 172 appels en 10 s pour un écran ouvert.
+  // L'indicateur de chargement change la hauteur de la liste, qui redit « bout de liste ».
+  // Le rejeu dans un vrai navigateur : web/tests/components/recrutement-sans-boucle.spec.ts.
+  const appelsDePage = (/** @type {number} */ page) => mockGetRecruitmentAds.mock.calls
+    .filter(([params]) => params?.page === page).length;
+
+  it('RECRUT-BOUCLE : première page en panne, le bout de liste ne redemande rien', async () => {
+    const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetRecruitmentAds.mockRejectedValue(new Error('Network Error 500'));
+
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).toContain(PANNE);
+    const avant = mockGetRecruitmentAds.mock.calls.length;
+
+    await chargerPageSuivante(tree);
+    await chargerPageSuivante(tree);
+    await chargerPageSuivante(tree);
+    expect(mockGetRecruitmentAds.mock.calls.length - avant).toBe(0);
+
+    // « Réessayer » reste, et rouvre la suite si le serveur est revenu.
+    mockGetRecruitmentAds.mockResolvedValue({
+      data: [ANNONCE_PUBLIQUE],
+      meta: { pagination: { page: 1, pageCount: 3 } },
+    });
+    await appuyerSur(tree, 'Réessayer');
+    expect(mockGetRecruitmentAds.mock.calls.length - avant).toBe(1);
+    await chargerPageSuivante(tree);
+    expect(appelsDePage(2)).toBe(1);
+
+    journalErreur.mockRestore();
+  });
+
+  it('RECRUT-BOUCLE : page suivante en panne, un seul appel, puis « Réessayer »', async () => {
+    const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetRecruitmentAds.mockImplementation((/** @type {any} */ params) => (
+      params?.page === 1
+        ? Promise.resolve({
+          data: [ANNONCE_PUBLIQUE],
+          meta: { pagination: { page: 1, pageCount: 3 } },
+        })
+        : Promise.reject(new Error('Network Error 500'))
+    ));
+
+    const tree = await rendrePour(JOUEUR, { initialTab: 'annonces' });
+    expect(texteVisible(tree)).not.toContain('Réessayer');
+
+    await chargerPageSuivante(tree);
+    await chargerPageSuivante(tree);
+    await chargerPageSuivante(tree);
+    expect(appelsDePage(2)).toBe(1);
+    expect(texteVisible(tree)).toContain('Olympique Public');
+
+    await appuyerSur(tree, 'Réessayer');
+    expect(appelsDePage(2)).toBe(2);
+
+    journalErreur.mockRestore();
+  });
+
   it('page 2 en erreur : la page 1 reste, et un filtre vide n est pas une panne', async () => {
     const journalErreur = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockGetRecruitmentAds.mockImplementation((/** @type {any} */ params) => (
