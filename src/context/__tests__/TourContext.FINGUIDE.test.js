@@ -421,11 +421,13 @@ describe('G93 — sortie par la flèche, puis « Reprendre »', () => {
 });
 
 describe('G93 — la feuille d’achat de l’installation', () => {
-  it('le refus Offre Club se dit : la carte explique et donne la sortie', () => {
+  it('le refus Offre Club ne saute pas la mission : la sortie est dite par la bulle', () => {
     const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
     const mission = COACH_GUIDE.missions.find((candidate) => candidate.id === 'coach_m3');
-    expect(mission.refusals['paywall.facility-manage-required']).toMatch(/offre Club/);
-    expect(mission.refusals['paywall.facility-manage-required']).toMatch(/Extérieur/);
+    expect(mission.refusals['paywall.facility-manage-required']).toBeUndefined();
+    const place = COACH_GUIDE.steps.find((candidate) => candidate.id === 'm3-place');
+    expect(place.subGuides[0].refused.key).toBe('paywall.facility-manage-required');
+    expect(place.subGuides[0].refused.text()).toMatch(/Extérieur/);
   });
 
   it('le guide prévient avant de faire remplir le formulaire', () => {

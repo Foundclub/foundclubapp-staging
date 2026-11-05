@@ -1,6 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 
 import {
+  emitGuidanceRefusal,
   emitGuidanceRouteVisit,
   resetGuidanceRuntimeForTests,
 } from '@/domains/guidance/guidanceRuntime';
@@ -145,7 +146,7 @@ afterEach(() => {
 });
 
 describe('n° 1 — la cible passe sous l en-tête fixe', () => {
-  it.each(['m4-tab-ev', 'm4-tab-club'])('%s, sous le titre : ni voile, et le sens du geste', async (id) => {
+  it.each(['m4-tab-ev', 'm4-tab-club'])('%s, sous le titre : ni voile, le sens du geste', async (id) => {
     const current = step(id);
     mountSearch(current.targets[0]);
     tabRect = { ...TAB_HOME, y: 66 };
@@ -237,5 +238,72 @@ describe('n° 2 — sortie par la flèche : le guide ne s efface plus sans un mo
     await tick();
     expect(textsOf(tree).join(' ')).not.toContain('Tu as quitté le guide');
     expect(textsOf(tree).join(' ')).toContain('Ouvre l’onglet Événement');
+  });
+});
+
+describe('sous-guide d installation (recette r3, e4 à e11)', () => {
+  const FORM = {
+    height: 120, width: 361, x: 16, y: 120,
+  };
+  let nameRect;
+  const mountForm = () => {
+    nameRect = FORM;
+    registerTourTarget('facility.name', (done) => done(nameRect));
+    registerTourTarget('facility.address', (done) => done({ ...FORM, y: 260 }));
+    registerTourTarget('facility.create', (done) => done({ ...FORM, height: 56, y: 700 }));
+  };
+  const pressNext = async (tree) => {
+    const next = tree.root.findAll((node) => node.props.testID === 'tour.next'
+      && typeof node.props.onPress === 'function')[0];
+    await act(async () => { next.props.onPress(); });
+    await tick();
+  };
+
+  it('le premier champ sort par le haut : la bulle en cours reste, rien ne repart', async () => {
+    mountForm();
+    mockTour = activeTour(step('m3-place'));
+    const tree = await renderLayer();
+    await pressNext(tree);
+    await pressNext(tree);
+    expect(textsOf(tree).join(' ')).toContain('Adresse obligatoire');
+    nameRect = { ...FORM, y: -400 };
+    await tick();
+    expect(textsOf(tree).join(' ')).toContain('Adresse obligatoire');
+    expect(textsOf(tree).join(' ')).not.toContain('Choisis ton lieu');
+    nameRect = FORM;
+    await tick();
+    expect(textsOf(tree).join(' ')).toContain('Adresse obligatoire');
+  });
+
+  it('la 1re bulle dit l obstacle avant de faire remplir', async () => {
+    mountForm();
+    mockTour = activeTour(step('m3-place'));
+    const tree = await renderLayer();
+    expect(textsOf(tree).join(' ')).toContain('offre Club');
+  });
+
+  it('achat refusé : la bulle donne la sortie, sur l offre et après « Plus tard »', async () => {
+    mountForm();
+    mockTour = activeTour(step('m3-place'));
+    const tree = await renderLayer();
+    await act(async () => { emitGuidanceRefusal('paywall.facility-manage-required'); });
+    await tick();
+    const texts = textsOf(tree).join(' ');
+    expect(texts).toContain('Annuler');
+    expect(texts).toContain('Extérieur');
+    expect(texts).not.toContain('Tout est bon');
+    expect(tree.root.findAll((node) => node.props.testID === 'tour.next')).toHaveLength(0);
+    await tick(2000);
+    expect(textsOf(tree).join(' ')).toContain('Annuler');
+  });
+
+  it('témoin : un autre refus ne change pas la bulle', async () => {
+    mountForm();
+    mockTour = activeTour(step('m3-place'));
+    const tree = await renderLayer();
+    await act(async () => { emitGuidanceRefusal('paywall.event-limit'); });
+    await tick();
+    expect(textsOf(tree).join(' ')).toContain('offre Club');
+    expect(textsOf(tree).join(' ')).not.toContain('Annuler');
   });
 });

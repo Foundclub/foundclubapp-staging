@@ -3,6 +3,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Dimensions,
   Image,
   Keyboard,
   Platform,
@@ -102,6 +103,8 @@ import Input, {
  * Autocomplete select component.
  * @inheritdoc
  */
+// G93 : hauteur au-dessus du clavier sous laquelle le pied ne laisse plus voir champ et résultats.
+const MIN_ROOM_WITH_FOOTER = 420;
 const SELECT_SHEET_TARGET = 'select.sheet';
 const SELECT_SHEET_RECT = {
   height: 1, width: 1, x: 0, y: 0,
@@ -137,6 +140,25 @@ const AutocompleteSelect = forwardRef(
 
     // local states
     const [areValuesVisible, setAreValuesVisible] = useState(false);
+
+    // G93 (360×640, r3 a20) : titre et pied sont fixes, le clavier ne laissait que 11 px au champ
+    // et aux résultats. Le pied laisse sa place, et revient quand un résultat replie le clavier.
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    useEffect(() => {
+      if (!areValuesVisible || !props.isSearchable) return undefined;
+      const moment = Platform.OS === 'ios' ? 'Will' : 'Did';
+      const shown = Keyboard.addListener(`keyboard${moment}Show`, (event) => {
+        setKeyboardHeight(event?.endCoordinates?.height || 0);
+      });
+      const hidden = Keyboard.addListener(`keyboard${moment}Hide`, () => setKeyboardHeight(0));
+      return () => {
+        shown.remove();
+        hidden.remove();
+        setKeyboardHeight(0);
+      };
+    }, [areValuesVisible, props.isSearchable]);
+    const isFooterDropped = keyboardHeight > 0
+      && Dimensions.get('window').height - keyboardHeight < MIN_ROOM_WITH_FOOTER;
     const [selectedOptions, setSelectedOptions] = useState(
       /** @type {Option[] | Option | undefined} */
       (props.isMulti ? [] : undefined),
@@ -287,6 +309,7 @@ const AutocompleteSelect = forwardRef(
       } else {
         setSelectedOptions((current) => (current === option ? undefined : option));
       }
+      if (isFooterDropped) Keyboard.dismiss();
     };
 
     const handleCloseModal = (persistSelection = true) => {
@@ -622,7 +645,7 @@ const AutocompleteSelect = forwardRef(
         <BottomModal
           androidKeyboardBehavior={props.isSearchable ? 'extend' : undefined}
           close={handleCloseModal}
-          footerComponent={modalFooter}
+          footerComponent={isFooterDropped ? undefined : modalFooter}
           headerComponent={(
             <View style={[Alignments.row, Alignments.alignCenter]}>
               <Text

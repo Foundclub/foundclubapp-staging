@@ -437,7 +437,8 @@ describe('guide Entraîneur — bonus (TUTOE-2)', () => {
     expect(byId('m3-when').subGuides[0].bubbles.map(([target]) => target)).toEqual([
       'repeat.frequency', 'repeat.interval', 'repeat.days', 'repeat.end', 'repeat.apply',
     ]);
-    expect(byId('m3-place').subGuides[0].bubbles).toHaveLength(6);
+    // G93 : 7, la 1re dit l'obstacle (offre Club) avant de faire remplir.
+    expect(byId('m3-place').subGuides[0].bubbles).toHaveLength(7);
   });
 });
 

@@ -194,8 +194,6 @@ const canAskTeamChoice = (ctx) => !hadTeam(ctx) && !hasTeamNow(ctx) && hasClubNo
 // Raisons des quotas, dites par le guide (la feuille de l'offre dit le reste).
 const teamQuota = () => t('refusal.teamQuota', 'Ton offre gratuite compte déjà toutes ses équipes : '
   + 'une nouvelle équipe demande l’offre Équipe. Rien n’a été créé.');
-const facilityPlan = () => t('refusal.facilityPlan', 'Créer une installation demande l’offre Club : '
-  + 'rien n’a été créé. Reviens en arrière et choisis « Extérieur » pour ta séance.');
 const eventQuota = () => t('refusal.eventQuota', 'Ton offre gratuite compte déjà tous ses événements : '
   + 'un nouvel événement demande l’offre Équipe. Rien n’a été créé.');
 
@@ -240,8 +238,6 @@ const MISSIONS = [
     needs: ['coach_m1'],
     refusals: {
       get 'paywall.event-limit'() { return eventQuota(); },
-      // G93 : le dirigeant en offre gratuite, au bout du formulaire d'installation.
-      get 'paywall.facility-manage-required'() { return facilityPlan(); },
       get 'paywall.match-limit'() { return eventQuota(); },
     },
     get title() { return t('missions.m3', "Programmer l'entraînement de la semaine"); },
@@ -785,8 +781,8 @@ const STEPS = [
           + 'reviens en arrière et choisis « Extérieur ».')],
         ['facility.name', () => t('m3-fac-1', 'Donne un nom à l’installation et choisis son type '
           + '(obligatoire).')],
-        ['facility.address', () => t('m3-fac-2', 'L’adresse exacte : tes joueur·se·s pourront '
-          + 'l’ouvrir dans leur GPS.')],
+        ['facility.address', () => t('m3-fac-2', 'Adresse obligatoire : choisis-la dans la liste. '
+          + 'Tes joueur·se·s l’ouvriront dans leur GPS.')],
         ['facility.conflict', () => t('m3-fac-3', 'Si deux équipes réservent le même créneau : '
           + '« Demande à valider », un dirigeant tranche ; « Autoriser et notifier », c’est '
           + 'réservé tout de suite et le bureau est prévenu.')],
@@ -797,6 +793,12 @@ const STEPS = [
         ['facility.create', () => t('m3-fac-6', 'Tout est bon ? Crée-la : elle sera '
           + 'sélectionnée pour ta séance.')],
       ],
+      // G93 : offre refusée, la mission continue par « Extérieur » ; la bulle donne le chemin.
+      refused: {
+        key: 'paywall.facility-manage-required',
+        text: () => t('m3-fac-refused', 'Sans offre Club, rien n’est créé. Ferme cette offre, '
+          + 'touche « Annuler », puis choisis « Extérieur ».'),
+      },
     }],
     targets: WIZARD,
     get text() { return t('m3-place-4', 'Choisis ton lieu, puis Suivant.'); },

@@ -131,7 +131,9 @@ const scaledFont = (font, scale, lineHeight) => ({
 const resolveVariant = (step, rects, windowHeight, stepTargets = step?.targets || []) => {
   const sub = (step?.subGuides || []).find((/** @type {any} */ guide) => {
     const rect = rects[guide.anchor];
-    return Boolean(rect) && rect.y < windowHeight && rect.y + rect.height > 0;
+    // G93 : seule une feuille fermée est sous l'écran. Le 1er champ d'un formulaire sort par le
+    // haut quand on descend : le sous-guide continue, sinon il repartait à sa 1re bulle.
+    return Boolean(rect) && rect.y < windowHeight;
   });
   if (sub) return { sub, targets: [], text: '' };
   const variant = (step?.variants || [])
@@ -213,7 +215,10 @@ function TourGuideLayer() {
   // l'écran qui a ouvert l'étape, le voile tombe pour qu'on puisse corriger.
   const [route, setRoute] = useState(/** @type {string | null} */ (null));
   const routeRef = useRef(/** @type {string | null} */ (null));
+  // G93 : le dernier refus de l'écran (offre), pour la bulle `refused` d'un sous-guide.
+  const [refusalKey, setRefusalKey] = useState(/** @type {string | null} */ (null));
   useEffect(() => subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+    if (signal?.kind === 'refusal') setRefusalKey(signal.key);
     if (signal?.kind !== 'route') return;
     routeRef.current = signal.key;
     setRoute(signal.key);
@@ -322,13 +327,18 @@ function TourGuideLayer() {
   const sheetGuide = resolved.sub || null;
   const sheetAnchor = sheetGuide?.anchor || null;
   // La feuille s'ouvre ou se ferme : ses bulles repartent de la première.
-  useEffect(() => { setSheetIndex(0); }, [sheetAnchor]);
+  useEffect(() => {
+    setSheetIndex(0);
+    setRefusalKey(null);
+  }, [sheetAnchor]);
   const sheetBubble = sheetGuide
     ? sheetGuide.bubbles[Math.min(sheetIndex, sheetGuide.bubbles.length - 1)]
     : null;
-  const variant = sheetBubble
+  const isSheetRefused = Boolean(sheetGuide?.refused && sheetGuide.refused.key === refusalKey);
+  let variant = sheetBubble
     ? { targets: [sheetBubble[0]], text: sheetBubble[1]() }
     : resolved;
+  if (isSheetRefused) variant = { targets: [], text: sheetGuide.refused.text() };
   // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
   // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
   // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
@@ -347,7 +357,7 @@ function TourGuideLayer() {
   const bubbleTexts = !sheetGuide && Array.isArray(currentStep?.bubbles)
     ? currentStep.bubbles
     : null;
-  let text = variant.text;
+  let { text } = variant;
   if (isLost) text = t('tourGuide.lost', 'Tu as quitté le guide ici. Reprends quand tu veux.');
   else if (bubbleTexts) text = bubbleTexts[Math.min(subIndex, bubbleTexts.length - 1)]();
 
@@ -383,7 +393,9 @@ function TourGuideLayer() {
   /** @type {Record<string, any>} */
   const visibleRects = Object.fromEntries(variant.targets.map((id) => {
     if (!rects[id] || DOCK_IDS.includes(id)) return [id, rects[id]];
-    const below = scrollsUnderHeader(id) ? clipBelowHeader(rects[id], fixedHeaderBottom) : rects[id];
+    const below = scrollsUnderHeader(id)
+      ? clipBelowHeader(rects[id], fixedHeaderBottom)
+      : rects[id];
     return [id, below && clipAboveDock(below, dock)];
   }));
   const measuredTargets = variant.targets
@@ -550,7 +562,7 @@ function TourGuideLayer() {
 
   const isBonus = Boolean(missionPosition?.isBonus);
   const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
-  const hasMoreSheetBubbles = Boolean(sheetGuide)
+  const hasMoreSheetBubbles = Boolean(sheetGuide) && !isSheetRefused
     && sheetIndex < sheetGuide.bubbles.length - 1;
   const hasMoreBubbles = hasMoreSheetBubbles
     || (Boolean(bubbleTexts) && subIndex < bubbleTexts.length - 1);
