@@ -146,7 +146,7 @@ afterEach(() => {
 });
 
 describe('n° 1 — la cible passe sous l en-tête fixe', () => {
-  it.each(['m4-tab-ev', 'm4-tab-club'])('%s, sous le titre : ni voile, le sens du geste', async (id) => {
+  it.each(['m4-tab-ev', 'm4-tab-club'])('%s, sous le titre : sans voile', async (id) => {
     const current = step(id);
     mountSearch(current.targets[0]);
     tabRect = { ...TAB_HOME, y: 66 };
