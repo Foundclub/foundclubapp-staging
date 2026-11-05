@@ -425,19 +425,7 @@ function ClubLicenseMemberDetail({ route }) {
     // tout le reste reste au dirigeant.
     if (modalType === 'payment' ? !canValidatePayment : !canUseSensitiveActions) return;
     const common = { onSuccess: () => { setModal(null); query.refetch(); } };
-    if (modalType === 'payment') {
-      manualPaymentMutation.mutate(payload, {
-        ...common,
-        // PAYE-LIMITE — fiche perimee : le motif du serveur, pas un silence.
-        onError: (error) => Alert.alert(
-          t('clubLicenseMemberDetail.alerts.manualPayment.title', 'Paiement non enregistré'),
-          error?.message || t(
-            'clubLicenseMemberDetail.alerts.manualPayment.fallback',
-            'Le serveur a refusé ce paiement.',
-          ),
-        ),
-      });
-    }
+    if (modalType === 'payment') manualPaymentMutation.mutate(payload, common);
     if (modalType === 'amount') amountMutation.mutate({ amountDueCents: payload.amountCents, note: payload.note }, common);
     if (modalType === 'waive') waiveMutation.mutate({ reason: payload.reason }, common);
     if (modalType === 'reject') rejectPaymentMutation.mutate({ paymentId: modal.paymentId, reason: payload.reason }, common);

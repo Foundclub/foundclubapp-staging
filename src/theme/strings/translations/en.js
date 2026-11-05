@@ -1847,6 +1847,8 @@ export default {
     'auth/quota-exceeded': 'The code cannot be sent right now. Try again in a few minutes.',
     'auth/session-expired': 'This code has expired. Send a new one.',
     'auth/too-many-requests': 'Too many attempts. Wait a few minutes before trying again.',
+    LICENSE_AMOUNT_EXCEEDS_REMAINING: 'This amount is more than what is left to pay on this fee.',
+    LICENSE_REFUND_EXCEEDS_REFUNDABLE: 'This amount is more than what can still be refunded on this payment.',
     AUTHENTICATION_FAILED: 'Authentication failed.',
     CHAT_ID_NOT_PROVIDED: 'Chat ID not provided.',
     CHAT_MESSAGE_NOT_FOUND_POLICY_ERROR: 'This message no longer exists, or it isn’t yours.',
@@ -3519,10 +3521,6 @@ export default {
         downloadFailedTitle: 'Download failed',
         unavailableMessage: 'No usable file is attached to this upload.',
         unavailableTitle: 'Document unavailable',
-      },
-      manualPayment: {
-        fallback: 'The server refused this payment.',
-        title: 'Payment not recorded',
       },
       officialLicense: {
         addedMessage: 'The official licence is now available to authorised people.',

@@ -1940,6 +1940,9 @@ export default {
     FORBIDDEN: 'Accès refusé.',
     // Repli quand un écran n'héberge pas encore la feuille de vente : le refus est bien un
     // refus d'abonnement, pas un refus de droits — les deux ne se disent pas pareil.
+    // PAYE-LIMITE : refus du serveur sur un montant, lus par le filet global de l'app.
+    LICENSE_AMOUNT_EXCEEDS_REMAINING: "Ce montant dépasse ce qu'il reste à payer sur cette cotisation.",
+    LICENSE_REFUND_EXCEEDS_REFUNDABLE: "Ce montant dépasse ce qu'il reste à rembourser sur ce paiement.",
     SUBSCRIPTION_PERMISSION_DENIED: "Cette action nécessite une offre FoundClub active. Rends-toi dans Mon abonnement pour l'activer.",
     UNAUTHORIZED: "Tu n'es pas autorisé·e à effectuer cette action.",
     // LOT RÔLES (2026-09-28) — les refus de POST /clubs/:id/member-roles.
@@ -3839,10 +3842,6 @@ export default {
         downloadFailedTitle: 'Téléchargement impossible',
         unavailableMessage: 'Aucun fichier exploitable n’est rattaché à ce dépôt.',
         unavailableTitle: 'Document indisponible',
-      },
-      manualPayment: {
-        fallback: 'Le serveur a refusé ce paiement.',
-        title: 'Paiement non enregistré',
       },
       officialLicense: {
         // eslint-disable-next-line max-len

@@ -253,16 +253,16 @@ describe('PAYE-LIMITE — « A payé » s arrete au reste a payer', () => {
     expect(mockMutationFigee.mutate.mock.calls[0][0]).toMatchObject({ amountCents: 7000 });
   });
 
-  test('le serveur refuse quand meme (fiche perimee) : son message s affiche', () => {
+  test('le serveur refuse quand meme (fiche perimee) : une seule alerte, celle du filet global', () => {
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockMutationFigee.mutate.mockImplementation((_, options) => {
-      options.onError({ message: 'Ce montant dépasse ce qu il reste à payer sur cette cotisation.' });
+      options.onError?.({ details: { code: 'LICENSE_AMOUNT_EXCEEDS_REMAINING' }, message: 'refus' });
     });
     monter();
     appuyer('A payé');
     saisirMontant('70');
     appuyer('Valider');
-    expect(alerte).toHaveBeenCalledWith('Paiement non enregistré', 'Ce montant dépasse ce qu il reste à payer sur cette cotisation.');
+    expect(alerte).not.toHaveBeenCalled();
   });
 
   test('le remboursement garde son plafond et son pre-remplissage', () => {
