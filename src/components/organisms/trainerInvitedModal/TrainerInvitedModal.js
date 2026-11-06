@@ -6,6 +6,8 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import FeuilleDeSucces from '@/components/organisms/feuilleDeSucces/FeuilleDeSucces';
 
+// Jumeaux `.native.js` / `.web.js` : le contrôle de types ne voit aucun fichier à ce chemin.
+// @ts-ignore -- cf. ci-dessus (même note que `ApercuDImage.js`)
 import { copier } from '@/platform/share';
 import { useIsDesktop } from '@/responsive/useIsDesktop';
 
@@ -13,8 +15,8 @@ import { useIsDesktop } from '@/responsive/useIsDesktop';
  * Modal to invite a trainer after creation
  * @param {object} props
  * @param {boolean} props.isVisible - Whether the modal is visible
- * @param {Function} props.onClose - Function to call when closing the modal (e.g. navigation.goBack)
- * @param {Function} props.onInvite - Function to call when clicking on "Invite"
+ * @param {() => void} props.onClose - Function to call when closing the modal (e.g. navigation.goBack)
+ * @param {() => void} props.onInvite - Function to call when clicking on "Invite"
  * @param {string} props.trainerName - Name of the trainer
  * @param {boolean} [props.isManager] - INVITESMS (29/10) : un dirigeant (son texte).
  * @param {string} [props.messageDInvitation] - RETOURS-TESTEUR-2 (M0077) : le texte du SMS, lien
