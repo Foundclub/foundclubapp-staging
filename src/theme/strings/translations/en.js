@@ -6164,6 +6164,7 @@ export default {
       combienDeFois: 'How often',
       commeDansTonPlanning: 'As in your planning.',
       completALEnvoi: 'it was full when sent',
+      compris: 'Got it',
       confirme: 'Your training is confirmed: the town already gave this slot to your club.',
       dejaLa: '{{nom}}{{tonClub}}, from {{debut}} to {{fin}}',
       dejaLaListe: 'Already there: {{noms}}.',

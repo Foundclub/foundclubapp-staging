@@ -6756,6 +6756,8 @@ export default {
       combienDeFois: 'Combien de fois',
       commeDansTonPlanning: 'Comme dans ton planning.',
       completALEnvoi: 'c’était complet à l’envoi',
+      // RETOURS-TESTEUR-2 (06/11, M0232) — fermer la fenêtre « Demande envoyée ».
+      compris: 'J’ai compris',
       confirme: 'Ton entraînement est confirmé : la Ville a déjà attribué ce créneau à ton club.',
       dejaLa: '{{nom}}{{tonClub}}, de {{debut}} à {{fin}}',
       dejaLaListe: 'Déjà là : {{noms}}.',

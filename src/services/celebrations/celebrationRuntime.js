@@ -1,4 +1,7 @@
 // @ts-nocheck
+import i18next from 'i18next';
+import { Alert } from 'react-native';
+
 import {
   buildCelebrationPayload,
   inferCelebrationActionFromNotification,
@@ -36,9 +39,37 @@ export const emitCelebrationBanner = (payload) => {
   return payload;
 };
 
+/**
+ * RETOURS-TESTEUR-2 (06/11/2026, M0232, décision du chef « B ») — les célébrations qui
+ * demandent qu'on les LISE : une fenêtre à fermer soi-même au lieu d'un bandeau de 4 s.
+ * La demande d'une séance à la Ville : la séance existe, mais la mairie peut la refuser.
+ */
+const EN_FENETRE = new Set(['event_city_request_sent']);
+
+const ouvrirLaFenetre = (payload) => {
+  const message = [
+    payload.body,
+    i18next.t(
+      'collectiviteDemandes.decision.siRefusAnnulee',
+      'Si la mairie refuse, la séance sera annulée.',
+    ),
+  ].filter(Boolean).join(' ');
+  Alert.alert(payload.title, message, [
+    {
+      style: 'cancel',
+      text: i18next.t('collectiviteDemandes.club.compris', 'J’ai compris'),
+    },
+    ...(payload.actionLabel && payload.onAction
+      ? [{ onPress: payload.onAction, text: payload.actionLabel }]
+      : []),
+  ]);
+  return payload;
+};
+
 export const celebrate = (actionKey, context = {}, options = {}) => {
   const payload = buildCelebrationPayload(actionKey, context, options);
   if (!payload) return null;
+  if (EN_FENETRE.has(actionKey)) return ouvrirLaFenetre(payload);
   return emitCelebrationBanner(payload);
 };
 
