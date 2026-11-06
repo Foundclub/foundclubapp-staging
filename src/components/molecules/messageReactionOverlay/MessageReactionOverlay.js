@@ -111,6 +111,7 @@ const ESPACE_SOUS_LE_BORD = RAYON_FEUILLE;
  *   peux modifier (« Modifier la composition »).
  * @param {boolean} [props.canReply] Puis-je ecrire dans ce fil ? Non (canal d'annonce) :
  *   pas de « Repondre ».
+ * @param {boolean} [props.canSave] RETOURS-TESTEUR-2 (M0035) : une photo a enregistrer.
  * @param {boolean} [props.isMine] Est-il a moi ? La pilule et le menu se rangent a droite.
  * @param {string} [props.myEmoji] L emoji que j ai deja pose sur ce message.
  * @param {(key: string) => void} props.onAction Appelee avec la clef de l action choisie.
@@ -125,6 +126,7 @@ function MessageReactionOverlay({
   canEdit = false,
   canEditComposition = false,
   canReply = true,
+  canSave = false,
   isMine = false,
   myEmoji = '',
   onAction,
@@ -143,9 +145,9 @@ function MessageReactionOverlay({
 
   const actions = useMemo(
     () => getMessageActions({
-      canCopy, canEdit, canEditComposition, canReply, isMine,
+      canCopy, canEdit, canEditComposition, canReply, canSave, isMine,
     }),
-    [canCopy, canEdit, canEditComposition, canReply, isMine],
+    [canCopy, canEdit, canEditComposition, canReply, canSave, isMine],
   );
   // Le filet rouge ne se pose que si une action rouge suit une action ordinaire.
   const indexDuFilet = actions.findIndex((action, index) => action.alerte && index > 0);

@@ -440,3 +440,57 @@ describe('IPH09 — actions du vrai écran de conversation', () => {
     expect(sheet.keyboardBehavior).toBe('interactive');
   });
 });
+
+// RETOURS-TESTEUR-2 (06/11/2026, M0035) — « Enregistrer » depuis l'appui long sur une photo : le
+// même geste que l'image en grand (`enregistrerLImage`), puis un bandeau qui le dit.
+const mockEnregistrerLImage = jest.fn();
+jest.mock('@/platform/media/enregistrerLImage', () => ({
+  ECHECS_D_ENREGISTREMENT: { PERMISSION: 'permission' },
+  enregistrerLImage: (/** @type {any[]} */ ...args) => mockEnregistrerLImage(...args),
+}));
+
+describe('M0035 — Enregistrer une photo depuis l appui long', () => {
+  beforeEach(() => {
+    [mockGiftedRenders, mockBullesEvenement, mockPrompts, mockOverlays, mockSheets]
+      .forEach((items) => { items.splice(0); });
+    jest.clearAllMocks();
+    mockEnregistrerLImage.mockResolvedValue(undefined);
+  });
+  afterEach(() => {
+    while (aDemonter.length) aDemonter.pop()();
+  });
+
+  const PHOTO = {
+    _id: 'photo-1',
+    attachments: [{ mime: 'image/jpeg', name: 'but.jpg', url: 'https://cdn.test/but.jpg' }],
+    documentId: 'photo-1',
+    text: '',
+    user: { _id: 'autre' },
+  };
+
+  test('une photo : « Enregistrer » est proposé, et l image part dans la galerie', async () => {
+    bulleDeLEvenement(futureEvent());
+    act(() => last(mockGiftedRenders).onLongPress(null, PHOTO));
+    expect(last(mockOverlays).canSave).toBe(true);
+    await act(async () => { await last(mockOverlays).onAction('save'); });
+    expect(mockEnregistrerLImage).toHaveBeenCalledWith('https://cdn.test/but.jpg');
+    expect(last(mockOverlays).visible).toBe(false);
+    expect(mockBanner).toHaveBeenCalledWith(expect.objectContaining({ tone: 'success' }));
+  });
+
+  test('un message texte : pas d Enregistrer', () => {
+    bulleDeLEvenement(futureEvent());
+    act(() => last(mockGiftedRenders).onLongPress(null, {
+      _id: 'texte', documentId: 'texte', text: 'Bonjour', user: { _id: 'autre' },
+    }));
+    expect(last(mockOverlays).canSave).toBe(false);
+  });
+
+  test('un refus d enregistrer se dit dans un bandeau d erreur', async () => {
+    mockEnregistrerLImage.mockRejectedValue(new Error('disque plein'));
+    bulleDeLEvenement(futureEvent());
+    act(() => last(mockGiftedRenders).onLongPress(null, PHOTO));
+    await act(async () => { await last(mockOverlays).onAction('save'); });
+    expect(mockBanner).toHaveBeenCalledWith(expect.objectContaining({ tone: 'error' }));
+  });
+});
