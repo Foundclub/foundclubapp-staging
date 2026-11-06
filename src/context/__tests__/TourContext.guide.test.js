@@ -326,6 +326,36 @@ describe('guide Entraîneur — reprise', () => {
     expect(tour.currentStep.id).toBe('m1-csearch');
   });
 
+  // Décision du chef du 05/11 : sauf si l'écran a changé pendant la pause. La bulle du formulaire
+  // s'affichait sur l'accueil, avec son « Suivant » (vu sur le guide Dirigeant, M1).
+  const inWizard = () => {
+    startAndOpen();
+    route(RouteNames.MyTeamList);
+    route(RouteNames.TeamWizardName);
+    route(RouteNames.TeamWizardDescription);
+    const paused = tour.currentStep;
+    expect(paused.resumeFrom).toBeTruthy();
+    expect(paused.resumeFrom).not.toBe(paused.id);
+    act(() => { tour.pauseTour(); });
+    return paused;
+  };
+
+  it('pause, écran quitté, « Reprendre » : repart de `resumeFrom`', () => {
+    const paused = inWizard();
+    route(RouteNames.MyTeamList);
+    act(() => { tour.resumeTour(); });
+    expect(tour.tourStatus).toBe('active');
+    expect(tour.currentStep.id).toBe(paused.resumeFrom);
+  });
+
+  it('témoin : écran quitté puis retrouvé pendant la pause : même étape', () => {
+    const paused = inWizard();
+    route(RouteNames.MyTeamList);
+    route(RouteNames.TeamWizardDescription);
+    act(() => { tour.resumeTour(); });
+    expect(tour.currentStep.id).toBe(paused.id);
+  });
+
   it('« Quitter » met en pause sans effacer la progression', () => {
     startAndOpen();
     act(() => { tour.pauseTour(); });
@@ -437,7 +467,8 @@ describe('guide Entraîneur — bonus (TUTOE-2)', () => {
     expect(byId('m3-when').subGuides[0].bubbles.map(([target]) => target)).toEqual([
       'repeat.frequency', 'repeat.interval', 'repeat.days', 'repeat.end', 'repeat.apply',
     ]);
-    expect(byId('m3-place').subGuides[0].bubbles).toHaveLength(6);
+    // G93 : 7, la 1re dit l'obstacle (offre Club) avant de faire remplir.
+    expect(byId('m3-place').subGuides[0].bubbles).toHaveLength(7);
   });
 });
 

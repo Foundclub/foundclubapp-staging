@@ -16,6 +16,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+import { getTourProfile } from '@/domains/tour/tourCatalog';
 import {
   measureTourTarget,
   measureTourTargetClipSide,
@@ -33,11 +34,13 @@ import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
   bubbleRoom,
   clipAboveDock,
+  clipBelowHeader,
   compactBubbleFits,
   computeBlockers,
   dockBarOf,
   headerBottomOf,
   isOnScreen,
+  isUnderHeader,
   placeBubble,
   stableHeight,
   toAbsoluteStyle,
@@ -86,14 +89,18 @@ const VARIANT_WAIT_MS = 2000;
 const MAX_FONT_SCALE = 1.3;
 // Toucher minimal (accessibilité) : croix et bouton de la bulle.
 const MIN_TOUCH = 44;
+// G93 : au-delà, l'écran affiché n'est pas un passage : le guide dit qu'on l'a quitté.
+const LOST_WAIT_MS = 1500;
 // Signal d'une liste de choix ouverte (AutocompleteSelect) : la bulle se retire.
 const SELECT_SHEET_ID = 'select.sheet';
 // Boutons ancrés de la barre d'onglets flottante : leur boîte englobante dit
 // où est la barre (elle recouvre le contenu), quand elle est à l'écran.
-const DOCK_IDS = ['dock.home', 'dock.planning', 'dock.teams'];
+const DOCK_IDS = ['dock.home', 'dock.messages', 'dock.planning', 'dock.teams'];
 // En-têtes ancrés (flèche Retour des piles, rangées du haut) : la bulle « en
 // haut » et la jauge se posent dessous (décision d'Adel 4- A, 28/10).
 const HEADER_IDS = ['header.back', 'screen.header'];
+// G93 : cibles posées DANS l'en-tête fixe ; les autres, sous son bas, sont passées dessous.
+const IN_HEADER_IDS = [...HEADER_IDS, 'team.more'];
 // GUIDE-FINITIONS-3 R2-2 : place réservée par l'écran sous son titre (TourBubbleSlot).
 const SLOT_ID = 'tour.bubbleSlot';
 // FIN-GUIDE, point 3 : la liste d'un tunnel, qui doit rester à portée du doigt (petit écran).
@@ -125,7 +132,9 @@ const scaledFont = (font, scale, lineHeight) => ({
 const resolveVariant = (step, rects, windowHeight, stepTargets = step?.targets || []) => {
   const sub = (step?.subGuides || []).find((/** @type {any} */ guide) => {
     const rect = rects[guide.anchor];
-    return Boolean(rect) && rect.y < windowHeight && rect.y + rect.height > 0;
+    // G93 : seule une feuille fermée est sous l'écran. Le 1er champ d'un formulaire sort par le
+    // haut quand on descend : le sous-guide continue, sinon il repartait à sa 1re bulle.
+    return Boolean(rect) && rect.y < windowHeight;
   });
   if (sub) return { sub, targets: [], text: '' };
   const variant = (step?.variants || [])
@@ -207,7 +216,10 @@ function TourGuideLayer() {
   // l'écran qui a ouvert l'étape, le voile tombe pour qu'on puisse corriger.
   const [route, setRoute] = useState(/** @type {string | null} */ (null));
   const routeRef = useRef(/** @type {string | null} */ (null));
+  // G93 : le dernier refus de l'écran (offre), pour la bulle `refused` d'un sous-guide.
+  const [refusalKey, setRefusalKey] = useState(/** @type {string | null} */ (null));
   useEffect(() => subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+    if (signal?.kind === 'refusal') setRefusalKey(signal.key);
     if (signal?.kind !== 'route') return;
     routeRef.current = signal.key;
     setRoute(signal.key);
@@ -316,19 +328,40 @@ function TourGuideLayer() {
   const sheetGuide = resolved.sub || null;
   const sheetAnchor = sheetGuide?.anchor || null;
   // La feuille s'ouvre ou se ferme : ses bulles repartent de la première.
-  useEffect(() => { setSheetIndex(0); }, [sheetAnchor]);
+  useEffect(() => {
+    setSheetIndex(0);
+    setRefusalKey(null);
+  }, [currentStep?.id, sheetAnchor]);
   const sheetBubble = sheetGuide
     ? sheetGuide.bubbles[Math.min(sheetIndex, sheetGuide.bubbles.length - 1)]
     : null;
-  const variant = sheetBubble
+  const refusedBubble = sheetGuide?.refused || currentStep?.refused || null;
+  const isRefused = Boolean(refusedBubble && refusedBubble.key === refusalKey);
+  let variant = sheetBubble
     ? { targets: [sheetBubble[0]], text: sheetBubble[1]() }
     : resolved;
+  if (isRefused) variant = { targets: [], text: refusedBubble.text() };
+  // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
+  // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
+  // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
+  const isStale = Boolean(seenRoute && route && route !== seenRoute && !sheetGuide
+    && !variant.targets.some((id) => rects[id]));
+  // G93 : une sortie par la flèche laissait le guide actif et invisible, donc sans bulle ni
+  // pastille. Le temps de passer d'un écran à l'autre, rien ; ensuite la bulle le dit.
+  const [isStaleLong, setIsStaleLong] = useState(false);
+  useEffect(() => {
+    setIsStaleLong(false);
+    if (!isStale) return undefined;
+    const timer = setTimeout(() => setIsStaleLong(true), LOST_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [currentStep?.id, isStale]);
+  const isLost = isStale && isStaleLong;
   const bubbleTexts = !sheetGuide && Array.isArray(currentStep?.bubbles)
     ? currentStep.bubbles
     : null;
-  const text = bubbleTexts
-    ? bubbleTexts[Math.min(subIndex, bubbleTexts.length - 1)]()
-    : variant.text;
+  let { text } = variant;
+  if (isLost) text = t('tourGuide.lost', 'Tu as quitté le guide ici. Reprends quand tu veux.');
+  else if (bubbleTexts) text = bubbleTexts[Math.min(subIndex, bubbleTexts.length - 1)]();
 
   useEffect(() => { setFitScale(MAX_FONT_SCALE); }, [text]);
 
@@ -356,11 +389,17 @@ function TourGuideLayer() {
 
   const dockRects = DOCK_IDS.map((id) => rects[id]).filter(Boolean);
   const dock = dockBarOf(dockRects, height);
+  const fixedHeaderBottom = headerBottomOf(HEADER_IDS.map((id) => rects[id] || null), height);
+  const scrollsUnderHeader = (/** @type {string} */ id) => !DOCK_IDS.includes(id)
+    && !IN_HEADER_IDS.includes(id);
   /** @type {Record<string, any>} */
-  const visibleRects = Object.fromEntries(variant.targets.map((id) => [
-    id,
-    rects[id] && !DOCK_IDS.includes(id) ? clipAboveDock(rects[id], dock) : rects[id],
-  ]));
+  const visibleRects = Object.fromEntries(variant.targets.map((id) => {
+    if (!rects[id] || DOCK_IDS.includes(id)) return [id, rects[id]];
+    const below = scrollsUnderHeader(id)
+      ? clipBelowHeader(rects[id], fixedHeaderBottom)
+      : rects[id];
+    return [id, below && clipAboveDock(below, dock)];
+  }));
   const measuredTargets = variant.targets
     // La barre d'onglets est fixe : seule une cible de contenu doit montrer un toucher entier.
     .filter((id) => visibleRects[id] && isOnScreen(
@@ -372,18 +411,21 @@ function TourGuideLayer() {
   const cutouts = measuredTargets.map((id) => toCutout(visibleRects[id], width, height));
   // Décision d'Adel 4- A : l'en-tête ancré (Retour, Fermer) reste visible et
   // touchable sous le voile, sans cadre ; ce n'est pas la cible de l'étape.
-  const passThrough = [
-    ...cutouts,
-    ...HEADER_IDS.map((id) => rects[id])
-      .filter((rect) => rect && rect.y < height / 3 && isOnScreen(rect, width, height))
-      .map((rect) => toCutout(rect, width, height)),
-  ];
+  const headerHoles = HEADER_IDS.map((id) => rects[id])
+    .filter((rect) => rect && rect.y < height / 3 && isOnScreen(rect, width, height))
+    .map((rect) => toCutout(rect, width, height));
+  const passThrough = [...cutouts, ...headerHoles];
   // FIN-GUIDE, point 3 : petit écran, le champ d'un tunnel peut être sous le bord de la liste ; le
   // voile ne doit pas empêcher de l'y chercher. La liste défile, elle reste sous le voile.
   const listScrolls = currentStep?.bubbleSlot || currentStep?.listScrolls;
+  // L10 (05/11, m1-info) : une étape à lire (`lookOnly`) montre sa cible sans la laisser toucher ;
+  // le doigt parti de la carte faisait monter la liste, et le voile tombait.
+  // ponytail: une cible à toucher garde son trou, donc un glissement parti d'elle fait défiler : le
+  // voile tombe et la bulle donne le sens. Sortie : bloquer le défilement de chaque écran ancré.
+  const reachable = currentStep?.lookOnly ? headerHoles : passThrough;
   const touchable = listScrolls && rects[WIZARD_LIST_ID]
-    ? [...passThrough, toCutout(rects[WIZARD_LIST_ID], width, height)]
-    : passThrough;
+    ? [...reachable, toCutout(rects[WIZARD_LIST_ID], width, height)]
+    : reachable;
   const primary = cutouts[0] || null;
   // GUIDE-STORES, règle du voile (recette du 04/11) : sous le voile, l'écran ne défile que si le
   // doigt part de la cible. Une cible entière n'a besoin que d'un toucher, le voile reste. Une
@@ -395,17 +437,12 @@ function TourGuideLayer() {
       || visibleRects[id].height < rects[id].height - 1
       || rects[id].y + rects[id].height > height - 2
     ));
-  // GUIDE-RECUL (audit du 28/10) : la cible vue sur un écran est partie avec
-  // lui (autre onglet, autre pile) ⇒ pas de bulle périmée sur l'écran affiché ;
-  // elle revient avec la cible. Une cible jamais vue garde le repli en haut.
-  const isStale = Boolean(seenRoute && route && route !== seenRoute && !sheetGuide
-    && !variant.targets.some((id) => rects[id]));
   // N9 : aucune ancre de l'étape ni de ses variantes encore mesurée.
   const isChoosingVariant = hasVariants && !isVariantWaitOver && !sheetGuide
     && ![...stepTargets, ...currentStep.variants.flatMap((/** @type {any} */ v) => v.targets || [])]
       .some((id) => rects[id]);
   // GUIDE-STORES : une liste de choix ouverte ; la bulle recouvrait sa recherche et sa croix.
-  const isHidden = isStale || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
+  const isHidden = (isStale && !isLost) || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
   // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
   // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
@@ -418,9 +455,12 @@ function TourGuideLayer() {
   const clipSide = (!primary || isTargetCut) && !sheetGuide
     ? variant.targets.map((id) => clipSides[id]).find(Boolean)
     : null;
+  const isCutByHeader = (!primary || isTargetCut) && !sheetGuide
+    && variant.targets.some((id) => rects[id] && scrollsUnderHeader(id)
+      && isUnderHeader(rects[id], fixedHeaderBottom));
   let scrollHint = null;
   // Au-dessus du haut de l'écran (même une lamelle visible, GUIDE-REPRISE N5) : vers le haut.
-  if (clipSide === 'above' || (!clipSide && offTarget && offTarget.y < 0)) {
+  if (clipSide === 'above' || isCutByHeader || (!clipSide && offTarget && offTarget.y < 0)) {
     scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
   } else if (clipSide || isTargetCut
     || (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2)) {
@@ -471,6 +511,12 @@ function TourGuideLayer() {
     primary: isCompact ? null : primary,
     slot,
   });
+  // G93 (rejeu, captures m3 et m7) : bulle en haut, la tête de la cible est sous elle
+  // (« Extérieur » après Annuler) : on la retrouve vers le haut, même si son bas dépasse aussi.
+  const bubbleBottom = position.top + Math.min(wantedHeight, maxHeight);
+  if (isTargetCut && isTop && !slot && measuredTargets.some((id) => rects[id].y < bubbleBottom)) {
+    scrollHint = t('tourGuide.scrollUp', 'Fais défiler vers le haut.');
+  }
 
   // Journal de calibrage (développement seulement) : une ligne par état de
   // l'étape, lue par `.local/outils/tutoe-calibrage.py` (cible, trou, bulle,
@@ -527,13 +573,15 @@ function TourGuideLayer() {
 
   const isBonus = Boolean(missionPosition?.isBonus);
   const missionWord = isBonus ? t('tourGuide.bonus', 'Bonus') : t('tourGuide.mission', 'Mission');
-  const hasMoreSheetBubbles = Boolean(sheetGuide)
+  const hasMoreSheetBubbles = Boolean(sheetGuide) && !isRefused
     && sheetIndex < sheetGuide.bubbles.length - 1;
   const hasMoreBubbles = hasMoreSheetBubbles
     || (Boolean(bubbleTexts) && subIndex < bubbleTexts.length - 1);
-  const buttonLabel = hasMoreBubbles
+  const canReturn = Boolean(!tour.isReview && (currentStep.resumeFrom || currentStep.navTarget));
+  let buttonLabel = hasMoreBubbles
     ? t('tourGuide.next', 'Suivant')
     : currentStep.nextLabel || null;
+  if (isLost) buttonLabel = canReturn ? t('tourGuide.lostResume', 'Reprendre') : null;
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
   const fontScale = isCompact
     ? 1
@@ -558,7 +606,7 @@ function TourGuideLayer() {
   const nextButton = (
     <TouchableOpacity
       accessibilityRole="button"
-      onPress={() => {
+      onPress={isLost ? tour.returnToGuide : () => {
         if (hasMoreSheetBubbles) setSheetIndex((value) => value + 1);
         else if (hasMoreBubbles) setSubIndex((value) => value + 1);
         else tour.completeCurrentStep();
@@ -781,7 +829,12 @@ function TourGuideLayer() {
               {/* Jauge DANS la bulle (arbitrage du chef, 28/10, « 3- A ») : toujours
                   visible, sur la ligne du titre pour que la bulle reste basse. */}
               <View
-                accessibilityLabel={t('tourGuide.teamReady', 'Équipe prête {{gauge}} %', { gauge })}
+                accessibilityLabel={t(
+                  /** @type {any} */ (getTourProfile(tour.profileKey || 'coach'))?.gaugeSpokenKey
+                    || 'tourGuide.teamReady',
+                  'Équipe prête {{gauge}} %',
+                  { gauge },
+                )}
                 accessible
                 style={{ alignItems: 'center', columnGap: 6, flexDirection: 'row' }}
                 testID={__DEV__ ? 'tour.gauge' : undefined}
@@ -842,6 +895,18 @@ function TourGuideLayer() {
             </Text>
             {buttonLabel ? nextButton : null}
           </View>
+          {tour.guardMessage ? (
+            <Text
+              allowFontScaling={false}
+              style={[
+                scaledFont(Fonts.p3Bold, fontScale),
+                { color: Colors.error700, marginTop: 4 },
+              ]}
+              testID={__DEV__ ? 'tour.guard' : undefined}
+            >
+              {tour.guardMessage}
+            </Text>
+          ) : null}
           {scrollHint ? (
             <Text
               allowFontScaling={false}
@@ -852,6 +917,23 @@ function TourGuideLayer() {
             >
               {scrollHint}
             </Text>
+          ) : null}
+          {(currentStep.passable || (isRefused && currentStep.refused)) && !isLost ? (
+            <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={tour.skipSubMission}
+                style={{ justifyContent: 'center', minHeight: 44 }}
+                testID={__DEV__ ? 'tour.skipPart' : undefined}
+              >
+                <Text
+                  allowFontScaling={false}
+                  style={[scaledFont(Fonts.p3Bold, fontScale), { color: Colors.neutral600 }]}
+                >
+                  {t('tourGuide.skipPart', 'Passer cette partie')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : null}
           {isBonus ? (
             <View style={{ alignItems: 'flex-start', marginTop: 2 }}>

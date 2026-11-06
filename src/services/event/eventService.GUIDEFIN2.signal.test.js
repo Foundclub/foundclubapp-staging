@@ -56,3 +56,33 @@ it('une série : la 1re (témoin), le nombre, et chaque date posée', async () =
     { date: '2031-01-16T18:00:00.000Z', documentId: 'ev-1', endDate: '2031-01-16T19:30:00.000Z' },
   ]);
 });
+
+// M3 GRATUIT (05/11) : la clôture dit les séances POSÉES, pas celles demandées.
+const serieEnPartie = (poses) => async (_url, body) => ({
+  data: {
+    data: body.dates.slice(0, poses).map((d, i) => ({
+      date: d.date, documentId: `ev-${i}`, endDate: d.endDate,
+    })),
+    meta: {
+      series: {
+        failed: body.dates.slice(poses).map((d) => ({
+          code: 'SUBSCRIPTION_PERMISSION_DENIED', date: d.date,
+        })),
+      },
+    },
+  },
+});
+
+it('une série refusée en partie : le nombre compte les dates posées', async () => {
+  mockPost.mockImplementation(serieEnPartie(1));
+  await createEventSeries([corps('09'), corps('16'), corps('23')], { suppressCelebration: true });
+  const meta = emitGuidanceAction.mock.calls.find((call) => call[0] === 'event.created')[1];
+  expect(meta.occurrences).toBe(1);
+  expect(meta.dates).toHaveLength(1);
+});
+
+it('aucune date posée : pas de signal, le guide ne dit pas « séance en ligne »', async () => {
+  mockPost.mockImplementation(serieEnPartie(0));
+  await createEventSeries([corps('09'), corps('16')], { suppressCelebration: true });
+  expect(emitGuidanceAction).not.toHaveBeenCalledWith('event.created', expect.anything());
+});

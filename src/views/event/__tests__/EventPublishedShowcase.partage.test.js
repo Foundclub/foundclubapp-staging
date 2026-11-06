@@ -1,5 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+
 import EventPublishedShowcase from '../EventPublishedShowcase';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -241,6 +243,18 @@ describe('T04 — ③ 🔒 partager une affiche DÉJÀ à l écran ne la refabri
 
   // ⚠️ LE PENDANT INDISPENSABLE : story et A4 sont d'AUTRES images. Les servir
   // depuis l'aperçu serait un bug bien pire — on partagerait le mauvais fichier.
+  it('guide Dirigeant : l écran dit le texte ouvert et le retour du partage', async () => {
+    const signaux = [];
+    const couper = subscribeToGuidanceSignals((signal) => signaux.push(signal.key));
+    const tree = await ecranAvecAfficheAffichee(clubParams());
+    await press(tree, 'Personnaliser le texte');
+    expect(signaux).toContain('poster.text.opened');
+    expect(signaux).not.toContain('poster.share.returned');
+    await press(tree, 'Partager l’affiche');
+    expect(signaux).toContain('poster.share.returned');
+    couper();
+  });
+
   it('story et A4 demandent bien le serveur : ce sont d autres formats', async () => {
     const tree = await ecranAvecAfficheAffichee(clubParams());
     await ouvrirAutresFormats(tree);

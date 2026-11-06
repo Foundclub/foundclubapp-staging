@@ -9,13 +9,18 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
+import { examplePlanningEvents, isExamplePlanningEvent } from '@/domains/tour/tourExamples';
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import PlanningFullscreenButton from '@/components/organisms/planning/PlanningFullscreenButton';
 import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
+
+import { useTour } from '@/context/useTour';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -71,6 +76,8 @@ function ClubFacilityPlanningContainer({
   const [currentDate, setCurrentDate] = useState(getPlanningDefaultDate());
   const [viewMode, setViewMode] = useState('week'); // '3days' | 'week' | 'month'
   const [planningScope, setPlanningScope] = useState(initialScope);
+  const { currentStep: tourStep, tourStatus } = useTour();
+  const showsTourExamples = tourStatus === 'active' && tourStep?.tourExample === 'planning';
 
   const {
     data: facilityContext,
@@ -192,15 +199,24 @@ function ClubFacilityPlanningContainer({
   });
   const choisirLaVue = useCallback((/** @type {string} */ vue) => {
     garderLeChoix();
+    if (vue === 'month') emitGuidanceInteraction('planning.view.month');
     setViewMode(vue);
   }, [garderLeChoix]);
   const choisirLaDate = useCallback((/** @type {Date} */ date) => {
     garderLeChoix();
+    if (date > currentDate) emitGuidanceInteraction('planning.period.next');
     setCurrentDate(date);
-  }, [garderLeChoix]);
+  }, [currentDate, garderLeChoix]);
 
-  const displayedEvents = planningScope === 'shared' ? sharedEvents : filteredClubEvents;
   const displayedFacilities = planningScope === 'shared' ? sharedFacilities : clubFacilities;
+  // Guide Dirigeant : l'exemple vit au rendu, le temps de ses étapes, et seulement sur un vide.
+  const realEvents = planningScope === 'shared' ? sharedEvents : filteredClubEvents;
+  const exampleFacility = displayedFacilities.find(
+    (facility) => getFacilityId(facility) === selectedFacilityId,
+  ) || displayedFacilities[0] || null;
+  const displayedEvents = useMemo(() => (showsTourExamples && !realEvents.length
+    ? normalizePlanningItems(examplePlanningEvents({ facility: exampleFacility }))
+    : realEvents), [exampleFacility, realEvents, showsTourExamples]);
   const selectedFacility = useMemo(
     () => displayedFacilities.find((facility) => getFacilityId(facility) === selectedFacilityId) || null,
     [displayedFacilities, selectedFacilityId],
@@ -264,7 +280,7 @@ function ClubFacilityPlanningContainer({
   ]), [t]);
 
   const handleEventPress = (event) => {
-    if (event?.documentId) {
+    if (event?.documentId && !isExamplePlanningEvent(event)) {
       navigation.navigate(RouteNames.EventStack, {
         params: { eventId: event.documentId },
         screen: RouteNames.EventDetails,
@@ -347,14 +363,14 @@ function ClubFacilityPlanningContainer({
 
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[12]]}>
         <View style={{ alignItems: 'center', flexDirection: 'row', gap: 12 }}>
-          <View style={{ flex: 1 }}>
+          <TourTarget id="planning.views" style={{ flex: 1 }}>
             <SegmentedControl
               centerContent
               onChange={choisirLaVue}
               options={viewOptions}
               value={viewMode}
             />
-          </View>
+          </TourTarget>
           <PlanningFullscreenButton
             borderColor={`${Colors.primary500}66`}
             onPress={handleOpenFullscreen}
@@ -362,14 +378,17 @@ function ClubFacilityPlanningContainer({
         </View>
       </View>
 
-      <View style={{ marginBottom: 16 }}>
+      <TourTarget id="planning.chips" style={{ marginBottom: 16 }}>
         <ScrollView
           contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.gap[8]]}
           horizontal
           showsHorizontalScrollIndicator={false}
         >
           <TouchableOpacity
-            onPress={() => setSelectedFacilityId(null)}
+            onPress={() => {
+              emitGuidanceInteraction('facility.planning.filter');
+              setSelectedFacilityId(null);
+            }}
             style={[
               Spaces.paddingVertical[8],
               Spaces.paddingHorizontal[16],
@@ -423,10 +442,13 @@ function ClubFacilityPlanningContainer({
             );
           })}
         </ScrollView>
-      </View>
+      </TourTarget>
 
       {facilityPlanningSummary ? (
-        <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
+        <TourTarget
+          id="planning.capacity"
+          style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}
+        >
           <View
             style={[
               ApplicationStyle.borderRadius16,
@@ -504,14 +526,14 @@ function ClubFacilityPlanningContainer({
               {facilitySummaryMessage}
             </Text>
           </View>
-        </View>
+        </TourTarget>
       ) : null}
 
       {/* Planning View */}
       {isLoadingPlanning ? (
         <Loader />
       ) : (
-        <View style={{ flex: 1 }}>
+        <TourTarget id="planning.grid" style={{ flex: 1 }}>
           {planningScope === 'shared' && displayedFacilities.length === 0 ? (
             <View style={[Spaces.paddingHorizontal[16], Spaces.paddingVertical[8]]}>
               <Text style={[Fonts.p2, Fonts.primary100]}>
@@ -536,7 +558,7 @@ function ClubFacilityPlanningContainer({
               scrollEnabled
             />
           )}
-        </View>
+        </TourTarget>
       )}
     </View>
   );

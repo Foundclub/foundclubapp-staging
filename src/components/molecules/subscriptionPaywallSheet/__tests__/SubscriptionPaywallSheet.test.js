@@ -426,8 +426,8 @@ describe('SubscriptionPaywallSheet — feuille de quota Équipe (inchangee par L
 
 describe('SubscriptionPaywallSheet — murs qui exigent l\'offre Club', () => {
   it.each([
-    ['FACILITY_MANAGE_REQUIRED', FACILITY_DECISION, 'gestion des installations du club'],
-    ['SPONSOR_MANAGE_REQUIRED', SPONSOR_DECISION, 'gestion des sponsors du club'],
+    ['FACILITY_MANAGE_REQUIRED', FACILITY_DECISION, 'La première installation est offerte'],
+    ['SPONSOR_MANAGE_REQUIRED', SPONSOR_DECISION, 'Le premier partenaire est offert'],
     ['DUES_CAMPAIGN_CREATE_REQUIRED', DUES_DECISION, 'campagnes de cotisation'],
   ])('%s : prix Club et achat direct', (_key, decision, sentence) => {
     const tree = renderSheet({ decision });

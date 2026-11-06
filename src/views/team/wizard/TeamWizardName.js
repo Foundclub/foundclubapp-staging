@@ -97,7 +97,7 @@ function TeamWizardName({ navigation, route }) {
   // FIN-GUIDE, point 1 : dans la mission 1 du guide, la question vient d'être posée
   // (TourTeamChoice).
   const { currentMission, tourStatus } = useTour();
-  const askedByGuide = tourStatus === 'active' && currentMission?.id === 'coach_m1';
+  const askedByGuide = tourStatus === 'active' && Boolean(currentMission?.asksTeamChoice);
   const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed && !askedByGuide;
 
   // 🔴 Q2 (recette d Adel du 28/08) — LE REFUS ARRIVE ICI, PAS A LA 8/8.

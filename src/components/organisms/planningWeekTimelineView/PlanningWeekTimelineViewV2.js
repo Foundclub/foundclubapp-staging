@@ -39,6 +39,7 @@ import useTheme from '@/theme/themeContext';
 
 import Hachures from '@/components/atoms/hachures/Hachures';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { etatDeLaDemande } from '@/utils/planning/installationPlanningViews';
@@ -1580,7 +1581,10 @@ function PlanningWeekTimelineView({
   const timelineBody = (
     <View style={styles.container}>
       {showHeader ? (
-        <View style={[styles.headerSpacing, compactFullscreen ? styles.compactHeaderSpacing : null]}>
+        <TourTarget
+          id="planning.head"
+          style={[styles.headerSpacing, compactFullscreen ? styles.compactHeaderSpacing : null]}
+        >
           <View
             style={[
               styles.headerCard,
@@ -1623,7 +1627,7 @@ function PlanningWeekTimelineView({
               />
             </TouchableOpacity>
           </View>
-        </View>
+        </TourTarget>
       ) : null}
 
       <View

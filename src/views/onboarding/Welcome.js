@@ -11,6 +11,7 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import isGuideSupported from '@/domains/tour/guideSupport';
+import { getTourProfile } from '@/domains/tour/tourCatalog';
 import { storage, useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -52,7 +53,8 @@ function Welcome({ navigation }) {
   // pas. T3-GUIDE-SITE : seul le guide de l'entraineur peut y jouer.
   const shouldOfferGuidedTour = Platform.OS === 'web'
     ? roleKey === 'coach' && isGuideSupported()
-    : roleKey === 'coach' || roleKey === 'president';
+    : roleKey === 'coach' || (roleKey === 'president'
+      && (/** @type {any} */ (getTourProfile('president'))?.canStart?.(userData) ?? true));
 
   /**
    * 👨‍👧 LES QUATRE PHRASES DE BIENVENUE, POUR LA BONNE PERSONNE.
@@ -147,10 +149,10 @@ function Welcome({ navigation }) {
       accentColor: Colors.success500,
       borderColor: withAlpha(Colors.neutral00, 0.14),
       bullets: [
-        t('welcome.subscription.free.bullet1', '1 équipe offerte'),
+        t('welcome.subscription.free.bullet1', '1 équipe, 1 installation, 1 partenaire offerts'),
         // « 1 match » est retire : un match EST un type d'evenement, l'annoncer
         // a part survendait le quota gratuit.
-        t('welcome.subscription.free.bullet2', '1 événement et 1 annonce offerts'),
+        t('welcome.subscription.free.bullet2', '2 événements et 1 annonce offerts'),
         t('welcome.subscription.free.bullet3', 'Chat illimité, pour toujours'),
       ],
       fillColor: withAlpha(Colors.neutral00, 0.05),

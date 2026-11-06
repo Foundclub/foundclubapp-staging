@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import i18next from 'i18next';
 import {
-  useCallback, useLayoutEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useAuth from '@/domains/auth/useAuth';
 import { phraseCreneauxEtSeances } from '@/domains/collectivite/collectiviteAccueil';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
@@ -38,6 +39,7 @@ import {
 import {
   extractSubscriptionDecisionFromError,
   formatCollectiviteOfferedBy,
+  isClubFreeSlotTaken,
 } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -52,6 +54,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import PlanningDesInstallations from '@/components/organisms/planning/PlanningDesInstallations';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -214,7 +217,7 @@ function FacilityList() {
   } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const { userData } = useAuth();
+  const { getSubscriptionAccessLevelForClub, subscriptionAccessLevel, userData } = useAuth();
   const { sceneBottomInset } = useBottomDockLayout();
 
   // 🏛️ COLLECTIVITES 1c — MODE COLLECTIVITE (route CollectiviteInstallations) : la liste est
@@ -259,6 +262,15 @@ function FacilityList() {
     }));
   }, [facilityContext, isCollectiviteMode]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
+  // GUIDE-D-QUOTA-CLUB : la place offerte du club déjà prise, le guide le dit avant le formulaire.
+  // Seules les installations À LUI comptent : le gymnase de la Ville ne prend pas sa place.
+  const isFreeFacilityTaken = !isCollectiviteMode && Boolean(contextClubId) && isClubFreeSlotTaken(
+    facilities.filter((/** @type {any} */ facility) => !facility?.isShared).length,
+    getSubscriptionAccessLevelForClub?.(contextClubId) || subscriptionAccessLevel,
+  );
+  useEffect(() => {
+    if (isFreeFacilityTaken) emitGuidanceAction('facility.free.taken');
+  }, [isFreeFacilityTaken]);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const isDesktop = useIsDesktop();
 
@@ -444,6 +456,8 @@ function FacilityList() {
       return;
     }
 
+    // Guide : même nom de route que la fiche, seul ce signal dit le planning.
+    emitGuidanceInteraction('facility.planning.opened');
     // NAVMORTE : l ecran est aussi monte a la RACINE, ou Club n existe pas.
     navigateToStackScreenOrScreen(navigation, {
       params: {
@@ -715,13 +729,13 @@ function FacilityList() {
         </TouchableOpacity>
 
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-          <View style={{ flex: 1 }}>
+          <TourTarget id={`facility.plan.${item.documentId || item.id}`} style={{ flex: 1 }}>
             <Button
               onPress={() => handleOpenPlanning(item)}
               title={t('facilityList.actions.openPlanning', 'Voir le planning')}
               variant="Primary"
             />
-          </View>
+          </TourTarget>
           {isEditable ? (
             <Button
               onPress={() => handleEdit(item)}
@@ -1201,29 +1215,31 @@ function FacilityList() {
 
   // COLL-C2C (02/10) — l ajout en pointille (D34) : en pied de liste, ou sous « Au club ».
   const boutonAjouter = (
-    <TouchableOpacity
-      accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-      accessibilityRole="button"
-      disabled={isMissingContext}
-      onPress={handleCreate}
-      style={[
-        Alignments.alignCenter,
-        Alignments.justifyCenter,
-        Spaces.marginTop[12],
-        {
-          backgroundColor: withAlpha(Colors.primary500, 0.06),
-          borderColor: withAlpha(Colors.primary500, 0.4),
-          borderRadius: 16,
-          borderStyle: 'dashed',
-          borderWidth: 1.5,
-          minHeight: 52,
-        },
-      ]}
-    >
-      <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-        {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
-      </Text>
-    </TouchableOpacity>
+    <TourTarget id="facility.add">
+      <TouchableOpacity
+        accessibilityLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+        accessibilityRole="button"
+        disabled={isMissingContext}
+        onPress={handleCreate}
+        style={[
+          Alignments.alignCenter,
+          Alignments.justifyCenter,
+          Spaces.marginTop[12],
+          {
+            backgroundColor: withAlpha(Colors.primary500, 0.06),
+            borderColor: withAlpha(Colors.primary500, 0.4),
+            borderRadius: 16,
+            borderStyle: 'dashed',
+            borderWidth: 1.5,
+            minHeight: 52,
+          },
+        ]}
+      >
+        <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+          {`+ ${t('facilityList.empty.action', 'Ajouter une installation')}`}
+        </Text>
+      </TouchableOpacity>
+    </TourTarget>
   );
 
   // COLL-C2C — la tete d un groupe : son titre, son nombre, puis UNE ligne : ce qu on y fait.
@@ -1379,14 +1395,14 @@ function FacilityList() {
           </View>
         ) : null}
         <View style={[Alignments.row, { gap: 8 }]}>
-          <View style={{ flex: 1 }}>
+          <TourTarget id={`facility.plan.${item.documentId || item.id}`} style={{ flex: 1 }}>
             <Button
               onPress={() => handleOpenPlanning(item)}
               size="sm"
               title={t('facilityList.actions.openPlanning', 'Voir le planning')}
               variant="Secondary"
             />
-          </View>
+          </TourTarget>
           <View style={{ flex: 1 }}>
             <Button
               onPress={() => ouvrirDemandeALaVille(navigation, {
@@ -1483,21 +1499,24 @@ function FacilityList() {
   ) : null;
 
   const etatVide = (
-    <EmptyState
-      actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-      description={isCollectiviteMode
-        ? t(
-          'facilityList.collectiviteEmpty',
+    <TourTarget id="facility.add">
+      <EmptyState
+        actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
+        description={isCollectiviteMode
+          ? t(
+            'facilityList.collectiviteEmpty',
 
-          'Ajoutez les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
-        )
-        : t(
-          'facilityList.empty.description',
-          'Ajoute les terrains, gymnases ou salles de ton club.',
-        )}
-      onAction={handleCreate}
-      title={t('facilityList.empty.title', 'Aucune installation')}
-    />
+            'Ajoutez les gymnases, terrains et salles de la Ville : '
+              + 'les clubs verront leur planning.',
+          )
+          : t(
+            'facilityList.empty.description',
+            'Ajoute les terrains, gymnases ou salles de ton club.',
+          )}
+        onAction={handleCreate}
+        title={t('facilityList.empty.title', 'Aucune installation')}
+      />
+    </TourTarget>
   );
 
   // COLL-C2B (02/10) — la Ville : une liste (une colonne sur telephone, trois sur ordinateur),

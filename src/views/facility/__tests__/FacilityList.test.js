@@ -1,6 +1,8 @@
 import { Alert, Linking, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import * as guidanceRuntime from '@/domains/guidance/guidanceRuntime';
+
 import { deleteFacility } from '@/services/facility/facilityService';
 
 import FacilityList from '../FacilityList';
@@ -23,6 +25,8 @@ import FacilityList from '../FacilityList';
 // a une meta d'une ligne.
 
 /** @type {any[]} */
+/** @type {any} */
+let mockAuthExtra = {};
 const mockButtonProps = [];
 /** @type {any[]} */
 const mockPaywallProps = [];
@@ -58,7 +62,7 @@ jest.mock('react-i18next', () => ({
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => ({ userData: mockUserData }),
+  default: () => ({ userData: mockUserData, ...mockAuthExtra }),
 }));
 
 // Le VRAI theme, sans le contexte React qui le porte : un mock en Proxy rend
@@ -309,6 +313,7 @@ beforeEach(() => {
   mockNavigation = { goBack: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() };
   mockRoute = { params: { clubId: 'club-1', cmId: null } };
   mockUserData = { club: { documentId: 'club-1' } };
+  mockAuthExtra = {};
   mockFacilityContext = {
     data: { allFacilities: [INSTALLATION_CLUB], cmId: null },
     error: null,
@@ -715,3 +720,37 @@ jest.mock(
   '@/components/organisms/planning/PlanningDesInstallations',
   () => function PlanningDesInstallationsDouble() { return null; },
 );
+
+describe('GUIDE-D-QUOTA-CLUB — l installation offerte deja la, dite au guide', () => {
+  const signaux = () => emitGuidanceActionSpy.mock.calls.map(([cle]) => cle);
+  let emitGuidanceActionSpy;
+
+  beforeEach(() => {
+    emitGuidanceActionSpy = jest.spyOn(guidanceRuntime, 'emitGuidanceAction');
+  });
+
+  it('club gratuit qui a la sienne : le signal part', () => {
+    rendre();
+    expect(signaux()).toContain('facility.free.taken');
+  });
+
+  it('club gratuit sans installation : aucun signal', () => {
+    mockFacilityContext.data.allFacilities = [];
+    rendre();
+    expect(signaux()).not.toContain('facility.free.taken');
+  });
+
+  it('une installation de la Ville ne prend pas la place du club', () => {
+    mockFacilityContext.data.allFacilities = [{
+      ...INSTALLATION_CLUB, isShared: true, ownerType: 'collectivite',
+    }];
+    rendre();
+    expect(signaux()).not.toContain('facility.free.taken');
+  });
+
+  it('avec l offre Club : aucun signal', () => {
+    mockAuthExtra = { subscriptionAccessLevel: 'CLUB' };
+    rendre();
+    expect(signaux()).not.toContain('facility.free.taken');
+  });
+});

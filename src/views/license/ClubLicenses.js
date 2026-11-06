@@ -25,6 +25,7 @@ import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGr
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -866,129 +867,131 @@ function CampaignSummary({
   };
 
   return (
-    <View
-      style={[ApplicationStyle.card, Spaces.gap[12], {
-        backgroundColor: Colors.primary800,
-        borderColor: withAlpha(Colors.primary500, 0.33),
-        borderRadius: licenseRadius.card,
-        borderWidth: 1,
-        paddingHorizontal: licenseSpacing.cardPadding,
-        paddingVertical: licenseSpacing.cardPadding,
-      }]}
-      testID="club-licenses-summary"
-    >
-      {lignes.map((ligne, index) => {
-        const attendu = Math.max(ligne.expectedCents || 0, 0);
-        const encaisse = Math.max(ligne.paidCents || 0, 0);
-        // Rien d'attendu = barre a zero, jamais a 100 % : une campagne vide n'est pas
-        // une campagne soldee. Et la part est bornee, un trop-percu ne deborde pas.
-        const partEncaissee = attendu > 0 ? Math.min(encaisse / attendu, 1) : 0;
-        const pourcentage = Math.round(partEncaissee * 100);
-        return (
-          <View
-            key={ligne.currency}
-            style={[Spaces.gap[12], index > 0 ? { ...separateur, paddingTop: 12 } : null]}
-          >
-            {plusieursDevises ? (
-              <Text style={[Fonts.p3Bold, Fonts.neutral300, { letterSpacing: 1 }]}>
-                {ligne.currency}
-              </Text>
-            ) : null}
-            <Text style={Fonts.p2}>
-              <Text style={[Fonts.h3, Fonts.neutral00]}>{money(encaisse, ligne.currency)}</Text>
-              <Text style={[Fonts.p2, Fonts.neutral200]}>
-                {t('clubLicenses.summary.collectedOf', ' encaissés sur ')}
-                {money(attendu, ligne.currency)}
-                {t('clubLicenses.summary.expected', ' attendus')}
-              </Text>
-            </Text>
-
+    <TourTarget id="cot-summary">
+      <View
+        style={[ApplicationStyle.card, Spaces.gap[12], {
+          backgroundColor: Colors.primary800,
+          borderColor: withAlpha(Colors.primary500, 0.33),
+          borderRadius: licenseRadius.card,
+          borderWidth: 1,
+          paddingHorizontal: licenseSpacing.cardPadding,
+          paddingVertical: licenseSpacing.cardPadding,
+        }]}
+        testID="club-licenses-summary"
+      >
+        {lignes.map((ligne, index) => {
+          const attendu = Math.max(ligne.expectedCents || 0, 0);
+          const encaisse = Math.max(ligne.paidCents || 0, 0);
+          // Rien d'attendu = barre a zero, jamais a 100 % : une campagne vide n'est pas
+          // une campagne soldee. Et la part est bornee, un trop-percu ne deborde pas.
+          const partEncaissee = attendu > 0 ? Math.min(encaisse / attendu, 1) : 0;
+          const pourcentage = Math.round(partEncaissee * 100);
+          return (
             <View
-              accessibilityLabel={t(
-                'clubLicenses.summary.progressLabel',
-                'Progression des encaissements',
-              )}
-              accessibilityRole="progressbar"
-              accessibilityValue={{
-                max: 100,
-                min: 0,
-                now: pourcentage,
-                text: t(
-                  'clubLicenses.summary.progressValue',
-                  '{{percent}} % encaissés',
-                  { percent: pourcentage, ...SANS_ECHAPPEMENT },
-                ),
-              }}
-              style={{
-                backgroundColor: withAlpha(Colors.primary500, 0.18),
-                borderRadius: licenseRadius.pill,
-                height: 8,
-                overflow: 'hidden',
-              }}
+              key={ligne.currency}
+              style={[Spaces.gap[12], index > 0 ? { ...separateur, paddingTop: 12 } : null]}
             >
-              <View style={{
-                backgroundColor: Colors.primary500,
-                borderRadius: licenseRadius.pill,
-                height: 8,
-                width: `${pourcentage}%`,
-              }}
-              />
-            </View>
+              {plusieursDevises ? (
+                <Text style={[Fonts.p3Bold, Fonts.neutral300, { letterSpacing: 1 }]}>
+                  {ligne.currency}
+                </Text>
+              ) : null}
+              <Text style={Fonts.p2}>
+                <Text style={[Fonts.h3, Fonts.neutral00]}>{money(encaisse, ligne.currency)}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral200]}>
+                  {t('clubLicenses.summary.collectedOf', ' encaissés sur ')}
+                  {money(attendu, ligne.currency)}
+                  {t('clubLicenses.summary.expected', ' attendus')}
+                </Text>
+              </Text>
 
-            <View style={styleRangee}>
-              <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
-                {t('clubLicenses.summary.remaining', 'Reste ')}
-                {money(Math.max(ligne.remainingCents || 0, 0), ligne.currency)}
-              </Text>
-              {plusieursDevises ? null : texteRetards}
-            </View>
-            {ligne.closedRemainingCents > 0 ? (
-              <Text style={styleMention}>
-                {t(
-                  'clubLicenses.summary.closedShare',
-                  'dont {{amount}} sur des campagnes terminées',
-                  {
-                    amount: money(ligne.closedRemainingCents, ligne.currency),
-                    ...SANS_ECHAPPEMENT,
-                  },
+              <View
+                accessibilityLabel={t(
+                  'clubLicenses.summary.progressLabel',
+                  'Progression des encaissements',
                 )}
-              </Text>
-            ) : null}
+                accessibilityRole="progressbar"
+                accessibilityValue={{
+                  max: 100,
+                  min: 0,
+                  now: pourcentage,
+                  text: t(
+                    'clubLicenses.summary.progressValue',
+                    '{{percent}} % encaissés',
+                    { percent: pourcentage, ...SANS_ECHAPPEMENT },
+                  ),
+                }}
+                style={{
+                  backgroundColor: withAlpha(Colors.primary500, 0.18),
+                  borderRadius: licenseRadius.pill,
+                  height: 8,
+                  overflow: 'hidden',
+                }}
+              >
+                <View style={{
+                  backgroundColor: Colors.primary500,
+                  borderRadius: licenseRadius.pill,
+                  height: 8,
+                  width: `${pourcentage}%`,
+                }}
+                />
+              </View>
+
+              <View style={styleRangee}>
+                <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
+                  {t('clubLicenses.summary.remaining', 'Reste ')}
+                  {money(Math.max(ligne.remainingCents || 0, 0), ligne.currency)}
+                </Text>
+                {plusieursDevises ? null : texteRetards}
+              </View>
+              {ligne.closedRemainingCents > 0 ? (
+                <Text style={styleMention}>
+                  {t(
+                    'clubLicenses.summary.closedShare',
+                    'dont {{amount}} sur des campagnes terminées',
+                    {
+                      amount: money(ligne.closedRemainingCents, ligne.currency),
+                      ...SANS_ECHAPPEMENT,
+                    },
+                  )}
+                </Text>
+              ) : null}
+            </View>
+          );
+        })}
+        {plusieursDevises ? (
+          <View style={[separateur, styleRangee, { paddingTop: 10 }]}>
+            <Text style={[styleMention, { flex: 1 }]}>{mentionArchivees}</Text>
+            {texteRetards}
           </View>
-        );
-      })}
-      {plusieursDevises ? (
-        <View style={[separateur, styleRangee, { paddingTop: 10 }]}>
-          <Text style={[styleMention, { flex: 1 }]}>{mentionArchivees}</Text>
-          {texteRetards}
-        </View>
-      ) : null}
-      {!plusieursDevises && mentionArchivees ? (
-        <Text style={styleMention}>{mentionArchivees}</Text>
-      ) : null}
-      {hiddenCount > 0 ? (
-        <Text style={styleMention}>
-          {t('clubLicenses.summary.hiddenCampaigns', {
-            count: hiddenCount,
-            defaultValue_one: 'Compte aussi {{count}} campagne non affichée ci-dessous',
-            defaultValue_other: 'Compte aussi {{count}} campagnes non affichées ci-dessous',
-          })}
-        </Text>
-      ) : null}
-      {serverTotal > loadedCount ? (
-        // ponytail: le serveur sert 50 campagnes par page ; au-dela, le total le dit au lieu de
-        // charger les pages suivantes. Sortie : un total par devise calcule par le serveur.
-        <Text style={styleMention}>
-          {t('clubLicenses.summary.partialList', {
-            count: loadedCount,
-            defaultValue_one: 'Calculé sur {{count}} campagne sur {{total}}',
-            defaultValue_other: 'Calculé sur {{count}} campagnes sur {{total}}',
-            total: serverTotal,
-            ...SANS_ECHAPPEMENT,
-          })}
-        </Text>
-      ) : null}
-    </View>
+        ) : null}
+        {!plusieursDevises && mentionArchivees ? (
+          <Text style={styleMention}>{mentionArchivees}</Text>
+        ) : null}
+        {hiddenCount > 0 ? (
+          <Text style={styleMention}>
+            {t('clubLicenses.summary.hiddenCampaigns', {
+              count: hiddenCount,
+              defaultValue_one: 'Compte aussi {{count}} campagne non affichée ci-dessous',
+              defaultValue_other: 'Compte aussi {{count}} campagnes non affichées ci-dessous',
+            })}
+          </Text>
+        ) : null}
+        {serverTotal > loadedCount ? (
+          // ponytail: le serveur sert 50 campagnes par page ; au-dela, le total le dit au lieu de
+          // charger les pages suivantes. Sortie : un total par devise calcule par le serveur.
+          <Text style={styleMention}>
+            {t('clubLicenses.summary.partialList', {
+              count: loadedCount,
+              defaultValue_one: 'Calculé sur {{count}} campagne sur {{total}}',
+              defaultValue_other: 'Calculé sur {{count}} campagnes sur {{total}}',
+              total: serverTotal,
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        ) : null}
+      </View>
+    </TourTarget>
   );
 }
 
@@ -3970,31 +3973,33 @@ function ClubLicenses({ navigation, route }) {
               />
             </View>
           ) : (
-            <Pressable
-              accessibilityHint={t(
-                'clubLicenses.campaigns.newHint',
-                'Ouvre le tunnel de creation d une campagne de cotisation.',
-              )}
-              accessibilityLabel={t('clubLicenses.campaigns.new', 'Nouvelle campagne')}
-              accessibilityRole="button"
-              onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
-              style={({ pressed }) => [{
-                alignItems: 'center',
-                borderColor: withAlpha(Colors.primary500, 0.4),
-                borderRadius: licenseRadius.card,
-                borderStyle: 'dashed',
-                borderWidth: 1,
-                justifyContent: 'center',
-                minHeight: 64,
-                opacity: pressed ? 0.8 : 1,
-                paddingHorizontal: licenseSpacing.cardPadding,
-                paddingVertical: licenseSpacing.cardPadding,
-              }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
-            >
-              <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
-                {t('clubLicenses.campaigns.newTile', '+ Nouvelle campagne')}
-              </Text>
-            </Pressable>
+            <TourTarget id="cot-new">
+              <Pressable
+                accessibilityHint={t(
+                  'clubLicenses.campaigns.newHint',
+                  'Ouvre le tunnel de creation d une campagne de cotisation.',
+                )}
+                accessibilityLabel={t('clubLicenses.campaigns.new', 'Nouvelle campagne')}
+                accessibilityRole="button"
+                onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
+                style={({ pressed }) => [{
+                  alignItems: 'center',
+                  borderColor: withAlpha(Colors.primary500, 0.4),
+                  borderRadius: licenseRadius.card,
+                  borderStyle: 'dashed',
+                  borderWidth: 1,
+                  justifyContent: 'center',
+                  minHeight: 64,
+                  opacity: pressed ? 0.8 : 1,
+                  paddingHorizontal: licenseSpacing.cardPadding,
+                  paddingVertical: licenseSpacing.cardPadding,
+                }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
+              >
+                <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                  {t('clubLicenses.campaigns.newTile', '+ Nouvelle campagne')}
+                </Text>
+              </Pressable>
+            </TourTarget>
           )}
           {/*
             D26 : la connexion HelloAsso est un reglage de CLUB — la charge
@@ -4481,15 +4486,17 @@ function ClubLicenses({ navigation, route }) {
               },
             ]}
           >
-            <Button
-              accessibilityHint={t(
-                'clubLicenses.setupFooter.hint',
-                'Continue le paramétrage des cotisations du club.',
-              )}
-              accessibilityLabel={t('clubLicenses.setupFooter.label', 'Continuer le paramétrage')}
-              onPress={handleSetupContinue}
-              title={t('clubLicenses.setupFooter.continue', 'Continuer')}
-            />
+            <TourTarget id="cot-setup">
+              <Button
+                accessibilityHint={t(
+                  'clubLicenses.setupFooter.hint',
+                  'Continue le paramétrage des cotisations du club.',
+                )}
+                accessibilityLabel={t('clubLicenses.setupFooter.label', 'Continuer le paramétrage')}
+                onPress={handleSetupContinue}
+                title={t('clubLicenses.setupFooter.continue', 'Continuer')}
+              />
+            </TourTarget>
           </PiedFlottant>
         ) : null}
       </View>

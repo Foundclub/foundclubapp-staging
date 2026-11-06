@@ -377,6 +377,69 @@ describe('point 4 — le retour du partage', () => {
   });
 });
 
+describe('G93 — sortie par la flèche, puis « Reprendre »', () => {
+  const inTabStep = () => {
+    mockUserData = { ...mockUserData, trainedTeams: [SENIORS] };
+    start();
+    const saved = JSON.parse(mockStore.get(`tourProgress_${USER_ID}`));
+    act(() => tree.unmount());
+    mockStore.set(`tourProgress_${USER_ID}`, JSON.stringify({
+      ...saved,
+      gauge: 75,
+      missionStatus: { coach_m1: 'done', coach_m2: 'done', coach_m3: 'done' },
+      status: 'active',
+      stepId: 'm4-card',
+    }));
+    renderProvider();
+    act(() => { tour.resumeTour(); });
+    route(RouteNames.SearchHome);
+    if (stepId() === 'm4-back') route(RouteNames.SearchHome);
+    expect(stepId()).toBe('m4-card');
+    route(RouteNames.SearchHub);
+    pressNext();
+    expect(stepId()).toBe('m4-tab-ev');
+  };
+
+  it('repart du point de reprise de la mission, sans perdre la jauge', () => {
+    inTabStep();
+    route(RouteNames.SearchHome);
+    mockNavigate.mockClear();
+    act(() => { tour.returnToGuide(); });
+    expect(stepId()).toBe('m4-card');
+    expect(tour.gauge).toBe(75);
+    expect(tour.tourStatus).toBe('active');
+    expect(mockNavigate).toHaveBeenCalled();
+  });
+
+  it('en pause, ou sans guide : rien ne bouge', () => {
+    inTabStep();
+    act(() => { tour.pauseTour(); });
+    act(() => { tour.returnToGuide(); });
+    expect(tour.tourStatus).toBe('paused');
+    expect(stepId()).toBe('m4-tab-ev');
+  });
+});
+
+describe('G93 — la feuille d’achat de l’installation', () => {
+  it('le refus Offre Club ne saute pas la mission : la sortie est dite par la bulle', () => {
+    const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
+    const mission = COACH_GUIDE.missions.find((candidate) => candidate.id === 'coach_m3');
+    expect(mission.refusals['paywall.facility-manage-required']).toBeUndefined();
+    const place = COACH_GUIDE.steps.find((candidate) => candidate.id === 'm3-place');
+    expect(place.subGuides[0].refused.key).toBe('paywall.facility-manage-required');
+    expect(place.subGuides[0].refused.text()).toMatch(/Extérieur/);
+  });
+
+  it('le guide prévient avant de faire remplir le formulaire', () => {
+    const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
+    const place = COACH_GUIDE.steps.find((candidate) => candidate.id === 'm3-place');
+    const [anchor, text] = place.subGuides[0].bubbles[0];
+    expect(anchor).toBe('facility.name');
+    expect(text()).toMatch(/offre Club/);
+    expect(text()).toMatch(/Extérieur/);
+  });
+});
+
 describe('reprise — la progression se retrouve par l’id de l’étape', () => {
   it('garde l’id, et le relit même si les étapes ont bougé', () => {
     start();

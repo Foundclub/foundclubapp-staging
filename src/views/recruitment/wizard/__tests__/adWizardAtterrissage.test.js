@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+
 import AdWizardRecap from '../AdWizardRecap';
 
 // Filet R07 point 4 (E6 — ce fichier n'avait AUCUN test) — OU L'ON ATTERRIT
@@ -287,5 +289,67 @@ describe('R07 point 4 — apres publication, on atterrit SUR son annonce', () =>
 
     // Dernier recours : mieux vaut l'accueil qu'un ecran fige.
     expect(dernierRecours).toHaveBeenCalled();
+  });
+});
+
+/** Étape du guide lue par l'écran. */
+let mockTour = {};
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+
+describe('Guide Dirigeant·e, B4 : « Publier » ne part pas pendant le bonus', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+
+  beforeEach(() => {
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+  });
+  afterEach(() => {
+    arreter();
+    mockTour = {};
+  });
+
+  const publierLeRecap = async () => {
+    await act(async () => {
+      await mockProprietesEtape[mockProprietesEtape.length - 1].onNext();
+    });
+  };
+
+  it('à l écran du bonus : 0 requête, et le signal d exemple', async () => {
+    mockTour = { currentStep: { simulatesAd: true }, tourStatus: 'active' };
+    monterLeRecap();
+    await publierLeRecap();
+    expect(mockCreerAnnonce).not.toHaveBeenCalled();
+    expect(resetRacine).not.toHaveBeenCalled();
+    expect(signaux.map((signal) => signal.key)).toContain('ad.publish.example');
+  });
+
+  it('guide en pause : la vraie publication, comme hors guide', async () => {
+    mockTour = { currentStep: { simulatesAd: true }, tourStatus: 'paused' };
+    monterLeRecap();
+    await publierLeRecap();
+    expect(mockCreerAnnonce).toHaveBeenCalled();
+    expect(signaux.map((signal) => signal.key)).not.toContain('ad.publish.example');
+  });
+
+  it('récap incomplet : grisé hors guide, jamais pendant le bonus (la bulle fait toucher)', () => {
+    mockEtatCourant = { ...ETAT_UN_POSTE, team: null };
+    monterLeRecap();
+    expect(mockProprietesEtape[mockProprietesEtape.length - 1].isNextDisabled).toBe(true);
+    act(() => arbre.unmount());
+    arbre = null;
+    mockTour = { currentStep: { simulatesAd: true }, tourStatus: 'active' };
+    monterLeRecap();
+    expect(mockProprietesEtape[mockProprietesEtape.length - 1].isNextDisabled).toBe(false);
+  });
+
+  it('hors guide : la vraie publication', async () => {
+    monterLeRecap();
+    await publierLeRecap();
+    expect(mockCreerAnnonce).toHaveBeenCalled();
   });
 });

@@ -46,6 +46,8 @@ export const stableHeight = (previous, next) => (Math.abs(next - previous) < 1 ?
 
 // Hauteur minimale d'un toucher (accessibilité).
 const MIN_TOUCH = 44;
+// Un élément posé contre l'en-tête peut le chevaucher de quelques points sans être passé dessous.
+const HEADER_OVERLAP_ALLOWED = 4;
 
 /**
  * La cible est-elle à l'écran ? Une cible hors écran donnait une découpe de
@@ -115,6 +117,31 @@ export const clipAboveDock = (rect, dock) => {
   if (!dock || rect.y + rect.height <= dock.y) return rect;
   const height = dock.y - rect.y;
   return height >= Math.min(rect.height, MIN_TOUCH) ? { ...rect, height } : null;
+};
+
+/**
+ * G93 : la cible est-elle passée sous l'en-tête fixe ? Une liste qui défile passe dessous : la
+ * mesure reste « à l'écran », et le cadre se dessinait sur le titre, sans plus rien de touchable.
+ * @param {{ y: number }} rect - Mesure.
+ * @param {number | null} headerBottom - Bas de l'en-tête fixe (`headerBottomOf`), ou rien.
+ * @returns {boolean} Sous l'en-tête ?
+ */
+export const isUnderHeader = (rect, headerBottom) => (
+  headerBottom !== null && rect.y < headerBottom - HEADER_OVERLAP_ALLOWED
+);
+
+/**
+ * Ce qui reste visible d'une cible sous l'en-tête fixe, même règle que `clipAboveDock`.
+ * @param {{ height: number; width: number; x: number; y: number }} rect - Mesure.
+ * @param {number | null} headerBottom - Bas de l'en-tête fixe, ou rien.
+ * @returns {{ height: number; width: number; x: number; y: number } | null} Partie visible.
+ */
+export const clipBelowHeader = (rect, headerBottom) => {
+  if (!isUnderHeader(rect, headerBottom)) return rect;
+  const height = rect.y + rect.height - /** @type {number} */ (headerBottom);
+  return height >= Math.min(rect.height, MIN_TOUCH)
+    ? { ...rect, height, y: /** @type {number} */ (headerBottom) }
+    : null;
 };
 
 /**

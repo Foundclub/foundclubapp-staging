@@ -1,6 +1,9 @@
 import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+import { isTourFieldValid, resetTourTargetsForTests } from '@/domains/tour/tourTargetRegistry';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
@@ -539,10 +542,10 @@ describe('AddCoach — fusion D51 ecran 10 : ce que les champs annoncent', () =>
     expect(texteDe(arbre.root)).toContain('Date de naissance — optionnelle');
   });
 
-  it('l ecran annonce l invitation SMS avant de l envoyer', async () => {
+  it('l ecran dit que c est lui qui enverra le SMS', async () => {
     const arbre = await monterEcran();
 
-    expect(texteDe(arbre.root)).toContain('invitation SMS');
+    expect(texteDe(arbre.root)).toContain('SMS juste après');
   });
 
   it('le bouton dit ce qu il envoie', async () => {
@@ -632,5 +635,80 @@ describe('R5-48 — le formulaire defile jusqu au-dessus du bouton', () => {
     const defilement = arbre.root.findByType(DefilementRN);
     expect(aplatirStyle(defilement.props.style).flex).toBe(1);
     expect(texteDe(defilement)).not.toContain(LIBELLE_CTA);
+  });
+});
+
+describe('Guide Dirigeant·e, M2 : ce que l écran dit au guide', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+
+  beforeEach(() => {
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+    resetTourTargetsForTests();
+  });
+  afterEach(() => arreter());
+
+  const cles = () => signaux.map((/** @type {any} */ signal) => signal.key);
+
+  it('le numéro requis : l écran dit au guide s il est rempli', async () => {
+    await monterEcran();
+    expect(isTourFieldValid('cf.phone')).toBe(false);
+    await saisirTelephone('+33 6 00 00 00 00');
+    expect(isTourFieldValid('cf.phone')).toBe(true);
+    await saisirTelephone('');
+    expect(isTourFieldValid('cf.phone')).toBe(false);
+  });
+
+  it('compte créé : le signal part sans le numéro de téléphone', async () => {
+    createTrainer.mockResolvedValueOnce({ documentId: 'coach-1' });
+    const arbre = await monterEcran();
+    await saisirTelephone('+33 6 00 00 00 00');
+    await appuyerSur(arbre, LIBELLE_CTA);
+    const signal = signaux.find((/** @type {any} */ one) => one.key === 'staff.invited');
+    expect(signal).toBeTruthy();
+    expect(JSON.stringify(signal)).not.toContain('00 00');
+  });
+
+  it('un refus n émet rien : le guide n avance pas sur un compte qui n existe pas', async () => {
+    createTrainer.mockRejectedValueOnce(new Error('refus'));
+    const arbre = await monterEcran();
+    await saisirTelephone('+33 6 00 00 00 00');
+    await appuyerSur(arbre, LIBELLE_CTA);
+    expect(cles()).not.toContain('staff.invited');
+  });
+
+  it('« Inviter » : la messagerie s ouvre ; « Plus tard » : elle ne s ouvrira pas', async () => {
+    createTrainer.mockResolvedValue({ documentId: 'coach-1' });
+    const arbre = await monterEcran();
+    await saisirTelephone('+33 6 00 00 00 00');
+    await appuyerSur(arbre, LIBELLE_CTA);
+    await act(async () => dernieresProps(mockInvitedModalProps).onInvite());
+    expect(cles()).toContain('staff.sms.opened');
+    expect(cles()).not.toContain('staff.invite.later');
+
+    signaux.length = 0;
+    await act(async () => dernieresProps(mockInvitedModalProps).onClose());
+    expect(cles()).toContain('staff.invite.later');
+  });
+
+  it('numéro déjà connu, rattaché sur accord : le guide le sait, sans feuille', async () => {
+    createTrainer.mockRejectedValueOnce({
+      details: { user: { documentId: 'u-1', firstname: 'A', lastname: 'B' } },
+    });
+    linkTrainerToClub.mockResolvedValueOnce({});
+    const spy = jest.spyOn(Alert, 'alert');
+    const arbre = await monterEcran();
+    await saisirTelephone('+33 6 00 00 00 00');
+    await appuyerSur(arbre, LIBELLE_CTA);
+    const boutons = spy.mock.calls[spy.mock.calls.length - 1][2];
+    await act(async () => boutons[1].onPress());
+    expect(cles()).toContain('staff.linked');
+    expect(cles()).not.toContain('staff.invited');
+    spy.mockRestore();
   });
 });

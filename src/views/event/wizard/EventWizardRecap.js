@@ -436,8 +436,10 @@ function EventWizardRecap({ navigation }) {
     if (!quotaTeamDocumentId) {
       return getSubscriptionQuotaItem(freeUsageSummary, quotaType, subscriptionAccessLevel);
     }
+    // QUOTA-EVENT-2 (« QG1- B », 05/11) : 2 événements offerts, le match reste à 1.
+    const offered = isMatch ? 1 : 2;
     const teamDefault = {
-      limit: 1, quotaType, remaining: 1, used: 0,
+      limit: offered, quotaType, remaining: offered, used: 0,
     };
     return getSubscriptionQuotaItem(
       teamRows.length ? teamRows : [teamDefault],

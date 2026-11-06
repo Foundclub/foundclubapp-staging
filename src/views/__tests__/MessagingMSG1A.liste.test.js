@@ -1,5 +1,7 @@
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+
 import Messaging from '../Messaging';
 
 // MSG1A (§3.13) — LA LIGNE DE LA LISTE « MESSAGES », au dessin du pack : avatar 52, titre,
@@ -373,4 +375,77 @@ describe('MSG1A (§3.13) — la ligne de la liste « Messages »', () => {
       expect(coches(await monterAvec([fil([])]))).not.toBe(couleurs.primary500);
     },
   );
+});
+
+/** Étape du guide lue par l'écran. */
+let mockTour = {};
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+
+describe('Guide Dirigeant·e, B2 : le canal du club', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+  const cles = () => signaux.map((/** @type {any} */ signal) => signal.key);
+  const pageDe = (fils) => etatListe({
+    data: {
+      pages: [{
+        data: fils,
+        meta: { pagination: { page: 1, pageCount: 1, total: fils.length } },
+      }],
+    },
+    hasNextPage: false,
+  });
+  const CANAL = {
+    club: { documentId: 'club-1', name: 'AS Test' },
+    documentId: 'canal-1',
+    type: 'club',
+  };
+  const ETAPE = { currentStep: { checksCanal: true } };
+
+  beforeEach(() => {
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+  });
+  afterEach(() => {
+    arreter();
+    mockTour = {};
+  });
+
+  it('l étape qui cherche le canal apprend qu il n existe pas', async () => {
+    mockTour = ETAPE;
+    mockChatsQuery = pageDe([]);
+    await monter();
+    expect(cles()).toContain('messaging.canal.absent');
+  });
+
+  it('le canal est là : rien à dire, et la ligne porte son ancre', async () => {
+    mockTour = ETAPE;
+    mockChatsQuery = pageDe([CANAL]);
+    const arbre = await monter();
+    expect(cles()).not.toContain('messaging.canal.absent');
+    const ids = arbre.root
+      .findAll((/** @type {any} */ noeud) => (
+        typeof noeud.props?.id === 'string' && noeud.props?.children
+      ))
+      .map((/** @type {any} */ noeud) => noeud.props.id);
+    expect(ids).toContain('msg-canal');
+  });
+
+  it('hors de l étape, ou pendant le chargement, ou s il reste des pages : silence', async () => {
+    mockChatsQuery = pageDe([]);
+    await monter();
+    expect(cles()).not.toContain('messaging.canal.absent');
+
+    mockTour = ETAPE;
+    mockChatsQuery = etatListe({ isLoading: true });
+    await monter();
+    expect(cles()).not.toContain('messaging.canal.absent');
+
+    mockChatsQuery = { ...pageDe([]), hasNextPage: true };
+    await monter();
+    expect(cles()).not.toContain('messaging.canal.absent');
+  });
 });

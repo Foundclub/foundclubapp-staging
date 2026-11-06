@@ -137,7 +137,28 @@ export const subscribeToTourTargets = (listener) => {
   };
 };
 
+// Garde du bouton d'une bulle : l'écran dit si son champ est rempli (la saisie vit dans son
+// formulaire, le guide ne la lit pas).
+/** @type {Map<string, boolean>} */
+const fields = new Map();
+
+/**
+ * Un écran dit si un champ suivi par le guide est valide.
+ * @param {string} id - Champ (`nextRequires.field` de l'étape).
+ * @param {boolean} isValid - Rempli et valide ?
+ * @returns {void}
+ */
+export const reportTourField = (id, isValid) => { fields.set(id, Boolean(isValid)); };
+
+/**
+ * L'écran a-t-il dit ce champ valide ? Sans nouvelle de lui, non.
+ * @param {string} id - Champ.
+ * @returns {boolean} Valide ?
+ */
+export const isTourFieldValid = (id) => fields.get(id) === true;
+
 export const resetTourTargetsForTests = () => {
+  fields.clear();
   targets.clear();
   listeners.clear();
 };

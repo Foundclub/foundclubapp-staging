@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -26,6 +27,7 @@ import { getShortAddress } from '@/utils/location';
 
 import { getCoachRoleLabel } from '@/constants/coachRoles';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
+import { useTour } from '@/context/useTour';
 
 /* eslint-disable perfectionist/sort-imports */
 import { useAdWizard } from './AdWizardContext';
@@ -166,6 +168,8 @@ function AdWizardRecap({ navigation }) {
   } = useTheme();
   const { showBanner } = useAppFeedback();
   const { dispatch, state } = useAdWizard();
+  const { currentStep: tourStep, tourStatus } = useTour();
+  const isAdSimulated = tourStatus === 'active' && Boolean(tourStep?.simulatesAd);
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState('');
@@ -455,6 +459,12 @@ function AdWizardRecap({ navigation }) {
   };
 
   const handleSubmit = async () => {
+    // Guide Dirigeant·e, B4 : simulation, le geste est désarmé tant que le bonus est à l'écran.
+    if (isAdSimulated) {
+      emitGuidanceInteraction('ad.publish.example');
+      return;
+    }
+
     if (!isReadyToSubmit) {
       showBanner({
         body: t(
@@ -571,7 +581,7 @@ function AdWizardRecap({ navigation }) {
   return (
     <>
       <WizardStepLayout
-        isNextDisabled={!isReadyToSubmit || isSubmitting}
+        isNextDisabled={(!isReadyToSubmit && !isAdSimulated) || isSubmitting}
         isNextLoading={isSubmitting}
         nextLabel={t('adWizardRecap.submit.label', "Publier l'annonce")}
         onBack={() => navigation.goBack()}

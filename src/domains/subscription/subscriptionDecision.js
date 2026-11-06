@@ -784,10 +784,10 @@ export const getSubscriptionPaywallContent = (decision) => {
         description: withRequiredPlan(
           i18next.t(
             'subscriptionDecision.paywall.facility.description',
-            'La gestion des installations du club est réservée a l offre Club.',
+            'La première installation est offerte. Les suivantes demandent l’offre Club.',
           ),
         ),
-        title: i18next.t('subscriptionDecision.paywall.facility.title', 'Installations réservées'),
+        title: i18next.t('subscriptionDecision.paywall.facility.title', 'Installations du club'),
       };
     case 'match-limit':
       return {
@@ -821,10 +821,10 @@ export const getSubscriptionPaywallContent = (decision) => {
         description: withRequiredPlan(
           i18next.t(
             'subscriptionDecision.paywall.sponsor.description',
-            'La gestion des sponsors du club est réservée a l offre Club.',
+            'Le premier partenaire est offert. Les suivants demandent l’offre Club.',
           ),
         ),
-        title: i18next.t('subscriptionDecision.paywall.sponsor.title', 'Sponsors reserves'),
+        title: i18next.t('subscriptionDecision.paywall.sponsor.title', 'Partenaires du club'),
       };
     case 'team-limit':
       return {
@@ -1226,6 +1226,18 @@ export const getSubscriptionRequiredScope = (decision) => (
  */
 export const hasActiveClubOffer = (subscriptionAccessLevel) => (
   subscriptionAccessLevel === 'CLUB' || subscriptionAccessLevel === 'CLUB_UNVERIFIED'
+);
+
+/**
+ * GUIDE-D-QUOTA-CLUB (Adel « 77- C », 05/11) : la place offerte d'un club (1 installation,
+ * 1 partenaire) est-elle déjà prise ? Le serveur reste seul juge ; ceci sert à prévenir AVANT de
+ * faire remplir un formulaire.
+ * @param {number} ownedCount - Ce que le club possède déjà, à lui.
+ * @param {string | null | undefined} subscriptionAccessLevel - Niveau d'offre de ce club.
+ * @returns {boolean} Vrai si le suivant demande l'offre Club.
+ */
+export const isClubFreeSlotTaken = (ownedCount, subscriptionAccessLevel) => (
+  ownedCount >= 1 && !hasActiveClubOffer(subscriptionAccessLevel)
 );
 
 /**
@@ -1960,7 +1972,7 @@ const ENTRY_POINT_EXHAUSTED_HINTS = {
   get EVENT_PUBLISH() {
     return i18next.t(
       'subscriptionDecision.entryPointHints.eventPublish',
-      "Ton événement gratuit est déjà en ligne — débloque l'offre Équipe",
+      "Tes événements gratuits sont déjà en ligne — débloque l'offre Équipe",
     );
   },
   get FREE_TEAM() {
@@ -2039,4 +2051,36 @@ export const getSubscriptionEntryPointLock = ({
     hint: ENTRY_POINT_EXHAUSTED_HINTS[normalizedQuotaType],
     scope: /** @type {'team'} */ ('team'),
   };
+};
+
+/**
+ * QG3 (Adel, 05/11/2026) : la carte « Ajouter un événement » ouvre aussi les matchs, qui ont
+ * leur propre compteur. Elle reste donc ouverte tant qu'il reste un match offert ; le tunnel dit
+ * dès son entrée que les événements sont épuisés (bandeau de `EventWizardType`).
+ * @param {object} input
+ * @param {boolean} [input.eventOnly] - Le geste ne crée qu'un événement (M3 du guide Entraîneur).
+ * @param {any[]} input.freeUsageSummary - Compteurs gratuits de `GET /app/bootstrap`.
+ * @param {string} [input.roleKey] - Clé de rôle rendue par `getUserRoleKey`.
+ * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [input.subscriptionAccessLevel]
+ * @returns {{ badgeLabel: string; decision: any; hint: string; scope: 'team' } | null} Le verrou.
+ */
+export const getAddEventEntryLock = ({
+  eventOnly = false,
+  freeUsageSummary,
+  roleKey,
+  subscriptionAccessLevel = 'FREE',
+}) => {
+  const lock = getSubscriptionEntryPointLock({
+    freeUsageSummary,
+    quotaType: 'EVENT_PUBLISH',
+    roleKey,
+    subscriptionAccessLevel,
+  });
+  if (!lock || eventOnly) return lock;
+  const matchQuota = getSubscriptionQuotaItem(
+    freeUsageSummary,
+    'MATCH_PUBLISH',
+    subscriptionAccessLevel,
+  );
+  return (matchQuota?.remaining ?? 0) > 0 ? null : lock;
 };

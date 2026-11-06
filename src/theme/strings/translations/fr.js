@@ -79,7 +79,7 @@ export default {
       },
     },
     hints: {
-      invitation: 'Une invitation SMS lui sera envoyée pour rejoindre le club.',
+      invitation: 'Tu lui enverras le SMS juste après.',
     },
     roles: {
       manager: 'Dirigeant·e',
@@ -18730,6 +18730,7 @@ export default {
       // PARENT-LIEN (30/09) — la porte de l'ENFANT : accepter, refuser, retirer le lien.
       myParent: 'Mon parent',
       myTeams: 'Mes équipes',
+      presidentGuide: 'Guide dirigeant·e',
       previewPublic: 'Voir mon profil comme les autres',
       save: 'Continuer',
       // A17 (audit V1, 30/09) — venue de la rubrique « Mon profil » de l'accueil.
@@ -19949,6 +19950,10 @@ export default {
       title: 'Ouvrir une conversation',
     },
     empty: 'Aucune demande en attente',
+    example: {
+      accepted: 'C’était un exemple : personne n’a rejoint ton club. Les joueur·se·s qui veulent '
+        + 'rejoindre une équipe arrivent ici aussi, dans le filtre « Équipe ».',
+    },
     filters: {
       all: 'Toutes',
       club: 'Club',
@@ -20027,6 +20032,7 @@ export default {
       childPlace: 'Place enfant',
       club: 'Club',
       event: 'Événement',
+      example: 'Exemple',
       featured: 'À la une',
       // R02 — ces trois-la manquaient : la banniere d'erreur les nommait
       // « Demande », le libelle fourre-tout. Une section indisponible qui ne dit
@@ -22499,7 +22505,7 @@ export default {
       unlimited: 'Illimité',
     },
     entryPointHints: {
-      eventPublish: "Ton événement gratuit est déjà en ligne — débloque l'offre Équipe",
+      eventPublish: "Tes événements gratuits sont déjà en ligne — débloque l'offre Équipe",
       freeTeam: "Ta création gratuite est utilisée — débloque l'offre Équipe",
       matchPublish: "Ton match gratuit est déjà en ligne — débloque l'offre Équipe",
       recruitmentAdPublish: "Ton annonce gratuite est déjà en ligne — débloque l'offre Équipe",
@@ -22539,8 +22545,8 @@ export default {
         title: 'Publication d’événement limitée',
       },
       facility: {
-        description: 'La gestion des installations du club est réservée à l’offre Club.',
-        title: 'Installations réservées',
+        description: 'La première installation est offerte. Les suivantes demandent l’offre Club.',
+        title: 'Installations du club',
       },
       match: {
         // eslint-disable-next-line max-len
@@ -22553,8 +22559,8 @@ export default {
         title: 'Publication recrutement limitée',
       },
       sponsor: {
-        description: 'La gestion des sponsors du club est réservée à l’offre Club.',
-        title: 'Sponsors réservés',
+        description: 'Le premier partenaire est offert. Les suivants demandent l’offre Club.',
+        title: 'Partenaires du club',
       },
       team: {
         description: 'La création d’équipe demande une offre active.{{requiredPlanSuffix}}',
@@ -23016,7 +23022,7 @@ export default {
     },
     exhaustedBody: {
       // eslint-disable-next-line max-len
-      eventPublish: "Ton événement gratuit est déjà en ligne. Passe à l'illimité : entraînements, matchs, tournois…",
+      eventPublish: "Tes événements gratuits sont déjà en ligne. Passe à l'illimité : entraînements, matchs, tournois…",
       freeTeam: "Ta 1ʳᵉ équipe reste active. Débloque l'offre Équipe pour en créer d'autres.",
       // eslint-disable-next-line max-len
       recruitmentAdPublish: "Ton annonce gratuite est déjà en ligne. Recrute sans limite avec l'offre Équipe.",
@@ -24252,7 +24258,7 @@ export default {
       fallback: 'Erreur',
     },
     events: {
-      emptyBody: 'Ton 1ᵉʳ événement est offert — entraînement, match…',
+      emptyBody: 'Tes premiers événements sont offerts — entraînement, match…',
       emptyCreate: 'Créer',
       emptyTitle: 'Aucun événement prévu',
     },
@@ -25340,14 +25346,17 @@ export default {
       'm3-access': 'Pour un entraînement, garde Privé : ton équipe et tes invités.',
       'm3-card': 'Touche « Ajouter un événement ».',
       'm3-create': 'Vérifie le récap : si ta séance se répète, elle s’arrête à la date de fin choisie dans « Répéter ». Crée !',
+      'm3-create-free': 'Vérifie le récap, puis crée ta séance !',
       'm3-desc': 'Écris une consigne pour ton équipe (ex. : rendez-vous 15 min avant). Sinon, passe.',
       'm3-dock': 'Programme maintenant ta séance : ouvre l’accueil.',
+      'm3-fac-0': 'Il faut l’offre Club. Sinon, reviens : « Extérieur ».',
       'm3-fac-1': 'Donne un nom à l’installation et choisis son type (obligatoire).',
-      'm3-fac-2': 'L’adresse exacte : tes joueur·se·s pourront l’ouvrir dans leur GPS.',
+      'm3-fac-2': 'Adresse obligatoire : choisis-la dans la liste proposée.',
       'm3-fac-3': 'Si deux équipes réservent le même créneau : « Demande à valider », un dirigeant tranche ; « Autoriser et notifier », c’est réservé tout de suite et le bureau est prévenu.',
       'm3-fac-4': 'Capacité : combien d’équipes peuvent l’utiliser en même temps. Ex. 2 pour un terrain coupé en deux.',
       'm3-fac-5': 'La couleur de l’installation dans le planning, pour la repérer d’un coup d’œil.',
       'm3-fac-6': 'Tout est bon ? Crée-la : elle sera sélectionnée pour ta séance.',
+      'm3-fac-refused': 'Sans offre Club : ferme l’offre, touche « Annuler », puis « Extérieur ».',
       'm3-page': 'Ta séance est en ligne.',
       'm3-place-1': 'Club : une installation du club. Extérieur : une autre adresse.',
       'm3-place-2': 'Ton club a des installations ? Touche celle de ta séance.',
@@ -25361,6 +25370,8 @@ export default {
       'm3-team': 'Rattache la séance à ton équipe.',
       'm3-type': 'Choisis « Entraînement ».',
       'm3-when': 'Touche la date et les heures. Chaque semaine ? Touche « Chaque semaine » ou « Plus d’options ». Puis Suivant.',
+      'm3-when-free': 'Touche la date et les heures, puis Suivant. Répéter chaque semaine demande '
+        + 'l’offre Équipe.',
       'm4-am1': 'Touche l’équipe qui cherche un adversaire.',
       'm4-am2': 'Tu reçois sur ton terrain, tu te déplaces, ou les deux. « Les deux » touche le plus d’équipes.',
       'm4-am3': 'Choisis un jour (l’heure est facultative), puis « Ajouter cette date ». Propose-en plusieurs : tu auras plus de réponses.',
@@ -25514,6 +25525,228 @@ export default {
       successMessage: 'Profil au top — tour terminé',
       title: 'Mon profil',
     },
+    president: {
+      'a-stop': 'Rien n’est parti. Une vraie annonce passe en ligne, et les candidatures arrivent '
+        + 'sur sa fiche, avec une affiche à partager.',
+      a1: 'Tu recrutes des joueur·se·s ou un coach ?',
+      a2: 'L’équipe qui recrute.',
+      a3: 'Active le poste qui te manque (au foot, par exemple « Ailier gauche »), puis Suivant.',
+      a3c: 'Le profil de coach que tu cherches, puis Suivant.',
+      a4: 'Le niveau minimum filtre les candidatures.',
+      a5: 'Le lieu sert à montrer l’annonce aux joueur·se·s proches.',
+      a5v: 'Cette annonce a une validation : choisis comment, puis Suivant.',
+      a6: 'Facultatif : les idées à inclure t’aident. Tu peux passer.',
+      a7: 'Relis ton annonce, puis touche le bouton : simulation, rien ne sera publié.',
+      'b1-card': 'Les cotisations du club se gèrent ici. Ouvre-les.',
+      'b1-new': 'Lance une campagne. C’est une simulation : rien ne sera envoyé.',
+      'b1-new-setup': 'Touche « Continuer ». C’est une simulation : rien ne sera envoyé.',
+      'b1-sum': 'En un coup d’œil : ce qui est encaissé, ce qui reste, les retards.',
+      'b1-sum-new': 'Ton club n’a pas encore de campagne : tout part d’ici. Ce résumé se remplira '
+        + 'avec la première.',
+      'b2-canal': 'Voici le canal de ton club. Ouvre-le.',
+      'b2-dock': 'Ouvre les Messages.',
+      'b2-foot': 'Toi tu écris, eux lisent : idéal pour les annonces officielles.',
+      'b2-info': 'Ton canal d’annonce : tous les membres du club le reçoivent.',
+      'b2-none': 'Ton canal n’existe pas encore : il naît quand ton club compte 2 membres et une '
+        + 'équipe. Il apparaîtra ici.',
+      'b3-back': 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou glisse '
+        + 'ton doigt depuis le bord gauche.',
+      'b3-create': 'Crée le groupe : il est réel, tes membres le verront.',
+      'b3-few': 'Un groupe demande au moins 2 autres membres, et ton club n’en a pas encore '
+        + 'assez. Reviens ici quand ils auront rejoint le club. On continue.',
+      'b3-name': 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
+        + 'messages » pour que seuls les admins écrivent.',
+      'b3-new': 'Touche ce bouton pour une nouvelle discussion.',
+      'b3-sel': 'Un membre : discussion à deux. Plusieurs : un groupe. Coche-en au moins 2, puis '
+        + 'Suivant.',
+      'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
+        + 'depuis le même bouton. On continue.',
+      'b4-card': 'Ouvre « Recruter ». C’est une simulation : rien ne sera publié.',
+      'b4-dock': 'Bonus suivant : recruter. Retourne à l’accueil.',
+      'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
+      'b5-cl': 'Club : les autres clubs, pour un partenariat ou un amical.',
+      'b5-ev': 'Événement : tournois, stages et détections autour de toi.',
+      'b5-fr': 'Matchs amicaux : trouve un adversaire, ou publie ton annonce.',
+      'b5-pr': 'Profils : les joueur·se·s et coachs ouverts au recrutement.',
+      'b5-re': 'Réservations : les créneaux de terrains à réserver près de toi.',
+      bonusDetail: 'Cotisation, canal, groupe, recrutement, recherche',
+      'c-stop': 'Rien n’est parti. Une vraie campagne ajoute les membres concernés, et tu suis '
+        + 'ensuite qui a payé dans les cotisations.',
+      c1: 'Choisis le type : le nom se remplit tout seul. Puis la période, et Suivant.',
+      c2: 'Le montant par membre. Un tarif différent ? Ajoute une règle dans cet écran. Puis '
+        + 'Suivant.',
+      c3: 'Active les moyens acceptés. HelloAsso encaisse en ligne une fois connecté. Puis '
+        + 'Suivant.',
+      c4: 'Facultatif : demande un document, un certificat médical par exemple. Tu peux passer.',
+      c5: 'Les relances partent seules jusqu’au paiement. Leur cadence se règle ici. Puis Suivant.',
+      c6: 'Relis chaque bloc, puis touche le bouton : simulation, rien n’est envoyé.',
+      close: {
+        bonus: 'BONUS',
+        club: 'Infos du club enregistrées',
+        coach: 'Coach ajouté au club',
+        cta: "Aller à l'accueil",
+        example: 'Les exemples du guide sont effacés : rien n’a été envoyé.',
+        facility: 'Installation créée',
+        footer: 'Retrouve ce guide dans Mon compte › Guide dirigeant·e.',
+        group: 'Groupe créé',
+        offer: 'Voir l’offre Club',
+        partner: 'Partenaire ajouté',
+        poster: 'Affiche partagée',
+        real: 'RÉEL',
+        skipped: 'PASSÉ',
+        subtitle: 'Bonne saison !',
+        team: '{{team}} créée',
+        title: 'Ton club est prêt',
+        titlePartial: 'Le guide est fini',
+        yourTeam: 'Ton équipe',
+      },
+      kicker: 'Guide dirigeant·e',
+      'm1-addr': 'L’adresse du club. « Placer sur la carte » permet aux joueur·se·s de te trouver '
+        + 'autour d’eux.',
+      'm1-card': 'Tout part d’ici : ouvre « Gérer mon club ».',
+      'm1-create': 'Tes coachs créent-ils leurs équipes eux-mêmes ? Et dois-tu les valider ?',
+      'm1-deleg': 'Qui accepte les joueur·se·s dans les équipes : toi seul·e, ou chaque coach '
+        + 'pour son équipe.',
+      'm1-edit': 'Pour les personnaliser, touche « Modifier ».',
+      'm1-email': 'L’email de contact du club.',
+      'm1-fac': '3/5 · Tes installations : stade, gymnase, salle…',
+      'm1-fac-taken': 'Ton installation offerte est déjà là : la suivante demande l’offre Club. '
+        + 'Passe cette partie.',
+      'm1-facadd': 'Ajoute une installation.',
+      'm1-fback': 'Puis retourne sur la fiche du club.',
+      'm1-ff2': 'Conflit de créneaux : à valider, ou réservé tout de suite. Capacité : équipes en '
+        + 'même temps. Couleur : son repère.',
+      'm1-ff3': 'Tout est bon ? Crée l’installation.',
+      'm1-ff3-refused': 'Ton offre gratuite compte déjà son installation : la suivante demande '
+        + 'l’offre Club. Ferme l’offre et passe cette partie.',
+      'm1-ffaddr': 'Son adresse (obligatoire) : touche le champ, tape-la, choisis-la dans la '
+        + 'liste, puis « Sélectionner ».',
+      'm1-ffaddr-guard': 'Choisis d’abord l’adresse de l’installation.',
+      'm1-ffname': 'Son nom (obligatoire) : par ex. Terrain Honneur ou Gymnase A.',
+      'm1-ffname-guard': 'Donne d’abord un nom à l’installation.',
+      'm1-fftype': 'Son type (obligatoire) : stade, gymnase, salle…',
+      'm1-fftype-guard': 'Choisis d’abord le type de l’installation.',
+      'm1-fplan': '4/5 · Ton installation est créée. Ouvre son planning.',
+      'm1-info': '1/5 · La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que '
+        + 'voient les joueur·se·s.',
+      'm1-logo': 'Ton logo : touche-le pour choisir une image de ton téléphone.',
+      'm1-name': 'Le nom du club, tel qu’il apparaît partout. Corrige-le si besoin.',
+      'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
+      'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
+      'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
+      'm1-partners-taken': 'Ton partenaire offert est déjà là : le suivant demande l’offre Club. '
+        + 'Passe cette partie.',
+      'm1-pb1': 'Reviens à tes installations.',
+      'm1-pback': 'Reviens sur la fiche du club.',
+      'm1-pcap': 'La capacité : combien d’équipes peuvent jouer en même temps, le moment le plus '
+        + 'chargé et les places encore libres.',
+      'm1-pchips': 'Choisis l’installation affichée. « Toutes installations » regroupe tout ton '
+        + 'club : touche-le.',
+      'm1-pclose': 'Envoyée ! Tu restes sur ton affiche pour la partager ailleurs. Quand tu as '
+        + 'fini, ferme-la avec la croix.',
+      'm1-pdemo': 'Ton planning est encore vide : on y a mis quelques événements d’exemple pour '
+        + 'te montrer. Ils disparaissent à la fin du guide.',
+      'm1-pempty': 'Une période sans événement s’affiche comme ça. Les créneaux de tes coachs '
+        + 'apparaîtront ici automatiquement.',
+      'm1-pfields': 'Change le titre, l’accroche, les sports ou le texte sous le QR code. Laisse '
+        + 'vide pour garder le texte proposé.',
+      'm1-pform': 'Son logo, son nom et le lien de son site, puis « Ajouter le partenaire ».',
+      'm1-pform-refused': 'Ton offre gratuite compte déjà son partenaire : le suivant demande '
+        + 'l’offre Club. Ferme l’offre et passe cette partie.',
+      'm1-phone': 'Le téléphone du club.',
+      'm1-pmodel': 'Choisis un modèle : Écusson ou Famille.',
+      'm1-pmonth': 'En vue Mois, un point signale chaque jour où l’installation est occupée.',
+      'm1-poster': '5/5 · Dernière étape : l’affiche « Rejoindre le club ».',
+      'm1-pposter': 'Voici ton affiche : le nom du club, ton sport et le QR code qui mène à ton '
+        + 'club. Tu pourras changer de modèle à tout moment.',
+      'm1-psent': 'Tu peux la partager encore, ou continuer quand c’est fait.',
+      'm1-psent-next': 'C’est envoyé',
+      'm1-pshare': 'Le QR code mène directement à ton club. Partage l’affiche, ou imprime-la pour '
+        + 'le club-house.',
+      'm1-ptext': 'Tu peux aussi adapter les textes de l’affiche. Touche « Personnaliser le texte '
+        + '».',
+      'm1-pview': 'Change d’affichage : Semaine, 3 jours ou Mois. Touche « Mois ».',
+      'm1-save': 'Enregistre.',
+      'm2-add': 'Touche le « + » à côté de tes coachs.',
+      'm2-back': 'De retour dans l’app, sur Staff. Reviens sur la fiche de ton club : touche la '
+        + 'flèche, ou glisse ton doigt depuis le bord gauche.',
+      'm2-fields': 'Son numéro (requis) et son prénom. Un compte est créé à ce numéro, et le SMS, '
+        + 'c’est toi qui l’envoies juste après.',
+      'm2-fields-required': 'Donne d’abord son numéro.',
+      'm2-invite': 'Ajouté·e au club ! Touche « Inviter » : ta messagerie s’ouvre avec le message '
+        + 'prêt. Envoie-le, puis reviens ici.',
+      'm2-role': 'Le bon rôle est déjà choisi. Garde-le.',
+      'm2-send': 'Touche « Envoyer l’invitation » : son compte est créé.',
+      'm2-sms': 'Envoie le SMS depuis ta messagerie, puis reviens ici. C’est à toi de l’envoyer : '
+        + 'l’app ne le fait pas.',
+      'm2-sms-next': 'C’est envoyé',
+      'm2-staff': 'Invite maintenant tes coachs. Ouvre « Staff ».',
+      'm2-visit': 'Tes coachs s’ajoutent depuis « Staff ». Ouvre-le.',
+      'm2-visit-add': 'Ce « + » ajoute un coach à ton club. Il demande l’offre Club : on te la '
+        + 'présente à la fin du guide. On continue.',
+      'm3-create': 'Touche « Créer une équipe ».',
+      'm3-ok': 'Ton équipe t’attend dans « Mes équipes ». Pas besoin de toutes les créer : tes '
+        + 'coachs peuvent créer les leurs, si tu le leur permets.',
+      'm3-sheet': 'Ton club a déjà des équipes. Ici, crée-en une nouvelle.',
+      'm3-teams': 'Crée maintenant une équipe : ouvre « Nos équipes ».',
+      'm3-teams-back': 'Reviens sur la fiche de ton club : touche la flèche.',
+      'm4-accept': 'Entraîne-toi : touche Accepter. Personne ne rejoindra vraiment ton club.',
+      'm4-back1': 'Dernière mission : les demandes. Retourne à l’accueil.',
+      'm4-card': 'Ouvre « Demandes ».',
+      'm4-card2': 'Attention : cette demande est FAUSSE, cette personne n’existe pas. Un coach '
+        + 'que tu ajoutes est déjà membre : seuls ceux qui s’inscrivent seuls arrivent ici.',
+      'm4-filter': 'Les demandes pour rejoindre le club arrivent dans le filtre « Club ». '
+        + 'Touche-le.',
+      missionTitles: {
+        b1: 'Lancer une campagne de cotisation',
+        b2: 'Le canal de ton club',
+        b3: 'Créer un groupe',
+        b4: 'Recruter',
+        b5: 'Rechercher, en un coup d’œil',
+        m1: 'Gérer ton club',
+        m2: 'Inviter tes coachs',
+        m3: 'Créer tes équipes',
+        m4: 'Gérer les demandes',
+      },
+      next: 'Suivant',
+      open: {
+        cta: "C'est parti",
+        gauge: '{{count}} missions pour le mettre en route. Chacune fait monter ta jauge de 25 %.',
+        later: 'Plus tard',
+        note: 'Ce que tu crées est réel. Les exemples sont marqués « Exemple » et ne laissent '
+          + "rien. Je t'accompagne à chaque étape.",
+        noteWithClub: 'Ce que tu crées est réel. Les exemples sont marqués « Exemple » et ne '
+          + "laissent rien. Je t'accompagne à chaque étape.",
+        title: 'Salut{{name}}, ton club est créé.',
+      },
+      palier: {
+        blocked: 'Plus tard',
+        bonus: '{{count}} missions bonus pour aller plus loin',
+        continue: 'Continuer',
+        later: 'Plus tard',
+        laterHint: 'Plus tard ? Les bonus t’attendent dans Mon compte › Guide dirigeant·e.',
+        subtitle: '{{count}} missions sur {{count}}, l’essentiel est fait.',
+        subtitlePartial: '{{done}} missions sur {{total}} : les autres attendent que l’app te le '
+          + 'permette.',
+        title: 'Ton club est prêt à 100 %',
+        titleNone: 'Aucune mission faite pour l’instant',
+        titlePartial: 'Une partie est faite',
+      },
+      refusal: {
+        coach: 'Ajouter un coach demande l’offre Club. Rien n’a été créé.',
+        team: 'Ton offre compte déjà toutes ses équipes : une nouvelle équipe demande une offre '
+          + 'au-dessus. Rien n’a été créé.',
+      },
+      tw1: 'Donne un nom à l’équipe, puis Suivant.',
+      tw2: 'Facultatif : décris l’équipe, ou passe.',
+      tw3: 'La section de l’équipe, puis Suivant.',
+      tw4: 'Cherche le sport et touche-le : tu passes directement à l’étape suivante.',
+      tw5: 'Touche la catégorie d’âge.',
+      tw6: 'Touche le niveau de compétition, ou Suivant pour continuer sans.',
+      tw7: 'Coche qui gérera l’équipe : toi, ou le coach que tu viens d’ajouter.',
+      tw8: 'Tout est bon ? Crée l’équipe pour de vrai.',
+      understood: 'Compris',
+    },
     presidentClub: {
       instruction: 'Ton espace club : infos, logo, coordonnées.',
       manualLabel: "J'ai vu",
@@ -25558,6 +25791,13 @@ export default {
       published: 'C’était un exemple : rien n’a été envoyé. Pour un vrai match, tes joueur·se·s la reçoivent dans le canal de l’équipe.',
       sheetDescription: 'C’est un exemple : rien ne sera envoyé. Sur un vrai match, la convocation part dans le canal de l’équipe.',
     },
+    planning: {
+      title: 'Exemple · {{team}}',
+    },
+    request: {
+      subtitle: '{{name}} demande à rejoindre ton club comme coach.',
+      title: 'Demande d’affiliation (exemple)',
+    },
     responders: {
       label: 'Exemple · rien n’est envoyé',
       present: 'Présent·e',
@@ -25571,7 +25811,10 @@ export default {
     },
     bonus: 'Bonus',
     bonusDone: 'Bonus réussi · {{title}}',
+    clubReady: 'Club prêt {{gauge}} %',
     essential: 'Mission essentielle',
+    lost: 'Tu as quitté le guide ici. Reprends quand tu veux.',
+    lostResume: 'Reprendre',
     mission: 'Mission',
     missionDone: 'Mission réussie · {{title}}',
     next: 'Suivant',
@@ -25579,6 +25822,8 @@ export default {
       decline: 'Ne plus me le proposer',
       message: '4 missions, environ 2 min. Tu le retrouves aussi dans Mon compte › Guide '
         + 'entraîneur·e.',
+      messagePresident: '4 missions pour mettre ton club en route. Tu le retrouves aussi dans Mon '
+        + 'compte › Guide dirigeant·e.',
       start: 'Lancer le guide',
       title: 'Prends l’app en main avec le guide',
     },
@@ -25592,9 +25837,11 @@ export default {
     },
     resume: 'Reprendre le tour',
     ringLabel: 'Équipe prête',
+    ringLabelClub: 'Club prêt',
     scrollDown: 'Fais défiler vers le bas.',
     scrollUp: 'Fais défiler vers le haut.',
     skipBonus: 'Passer ce bonus',
+    skipPart: 'Passer cette partie',
     teamReady: 'Équipe prête {{gauge}} %',
   },
   tournamentCompetitionComponents: {
@@ -27911,8 +28158,8 @@ export default {
         title: 'Pilote tout le club',
       },
       free: {
-        bullet1: '1 équipe offerte',
-        bullet2: '1 événement et 1 annonce offerts',
+        bullet1: '1 équipe, 1 installation, 1 partenaire offerts',
+        bullet2: '2 événements et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",
         title: 'Commence sans payer',

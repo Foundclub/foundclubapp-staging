@@ -1,6 +1,8 @@
 import i18next from 'i18next';
 
 import { COACH_GUIDE } from '@/domains/tour/coachGuide';
+import { PRESIDENT_GUIDE } from '@/domains/tour/presidentGuide';
+import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -299,7 +301,8 @@ export const TOUR_PROFILES = Object.freeze({
   // TUTOE (27/10) : le guide Entraîneur à missions remplace l'ancien tour coach.
   coach: COACH_GUIDE,
   player: { steps: PLAYER_TOUR_STEPS },
-  president: { steps: PRESIDENT_TOUR_STEPS },
+  // Éteint : le tour v2 reste. Le guide à missions s'allume dans `presidentGuideSettings`.
+  president: PRESIDENT_GUIDE_SETTINGS.enabled ? PRESIDENT_GUIDE : { steps: PRESIDENT_TOUR_STEPS },
 });
 
 /**
@@ -309,3 +312,16 @@ export const TOUR_PROFILES = Object.freeze({
 export const getTourProfile = (profileKey) => (
   TOUR_PROFILES[/** @type {keyof typeof TOUR_PROFILES} */ (String(profileKey || ''))] || null
 );
+
+/**
+ * Le guide à missions d'un rôle. Le dirigeant y bascule quand son profil passe en `version: 3`.
+ * @param {string | null | undefined} roleKey - Rôle (`getUserRoleKey`).
+ * @returns {string | null} Clé du profil, ou rien.
+ */
+export const getGuideKeyForRole = (roleKey) => (
+  /** @type {any} */ (getTourProfile(roleKey))?.version === 3 ? String(roleKey) : null
+);
+
+// Signaux d'avant le départ que le moteur retient, tous guides confondus.
+export const GUIDE_PRE_START_SIGNALS = Object.values(TOUR_PROFILES)
+  .flatMap((/** @type {any} */ profile) => profile.preStartSignals || []);

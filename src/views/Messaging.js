@@ -18,6 +18,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   auteurDeLApercu, CANAL_VILLE, estMineurConnu, filsDeLaMessagerie, titreDuFil,
 } from '@/domains/collectivite/collectiviteCanaux';
+import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import {
@@ -58,6 +59,7 @@ import NotificationBadge from '@/components/molecules/notificationBadge/Notifica
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -79,6 +81,8 @@ import { useGetMyBlockedUsers } from '@/services/userBlock/userBlockQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
+
+import { useTour } from '@/context/useTour';
 
 const CHAT_SCOPE_VALUES = new Set(['all', 'classic', 'league']);
 
@@ -372,6 +376,16 @@ function Messaging({ navigation, route }) {
 
     Alert.alert(t('messaging.title', 'Messagerie'), safeMessage);
   };
+
+  // Guide Dirigeant·e, B2 : le canal d'un club naît à 2 membres ; le guide doit savoir s'il manque.
+  const { currentStep: tourStep } = useTour();
+  const canalAttendu = Boolean(tourStep?.checksCanal);
+  const listeComplete = Boolean(!isLoading && chatsData?.pages && !hasNextPage);
+  const canalAbsent = listeComplete
+    && !allChats.some((/** @type {any} */ chat) => chat?.type === 'club');
+  useEffect(() => {
+    if (canalAttendu && canalAbsent) emitGuidanceInteraction('messaging.canal.absent');
+  }, [canalAbsent, canalAttendu]);
 
   const filteredChats = useMemo(() => {
     const filsAffiches = filsDeLaMessagerie(enModeArchivees ? filsArchives : allChats, {
@@ -795,7 +809,7 @@ function Messaging({ navigation, route }) {
    * @param {{ item: Chat }} param - The chat item
    * @returns {import('react').ReactElement} The rendered chat item
    */
-  const renderChat = ({ item: chat }) => {
+  const renderChatRow = ({ item: chat }) => {
     const chatIsLeague = isLeagueChat(chat);
     // AC05 — le message le PLUS RÉCENT, choisi sur sa date : `messages[0]`
     // supposait un ordre que le contrat serveur ne promet pas.
@@ -1125,27 +1139,29 @@ function Messaging({ navigation, route }) {
                           {t('messaging.title')}
                         </Text>
                         {canCreateConversation ? (
-                          <TouchableOpacity
-                            accessibilityLabel={libelleNouvelleConversation}
-                            accessibilityRole="button"
-                            activeOpacity={0.85}
-                            onPress={ouvrirNouvelleConversation}
-                            style={{
-                              alignItems: 'center',
-                              backgroundColor: Colors.primary500,
-                              borderRadius: 22,
-                              height: 44,
-                              justifyContent: 'center',
-                              width: 44,
-                            }}
-                            testID="messaging-nouvelle-conversation"
-                          >
-                            <Image
-                              resizeMode="contain"
-                              source={Images.plus}
-                              style={{ height: 18, tintColor: Colors.primary900, width: 18 }}
-                            />
-                          </TouchableOpacity>
+                          <TourTarget id="msg-new">
+                            <TouchableOpacity
+                              accessibilityLabel={libelleNouvelleConversation}
+                              accessibilityRole="button"
+                              activeOpacity={0.85}
+                              onPress={ouvrirNouvelleConversation}
+                              style={{
+                                alignItems: 'center',
+                                backgroundColor: Colors.primary500,
+                                borderRadius: 22,
+                                height: 44,
+                                justifyContent: 'center',
+                                width: 44,
+                              }}
+                              testID="messaging-nouvelle-conversation"
+                            >
+                              <Image
+                                resizeMode="contain"
+                                source={Images.plus}
+                                style={{ height: 18, tintColor: Colors.primary900, width: 18 }}
+                              />
+                            </TouchableOpacity>
+                          </TourTarget>
                         ) : null}
                       </View>
                       {espaceVille ? null : renderChatScopeFilter()}
@@ -1176,7 +1192,9 @@ function Messaging({ navigation, route }) {
                   onEndReachedThreshold={0.5}
                   onRefresh={handlePullRefresh}
                   refreshing={isPullRefreshing}
-                  renderItem={renderChat}
+                  renderItem={(/** @type {any} */ ligne) => (ligne.item?.type === 'club'
+                    ? <TourTarget id="msg-canal">{renderChatRow(ligne)}</TourTarget>
+                    : renderChatRow(ligne))}
                   showsVerticalScrollIndicator={false}
                 />
               </View>

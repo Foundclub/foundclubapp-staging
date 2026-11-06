@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SectionList, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
+
 import NewConversation from '../NewConversation';
 
 // MSG1A (§3.15) — E6 : « NOUVELLE DISCUSSION » N'AVAIT AUCUN TEMOIN.
@@ -385,5 +387,66 @@ describe('point 55 — accessibilité des lignes de personnes', () => {
 
     expect(ligne.props.accessibilityRole).toBe('checkbox');
     expect(String(ligne.props.accessibilityLabel)).toMatch(/^\S+ \S+/);
+  });
+});
+
+/** Étape du guide lue par l'écran. */
+let mockTour = {};
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+
+describe('Guide Dirigeant·e, B3 : ce que l écran dit au guide', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+  const cles = () => signaux.map((/** @type {any} */ signal) => signal.key);
+  /**
+   * Les ancres posées dans l'arbre.
+   * @param {any} arbre - Arbre rendu.
+   * @returns {string[]} Leurs ids.
+   */
+  const ancres = (arbre) => arbre.root
+    .findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.id === 'string' && noeud.props?.children
+    ))
+    .map((/** @type {any} */ noeud) => noeud.props.id);
+
+  beforeEach(() => {
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+  });
+  afterEach(() => {
+    arreter();
+    mockTour = {};
+  });
+
+  test('passer au nom le dit, créer le groupe aussi, et les ancres suivent l étape', async () => {
+    mockStartGroupChat.mockResolvedValue({ documentId: 'groupe-1' });
+    const arbre = await monter();
+    expect(ancres(arbre)).toEqual(expect.arrayContaining(['conv-list']));
+    await appuyer(arbre, 'Karim Benali');
+    await appuyer(arbre, 'Hugo Petit');
+    expect(ancres(arbre)).toEqual(expect.arrayContaining(['conv-next']));
+    await appuyer(arbre, 'Suivant');
+    expect(cles()).toContain('conversation.step.name');
+    expect(ancres(arbre)).toEqual(expect.arrayContaining(['grp-name', 'grp-perms', 'grp-create']));
+    await appuyer(arbre, 'Créer le groupe');
+    expect(cles()).toContain('conversation.group.created');
+  });
+
+  test('une discussion à deux n est pas un groupe : pas de signal de groupe', async () => {
+    mockStartWhisperChat.mockResolvedValue({ documentId: 'fil-2' });
+    const arbre = await monter();
+    await appuyer(arbre, 'Karim Benali');
+    await appuyer(arbre, 'Démarrer');
+    expect(cles()).not.toContain('conversation.group.created');
+  });
+
+  test('assez de membres : l étape n apprend rien', async () => {
+    mockTour = { currentStep: { checksMembers: true } };
+    await monter();
+    expect(cles()).not.toContain('conversation.members.few');
   });
 });

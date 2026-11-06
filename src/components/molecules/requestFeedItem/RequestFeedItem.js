@@ -480,7 +480,8 @@ function RequestFeedItem({
             <Text style={[Fonts.p4Bold, isInstallationRequest ? Fonts.warning500 : Fonts.primary500]}>
               {isChildPlaceRequest
                 ? t('requestsHub.types.childPlace', 'Place enfant')
-                : getTypeLabel(item?.type, t)}
+                : (item?.meta?.example && t('requestsHub.types.example', 'Exemple'))
+                  || getTypeLabel(item?.type, t)}
             </Text>
           </View>
           {featuredScopeLabel ? (

@@ -5,6 +5,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 const TAILLE_PASTILLE = 40;
 const TAILLE_ICONE = 20;
@@ -28,6 +29,7 @@ const TAILLE_ICONE = 20;
  * @param {() => void} [props.onDismissed] - Appelé quand la feuille a quitté l'écran.
  * @param {string} props.texte - La phrase sous le titre.
  * @param {string} props.titre - Le titre.
+ * @param {string} [props.tourTargetId] - Ancre du guide sur le bouton plein.
  * @returns {import('react').ReactElement} La feuille.
  */
 function FeuilleDeSucces({
@@ -39,10 +41,18 @@ function FeuilleDeSucces({
   onDismissed,
   texte,
   titre,
+  tourTargetId = undefined,
 }) {
   const {
     Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const boutonPrincipal = (
+    <Button
+      onPress={actionPrincipale.onPress}
+      title={actionPrincipale.title}
+      variant="Primary"
+    />
+  );
 
   return (
     <BottomModal
@@ -83,11 +93,9 @@ function FeuilleDeSucces({
         </View>
         {children}
         <View style={[Spaces.gap[8]]}>
-          <Button
-            onPress={actionPrincipale.onPress}
-            title={actionPrincipale.title}
-            variant="Primary"
-          />
+          {tourTargetId
+            ? <TourTarget id={tourTargetId}>{boutonPrincipal}</TourTarget>
+            : boutonPrincipal}
           <Button
             onPress={actionSecondaire.onPress}
             title={actionSecondaire.title}

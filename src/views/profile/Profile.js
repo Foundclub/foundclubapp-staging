@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +33,7 @@ import {
   getSubscriptionQuotaItems,
 } from '@/domains/subscription/subscriptionDecision';
 import isGuideSupported from '@/domains/tour/guideSupport';
+import { getGuideKeyForRole, getTourProfile } from '@/domains/tour/tourCatalog';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import {
@@ -173,7 +175,19 @@ function Profile({ navigation, route }) {
   const tour = useTour();
   // GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : guide déjà lancé ⇒ petit menu.
   const [isGuideChoiceOpen, setIsGuideChoiceOpen] = useState(false);
+  // Petit écran : le menu s'ouvrait sous le bord. La liste y va, une fois le menu posé.
+  const listeRef = useRef(/** @type {any} */ (null));
+  const menuVientDOuvrirRef = useRef(false);
   const isGuideInProgress = Boolean(tour.isGuide && tour.isTourActive);
+  // Le guide en cours, sinon celui du rôle. Coach devenu dirigeant en créant son club (« Moi »)
+  // : il retrouve son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
+  const roleGuideKey = getGuideKeyForRole(currentRoleKey);
+  const canStartRoleGuide = /** @type {any} */ (getTourProfile(roleGuideKey))
+    ?.canStart?.(userData) ?? true;
+  const guideKey = (tour.isGuide && tour.profileKey)
+    || (canStartRoleGuide ? roleGuideKey : null)
+    || (currentRoleKey === 'president' && tour.hasGuideHistory ? 'coach' : null);
+  const guideProfile = /** @type {any} */ (getTourProfile(guideKey));
   /**
    * Choix du menu du guide : le menu se referme, puis le guide part.
    * @param {() => void} action - Ce que fait le choix.
@@ -1150,7 +1164,7 @@ function Profile({ navigation, route }) {
     // téléphone seulement (le site ne joue aucun tour).
     // GUIDE-RELANCE (3- A et 5- A) : déjà lancé, il ouvre un menu au lieu de tout
     // refaire en vrai ; en pause (« Plus tard »), une pastille le dit.
-    ...(currentRoleKey === 'coach' && isGuideSupported() ? [{
+    ...(guideKey && isGuideSupported() ? [{
       accessoire: isGuideInProgress && tour.tourStatus === 'paused' ? (
         <PastilleDEtat
           testID="coachGuide-pause"
@@ -1160,12 +1174,19 @@ function Profile({ navigation, route }) {
       ) : null,
       icon: Images.flag,
       key: 'coachGuide',
-      label: t('profile.actions.coachGuide', 'Guide entraîneur·e'),
-      onPress: () => (tour.hasGuideHistory
-        ? setIsGuideChoiceOpen((ouvert) => !ouvert)
-        : tour.startTour('coach')),
+      label: t(guideProfile?.accountLabelKey, 'Guide entraîneur·e'),
+      onPress: () => {
+        if (!tour.hasGuideHistory) {
+          tour.startTour(guideKey);
+          return;
+        }
+        setIsGuideChoiceOpen((ouvert) => {
+          menuVientDOuvrirRef.current = !ouvert;
+          return !ouvert;
+        });
+      },
     }] : []),
-    ...(currentRoleKey === 'coach' && isGuideSupported() && isGuideChoiceOpen
+    ...(guideKey && isGuideSupported() && isGuideChoiceOpen
       && tour.hasGuideHistory ? [
         ...(isGuideInProgress ? [{
           icon: Images.flag,
@@ -1174,13 +1195,14 @@ function Profile({ navigation, route }) {
           onPress: () => chooseGuide(() => tour.resumeTour({ pop: true })),
           sousLigne: true,
         }] : []),
-        {
+        // Guide Dirigeant : pas d'étape de visite, la ligne ne mènerait à rien.
+        ...(guideProfile?.steps?.some((/** @type {any} */ step) => step.review) ? [{
           icon: Images.flag,
           key: 'coachGuide-review',
           label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
-          onPress: () => chooseGuide(() => tour.startTour('coach', { review: true })),
+          onPress: () => chooseGuide(() => tour.startTour(guideKey, { review: true })),
           sousLigne: true,
-        },
+        }] : []),
         // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
         ...(isGuideInProgress ? [] : [{
           icon: Images.flag,
@@ -1188,8 +1210,10 @@ function Profile({ navigation, route }) {
           label: t('profile.coachGuide.bonus', 'Faire un bonus'),
           sousLigne: true,
           // N10 : lesquels (B1 puis B2, `startTour` part du premier).
-          onPress: () => chooseGuide(() => tour.startTour('coach', { fromMission: 'coach_b1' })),
-          value: t(
+          onPress: () => chooseGuide(() => tour.startTour(guideKey, {
+            fromMission: guideProfile?.bonusFromMission,
+          })),
+          value: guideProfile?.bonusDetail || t(
             'profile.coachGuide.bonusDetail',
             'Voir qui vient, puis convoquer pour un match',
           ),
@@ -1209,7 +1233,7 @@ function Profile({ navigation, route }) {
             [
               { style: 'cancel', text: t('profile.coachGuide.restartConfirm.cancel', 'Annuler') },
               {
-                onPress: () => chooseGuide(() => tour.restartTour('coach')),
+                onPress: () => chooseGuide(() => tour.restartTour(guideKey)),
                 text: t('profile.coachGuide.restartConfirm.confirm', 'Recommencer'),
               },
             ],
@@ -1478,6 +1502,12 @@ function Profile({ navigation, route }) {
           contentContainerStyle={{
             flexGrow: 1, gap: 18, paddingBottom: 8, paddingTop: 20,
           }}
+          onContentSizeChange={() => {
+            if (!menuVientDOuvrirRef.current) return;
+            menuVientDOuvrirRef.current = false;
+            listeRef.current?.scrollToEnd({ animated: true });
+          }}
+          ref={listeRef}
           refreshControl={(
             <RefreshControl
               onRefresh={() => {

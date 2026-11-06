@@ -7,12 +7,15 @@ import Svg, {
   Circle, Defs, LinearGradient, Rect, Stop,
 } from 'react-native-svg';
 
+import { getTourProfile } from '@/domains/tour/tourCatalog';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+
+import { navigate as navigateRoot } from '@/navigation/navigationService';
 
 import { useTour } from '@/context/useTour';
 
@@ -27,6 +30,9 @@ const FULL_SCREEN_MAX_WIDTH = 560;
  * @returns {import('react').ReactElement} Anneau.
  */
 function GaugeRing({ size, value }) {
+  const { profileKey } = useTour();
+  const { gaugeLabel, gaugeLabelKey } = /** @type {any} */ (getTourProfile(profileKey || 'coach'))
+    || {};
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
   const stroke = 8;
@@ -66,7 +72,7 @@ function GaugeRing({ size, value }) {
         {`${value} %`}
       </Text>
       <Text style={[Fonts.p4Bold, { color: Colors.neutral200 }]}>
-        {t('tourGuide.ringLabel', 'Équipe prête')}
+        {t(gaugeLabelKey || 'tourGuide.ringLabel', String(gaugeLabel || 'Équipe prête'))}
       </Text>
     </View>
   );
@@ -141,11 +147,26 @@ function MissionRow({
  */
 function TourFullScreen({ kind }) {
   const { Colors, Fonts } = useTheme();
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus, pauseTour,
+    profileKey,
   } = useTour();
+  // Textes `tourCatalog.<profil>.*` : chaque guide a les siens (les replis sont ceux du coach).
+  const guideKey = profileKey || 'coach';
+  const guide = /** @type {any} */ (getTourProfile(guideKey));
+  /**
+   * Le repli écrit ci-dessous est celui du coach : un autre guide porte le sien, clé par clé.
+   * @param {string} key - Clé i18n.
+   * @param {any} fallback - Repli du coach.
+   * @param {any} [values] - Interpolation.
+   * @returns {any} Texte.
+   */
+  const t = (key, fallback, values) => {
+    const own = guide?.fullScreenTexts?.[key.replace(`tourCatalog.${guideKey}.`, '')];
+    return translate(key, own ?? fallback, values);
+  };
 
   const essentials = missions.filter((/** @type {any} */ mission) => mission.locked);
   const bonuses = missions.filter((/** @type {any} */ mission) => !mission.locked);
@@ -157,15 +178,18 @@ function TourFullScreen({ kind }) {
   // la séance » s'affichaient à 0 %, missions passées. Le titre dit ce qui est fait.
   const doneCount = essentials
     .filter((/** @type {any} */ mission) => missionStatus?.[mission.id] === 'done').length;
-  let milestoneTitle = t('tourCatalog.coach.palier.title', 'Ton équipe est prête !');
-  if (missionStatus?.coach_m1 !== 'done') {
+  let milestoneTitle = t(`tourCatalog.${guideKey}.palier.title`, 'Ton équipe est prête !');
+  const isReady = guide?.readyNeedsAllMissions
+    ? doneCount === essentials.length
+    : missionStatus?.[guide?.keyMissionId] === 'done';
+  if (!isReady) {
     milestoneTitle = doneCount > 0
-      ? t('tourCatalog.coach.palier.titlePartial', 'Une partie est faite')
-      : t('tourCatalog.coach.palier.titleNone', 'Aucune mission faite pour l’instant');
+      ? t(`tourCatalog.${guideKey}.palier.titlePartial`, 'Une partie est faite')
+      : t(`tourCatalog.${guideKey}.palier.titleNone`, 'Aucune mission faite pour l’instant');
   }
   const closingTitle = doneCount === essentials.length
-    ? t('tourCatalog.coach.close.title', 'Prêt·e pour la séance')
-    : t('tourCatalog.coach.close.titlePartial', 'Le guide est fini');
+    ? t(`tourCatalog.${guideKey}.close.title`, 'Prêt·e pour la séance')
+    : t(`tourCatalog.${guideKey}.close.titlePartial`, 'Le guide est fini');
 
   let content = null;
   let cta = null;
@@ -178,22 +202,23 @@ function TourFullScreen({ kind }) {
           textTransform: 'uppercase',
         }]}
         >
-          {t('tourCatalog.coach.kicker', 'Guide entraîneur·e')}
+          {t(`tourCatalog.${guideKey}.kicker`, 'Guide entraîneur·e')}
         </Text>
         <Text style={[Fonts.h1Black, { color: Colors.neutral00, fontSize: 27, lineHeight: 34 }]}>
-          {t('tourCatalog.coach.open.title', 'Salut{{name}}, prêt·e pour ta première séance '
+          {t(`tourCatalog.${guideKey}.open.title`, 'Salut{{name}}, prêt·e pour ta première séance '
             + '?', { name, ...SANS_ECHAPPEMENT })}
         </Text>
         <View style={{ alignItems: 'center', columnGap: 16, flexDirection: 'row' }}>
           {/* FIN-GUIDE, point 1 : déjà coach d'une équipe, la mission 1 est validée d'emblée. */}
           <GaugeRing size={92} value={gauge} />
           <Text style={[Fonts.p2, { color: Colors.neutral200, flex: 1 }]}>
-            {t('tourCatalog.coach.open.gauge', '{{count}} missions. Chacune fait monter ta jauge '
+            {t(`tourCatalog.${guideKey}.open.gauge`, '{{count}} missions. Chacune fait monter ta '
+              + 'jauge '
               + 'de 25 %.', { count: essentials.length })}
           </Text>
         </View>
         <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, index) => {
+          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => {
             const isDone = missionStatus?.[mission.id] === 'done';
             return (
               <MissionRow
@@ -215,12 +240,12 @@ function TourFullScreen({ kind }) {
           <Text style={[Fonts.p3, { color: Colors.neutral200, flex: 1 }]}>
             {flags?.hadClub
               ? t(
-                'tourCatalog.coach.open.noteWithClub',
+                `tourCatalog.${guideKey}.open.noteWithClub`,
                 "Tout est réel : ton équipe, ton lien d'invitation, ta séance. "
                   + "Je t'accompagne à chaque étape.",
               )
               : t(
-                'tourCatalog.coach.open.note',
+                `tourCatalog.${guideKey}.open.note`,
                 "Tout est réel : ton club, ton équipe, ton lien d'invitation, ta séance. "
                   + "Je t'accompagne à chaque étape.",
               )}
@@ -232,7 +257,7 @@ function TourFullScreen({ kind }) {
       <>
         <Button
           onPress={() => completeCurrentStep()}
-          title={t('tourCatalog.coach.open.cta', "C'est parti")}
+          title={t(`tourCatalog.${guideKey}.open.cta`, "C'est parti")}
           variant="Primary"
         />
         {/* GUIDE-RELANCE (décision d'Adel 5- A) : découvrir l'app seul ; le
@@ -243,7 +268,7 @@ function TourFullScreen({ kind }) {
           style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
         >
           <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
-            {t('tourCatalog.coach.open.later', 'Plus tard')}
+            {t(`tourCatalog.${guideKey}.open.later`, 'Plus tard')}
           </Text>
         </TouchableOpacity>
       </>
@@ -264,25 +289,26 @@ function TourFullScreen({ kind }) {
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
           {blockedCount > 0
-            ? t('tourCatalog.coach.palier.subtitlePartial', '{{done}} missions sur {{total}} : '
+            ? t(`tourCatalog.${guideKey}.palier.subtitlePartial`, '{{done}} missions sur '
+              + '{{total}} : '
               + 'les autres attendent que l’app te le permette.', {
               done: essentials.length - blockedCount, total: essentials.length,
             })
             : t(
-              'tourCatalog.coach.palier.subtitle',
+              `tourCatalog.${guideKey}.palier.subtitle`,
               '{{count}} missions sur {{count}}, l’essentiel est fait.',
               { count: essentials.length },
             )}
         </Text>
         <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, index) => (
+          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => (
             <MissionRow
               done={missionStatus?.[mission.id] !== 'blocked'}
               key={mission.id}
               label={mission.title}
               marker={String(index + 1)}
               right={missionStatus?.[mission.id] === 'blocked'
-                ? t('tourCatalog.coach.palier.blocked', 'Plus tard')
+                ? t(`tourCatalog.${guideKey}.palier.blocked`, 'Plus tard')
                 : undefined}
             />
           ))}
@@ -295,7 +321,7 @@ function TourFullScreen({ kind }) {
               textTransform: 'uppercase',
             }]}
             >
-              {t('tourCatalog.coach.palier.bonus', '{{count}} bonus · on te montre où ça se '
+              {t(`tourCatalog.${guideKey}.palier.bonus`, '{{count}} bonus · on te montre où ça se '
                 + 'trouve', { count: bonuses.length })}
             </Text>
             {bonuses.map((/** @type {any} */ mission) => (
@@ -310,7 +336,7 @@ function TourFullScreen({ kind }) {
             {/* GUIDE-FINITIONS-2 n° 29 : « Plus tard » dit où les retrouver. */}
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
               {t(
-                'tourCatalog.coach.palier.laterHint',
+                `tourCatalog.${guideKey}.palier.laterHint`,
                 'Plus tard ? Les bonus t’attendent dans Mon compte › Guide entraîneur·e.',
               )}
             </Text>
@@ -322,7 +348,7 @@ function TourFullScreen({ kind }) {
       <>
         <Button
           onPress={() => completeCurrentStep()}
-          title={t('tourCatalog.coach.palier.continue', 'Continuer')}
+          title={t(`tourCatalog.${guideKey}.palier.continue`, 'Continuer')}
           variant="Primary"
         />
         {bonuses.length > 0 ? (
@@ -332,48 +358,14 @@ function TourFullScreen({ kind }) {
             style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
-              {t('tourCatalog.coach.palier.later', 'Plus tard')}
+              {t(`tourCatalog.${guideKey}.palier.later`, 'Plus tard')}
             </Text>
           </TouchableOpacity>
         ) : null}
       </>
     );
   } else {
-    const real = [
-      created?.['club.joined']
-        ? t('tourCatalog.coach.close.club', '{{club}} rejoint', {
-          club: created['club.joined'].clubName
-            || t('tourCatalog.coach.close.yourClub', 'Ton club'),
-          ...SANS_ECHAPPEMENT,
-        })
-        : null,
-      created?.['team.created']
-        ? t('tourCatalog.coach.close.team', '{{team}} créée', {
-          team: created['team.created'].teamName
-            || t('tourCatalog.coach.close.yourTeam', 'Ton équipe'),
-          ...SANS_ECHAPPEMENT,
-        })
-        // n° 29 : l'équipe d'un coach qui l'avait déjà, ou reconnue dans la question de M1.
-        : ((flags?.hadTeam || created?.['team.trained'])
-          && t('tourCatalog.coach.close.teamReady', 'Ton équipe, déjà prête')) || null,
-      created?.['team.invite.shared']
-        ? t('tourCatalog.coach.close.link', "Lien d'invitation partagé")
-        : null,
-      created?.['team.invite.sent']
-        ? t('tourCatalog.coach.close.invited', 'Invitation envoyée')
-        : null,
-      created?.['event.created']
-        // n° 29 : pluriel d'i18next (`sessions_one` / `sessions_other`), plus de « (s) ».
-        ? t('tourCatalog.coach.close.sessions', {
-          count: Number(created['event.created'].occurrences) || 1,
-          defaultValue_one: '{{count}} séance programmée',
-          defaultValue_other: '{{count}} séances programmées',
-        })
-        : null,
-      created?.['friendlyMatch.ad.published']
-        ? t('tourCatalog.coach.close.friendly', 'Annonce de match amical publiée')
-        : null,
-    ].filter(Boolean);
+    const real = guide?.closingLines?.(t, { created, flags }) || [];
     content = (
       <>
         <View style={{ alignItems: 'center' }}>
@@ -388,10 +380,10 @@ function TourFullScreen({ kind }) {
           {closingTitle}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
-          {t('tourCatalog.coach.close.subtitle', 'Bonne saison !')}
+          {t(`tourCatalog.${guideKey}.close.subtitle`, 'Bonne saison !')}
         </Text>
         <View style={{ rowGap: 8 }}>
-          {real.map((label) => (
+          {real.map((/** @type {string} */ label) => (
             <View
               key={String(label)}
               style={{
@@ -403,7 +395,7 @@ function TourFullScreen({ kind }) {
               <SvgIcon color={Colors.primary500} height={14} name="check" width={14} />
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1 }]}>{label}</Text>
               <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
-                {t('tourCatalog.coach.close.real', 'RÉEL')}
+                {t(`tourCatalog.${guideKey}.close.real`, 'RÉEL')}
               </Text>
             </View>
           ))}
@@ -431,35 +423,52 @@ function TourFullScreen({ kind }) {
               </Text>
               <Text style={[Fonts.p4Bold, { color: Colors.neutral400 }]}>
                 {missionStatus?.[mission.id] === 'done'
-                  ? t('tourCatalog.coach.close.bonus', 'BONUS')
-                  : t('tourCatalog.coach.close.skipped', 'PASSÉ')}
+                  ? t(`tourCatalog.${guideKey}.close.bonus`, 'BONUS')
+                  : t(`tourCatalog.${guideKey}.close.skipped`, 'PASSÉ')}
               </Text>
             </View>
           ))}
         </View>
         {/* n° 29 : le match d'exemple de B2 n'a rien laissé. */}
-        {missionStatus?.coach_b2 === 'done' ? (
+        {missionStatus?.[guide?.exampleMissionId] === 'done' ? (
           <Text style={[Fonts.p3, { color: Colors.neutral200, textAlign: 'center' }]}>
             {t(
-              'tourCatalog.coach.close.example',
+              `tourCatalog.${guideKey}.close.example`,
               'Le match d’exemple est effacé : rien n’a été envoyé.',
             )}
           </Text>
         ) : null}
         <Text style={[Fonts.p3, { color: Colors.neutral400, textAlign: 'center' }]}>
           {t(
-            'tourCatalog.coach.close.footer',
+            `tourCatalog.${guideKey}.close.footer`,
             'Retrouve ce guide dans Mon compte › Guide entraîneur·e.',
           )}
         </Text>
       </>
     );
+    const offerRoute = guide?.closingOfferRoute?.(flags);
     cta = (
-      <Button
-        onPress={() => finishGuide()}
-        title={t('tourCatalog.coach.close.cta', "Aller à l'accueil")}
-        variant="Primary"
-      />
+      <>
+        <Button
+          onPress={() => finishGuide()}
+          title={t(`tourCatalog.${guideKey}.close.cta`, "Aller à l'accueil")}
+          variant="Primary"
+        />
+        {offerRoute ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              finishGuide();
+              navigateRoot(offerRoute);
+            }}
+            style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
+              {t(`tourCatalog.${guideKey}.close.offer`, 'Voir l’offre')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </>
     );
   }
 
