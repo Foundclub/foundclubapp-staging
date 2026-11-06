@@ -534,7 +534,7 @@ describe('L11 bis — un membre sans nom de famille', () => {
             documentId: 'c7', firstname: 'Coachsept', lastname: null, role: { name: 'coach' },
           },
           {
-            documentId: 'p1', firstname: 'Dirsolo', lastname: undefined, role: { name: 'president' },
+            documentId: 'p1', firstname: 'Dirsolo', role: { name: 'president' },
           },
         ],
       },

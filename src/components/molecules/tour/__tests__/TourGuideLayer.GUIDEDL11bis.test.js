@@ -169,10 +169,12 @@ describe('l11-b1e3 — la bulle plus haute que sa place remonte, son pied reste 
     expect(style.maxHeight).toBeGreaterThanOrEqual(170);
   });
 
-  it('jamais sur l’en-tête : la bulle s’arrête dessous', async () => {
+  it('trop haute pour tenir sous l’en-tête : elle reste dans sa place et défile', async () => {
     const tree = await mountC1();
     await contentOf(tree, 260);
-    expect(styleOf(bubbleOf(tree)).top).toBe(HEADER.height + 6 + STATUS_BAR);
+    const style = styleOf(bubbleOf(tree));
+    expect(style.top).toBe(SLOT.y + STATUS_BAR);
+    expect(style.maxHeight).toBe(SLOT.height);
   });
 
   it('témoin : une bulle qui tient reste dans sa place', async () => {
@@ -184,12 +186,12 @@ describe('l11-b1e3 — la bulle plus haute que sa place remonte, son pied reste 
   });
 });
 
-describe('l11-m1-reprise — sur l’Accueil, la bulle de la fiche dit d’ouvrir « Gérer mon club »', () => {
+describe('l11-m1-reprise — sur l’Accueil, la bulle dit d’ouvrir « Gérer mon club »', () => {
   const CARD = {
     height: 180, width: 170, x: 16, y: 300,
   };
 
-  it.each(['m1-partners', 'm1-fac'])('%s : la carte entourée, la consigne « ouvre »', async (id) => {
+  it.each(['m1-partners', 'm1-fac'])('%s : carte entourée, consigne « ouvre »', async (id) => {
     mockTour = activeTour({ ...step(id), when: undefined });
     mountTarget('home.card.manage-club', CARD);
     const tree = await renderLayer();

@@ -522,9 +522,9 @@ describe('L11 bis — B3 après B2 passé', () => {
   });
 });
 
-// Recette L11 (l11-r2-m3a) : deux retours Android rapides (messagerie, puis Staff). Le 2ᵉ ferme Staff
-// pendant le bandeau de M2 : son signal se perd, m2-back s'ouvre sur la fiche. « Nos équipes »
-// touché ensuite laissait la bulle « sur Staff » posée sur Nos équipes.
+// Recette L11 (l11-r2-m3a) : deux retours Android rapides (messagerie, puis Staff). Le 2ᵉ ferme
+// Staff pendant le bandeau de M2 : son signal se perd, m2-back s'ouvre sur la fiche. « Nos
+// équipes » touché ensuite laissait la bulle « sur Staff » posée sur Nos équipes.
 describe('L11 bis — deux retours rapides de M2 à M3', () => {
   it('Staff fermé pendant le bandeau, puis « Nos équipes » : la bulle de M3 suit', () => {
     toInvite();

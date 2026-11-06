@@ -589,7 +589,10 @@ describe('recette L11 — le nom de la campagne revient au retour sur 1/6', () =
     let arbre;
     await act(async () => {
       arbre = renderer.create(
-        <ClubLicenseCampaignSettings navigation={navigationFigee} route={{ params: { clubId: 'c' } }} />,
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
       );
     });
     const nom = () => arbre.root.findAllByType(TextInput)

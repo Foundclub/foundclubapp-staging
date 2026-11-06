@@ -39,8 +39,6 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useTour } from '@/context/useTour';
-
 import {
   useCollectiviteInstallations,
   useSaveCollectiviteInstallation,
@@ -62,6 +60,8 @@ import {
 // COLL1D (D28) : la liste des types (5 d'avant + 8 des mairies) vit dans utils : les
 // cartes des installations y lisent aussi le libelle.
 import { FACILITY_TYPES, getFacilityTypeLabel } from '@/utils/facilityTypes';
+
+import { useTour } from '@/context/useTour';
 
 // COLL-C2B (02/10) — design P4-form, ecran 2 : la feuille « Type » d une MAIRIE propose ses 11
 // types ; « Salle video » et « Club House » sont des types de club. Ecrits en NOMS DE PROPRIETE :
@@ -823,11 +823,11 @@ function FacilityForm() {
                     !isActive ? { borderColor: Colors.primary200 } : null,
                   ]}
                   textStyle={!isActive ? { color: Colors.primary200 } : undefined}
-                  // Recette L11 (l11-p8f5) : « Terrain de rugby » montrait « Terrain de ». Android
-                  // dessine le libellé un peu plus large que mesuré, le dernier mot passait sur une
-                  // ligne invisible (ROLES2, Button.js). ponytail: insécable ici seulement ; sortie :
-                  // corriger Button.js pour tout bouton dimensionné par son libellé.
-                  title={typeItem.label.replace(/ /g, ' ')}
+                  // Recette L11 (l11-p8f5) : « Terrain de rugby » montrait « Terrain de ».
+                  // Android dessine le libellé un peu plus large que mesuré : le dernier mot
+                  // passait sur une ligne invisible (ROLES2, Button.js). ponytail: insécable
+                  // ici seulement ; sortie : corriger Button.js pour tout bouton à sa taille.
+                  title={typeItem.label.replace(/ /g, '\u00A0')}
                   variant={isActive ? 'Primary' : 'SecondaryLight'}
                 />
               );

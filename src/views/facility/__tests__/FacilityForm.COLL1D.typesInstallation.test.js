@@ -229,7 +229,7 @@ const texteDe = (noeud) => noeud
   .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children))
   .join(' ')
   // Les pastilles de type ont des espaces insécables (recette L11) : à l'écran, le même texte.
-  .replace(/ /g, ' ');
+  .replace(/\u00A0/g, ' ');
 
 /**
  * Appuie sur l'element pressable qui porte ce libelle.
@@ -349,7 +349,7 @@ const LIBELLES_ATTENDUS = [
  * @returns {string[]}
  */
 const pastillesDeType = () => {
-  const titres = mockButtonProps.map((props) => String(props.title).replace(/ /g, ' '));
+  const titres = mockButtonProps.map((props) => String(props.title).replace(/\u00A0/g, ' '));
   const debut = titres.lastIndexOf('Terrain');
   return debut < 0 ? [] : titres.slice(debut, debut + LIBELLES_ATTENDUS.length);
 };
