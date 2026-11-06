@@ -696,11 +696,9 @@ describe('Guide Dirigeant·e, M2 : ce que l écran dit au guide', () => {
     expect(cles()).toContain('staff.invite.later');
   });
 
-  it('numéro déjà connu, rattaché sur accord : le guide le sait, sans feuille', async () => {
-    createTrainer.mockRejectedValueOnce({
-      details: { user: { documentId: 'u-1', firstname: 'A', lastname: 'B' } },
-    });
-    linkTrainerToClub.mockResolvedValueOnce({});
+  it('numéro déjà connu, invité sur accord : le guide le sait, sans feuille', async () => {
+    // SECU-NOM-NUMERO : plus de rattachement direct ni de nom, une invitation.
+    createTrainer.mockRejectedValueOnce({ details: { code: 'PHONE_NUMBER_TAKEN' } });
     const spy = jest.spyOn(Alert, 'alert');
     const arbre = await monterEcran();
     await saisirTelephone('+33 6 00 00 00 00');

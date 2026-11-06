@@ -1,20 +1,6 @@
 export default {
   addClubManager: {
     alerts: {
-      alreadyExist: {
-        actions: {
-          addToClub: 'Ajouter à la section',
-          cancel: 'Annuler',
-        },
-        // eslint-disable-next-line max-len
-        description: "Le détenteur de ce numéro de téléphone utilise déjà l'application sous le nom de {{firstname}} {{lastname}}. Veux-tu l'ajouter comme dirigeant à cette section ?",
-        title: 'Un utilisateur existe déjà avec ce numéro de téléphone.',
-      },
-      alreadyInClub: {
-        // eslint-disable-next-line max-len
-        description: "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
-        title: "Impossible d'ajouter ce dirigeant à la section",
-      },
       success: {
         description: 'Le dirigeant {{managerName}} a bien été ajouté à cette section.',
         title: 'Ajout réussi !',
@@ -30,26 +16,22 @@ export default {
       save: 'Envoyer l\'invitation',
     },
     alerts: {
-      alreadyExist: {
-        actions: {
-          addToClub: 'Ajouter au club',
-          cancel: 'Annuler',
-        },
-        description: "Le détenteur de ce numéro de téléphone utilise l'application sous le nom de {{firstname}} {{lastname}}. Veux-tu l'ajouter à ton club ?",
-        title: 'Un utilisateur existe déjà avec ce numéro de téléphone.',
+      // SECU-NOM-NUMERO : un numéro déjà inscrit ne révèle ni nom ni club.
+      alreadyInThisClub: {
+        description: 'Ce numéro est déjà membre de ce club.',
+        title: 'Déjà dans ce club',
       },
-      alreadyInClub: {
-        description: "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
-        title: "Impossible d'ajouter cet·te entraîneur·e à l'équipe",
+      invitation: {
+        actions: {
+          send: "Envoyer l'invitation",
+        },
+        description: 'Une invitation sera envoyée à ce numéro.',
+        title: 'Invitation',
       },
       success: {
         description: "L'entraîneur·e {{trainerName}} a bien été ajouté·e à ton club.",
         title: 'Ajout réussi !',
       },
-    },
-    errors: {
-      linkManager: "Impossible d'ajouter ce dirigeant à la section pour le moment.",
-      linkTrainer: "Impossible d'ajouter cet entraîneur au club pour le moment.",
     },
     fallbacks: {
       clubName: 'Club',
