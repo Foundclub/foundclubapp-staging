@@ -1,5 +1,5 @@
 import { RouteNames } from '../routeNames';
-import { buildWebPath, WEB_ROUTE_PATTERNS } from '../webRoutes';
+import { ANCIENNES_ADRESSES_DU_SITE, buildWebPath, WEB_ROUTE_PATTERNS } from '../webRoutes';
 
 // RETOURS-TESTEUR-2 (06/11/2026, défaut 1 de CR-TRAIN5) — « Ajouter une installation » n'ouvrait
 // rien sur le site : le formulaire sans identifiant rendait `/facilities?clubId=…`, l'adresse de
@@ -38,5 +38,17 @@ describe('RETOURS-TESTEUR-2 — aucune adresse vidée ne tombe sur un autre écr
     const formulaire = buildWebPath(RouteNames.FacilityForm, { clubId: 'c1' });
     const liste = buildWebPath(RouteNames.FacilityList, { clubId: 'c1' });
     expect(formulaire.split('?')[0]).not.toBe(liste.split('?')[0]);
+  });
+
+  it('modifier une installation : son identifiant est dans l adresse, l objet n y est pas', () => {
+    expect(buildWebPath(RouteNames.FacilityForm, {
+      clubId: 'c1', facility: { documentId: 'f1', name: 'Gymnase' }, facilityId: 'f1',
+    })).toBe('/facility/f1?clubId=c1');
+  });
+
+  it('l ancienne adresse du formulaire (/facilities/<id>) est redirigée vers la nouvelle', () => {
+    expect(ANCIENNES_ADRESSES_DU_SITE).toEqual([
+      { ancienne: '/facilities/:facilityId', routeName: RouteNames.FacilityForm },
+    ]);
   });
 });

@@ -414,10 +414,13 @@ function FacilityList() {
       });
       return;
     }
+    // RETOURS-TESTEUR-2 (06/11) — l'identifiant voyage aussi : sur le site, seul lui tient
+    // dans l'adresse (sans lui, « Modifier » rouvrait la liste).
     navigation.navigate(RouteNames.FacilityForm, {
       clubId: contextClubId,
       cmId: resolvedCmId,
       facility,
+      facilityId: facility?.documentId,
     });
   }, [collectiviteId, contextClubId, isCollectiviteMode, navigation, resolvedCmId]);
 

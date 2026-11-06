@@ -380,9 +380,16 @@ describe('FacilityList — ce que l ecran fait (fige avant la refonte D34)', () 
       carte.props.onPress();
     });
 
+    // RETOURS-TESTEUR-2 (06/11/2026) — l'identifiant voyage aussi : sur le site, l'objet ne passe
+    // pas dans l'adresse, et sans identifiant « Modifier » rouvrait la liste.
     expect(mockNavigation.navigate).toHaveBeenCalledWith(
       'FacilityForm',
-      { clubId: 'club-1', cmId: null, facility: INSTALLATION_CLUB },
+      {
+        clubId: 'club-1',
+        cmId: null,
+        facility: INSTALLATION_CLUB,
+        facilityId: INSTALLATION_CLUB.documentId,
+      },
     );
   });
 

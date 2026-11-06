@@ -3888,10 +3888,12 @@ function ClubDetails({ navigation, route }) {
                             : isMember),
                         );
                         const handleOpenFacilityEdit = () => {
+                          // RETOURS-TESTEUR-2 : l'identifiant, seul à tenir dans l'adresse du site.
                           navigation.navigate(RouteNames.FacilityForm, {
                             clubId,
                             cmId: resolvedFacilityCmId,
                             facility,
+                            facilityId: facility?.documentId,
                           });
                         };
                         const handleOpenPlanning = () => {

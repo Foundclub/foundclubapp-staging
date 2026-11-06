@@ -452,6 +452,17 @@ export const readWebQueryParams = (searchParams) => Object.fromEntries(
 export const getWebRoutePattern = (routeName) => WEB_ROUTE_PATTERNS[routeName] || '/';
 
 /**
+ * RETOURS-TESTEUR-2 (06/11/2026, condition du chef : « aucun lien existant ne doit casser ») — les
+ * adresses qu'un écran a quittées. Le site les redirige vers l'adresse actuelle de l'écran, avec
+ * les mêmes paramètres (web/src/App.tsx). Aucune n'était fabriquée par l'app ni par le serveur
+ * (relevé du 06/11) ; elles restent pour un lien tapé ou gardé en favori.
+ * @type {ReadonlyArray<{ ancienne: string, routeName: string }>}
+ */
+export const ANCIENNES_ADRESSES_DU_SITE = Object.freeze([
+  { ancienne: '/facilities/:facilityId', routeName: RouteNames.FacilityForm },
+]);
+
+/**
  * FINITIONS16 · POINT 13 (T15) — UNE PILE APPELEE SANS ECRAN. Sur le telephone,
  * `navigate(AdWizardStack)` ouvre la pile sur son premier ecran (`initialRouteName`) ;
  * sur le site, la pile n'a pas d'adresse (un conteneur, webRouteExemptions.js) et
