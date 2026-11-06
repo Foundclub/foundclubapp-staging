@@ -27,6 +27,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -1580,8 +1581,10 @@ function ClubLicenses({ navigation, route }) {
   const {
     activeClubId,
     clubs,
+    getSubscriptionAccessLevelForClub,
+    isBootstrapResolved,
     refetchUserData,
-  } = useAuth();
+  } = /** @type {any} */ (useAuth());
   const routeClubId = route?.params?.clubId;
   const clubId = routeClubId || activeClubId || clubs?.[0]?.documentId || clubs?.[0]?.id || null;
   const routeCampaign = route?.params?.campaign;
@@ -1615,6 +1618,7 @@ function ClubLicenses({ navigation, route }) {
   // Campagne dont la feuille « … » est ouverte, ou `null`. C'est elle qui
   // remplace les boutons secondaires tronques de l'ancienne carte.
   const [campaignActionsFor, setCampaignActionsFor] = useState(null);
+  const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   // T03 — LE GESTE EN VOL, ET SUR QUELLE CAMPAGNE.
   //
   // Adel, recette du 2026-08-17 (point 8) : « quand on appuie sur REPRENDRE,
@@ -2239,9 +2243,29 @@ function ClubLicenses({ navigation, route }) {
     navigation.replace(RouteNames.ClubLicenses, { clubId });
   }, [clubId, currentRouteName, navigation, resetAdvancedMemberFilters]);
 
-  const handleSetupContinue = useCallback(() => {
+  // RETOURS-TESTEUR-3 D2-A (decision du chef) : un club sans aucune offre voit l'ecran de
+  // l'offre AVANT les 6 etapes, au lieu d'un refus a l'enregistrement. Le droit vient du
+  // bootstrap (`entitlementsSummary`), sans appel neuf. Passent : l'offre Equipe (le serveur
+  // accepte une campagne d'UNE equipe, subscription-permission.ts), le SuperAdmin, et des
+  // droits pas encore lus. Le refus a l'enregistrement (`refusDeCampagne.js`) reste le filet.
+  const handleNewCampaign = useCallback(() => {
+    if (
+      isBootstrapResolved === true
+      && roleKey !== 'superAdmin'
+      && getSubscriptionAccessLevelForClub?.(clubId) === 'FREE'
+    ) {
+      setSubscriptionPaywallDecision(/** @type {any} */ ({
+        allowed: false,
+        paywall: 'DUES_CAMPAIGN_CREATE_REQUIRED',
+        reason: 'SUBSCRIPTION_REQUIRED',
+        requiredPlan: ['CLUB'],
+      }));
+      return;
+    }
     navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId });
-  }, [clubId, navigation]);
+  }, [clubId, getSubscriptionAccessLevelForClub, isBootstrapResolved, navigation, roleKey]);
+
+  const handleSetupContinue = handleNewCampaign;
 
   const handleSetupFooterLayout = useCallback((event) => {
     const nextHeight = Math.ceil(event?.nativeEvent?.layout?.height || 0);
@@ -3966,7 +3990,7 @@ function ClubLicenses({ navigation, route }) {
                 variant="Secondary"
               />
               <Button
-                onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
+                onPress={handleNewCampaign}
                 style={{ flex: 1 }}
                 title={t('clubLicenses.campaigns.new', 'Nouvelle campagne')}
                 variant="Secondary"
@@ -3981,7 +4005,7 @@ function ClubLicenses({ navigation, route }) {
                 )}
                 accessibilityLabel={t('clubLicenses.campaigns.new', 'Nouvelle campagne')}
                 accessibilityRole="button"
-                onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
+                onPress={handleNewCampaign}
                 style={({ pressed }) => [{
                   alignItems: 'center',
                   borderColor: withAlpha(Colors.primary500, 0.4),
@@ -4423,6 +4447,17 @@ function ClubLicenses({ navigation, route }) {
   const isDashboardListMode = !isLoading && !hasError && !shouldShowSetup && canManageLicenses;
   const scrollBottomPadding = isSetupMode ? (setupFooterHeight || 96) + 28 : Math.max(insets.bottom + 8, 16);
 
+  // D2-A : l'ecran de l'offre, ouvert par « Nouvelle campagne » (les deux rendus).
+  const offerSheet = (
+    <SubscriptionPaywallSheet
+      close={() => setSubscriptionPaywallDecision(null)}
+      clubDocumentId={clubId}
+      decision={subscriptionPaywallDecision}
+      isVisible={Boolean(subscriptionPaywallDecision)}
+      navigation={navigation}
+    />
+  );
+
   if (isDashboardListMode) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
@@ -4454,6 +4489,7 @@ function ClubLicenses({ navigation, route }) {
         {renderMemberFilterModal()}
         {renderCampaignActionsSheet()}
         {renderHelloAssoSettingsSheet()}
+        {offerSheet}
       </ScreenContainer>
     );
   }
@@ -4502,6 +4538,7 @@ function ClubLicenses({ navigation, route }) {
       </View>
       {renderCampaignActionsSheet()}
       {renderHelloAssoSettingsSheet()}
+      {offerSheet}
     </ScreenContainer>
   );
 }

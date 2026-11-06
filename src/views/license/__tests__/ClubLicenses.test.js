@@ -71,7 +71,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 // entierement plutot que de faire dependre ce filet de la couche de stockage.
 jest.mock('@/domains/auth/authUseCases', () => ({
   getUserRoleKey: (/** @type {string} */ nomDeRole) => (
-    String(nomDeRole || '').toLowerCase().includes('dirigeant') ? 'president' : 'new'
+    String(nomDeRole || '').toLowerCase().includes('dirigeant') ? 'president'
+      : String(nomDeRole || '').toLowerCase().includes('super') ? 'superAdmin' : 'new'
   ),
 }));
 
@@ -146,6 +147,19 @@ jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => function P
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => function SegmentedControlMock() {
   return null;
 });
+
+// RETOURS-TESTEUR-3 (D2-A) : l'ecran de l'offre est une doublure qui dit QUELLE offre
+// elle vend ; la vraie tire le client HTTP au chargement.
+jest.mock(
+  '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet',
+  () => function SubscriptionPaywallSheetMock(/** @type {any} */ props) {
+    const reactActuel = jest.requireActual('react');
+    const { Text: TexteRN } = jest.requireActual('react-native');
+    return props.isVisible
+      ? reactActuel.createElement(TexteRN, null, `OFFRE ${props.decision?.paywall}`)
+      : null;
+  },
+);
 
 jest.mock('../MyLicenses', () => function MyLicensesMock() {
   return null;
@@ -230,17 +244,21 @@ const texteDeLEcran = (arbre) => recolterTextes(arbre.toJSON())
  * @type {any}
  */
 let arbreCourant = null;
+/** @type {any} */
+let navigationCourante = null;
 
 /**
  * @param {any} [surcharges] - Etat des requetes a simuler.
  * @returns {any} L'arbre rendu du hub, vu par un dirigeant.
  */
 const monterHub = (surcharges = {}) => {
-  mockAuthContexte = [{ auth: { user: { role: { name: 'Dirigeant', type: 'dirigeant' } } } }];
+  const role = surcharges.role || 'Dirigeant';
+  mockAuthContexte = [{ auth: { user: { role: { name: role, type: role.toLowerCase() } } } }];
   mockDonneesAuth = {
     activeClubId: 'club-hub',
     clubs: [{ documentId: 'club-hub', name: 'FC Test' }],
     refetchUserData: jest.fn(),
+    ...(surcharges.auth || {}),
   };
   mockCampagneCouranteRequete = surcharges.campagneCourante || {
     data: CAMPAGNE_OUVERTE, isError: false, isLoading: false,
@@ -268,6 +286,7 @@ const monterHub = (surcharges = {}) => {
     arbre = renderer.create(<ClubLicenses navigation={navigation} route={route} />);
   });
   arbreCourant = arbre;
+  navigationCourante = navigation;
   return arbre;
 };
 
@@ -513,6 +532,68 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
 
       expect(texte).toContain('+ Nouvelle campagne');
       expect(texte).not.toContain('Modifier l active');
+    });
+
+    // RETOURS-TESTEUR-3 D2-A (decision du chef) : sans l'offre Club, le dirigeant
+    // remplissait les 6 etapes pour se voir refuser a l'enregistrement. Le droit se
+    // lit dans `entitlementsSummary` (bootstrap), par `getSubscriptionAccessLevelForClub`.
+    /**
+     * @param {any} auth - Ce que `useAuth` rend en plus.
+     * @param {string} [role] - Le role du compte.
+     * @returns {string} Le texte de l'ecran apres l'appui sur la tuile.
+     */
+    const appuyerSurNouvelleCampagne = (auth, role) => {
+      const arbre = monterHub({ auth, role });
+      const tuile = arbre.root.findAll((/** @type {any} */ noeud) => (
+        noeud.props.accessibilityLabel === 'Nouvelle campagne'
+        && typeof noeud.props.onPress === 'function'
+      ))[0];
+      act(() => tuile.props.onPress());
+      return texteDeLEcran(arbre);
+    };
+    const versLAssistant = () => navigationCourante.navigate.mock.calls
+      .filter((/** @type {any[]} */ appel) => appel[0] === 'ClubLicenseCampaignSettings');
+
+    it('D2-A : club sans offre (FREE) ⇒ l ecran de l offre, pas les 6 etapes', () => {
+      const texte = appuyerSurNouvelleCampagne({
+        getSubscriptionAccessLevelForClub: (/** @type {string} */ id) => (id === 'club-hub' ? 'FREE' : 'CLUB'),
+        isBootstrapResolved: true,
+      });
+
+      expect(texte).toContain('OFFRE DUES_CAMPAIGN_CREATE_REQUIRED');
+      expect(versLAssistant()).toHaveLength(0);
+    });
+
+    it.each(['CLUB', 'CLUB_UNVERIFIED', 'TEAM'])('D2-A : offre %s ⇒ les 6 etapes, sans ecran d offre', (niveau) => {
+      // TEAM : le serveur accepte une campagne d'UNE equipe avec l'offre Equipe
+      // (subscription-permission.ts resolveRequiredPlans) ; le filet reste a l'enregistrement.
+      const texte = appuyerSurNouvelleCampagne({
+        getSubscriptionAccessLevelForClub: () => niveau,
+        isBootstrapResolved: true,
+      });
+
+      expect(texte).not.toContain('OFFRE');
+      expect(versLAssistant()).toEqual([['ClubLicenseCampaignSettings', { clubId: 'club-hub' }]]);
+    });
+
+    it('D2-A : droits pas encore lus (bootstrap en cours) ⇒ les 6 etapes ; le serveur reste juge', () => {
+      const texte = appuyerSurNouvelleCampagne({
+        getSubscriptionAccessLevelForClub: () => 'FREE',
+        isBootstrapResolved: false,
+      });
+
+      expect(texte).not.toContain('OFFRE');
+      expect(versLAssistant()).toHaveLength(1);
+    });
+
+    it('D2-A : SuperAdmin ⇒ les 6 etapes (le serveur le laisse passer)', () => {
+      const texte = appuyerSurNouvelleCampagne({
+        getSubscriptionAccessLevelForClub: () => 'FREE',
+        isBootstrapResolved: true,
+      }, 'SuperAdmin');
+
+      expect(texte).not.toContain('OFFRE');
+      expect(versLAssistant()).toHaveLength(1);
     });
   });
 

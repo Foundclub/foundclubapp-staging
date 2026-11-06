@@ -46,6 +46,15 @@ const mockMutationFigee = {
 // `QueryClientContext` : le VRAI WithDataWrapper (pas mocke ici, c est lui
 // qu on observe) le lit avec un contexte nu — absent, il rend `undefined` et
 // aucun bouton de relance, exactement le contrat du composant.
+// RETOURS-TESTEUR-3 (D2-A) : le hub monte l'ecran de l'offre ; la vraie feuille tire le
+// client HTTP (AsyncStorage) au chargement.
+jest.mock(
+  '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet',
+  () => function PaywallMock() {
+    return null;
+  },
+);
+
 jest.mock('@tanstack/react-query', () => ({
   QueryClientContext: jest.requireActual('react').createContext(undefined),
   useMutation: () => mockMutationFigee,

@@ -39,6 +39,15 @@ const mockInsetsFiges = {
 // PERF2 - l ecran importe desormais WithDataWrapper -> SkeletonLoader, qui
 // tire MaskedView / LinearGradient / Reanimated : hors sujet dans cette
 // suite. Meme mock que les suites EventPublishedShowcase.
+// RETOURS-TESTEUR-3 (D2-A) : le hub monte l'ecran de l'offre ; la vraie feuille tire le
+// client HTTP (AsyncStorage) au chargement.
+jest.mock(
+  '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet',
+  () => function PaywallMock() {
+    return null;
+  },
+);
+
 jest.mock(
   '@/components/atoms/skeletonLoader/SkeletonLoader',
   () => function SkeletonLoaderMock() { return null; },
