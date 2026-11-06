@@ -9,7 +9,7 @@ import { buildWebPath, WEB_ROUTE_PATTERNS } from '../webRoutes';
 
 const segments = (adresse) => adresse.split('/').filter(Boolean);
 
-/** Les formes qu'un motif accepte : chaque paramètre facultatif présent ou absent. */
+// Les formes qu'un motif accepte : chaque paramètre facultatif présent ou absent.
 const formes = (motif) => segments(motif).reduce(
   (acc, segment) => (segment.endsWith('?')
     ? acc.flatMap((forme) => [forme, [...forme, segment.slice(0, -1)]])
@@ -17,7 +17,7 @@ const formes = (motif) => segments(motif).reduce(
   [[]],
 );
 
-/** Deux formes sont la même adresse : mêmes segments fixes, paramètres aux mêmes places. */
+// Deux formes sont la même adresse : mêmes segments fixes, paramètres aux mêmes places.
 const meme = (a, b) => a.length === b.length && a.every((s, i) => (
   s.startsWith(':') ? b[i].startsWith(':') : s === b[i]));
 

@@ -149,7 +149,8 @@ describe('R17-VUE — « Mon planning » a l arrivee', () => {
     expect(mockGrilles[mockGrilles.length - 1].mode).toBe('3days');
   });
 
-  test('1 bis RETOURS-TESTEUR-2 (M0204 / M0983) — aujourd hui vide, demain plein : la SEMAINE', async () => {
+  // RETOURS-TESTEUR-2 (M0204 / M0983).
+  test('1 bis — aujourd hui vide, demain plein : la SEMAINE', async () => {
     await monter([creneau('2026-10-22')], [new Date(2026, 9, 22, 12)]);
     expect(selecteur().value).toBe('week');
     expect(mockGrilles[mockGrilles.length - 1].mode).toBe('week');
