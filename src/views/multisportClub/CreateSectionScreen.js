@@ -16,6 +16,8 @@ import {
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import useAuth from '@/domains/auth/useAuth';
+
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
 import Input from '@/components/molecules/input/Input';
@@ -80,6 +82,7 @@ function CreateSectionScreen({ navigation, route }) {
     /** @type {Option | undefined} */ (undefined),
   );
   const [managerPhone, setManagerPhone] = useState('');
+  const { inviteTrainer } = useAuth();
 
   const {
     data: activities = [],
@@ -144,7 +147,7 @@ function CreateSectionScreen({ navigation, route }) {
         typeof message === 'string' ? message : fallbackMessage,
       );
     },
-    onSuccess: async (result) => {
+    onSuccess: async (result, variables) => {
       await Promise.allSettled([
         queryClient.invalidateQueries({ queryKey: ['multisport-club', resolvedCmId] }),
         // BH03 · P14-10 : les listes du tableau de bord multisport.
@@ -156,12 +159,38 @@ function CreateSectionScreen({ navigation, route }) {
         refetchCm(),
         refetchUserData(),
       ]);
+      const sectionName = result?.data?.name || name;
+      // SECU-RATTACHEMENT (« 119- A ») : le numero d un tiers ne le rattache plus.
+      // Le serveur repond `managerInvitation` : on propose le SMS d invitation.
+      if (result?.data?.managerInvitation) {
+        Alert.alert(
+          t('multisport.sectionCreatedTitle', 'Section créée'),
+          t('multisport.sectionCreatedInvitation', { name: sectionName, ...SANS_ECHAPPEMENT }),
+          [
+            { onPress: () => navigation.goBack(), style: 'cancel', text: t('common.later', 'Plus tard') },
+            {
+              onPress: () => {
+                inviteTrainer({
+                  clubId: result.data.documentId,
+                  clubName: sectionName,
+                  firstname: t('addCoach.roles.manager'),
+                  isManager: true,
+                  phoneNumber: variables?.managerPhone,
+                });
+                navigation.goBack();
+              },
+              text: t('addCoach.alerts.invitation.actions.send'),
+            },
+          ],
+        );
+        return;
+      }
       Alert.alert(
         t('multisport.sectionCreatedTitle', 'Section créée'),
         t(
           'multisport.sectionCreatedMessage',
           'La section "{{name}}" a été créée avec succès.',
-          { name: result?.data?.name || name, ...SANS_ECHAPPEMENT },
+          { name: sectionName, ...SANS_ECHAPPEMENT },
         ),
         [{ onPress: () => navigation.goBack(), text: 'OK' }],
       );
@@ -378,7 +407,7 @@ function CreateSectionScreen({ navigation, route }) {
                 value={managerPhone}
               />
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {t('multisport.createSection.fields.managerPhone.help', 'Ce numéro sera utilise pour rattacher le dirigeant à la section.')}
+                {t('multisport.createSection.fields.managerPhone.help', 'Ton numéro te rattache à la section. Un autre numéro reçoit une invitation : la personne choisit de rejoindre.')}
               </Text>
             </View>
           </View>

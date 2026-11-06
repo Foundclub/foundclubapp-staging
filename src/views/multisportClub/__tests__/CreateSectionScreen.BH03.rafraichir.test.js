@@ -16,6 +16,7 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: [], isLoading: false }),
   useQueryClient: () => ({ invalidateQueries: mockInvalidate }),
 }));
+jest.mock('@/domains/auth/useAuth', () => () => ({ inviteTrainer: jest.fn() }));
 jest.mock('@/theme/themeContext', () => {
   const mockToutStyle = new Proxy({}, { get: () => mockToutStyle });
   return () => mockToutStyle;
