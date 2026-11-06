@@ -179,6 +179,9 @@ export const signatureDuMessage = (t, message) => {
   if (!signature || typeof signature !== 'object' || !signature.voix) return null;
   const prenom = String(message?.sender?.firstname || '').trim();
   const nom = String(message?.sender?.lastname || '').trim();
+  // M0259, M0298 (06/11) : un compte sans prénom ni nom signe du seul nom du club ou de la Ville,
+  // jamais « · AS Montrivage ».
+  if (!prenom && !nom) return String(signature.nom || '').trim() || null;
   if (signature.voix === 'ville') {
     return t('collectiviteCanaux.signature.ville', '{{ville}} · {{prenom}} {{initiale}}', {
       initiale: nom ? `${nom.charAt(0)}.` : '',

@@ -219,3 +219,12 @@ describe('SERIES — le site envoie la portée choisie, et dit les dates en atte
     delete /** @type {any} */ (window).alert;
   });
 });
+
+// RETOURS-TESTEUR (06/11, M0177) — « public / privé, problème de visibilité » : la liste ouverte par
+// le navigateur gardait un fond blanc sous un texte blanc. Les listes de la fiche se disent sombres.
+test('M0177 : chaque liste déroulante de la modification se dessine en sombre', async () => {
+  await monter();
+  const listes = arbre.root.findAll((/** @type {any} */ n) => n.type === 'select');
+  expect(listes.length).toBeGreaterThan(0);
+  listes.forEach((/** @type {any} */ liste) => expect(liste.props.style?.colorScheme).toBe('dark'));
+});
