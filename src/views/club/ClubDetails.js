@@ -1370,9 +1370,14 @@ function ClubDetails({ navigation, route }) {
   // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Le club d'un autre
   // garde l'onglet d'où l'on vient, aucun sans origine connue (FIN-PLACE, Adel « 1- C »). Le
   // téléphone ne lit pas ce magasin.
+  // RETOURS-TESTEUR-2 (06/11/2026, M0805) — le hub du dirigeant (même règle que `isClubHub`,
+  // plus bas) s'intitule « Gestion du club » : son en-tête dit déjà le nom.
+  const surLeHubDuClub = canEdit && !route?.params?.section && selectedTab !== 'planning';
   useDeclarerPageDuSite({
     onglet: isMember ? 'main-team' : lireOngletDOrigine(),
-    titre: club?.name || null,
+    titre: surLeHubDuClub
+      ? t('clubDetails.compactHeader.kicker', 'Gestion du club')
+      : club?.name || null,
   });
 
   // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre

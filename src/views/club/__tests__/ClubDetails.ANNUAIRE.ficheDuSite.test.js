@@ -691,3 +691,23 @@ describe('FIN-PLACE — l onglet allumé sur le club d un autre', () => {
     expect(lirePageDuSite().onglet).toBe('main-planning');
   });
 });
+
+// RETOURS-TESTEUR-2 (06/11/2026, M0805) — « Pour gestion du club le titre en haut n'est pas bon » :
+// sur le hub du dirigeant, la barre fine du site disait le NOM du club, que l'en-tête répète.
+describe('M0805 — le titre de la barre fine sur « Gestion du club »', () => {
+  it('le hub du dirigeant s intitule « Gestion du club »', () => {
+    mockHasClubAccess.mockReturnValue(true);
+    mockUserData = { ...mockUserData, role: { name: 'president' } };
+    mockClubQuery.data = CLUB_SANS_EQUIPE;
+    monter();
+    expect(lirePageDuSite().titre).toBe('Gestion du club');
+  });
+
+  it('une sous-page du hub garde le nom du club', () => {
+    mockHasClubAccess.mockReturnValue(true);
+    mockRoute = { params: { clubId: 'club-1', section: 'facilities' } };
+    mockClubQuery.data = CLUB_SANS_EQUIPE;
+    monter();
+    expect(lirePageDuSite().titre).toBe(CLUB_SANS_EQUIPE.name);
+  });
+});
