@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, View,
@@ -147,12 +148,24 @@ function MissionRow({
  */
 function TourFullScreen({ kind }) {
   const { Colors, Fonts } = useTheme();
+  // Palier « Plus tard » (chef, option A, 06/11) : la clôture, sans les bonus qui restent à faire.
+  const [isLater, setIsLater] = useState(false);
+  const shown = kind === 'milestone' && isLater ? 'closing' : kind;
   const { t: translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus, pauseTour,
-    profileKey,
+    profileKey, skippedSubMissions,
   } = useTour();
+  // Recette L11 : une mission dont la seule partie a été passée (M2, le coach) n'est pas cochée.
+  const passedMissionIds = new Set((missions || [])
+    .filter((/** @type {any} */ mission) => {
+      const parts = new Set((getTourProfile(profileKey || 'coach')?.steps || [])
+        .filter((/** @type {any} */ step) => step.missionId === mission.id && step.subMission)
+        .map((/** @type {any} */ step) => step.subMission));
+      return parts.size === 1 && (skippedSubMissions || []).includes([...parts][0]);
+    })
+    .map((/** @type {any} */ mission) => mission.id));
   // Textes `tourCatalog.<profil>.*` : chaque guide a les siens (les replis sont ceux du coach).
   const guideKey = profileKey || 'coach';
   const guide = /** @type {any} */ (getTourProfile(guideKey));
@@ -193,7 +206,7 @@ function TourFullScreen({ kind }) {
 
   let content = null;
   let cta = null;
-  if (kind === 'opening') {
+  if (shown === 'opening') {
     content = (
       <>
         <Text style={[Fonts.p3Black, {
@@ -273,7 +286,7 @@ function TourFullScreen({ kind }) {
         </TouchableOpacity>
       </>
     );
-  } else if (kind === 'milestone') {
+  } else if (shown === 'milestone') {
     content = (
       <>
         <View style={{ alignItems: 'center' }}>
@@ -301,17 +314,22 @@ function TourFullScreen({ kind }) {
             )}
         </Text>
         <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => (
-            <MissionRow
-              done={missionStatus?.[mission.id] !== 'blocked'}
-              key={mission.id}
-              label={mission.title}
-              marker={String(index + 1)}
-              right={missionStatus?.[mission.id] === 'blocked'
-                ? t(`tourCatalog.${guideKey}.palier.blocked`, 'Plus tard')
-                : undefined}
-            />
-          ))}
+          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => {
+            const isBlocked = missionStatus?.[mission.id] === 'blocked';
+            const isPassed = passedMissionIds.has(mission.id);
+            let right;
+            if (isBlocked) right = t(`tourCatalog.${guideKey}.palier.blocked`, 'Plus tard');
+            else if (isPassed) right = t(`tourCatalog.${guideKey}.palier.skipped`, 'Passée');
+            return (
+              <MissionRow
+                done={!isBlocked && !isPassed}
+                key={mission.id}
+                label={mission.title}
+                marker={String(index + 1)}
+                right={right}
+              />
+            );
+          })}
         </View>
         {bonuses.length > 0 ? (
           <View style={{ rowGap: 8 }}>
@@ -354,7 +372,7 @@ function TourFullScreen({ kind }) {
         {bonuses.length > 0 ? (
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={() => finishGuide({ later: true })}
+            onPress={() => setIsLater(true)}
             style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
@@ -399,7 +417,7 @@ function TourFullScreen({ kind }) {
               </Text>
             </View>
           ))}
-          {bonuses.map((/** @type {any} */ mission) => (
+          {(isLater ? [] : bonuses).map((/** @type {any} */ mission) => (
             <View
               key={mission.id}
               style={{
@@ -429,6 +447,11 @@ function TourFullScreen({ kind }) {
             </View>
           ))}
         </View>
+        {(guide?.closingTodoLines?.(t, skippedSubMissions) || []).map((/** @type {any} */ line) => (
+          <Text key={line} style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+            {line}
+          </Text>
+        ))}
         {/* n° 29 : le match d'exemple de B2 n'a rien laissé. */}
         {missionStatus?.[guide?.exampleMissionId] === 'done' ? (
           <Text style={[Fonts.p3, { color: Colors.neutral200, textAlign: 'center' }]}>
@@ -450,7 +473,7 @@ function TourFullScreen({ kind }) {
     cta = (
       <>
         <Button
-          onPress={() => finishGuide()}
+          onPress={() => finishGuide(isLater ? { later: true } : undefined)}
           title={t(`tourCatalog.${guideKey}.close.cta`, "Aller à l'accueil")}
           variant="Primary"
         />
@@ -458,7 +481,7 @@ function TourFullScreen({ kind }) {
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => {
-              finishGuide();
+              finishGuide(isLater ? { later: true } : undefined);
               navigateRoot(offerRoute);
             }}
             style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
@@ -486,16 +509,19 @@ function TourFullScreen({ kind }) {
         </Defs>
         <Rect fill="url(#tourFullScreen)" height="100%" width="100%" x={0} y={0} />
       </Svg>
+      {/* Recette L11 (l11-p8-ouv-bas) : la marge de la barre d'état est hors de la liste ; défilé,
+          le titre passait dessous. */}
       <ScrollView
         contentContainerStyle={{
           alignSelf: 'center',
           maxWidth: FULL_SCREEN_MAX_WIDTH,
           paddingBottom: 16,
           paddingHorizontal: 22,
-          paddingTop: Math.max(64, insets.top + 24),
+          paddingTop: Math.max(64, insets.top + 24) - insets.top,
           rowGap: 18,
           width: '100%',
         }}
+        style={{ marginTop: insets.top }}
       >
         {content}
       </ScrollView>

@@ -22,6 +22,17 @@ const MISSION_ID = 'president_m1';
  */
 const isTaken = (key) => (ctx) => Boolean(ctx?.created?.[key]);
 
+/**
+ * Recette L11 (l11-m1-reprise) : vue de l'Accueil, la bulle d'une étape de la fiche garde sa
+ * consigne et montre la carte « Gérer mon club ».
+ * @param {() => string} text - Texte de la bulle sur l'Accueil.
+ * @returns {{ targets: string[]; text: string }} Repli de l'étape.
+ */
+const fromHome = (text) => ({
+  targets: ['home.card.manage-club'],
+  get text() { return text(); },
+});
+
 export const M1_MISSION = {
   gaugeStep: 25,
   id: MISSION_ID,
@@ -135,6 +146,10 @@ const PARTNER_TAKEN = { goto: 'm1-partners-taken', key: 'sponsor.free.taken', ty
 const PART_PARTNERS = [
   {
     advanceOn: [{ key: 'club.section.partners', type: 'interaction' }, PARTNER_TAKEN],
+    fallback: fromHome(() => t(
+      'm1-partners-home',
+      '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos partenaires ».',
+    )),
     id: 'm1-partners',
     missionId: MISSION_ID,
     navTarget: clubHubTarget,
@@ -208,11 +223,18 @@ const PART_PARTNERS = [
 ];
 
 const FACILITY_TAKEN = { goto: 'm1-fac-taken', key: 'facility.free.taken', type: 'action' };
+// Recette L11 (décision du chef, 06/11) : une installation déjà là suffit, on passe à son planning.
+// Train 5 : elle passe avant « place offerte prise » (QUOTA-CLUB), que FacilityList émet après elle.
+const FACILITY_EXISTING = { goto: 'm1-fac-have', key: 'facility.existing', type: 'action' };
 
 const PART_FACILITIES = [
   {
     // Le signal de l'écran peut précéder sa route : les deux étapes l'écoutent.
-    advanceOn: [{ key: RouteNames.FacilityList, type: 'route' }, FACILITY_TAKEN],
+    advanceOn: [{ key: RouteNames.FacilityList, type: 'route' }, FACILITY_EXISTING, FACILITY_TAKEN],
+    fallback: fromHome(() => t(
+      'm1-fac-home',
+      '3/5 · Tes installations : stade, gymnase, salle… Ouvre « Gérer mon club ».',
+    )),
     id: 'm1-fac',
     missionId: MISSION_ID,
     // Depuis « Passer cette partie » sur l'ajout d'un partenaire : la fiche n'est pas à l'écran.
@@ -224,7 +246,7 @@ const PART_FACILITIES = [
     get text() { return t('m1-fac', '3/5 · Tes installations : stade, gymnase, salle…'); },
   },
   {
-    advanceOn: [{ key: RouteNames.FacilityForm, type: 'route' }, FACILITY_TAKEN],
+    advanceOn: [{ key: RouteNames.FacilityForm, type: 'route' }, FACILITY_EXISTING, FACILITY_TAKEN],
     id: 'm1-facadd',
     missionId: MISSION_ID,
     resumeFrom: 'm1-fac',
@@ -328,6 +350,24 @@ const planningStep = (step) => Object.defineProperties(
 );
 
 const PART_PLANNING = [
+  {
+    advanceOn: { goto: 'm1-pdemo', key: 'facility.planning.opened', type: 'interaction' },
+    id: 'm1-fac-have',
+    missionId: MISSION_ID,
+    navTarget: facilityListTarget,
+    resumeFrom: 'm1-fac',
+    subMission: 'facilities',
+    targetsFor: (/** @type {any} */ context) => {
+      const facilityId = context?.created?.['facility.existing']?.facilityId;
+      return facilityId ? [`facility.plan.${facilityId}`] : [];
+    },
+    get text() {
+      return t('m1-fac-have', '3/5 · Tu as déjà ton terrain. Ouvre son planning.');
+    },
+    // Seulement par l'aiguillage : après une création, la partie suit son cours.
+    when: (/** @type {any} */ ctx) => Boolean(ctx?.created?.['facility.existing'])
+      && !ctx?.created?.['facility.created'],
+  },
   {
     advanceOn: { key: 'facility.planning.opened', type: 'interaction' },
     id: 'm1-fplan',
@@ -455,7 +495,7 @@ const PART_POSTER = [
     resumeFrom: 'm1-poster',
     targets: ['club.poster'],
     get text() {
-      return t('m1-poster', '5/5 · Dernière étape : l’affiche « Rejoindre le club ».');
+      return t('m1-poster', 'Dernière étape : l’affiche « Rejoindre le club ».');
     },
   },
   {
@@ -537,7 +577,7 @@ const PART_POSTER = [
     bubblePlacement: 'top',
     id: 'm1-psent',
     missionId: MISSION_ID,
-    get nextLabel() { return t('m1-psent-next', 'C’est envoyé'); },
+    get nextLabel() { return t('m1-psent-next', 'C’est fait'); },
     resumeFrom: 'm1-poster',
     targets: ['poster.share'],
     get text() {
@@ -555,8 +595,8 @@ const PART_POSTER = [
     get text() {
       return t(
         'm1-pclose',
-        'Envoyée ! Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, '
-          + 'ferme-la avec la croix.',
+        'Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, ferme-la avec '
+          + 'la croix.',
       );
     },
   },

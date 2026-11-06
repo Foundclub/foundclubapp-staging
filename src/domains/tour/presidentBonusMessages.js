@@ -117,6 +117,8 @@ export const B3_STEPS = [
     advanceOn: { key: RouteNames.NewConversation, type: 'route' },
     id: 'b3-new',
     missionId: 'president_b3',
+    // Recette L11 (l11-b3a) : b3-back passée toute seule depuis l'Accueil n'a emmené nulle part.
+    navigateOnEnter: true,
     navTarget: messagingTarget,
     targets: ['msg-new'],
     get text() { return t('b3-new', 'Touche ce bouton pour une nouvelle discussion.'); },

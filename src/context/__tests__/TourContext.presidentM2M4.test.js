@@ -8,6 +8,7 @@ import {
   emitGuidanceRouteVisit,
   resetGuidanceRuntimeForTests,
 } from '@/domains/guidance/guidanceRuntime';
+import { PRESIDENT_GUIDE } from '@/domains/tour/presidentGuide';
 import { reportTourField, resetTourTargetsForTests } from '@/domains/tour/tourTargetRegistry';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -282,7 +283,7 @@ describe('les bonus de bout en bout', () => {
     ].forEach(route);
     expect(stepId()).toBe('a7');
     touch('ad.publish.example');
-    expect(stepId()).toBe('a-stop');
+    expect(stepId()).toBe('b4-cand');
     next();
     expect(tour.missionStatus.president_b4).toBe('done');
   });
@@ -372,5 +373,180 @@ describe('M3 et M4 de bout en bout', () => {
     start('president_m4');
     expect(stepId()).toBe('m4-home');
     expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+});
+
+const driveTo = (target) => {
+  for (let guard = 0; guard < 80 && stepId() !== target; guard += 1) {
+    const step = tour.currentStep;
+    const { steps } = PRESIDENT_GUIDE;
+    const nextId = steps[steps.findIndex((one) => one.id === step.id) + 1]?.id;
+    const advances = [step.advanceOn].flat().filter(Boolean);
+    const signal = advances.find((one) => one.goto === nextId)
+      || advances.find((one) => !one.goto) || advances[0];
+    if (step.nextRequires) act(() => { reportTourField(step.nextRequires.field, true); });
+    if (!signal) next();
+    else if (signal.type === 'route') route(signal.key);
+    else if (signal.type === 'action') action(signal.key);
+    else touch(signal.key);
+  }
+  expect(stepId()).toBe(target);
+};
+
+describe('recette L10 — retour sur l’écran d’exemple de B4', () => {
+  const toExample = () => {
+    start('president_b4');
+    driveTo('b4-cand');
+  };
+
+  it('« Reprendre » rouvre l’annonce d’exemple, sans refaire le tunnel', () => {
+    toExample();
+    route(RouteNames.AdWizardDescription);
+    mockNavigate.mockClear();
+    act(() => { tour.returnToGuide(); });
+    expect(stepId()).toBe('b4-cand');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.AdWizardStack,
+      { screen: RouteNames.AdWizardRecap },
+    );
+  });
+});
+
+describe('bilan : les parties passées arrivent jusqu’à la clôture', () => {
+  it('le coach passé est exposé par le contexte', () => {
+    start();
+    touch('club.section.staff');
+    route(RouteNames.AddCoach);
+    expect(tour.skippedSubMissions).toEqual([]);
+    act(() => { tour.skipSubMission(); });
+    expect(tour.skippedSubMissions).toEqual(['coach']);
+  });
+});
+
+describe('recette L11 — reprise pile sur l’écran d’exemple', () => {
+  it('B4 : après « Reprendre », l’arrivée sur le récap garde l’exemple', () => {
+    start('president_b4');
+    driveTo('b4-cand');
+    route(RouteNames.AdWizardDescription);
+    act(() => { tour.returnToGuide(); });
+    route(RouteNames.AdWizardRecap);
+    expect(stepId()).toBe('b4-cand');
+  });
+
+  it('B1 : retour sur l’exemple, « Reprendre » rouvre la campagne et garde l’exemple', () => {
+    start('president_b1');
+    driveTo('b1-camp');
+    route(RouteNames.ClubLicenses);
+    mockNavigate.mockClear();
+    act(() => { tour.returnToGuide(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ClubStack, {
+      params: { clubId: 'club-1' },
+      screen: RouteNames.ClubLicenseCampaignSettings,
+    });
+    route(RouteNames.ClubLicenseCampaignSettings);
+    expect(stepId()).toBe('b1-camp');
+  });
+});
+
+// Recette L11 (l11-r2-clo) : « Partager » émet l'action puis, au retour, l'interaction, dans le
+// même tour de boucle. La 2ᵉ relisait l'état d'avant la 1ʳᵉ et effaçait l'affiche du bilan.
+describe('bilan : l’affiche partagée y reste', () => {
+  it('action et retour du partage à la suite : l’affiche est comptée', () => {
+    start('president_m1');
+    driveTo('m1-pshare');
+    act(() => {
+      emitGuidanceAction('club.poster.shared');
+      emitGuidanceInteraction('poster.share.returned');
+    });
+    expect(tour.created['club.poster.shared']).toBeTruthy();
+    expect(stepId()).toBe('m1-psent');
+  });
+});
+
+// Recette L11 (l11-m1g1) : une installation déjà là valide la partie, on passe à son planning.
+describe('M1 : l’installation existante suffit', () => {
+  it('« Tu as déjà ton terrain », puis son planning', () => {
+    start('president_m1');
+    driveTo('m1-facadd');
+    action('facility.existing', { facilityId: 'f1' });
+    expect(stepId()).toBe('m1-fac-have');
+    expect(tour.currentStep.text).toMatch(/déjà ton terrain/);
+    touch('facility.planning.opened');
+    expect(stepId()).toBe('m1-pdemo');
+  });
+
+  it('témoin : sans installation, la création reste le chemin', () => {
+    start('president_m1');
+    driveTo('m1-facadd');
+    route(RouteNames.FacilityForm);
+    expect(stepId()).not.toBe('m1-fac-have');
+  });
+
+  // Train 5 : chez un club gratuit, l installation offerte prise ET existante arrivent ensemble,
+  // dans l ordre de FacilityList. L existante l emporte : son planning, pas « passe cette partie ».
+  it('train 5 — club gratuit : existante puis place offerte prise, on va au planning', () => {
+    start('president_m1');
+    driveTo('m1-fac');
+    act(() => {
+      emitGuidanceAction('facility.existing', { facilityId: 'f1' });
+      emitGuidanceAction('facility.free.taken');
+    });
+    expect(stepId()).toBe('m1-fac-have');
+  });
+});
+
+// Recette L11 (l11-m1-reprise) : app tuée en M1 ③, « Reprendre » laissait la bulle 3/5 sur
+// l'Accueil. `navigate('Club')` nu, depuis la racine, n'est traité par aucun navigateur tant que
+// la pile du club n'est pas montée (hotesDepuisLaRacine.js) : la fiche passe par sa pile.
+describe('L11 bis — reprise après relancement en M1 ③', () => {
+  it('« Reprendre » ouvre la fiche du club par sa pile', () => {
+    start('president_m1');
+    driveTo('m1-facadd');
+    act(() => tree.unmount());
+    tree = undefined;
+    mount();
+    mockNavigate.mockClear();
+    act(() => { tour.resumeTour(); });
+    expect(stepId()).toBe('m1-fac');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.ClubStack,
+      { params: { clubId: 'club-1' }, pop: true, screen: RouteNames.Club },
+      { pop: true },
+    );
+  });
+});
+
+// Recette L11 (l11-b3a) : B2 passé depuis l'Accueil, b3-back passait toute seule (on n'est pas
+// dans une conversation) avant d'avoir emmené aux Messages ; b3-new restait sur l'Accueil.
+describe('L11 bis — B3 après B2 passé', () => {
+  it('b3-new emmène aux Messages', () => {
+    start('president_b2');
+    route(RouteNames.SearchHome);
+    expect(stepId()).toBe('b2-dock');
+    mockNavigate.mockClear();
+    act(() => { tour.skipMission(); });
+    expect(stepId()).toBe('b3-new');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.HomeTab,
+      { screen: RouteNames.Chat },
+      { pop: true },
+    );
+  });
+});
+
+// Recette L11 (l11-r2-m3a) : deux retours Android rapides (messagerie, puis Staff). Le 2ᵉ ferme
+// Staff pendant le bandeau de M2 : son signal se perd, m2-back s'ouvre sur la fiche. « Nos
+// équipes » touché ensuite laissait la bulle « sur Staff » posée sur Nos équipes.
+describe('L11 bis — deux retours rapides de M2 à M3', () => {
+  it('Staff fermé pendant le bandeau, puis « Nos équipes » : la bulle de M3 suit', () => {
+    toInvite();
+    touch('staff.sms.opened');
+    route(RouteNames.Club);
+    leaveAndComeBack();
+    touch('club.section.closed', { section: 'staff' });
+    flush();
+    expect(stepId()).toBe('m2-back');
+    touch('club.section.teams');
+    expect(stepId()).toBe('m3-create');
   });
 });

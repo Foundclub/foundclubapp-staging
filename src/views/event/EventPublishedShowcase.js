@@ -41,8 +41,8 @@ import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEven
 import useTheme from '@/theme/themeContext';
 
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
-import TourTarget from '@/components/molecules/tour/TourTarget';
 import Input from '@/components/molecules/input/Input';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 

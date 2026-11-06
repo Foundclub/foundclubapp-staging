@@ -170,8 +170,11 @@ const aplatir = (/** @type {any} */ enfants) => {
   if (typeof enfants === 'object') return aplatir(enfants?.props?.children);
   return String(enfants);
 };
+// Pastilles de type du club en espaces insécables (recette L11) : à l'écran, le même texte.
 const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
-  .map((/** @type {any} */ noeud) => aplatir(noeud.props.children).trim());
+  .map((/** @type {any} */ noeud) => aplatir(noeud.props.children)
+    .replace(/\u00A0/g, ' ')
+    .trim());
 const pressables = (/** @type {any} */ arbre) => arbre.root
   .findAll((/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function');
 const parTexte = (/** @type {any} */ arbre, /** @type {string} */ libelle) => pressables(arbre)

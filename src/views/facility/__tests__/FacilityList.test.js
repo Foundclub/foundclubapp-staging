@@ -734,6 +734,14 @@ describe('GUIDE-D-QUOTA-CLUB — l installation offerte deja la, dite au guide',
     expect(signaux()).toContain('facility.free.taken');
   });
 
+  // Train 5 (fusion du guide Dirigeant) : le guide prend le 1er signal ; l existante passe avant.
+  it('club gratuit qui a la sienne : « existante » part avant « place prise »', () => {
+    rendre();
+    const ordre = signaux();
+    expect(ordre.indexOf('facility.existing')).toBeGreaterThan(-1);
+    expect(ordre.indexOf('facility.existing')).toBeLessThan(ordre.indexOf('facility.free.taken'));
+  });
+
   it('club gratuit sans installation : aucun signal', () => {
     mockFacilityContext.data.allFacilities = [];
     rendre();

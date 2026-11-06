@@ -88,6 +88,7 @@ const ETAT_ENTRAINEUR_ADJOINT = Object.freeze({
 /** @type {any} */
 let mockEtatCourant = ETAT_ARTS_MARTIAUX;
 
+jest.mock('@/components/molecules/tour/TourAnnonceExemple', () => () => null);
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     mutateAsync: (/** @type {any} */ variables) => options.mutationFn(variables),

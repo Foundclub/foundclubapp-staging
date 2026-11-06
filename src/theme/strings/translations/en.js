@@ -24465,8 +24465,6 @@ export default {
       title: 'My profile',
     },
     president: {
-      'a-stop': 'Nothing was sent. A real ad goes online, and applications arrive on its page, '
-        + 'with a poster to share.',
       a1: 'Are you recruiting players or a coach?',
       a2: 'The team that’s recruiting.',
       a3: 'Turn on the position you’re missing (in football, “Left winger” for example), then '
@@ -24477,9 +24475,11 @@ export default {
       a5v: 'This ad needs approval: choose how, then Next.',
       a6: 'Optional: the suggested ideas can help. You can skip this.',
       a7: 'Read your ad, then tap the button: simulation, nothing will be published.',
+      'b1-camp': 'Tap “Paid” when a member pays in cash, or “Remind” to send them a reminder.',
       'b1-card': 'Your club’s dues are managed here. Open them.',
       'b1-new': 'Launch a campaign. It’s a simulation: nothing will be sent.',
       'b1-new-setup': 'Tap “Continue”. It’s a simulation: nothing will be sent.',
+      'b1-open': 'Your campaign is open: the members concerned are added automatically.',
       'b1-sum': 'At a glance: what’s collected, what’s left, what’s late.',
       'b1-sum-new': 'Your club has no campaign yet: it all starts here. This summary fills up '
         + 'with the first one.',
@@ -24500,6 +24500,8 @@ export default {
       'b3-sel': 'One member: a one-to-one chat. Several: a group. Tick at least 2, then Next.',
       'b3-whisper': 'That’s a one-to-one chat. For a group, tick at least 2 people from the same '
         + 'button. Let’s continue.',
+      'b4-cand': 'Your example ad is online. Applications arrive here, and you can turn it into a '
+        + 'poster to share.',
       'b4-card': 'Open “Recruit”. It’s a simulation: nothing will be published.',
       'b4-dock': 'Next bonus: recruiting. Go back to the home screen.',
       'b5-back': 'One last look: go back to the home screen.',
@@ -24509,8 +24511,6 @@ export default {
       'b5-pr': 'Profiles: players and coaches open to recruitment.',
       'b5-re': 'Bookings: pitch slots to book near you.',
       bonusDetail: 'Dues, channel, group, recruiting, search',
-      'c-stop': 'Nothing was sent. A real campaign adds the members concerned, and you then '
-        + 'follow who has paid in the dues.',
       c1: 'Choose the type: the name fills in by itself. Then the period, and Next.',
       c2: 'The amount per member. A different rate? Add a rule on this screen. Then Next.',
       c3: 'Turn on the accepted payment methods. HelloAsso collects online once connected. Then '
@@ -24529,13 +24529,15 @@ export default {
         group: 'Group created',
         offer: 'See the Club plan',
         partner: 'Partner added',
-        poster: 'Poster shared',
+        poster: 'Poster ready to share',
         real: 'REAL',
         skipped: 'SKIPPED',
         subtitle: 'Have a great season!',
         team: '{{team}} created',
         title: 'Your club is ready',
         titlePartial: 'The guide is finished',
+        todoCoach: 'To do: your coach',
+        todoPartner: 'To do: your partner',
         yourTeam: 'Your team',
       },
       kicker: 'Club manager guide',
@@ -24546,6 +24548,8 @@ export default {
       'm1-edit': 'To personalize them, tap “Edit”.',
       'm1-email': 'The club’s contact email.',
       'm1-fac': '3/5 · Your facilities: stadium, gym, hall…',
+      'm1-fac-have': '3/5 · You already have your venue. Open its schedule.',
+      'm1-fac-home': '3/5 · Your facilities: stadium, gym, hall… Open “Manage my club”.',
       'm1-fac-taken': 'Your free facility is already here: the next one needs the Club plan. Skip '
         + 'this part.',
       'm1-facadd': 'Add a facility.',
@@ -24569,6 +24573,8 @@ export default {
       'm1-padd': 'Add your first partner with “+”.',
       'm1-parrows': 'The arrows change the period. Try the right one.',
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
+      'm1-partners-home': '2/5 · Your partners. Open “Manage my club”, then “Our '
+        + 'partners”.',
       'm1-partners-taken': 'Your free partner is already here: the next one needs the Club plan. '
         + 'Skip this part.',
       'm1-pb1': 'Go back to your facilities.',
@@ -24577,8 +24583,7 @@ export default {
         + 'places still free.',
       'm1-pchips': 'Choose the facility shown. “All facilities” brings your whole club together: '
         + 'tap it.',
-      'm1-pclose': 'Sent! You stay on your poster to share it elsewhere. When you’re done, close '
-        + 'it with the cross.',
+      'm1-pclose': 'You stay on your poster to share it elsewhere. When you’re done, close it with the cross.',
       'm1-pdemo': 'Your schedule is still empty: we’ve added a few sample events to show you. '
         + 'They disappear at the end of the guide.',
       'm1-pempty': 'A period with no events looks like this. Your coaches’ slots will appear here '
@@ -24591,11 +24596,11 @@ export default {
       'm1-phone': 'The club’s phone number.',
       'm1-pmodel': 'Choose a style: Crest or Family.',
       'm1-pmonth': 'In Month view, a dot marks each day the facility is in use.',
-      'm1-poster': '5/5 · Last step: the “Join the club” poster.',
+      'm1-poster': 'Last step: the “Join the club” poster.',
       'm1-pposter': 'Here is your poster: the club name, your sport and the QR code leading to '
         + 'your club. You can change the style at any time.',
       'm1-psent': 'You can share it again, or continue when you’re done.',
-      'm1-psent-next': 'It’s sent',
+      'm1-psent-next': 'Done',
       'm1-pshare': 'The QR code leads straight to your club. Share the poster, or print it for '
         + 'the clubhouse.',
       'm1-ptext': 'You can also adapt the poster’s text. Tap “Customize the text”.',
@@ -24642,6 +24647,7 @@ export default {
         m4: 'Manage requests',
       },
       next: 'Next',
+      ok: 'OK',
       open: {
         cta: 'Let’s go',
         gauge: '{{count}} missions to get it going. Each one raises your gauge by 25%.',
@@ -24658,6 +24664,7 @@ export default {
         continue: 'Continue',
         later: 'Later',
         laterHint: 'Later? The bonuses are waiting in My account › Club manager guide.',
+        skipped: 'Skipped',
         subtitle: '{{count}} missions out of {{count}}, the essentials are done.',
         subtitlePartial: '{{done}} missions out of {{total}}: the others are waiting for the app '
           + 'to allow them.',
@@ -24675,8 +24682,8 @@ export default {
       tw3: 'The team’s section, then Next.',
       tw4: 'Search for the sport and tap it: you go straight to the next step.',
       tw5: 'Tap the age category.',
-      tw6: 'Tap the competition level, or Next to continue without one.',
-      tw7: 'Tick who will manage the team: you, or the coach you just added.',
+      tw6: 'Tap the competition level, or “Continue without a level”.',
+      tw7: 'Tick who will manage the team: you, or a coach from the club.',
       tw8: 'All good? Create the team for real.',
       understood: 'Got it',
     },
@@ -24718,6 +24725,30 @@ export default {
     },
   },
   tourExamples: {
+    ad: {
+      candidates: 'Applications (0)',
+      example: 'Example',
+      online: 'ONLINE',
+      position: 'Left winger',
+    },
+    campaign: {
+      filterAll: 'All',
+      filterOverdue: 'Overdue',
+      filterPartial: 'Partial',
+      filterPending: 'Pending',
+      memberTeam: 'Senior',
+      name: 'Membership fees',
+      paid: 'Collected',
+      reminded: 'A real reminder would go out here: nothing is sent to this member.',
+      search: 'Search for a member',
+      settled: 'Settled',
+      statusPaid: 'Paid',
+      subtitle: 'Full details of the {{name}} campaign.',
+      tabMembers: 'Members',
+      tabOverview: 'Overview',
+      tabPayments: 'Payments',
+      title: 'Fees',
+    },
     match: {
       label: 'Example · vs US Monpeyroux',
       nonePlaced: 'Place at least one player on the pitch.',
@@ -24939,7 +24970,8 @@ export default {
     facilityLine: 'Facility: {{name}}',
     forfeitNotice: 'Forfeit {{teamName}}: score pre-filled 3-0 for the other team, editable.',
     forfeitOf: 'Forfeit {{teamName}}',
-    forfeitScoreRefused: 'The forfeiting team ({{teamName}}) cannot win or draw. Correct the score.',
+    forfeitScoreRefused: 'The forfeiting team ({{teamName}}) cannot win or draw. Correct the '
+      + 'score.',
     forfeitScoreRefusedTitle: 'Score refused',
     groupLabel: '{{label}}',
     incompleteScore: 'Incomplete score',
@@ -26463,8 +26495,10 @@ export default {
         bullet2: '2 free events and 1 free ad',
         bullet3: 'Unlimited chat, forever',
         kicker: 'Today',
+        kickerAfterGift: 'After the 7 days',
         title: 'Start for free',
       },
+      giftSubtitle: 'Club plan free for 7 days',
       hint: "You'll find these plans anytime in Profile, under My subscription.",
       team: {
         bullet1: 'Unlimited events and matches',
