@@ -186,7 +186,9 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.FriendlyMatchWizardRecap]: '/friendly-matches/wizard/recap',
   [RouteNames.PollDetails]: '/polls/:pollId',
   [RouteNames.FacilityList]: '/facilities',
-  [RouteNames.FacilityForm]: '/facilities/:facilityId?',
+  // RETOURS-TESTEUR-2 (06/11/2026) — le formulaire a SA propre adresse : sous `/facilities/`, sans
+  // identifiant (« Ajouter »), il rendait `/facilities`, celle de la liste, qui gagnait sur le site.
+  [RouteNames.FacilityForm]: '/facility/:facilityId?',
   [RouteNames.AdminDashboard]: '/admin',
   [RouteNames.AdminRevenue]: '/admin/revenue',
   [RouteNames.AdminEvents]: '/admin/events',
