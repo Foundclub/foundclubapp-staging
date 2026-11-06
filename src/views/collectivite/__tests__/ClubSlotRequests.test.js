@@ -407,12 +407,16 @@ describe('R17-QUAND-1 bis — la ligne d’une série dit son rythme', () => {
   });
 });
 
-// RETOURS-TESTEUR (06/11, M0133) — « Il faut mettre les heures des demandes » : quand elle est partie.
+// RETOURS-TESTEUR (06/11, M0133) — « Il faut mettre les heures des demandes » : quand elle
+// est partie.
 describe('M0133 — la carte dit quand la demande est partie', () => {
   const ENVOI = '2030-09-28T15:06:00.000Z';
   const envoi = new Date(ENVOI);
-  const ENVOYEE = `Envoyée le ${envoi.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' })}`
-    + ` à ${envoi.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' })}`;
+  const jour = envoi.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' });
+  const heureDEnvoi = envoi.toLocaleTimeString(localeDesFormats(), {
+    hour: '2-digit', minute: '2-digit',
+  });
+  const ENVOYEE = `Envoyée le ${jour} à ${heureDEnvoi}`;
 
   it('téléphone : « Envoyée le … à … » sur la carte', async () => {
     mockLignes = [ligne({ createdAt: ENVOI, documentId: 'rq-envoi' })];
