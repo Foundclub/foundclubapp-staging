@@ -187,7 +187,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.PollDetails]: '/polls/:pollId',
   [RouteNames.FacilityList]: '/facilities',
   // RETOURS-TESTEUR-2 (06/11/2026) — le formulaire a SA propre adresse : sous `/facilities/`, sans
-  // identifiant (« Ajouter »), il rendait `/facilities`, celle de la liste, qui gagnait sur le site.
+  // identifiant (« Ajouter »), il rendait `/facilities`, celle de la liste, qui gagnait.
   [RouteNames.FacilityForm]: '/facility/:facilityId?',
   [RouteNames.AdminDashboard]: '/admin',
   [RouteNames.AdminRevenue]: '/admin/revenue',

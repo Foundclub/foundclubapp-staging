@@ -15,7 +15,9 @@ jest.mock('@/theme/themeContext', () => {
   // Seuls les espacements verticaux portent leur valeur : c'est ce que ce témoin lit.
   const espaces = new Proxy({}, {
     get: (_cible, groupe) => new Proxy({}, {
-      get: (_c, valeur) => (groupe === 'paddingVertical' ? { paddingVertical: Number(valeur) } : vide),
+      get: (_c, valeur) => (
+        groupe === 'paddingVertical' ? { paddingVertical: Number(valeur) } : vide
+      ),
     }),
   });
   return {
@@ -33,7 +35,11 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: jest.fn(), type: '3rdParty' },
-  useTranslation: () => ({ t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle) }),
+  useTranslation: () => ({
+    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : cle
+    ),
+  }),
 }));
 
 const evenement = (/** @type {string} */ typeName) => ({
