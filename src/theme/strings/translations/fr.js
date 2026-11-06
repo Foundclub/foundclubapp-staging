@@ -28161,7 +28161,7 @@ export default {
       },
       free: {
         bullet1: '1 équipe, 1 installation, 1 partenaire offerts',
-        bullet2: '2 événements et 1 annonce offerts',
+        bullet2: '2 événements, 1 match et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",
         title: 'Commence sans payer',

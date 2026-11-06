@@ -152,7 +152,7 @@ function Welcome({ navigation }) {
         t('welcome.subscription.free.bullet1', '1 équipe, 1 installation, 1 partenaire offerts'),
         // « 1 match » est retire : un match EST un type d'evenement, l'annoncer
         // a part survendait le quota gratuit.
-        t('welcome.subscription.free.bullet2', '2 événements et 1 annonce offerts'),
+        t('welcome.subscription.free.bullet2', '2 événements, 1 match et 1 annonce offerts'),
         t('welcome.subscription.free.bullet3', 'Chat illimité, pour toujours'),
       ],
       fillColor: withAlpha(Colors.neutral00, 0.05),

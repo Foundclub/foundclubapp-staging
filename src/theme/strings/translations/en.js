@@ -26462,7 +26462,7 @@ export default {
       },
       free: {
         bullet1: '1 free team, facility and partner',
-        bullet2: '2 free events and 1 free ad',
+        bullet2: '2 free events, 1 free match and 1 free ad',
         bullet3: 'Unlimited chat, forever',
         kicker: 'Today',
         title: 'Start for free',
