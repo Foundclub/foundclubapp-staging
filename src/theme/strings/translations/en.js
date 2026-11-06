@@ -6175,12 +6175,12 @@ export default {
       entrainementAnnule: 'the training is cancelled',
       // VILLE-T18C (07/10) — a series being sent (round T18, D09b).
       envoiEnCours: 'Sending: {{fait}} of {{total}} dates sent. Stay on this screen.',
-      // RETOURS-TESTEUR (06/11, M0133) — when the request was sent.
-      envoyeeLe: 'Sent on {{date}} at {{time}}',
       envoiEnCoursAttends: 'Wait for the sending to finish: otherwise some dates would not be sent.',
       envoiEnCoursTitre: 'Sending',
       envoyee: 'Request sent to {{ville}}',
       envoyeeDirigeant: 'Request sent to your club manager',
+      // RETOURS-TESTEUR (06/11, M0133) — when the request was sent.
+      envoyeeLe: 'Sent on {{date}} at {{time}}',
       envoyer: 'Send the request',
       envoyerQuandMeme: 'Send anyway',
       equipe: 'Team',

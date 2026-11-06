@@ -6768,13 +6768,13 @@ export default {
       entrainementAnnule: 'l’entraînement est annulé',
       // VILLE-T18C (07/10) — une série en cours d’envoi (tournée T18, D09b).
       envoiEnCours: 'Envoi en cours : {{fait}} sur {{total}} dates envoyées. Reste sur cet écran.',
-      // RETOURS-TESTEUR (06/11, M0133) — quand la demande est partie.
-      envoyeeLe: 'Envoyée le {{date}} à {{time}}',
       // eslint-disable-next-line max-len
       envoiEnCoursAttends: 'Attends la fin de l’envoi : sinon, une partie des dates ne partirait pas.',
       envoiEnCoursTitre: 'Envoi en cours',
       envoyee: 'Demande envoyée à la {{ville}}',
       envoyeeDirigeant: 'Demande envoyée à ton dirigeant',
+      // RETOURS-TESTEUR (06/11, M0133) — quand la demande est partie.
+      envoyeeLe: 'Envoyée le {{date}} à {{time}}',
       envoyer: 'Envoyer la demande',
       envoyerQuandMeme: 'Envoyer quand même',
       equipe: 'Équipe',
