@@ -928,7 +928,7 @@ const QUOTA_SHEET_CONTENT_BY_KEY = {
     get title() {
       return i18next.t(
         'subscriptionDecision.quotaSheet.event.title',
-        'Tu veux publier un 2ᵉ événement ?',
+        'Tu veux publier un autre événement ?',
       );
     },
   },

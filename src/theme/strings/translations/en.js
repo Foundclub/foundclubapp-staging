@@ -21747,7 +21747,7 @@ export default {
       },
       event: {
         successCta: 'Publish my event',
-        title: 'Want to publish a 2nd event?',
+        title: 'Want to publish another event?',
       },
       kickerTeamOffer: 'Team plan',
       match: {

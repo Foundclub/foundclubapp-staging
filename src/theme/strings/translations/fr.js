@@ -22595,7 +22595,7 @@ export default {
       },
       event: {
         successCta: 'Publier mon événement',
-        title: 'Tu veux publier un 2ᵉ événement ?',
+        title: 'Tu veux publier un autre événement ?',
       },
       kickerTeamOffer: 'Offre Équipe',
       match: {
