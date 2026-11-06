@@ -58,6 +58,7 @@ import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import CreateTrainerModal from '@/components/organisms/createTrainerModal/CreateTrainerModal';
 import EventListContent from '@/components/organisms/eventListContent/EventListContent';
+import AnnulerMaDemande from '@/components/organisms/teamListContent/AnnulerMaDemande';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
@@ -4833,6 +4834,10 @@ function TeamDetails({ navigation, route }) {
             title={joinActionTitle}
             variant={pendingRequest ? 'Secondary' : 'Primary'}
           />
+          {/* RETOURS-TESTEUR-2 (06/11/2026, M0046 « B ») — retirer sa demande, ici aussi. */}
+          {pendingRequest?.documentId ? (
+            <AnnulerMaDemande requestId={pendingRequest.documentId} teamName={team?.name} />
+          ) : null}
         </View>
       ) : null}
 

@@ -652,3 +652,43 @@ describe('INVIT2R — l alerte « Demander a rejoindre » ne se rejoue pas', () 
     alerte.mockRestore();
   });
 });
+
+// RETOURS-TESTEUR-2 (06/11/2026, M0046, décision du chef « B ») — « On ne peut pas annuler la
+// demande en attente » : la fiche de l'équipe porte « Annuler ma demande » sous « Demande en
+// attente » (le bouton de la liste des équipes, `AnnulerMaDemande`).
+/** @type {any[]} */
+const mockAnnulations = [];
+jest.mock('@/components/organisms/teamListContent/AnnulerMaDemande', () => (
+  /** @type {any} */ props,
+) => {
+  mockAnnulations.push(props);
+  return null;
+});
+
+describe('M0046 — retirer sa demande depuis la fiche de l équipe', () => {
+  beforeEach(() => { mockAnnulations.length = 0; });
+
+  test('ma demande en attente : « Annuler ma demande », sur CETTE demande', () => {
+    mockEstMonEquipe = false;
+    mockAuthCourant = {
+      ...authAvecLignes([{
+        direction: 'request',
+        documentId: 'tmr-46',
+        state: 'pending',
+        team: { documentId: 'equipe-1' },
+      }]),
+      canJoinTeam: () => true,
+    };
+    const racine = monterLaFiche();
+    expect(textesPortant(racine, 'Demande en attente')).toHaveLength(1);
+    expect(mockAnnulations[mockAnnulations.length - 1])
+      .toEqual(expect.objectContaining({ requestId: 'tmr-46', teamName: 'Seniors A' }));
+  });
+
+  test('sans demande : pas de bouton d annulation', () => {
+    mockEstMonEquipe = false;
+    mockAuthCourant = { ...authAvecLignes([]), canJoinTeam: () => true };
+    monterLaFiche();
+    expect(mockAnnulations).toHaveLength(0);
+  });
+});
