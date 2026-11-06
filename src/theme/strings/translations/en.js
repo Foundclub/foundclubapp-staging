@@ -24422,6 +24422,7 @@ export default {
       'm1-email': 'The club’s contact email.',
       'm1-fac': '3/5 · Your facilities: stadium, gym, hall…',
       'm1-fac-have': '3/5 · You already have your venue. Open its schedule.',
+      'm1-fac-home': '3/5 · Your facilities: stadium, gym, hall… Open “Manage my club”.',
       'm1-fac-visit': '3/5 · Your facilities and their schedule are created here, with the Club plan.',
       'm1-facadd': 'Add a facility.',
       'm1-fback': 'Then return to the club page.',
@@ -24443,6 +24444,8 @@ export default {
       'm1-padd': 'Add your first partner with “+”.',
       'm1-parrows': 'The arrows change the period. Try the right one.',
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
+      'm1-partners-home': '2/5 · Your partners. Open “Manage my club”, then “Our '
+        + 'partners”.',
       'm1-partners-visit': '2/5 · Your partners are added here, with the Club plan: their logo on '
         + 'your team cards and the club page.',
       'm1-pb1': 'Go back to your facilities.',

@@ -318,6 +318,21 @@ export const placeBubble = ({
   };
 };
 
+/**
+ * Haut de la bulle posée dans la place réservée par l'écran (`TourBubbleSlot`). Recette L11
+ * (l11-b1e3) : plus haute que la place (titre de mission sur deux lignes), elle remonte sur le titre
+ * de l'écran, bas calé sur celui de la place, jamais sur l'en-tête ; son pied reste visible.
+ * @param {{ height: number; y: number }} slot - Place réservée.
+ * @param {number} bubbleHeight - Hauteur voulue par la bulle.
+ * @param {number} insetTop - Encoche.
+ * @param {number | null} headerBottom - Bas de l'en-tête ancré.
+ * @returns {number} Haut de la bulle.
+ */
+export const slotBubbleTop = (slot, bubbleHeight, insetTop, headerBottom) => Math.min(
+  slot.y,
+  Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP, slot.y + slot.height - bubbleHeight),
+);
+
 // Hauteur sous laquelle une bulle n'a plus de sens (titre + une ligne) : en
 // deçà, on la laisse déborder plutôt que de montrer une bande vide.
 const MIN_BUBBLE_ROOM = 88;
@@ -340,7 +355,7 @@ const MIN_BUBBLE_ROOM = 88;
 export const bubbleRoom = ({
   bottomLimit, headerBottom = null, insetTop, position, primary, slot = null,
 }) => {
-  if (slot) return slot.height;
+  if (slot) return slot.y + slot.height - position.top;
   const base = Math.max(insetTop + 4, (headerBottom ?? 0) + HEADER_GAP);
   let room = bottomLimit - position.top;
   if (position.arrow === 'down' && primary) {

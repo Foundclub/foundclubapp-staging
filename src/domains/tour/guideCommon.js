@@ -27,10 +27,16 @@ export const teamHubTarget = {
 };
 
 // La fiche du club (« Gérer mon club »), son hub sans section. `pop` : on y revient sans empiler.
+// Par sa pile : `Club` nu n'est traité par aucun navigateur tant qu'elle n'est pas montée
+// (reprise après relancement, recette L11, l11-m1-reprise ; hotesDepuisLaRacine.js).
 export const clubHubTarget = {
-  params: (/** @type {any} */ context) => ({ clubId: context?.userData?.club?.documentId }),
+  params: (/** @type {any} */ context) => ({
+    params: { clubId: context?.userData?.club?.documentId },
+    pop: true,
+    screen: RouteNames.Club,
+  }),
   pop: true,
-  routeName: RouteNames.Club,
+  routeName: RouteNames.ClubStack,
 };
 
 export const teamWizardTarget = {

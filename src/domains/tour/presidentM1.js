@@ -14,6 +14,17 @@ import { RouteNames } from '@/navigation/routeNames';
  */
 
 const MISSION_ID = 'president_m1';
+
+/**
+ * Recette L11 (l11-m1-reprise) : vue de l'Accueil, la bulle d'une étape de la fiche garde sa
+ * consigne et montre la carte « Gérer mon club ».
+ * @param {() => string} text - Texte de la bulle sur l'Accueil.
+ * @returns {{ targets: string[]; text: string }} Repli de l'étape.
+ */
+const fromHome = (text) => ({
+  targets: ['home.card.manage-club'],
+  get text() { return text(); },
+});
 const hasClubPlan = (/** @type {any} */ ctx) => Boolean(ctx?.flags?.hasClubPlan);
 const noClubPlan = (/** @type {any} */ ctx) => !hasClubPlan(ctx);
 
@@ -146,6 +157,10 @@ const PART_PARTNERS = [
   },
   {
     advanceOn: { key: 'club.section.partners', type: 'interaction' },
+    fallback: fromHome(() => t(
+      'm1-partners-home',
+      '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos partenaires ».',
+    )),
     id: 'm1-partners',
     missionId: MISSION_ID,
     navTarget: clubHubTarget,
@@ -227,6 +242,10 @@ const PART_FACILITIES = [
   },
   {
     advanceOn: [{ key: RouteNames.FacilityList, type: 'route' }, FACILITY_EXISTING],
+    fallback: fromHome(() => t(
+      'm1-fac-home',
+      '3/5 · Tes installations : stade, gymnase, salle… Ouvre « Gérer mon club ».',
+    )),
     id: 'm1-fac',
     missionId: MISSION_ID,
     // Depuis « Passer cette partie » sur l'ajout d'un partenaire : la fiche n'est pas à l'écran.

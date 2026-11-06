@@ -271,6 +271,9 @@ const M3_STEPS = [
     advanceOn: [
       { key: 'club.section.closed', type: 'interaction' },
       { not: RouteNames.Club, type: 'route' },
+      // Recette L11 (l11-r2-m3a) : Staff fermé pendant le bandeau de M2, son signal est perdu ;
+      // déjà sur la fiche, on ouvre « Nos équipes » : M3 suit.
+      { goto: 'm3-create', key: 'club.section.teams', type: 'interaction' },
     ],
     id: 'm2-back',
     missionId: 'president_m3',

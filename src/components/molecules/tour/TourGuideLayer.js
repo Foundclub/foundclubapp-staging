@@ -43,6 +43,7 @@ import {
   isOnScreen,
   isUnderHeader,
   placeBubble,
+  slotBubbleTop,
   stableHeight,
   toAbsoluteStyle,
   toCutout,
@@ -498,7 +499,10 @@ function TourGuideLayer() {
   const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height, keyboardTop);
   const position = slot
     ? {
-      arrow: 'none', arrowX: 0, ...wideBubbleFrame(width), top: slot.y,
+      arrow: 'none',
+      arrowX: 0,
+      ...wideBubbleFrame(width),
+      top: slotBubbleTop(slot, wantedHeight, insets.top, headerBottom),
     }
     : placeBubble({
       bottomLimit,

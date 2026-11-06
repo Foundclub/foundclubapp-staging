@@ -576,3 +576,31 @@ describe('recette L11 — retour sur la campagne d exemple', () => {
     arbre.unmount();
   }, 30000);
 });
+
+// Recette L11 (l11-b1x6) : au retour 2/6 → 1/6, le relevé d'écran disait le nom « vide, indice =
+// nom par défaut ». La capture le montre écrit en blanc, couleur d'une valeur : valeur et indice
+// portent le même texte, et le relevé ne sait pas les distinguer. Le témoin lit la valeur.
+describe('recette L11 — le nom de la campagne revient au retour sur 1/6', () => {
+  afterEach(() => { mockTour = {}; });
+
+  it('nom pré-rempli à 1/6, toujours là après 2/6 et retour', async () => {
+    mockTour = { currentStep: { id: 'c1', simulatesCampaign: true }, tourStatus: 'active' };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <ClubLicenseCampaignSettings navigation={navigationFigee} route={{ params: { clubId: 'c' } }} />,
+      );
+    });
+    const nom = () => arbre.root.findAllByType(TextInput)
+      .find((noeud) => /^Cotisation licences/.test(String(noeud.props.placeholder)));
+    expect(propsDuTunnel.stepIndex).toBe(1);
+    expect(nom().props.value).toMatch(/^Cotisation licences \d{4}\/\d{4}$/);
+    await act(async () => { propsDuTunnel.onNext(); });
+    expect(propsDuTunnel.stepIndex).toBe(2);
+    await act(async () => { propsDuTunnel.onBack(); });
+    expect(propsDuTunnel.stepIndex).toBe(1);
+    expect(nom().props.value).toMatch(/^Cotisation licences \d{4}\/\d{4}$/);
+    arbre.unmount();
+  }, 30000);
+});

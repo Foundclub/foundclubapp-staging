@@ -25482,6 +25482,8 @@ export default {
       'm1-email': 'L’email de contact du club.',
       'm1-fac': '3/5 · Tes installations : stade, gymnase, salle…',
       'm1-fac-have': '3/5 · Tu as déjà ton terrain. Ouvre son planning.',
+      'm1-fac-home': '3/5 · Tes installations : stade, gymnase, salle… Ouvre « Gérer mon '
+        + 'club ».',
       'm1-fac-visit': '3/5 · Tes installations et leur planning se créent ici, avec l’offre Club.',
       'm1-facadd': 'Ajoute une installation.',
       'm1-fback': 'Puis retourne sur la fiche du club.',
@@ -25505,6 +25507,8 @@ export default {
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
       'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
+      'm1-partners-home': '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos '
+        + 'partenaires ».',
       'm1-partners-visit': '2/5 · Tes partenaires s’ajoutent ici, avec l’offre Club : leur logo sur '
         + 'tes cartes équipe et la page du club.',
       'm1-pb1': 'Reviens à tes installations.',

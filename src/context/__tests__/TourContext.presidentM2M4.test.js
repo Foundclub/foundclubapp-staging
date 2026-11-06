@@ -482,3 +482,59 @@ describe('M1 : l’installation existante suffit', () => {
     expect(stepId()).not.toBe('m1-fac-have');
   });
 });
+
+// Recette L11 (l11-m1-reprise) : app tuée en M1 ③, « Reprendre » laissait la bulle 3/5 sur
+// l'Accueil. `navigate('Club')` nu, depuis la racine, n'est traité par aucun navigateur tant que
+// la pile du club n'est pas montée (hotesDepuisLaRacine.js) : la fiche passe par sa pile.
+describe('L11 bis — reprise après relancement en M1 ③', () => {
+  it('« Reprendre » ouvre la fiche du club par sa pile', () => {
+    start('president_m1');
+    driveTo('m1-facadd');
+    act(() => tree.unmount());
+    tree = undefined;
+    mount();
+    mockNavigate.mockClear();
+    act(() => { tour.resumeTour(); });
+    expect(stepId()).toBe('m1-fac');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.ClubStack,
+      { params: { clubId: 'club-1' }, pop: true, screen: RouteNames.Club },
+      { pop: true },
+    );
+  });
+});
+
+// Recette L11 (l11-b3a) : B2 passé depuis l'Accueil, b3-back passait toute seule (on n'est pas
+// dans une conversation) avant d'avoir emmené aux Messages ; b3-new restait sur l'Accueil.
+describe('L11 bis — B3 après B2 passé', () => {
+  it('b3-new emmène aux Messages', () => {
+    start('president_b2');
+    route(RouteNames.SearchHome);
+    expect(stepId()).toBe('b2-dock');
+    mockNavigate.mockClear();
+    act(() => { tour.skipMission(); });
+    expect(stepId()).toBe('b3-new');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.HomeTab,
+      { screen: RouteNames.Chat },
+      { pop: true },
+    );
+  });
+});
+
+// Recette L11 (l11-r2-m3a) : deux retours Android rapides (messagerie, puis Staff). Le 2ᵉ ferme Staff
+// pendant le bandeau de M2 : son signal se perd, m2-back s'ouvre sur la fiche. « Nos équipes »
+// touché ensuite laissait la bulle « sur Staff » posée sur Nos équipes.
+describe('L11 bis — deux retours rapides de M2 à M3', () => {
+  it('Staff fermé pendant le bandeau, puis « Nos équipes » : la bulle de M3 suit', () => {
+    toInvite();
+    touch('staff.sms.opened');
+    route(RouteNames.Club);
+    leaveAndComeBack();
+    touch('club.section.closed', { section: 'staff' });
+    flush();
+    expect(stepId()).toBe('m2-back');
+    touch('club.section.teams');
+    expect(stepId()).toBe('m3-create');
+  });
+});
