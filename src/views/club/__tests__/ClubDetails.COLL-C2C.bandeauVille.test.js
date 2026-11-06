@@ -520,3 +520,31 @@ describe('COLL-C2C — le bandeau de la Ville, en carte', () => {
     expect(texteDe(monter().root)).not.toContain('Offert par');
   });
 });
+
+// Recette L11 (l11-s2-staff) : un coach invité par le guide n'a qu'un prénom ; Staff affichait
+// « Coachsept null ». Les rangées des coachs et des dirigeants écrivent le nom comme l'avatar.
+describe('L11 bis — un membre sans nom de famille', () => {
+  it('coach et dirigeant : le prénom seul, jamais « null »', () => {
+    devenirJoueurMembre();
+    mockClubQuery = {
+      data: {
+        ...CLUB_A,
+        members: [
+          {
+            documentId: 'c7', firstname: 'Coachsept', lastname: null, role: { name: 'coach' },
+          },
+          {
+            documentId: 'p1', firstname: 'Dirsolo', lastname: undefined, role: { name: 'president' },
+          },
+        ],
+      },
+      error: null,
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+    const texte = texteDe(monter().root);
+    expect(texte).toContain('Coachsept');
+    expect(texte).toContain('Dirsolo');
+    expect(texte).not.toMatch(/null|undefined/);
+  });
+});

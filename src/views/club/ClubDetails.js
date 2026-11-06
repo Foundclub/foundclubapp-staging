@@ -4349,7 +4349,8 @@ function ClubDetails({ navigation, route }) {
                               numberOfLines={2}
                               style={[Fonts.p1Bold, Fonts.neutral00]}
                             >
-                              {`${user.firstname} ${user.lastname}`}
+                              {/* Recette L11 : un coach invité n'a qu'un prénom (« Coachsept null »). */}
+                              {[user.firstname, user.lastname].filter(Boolean).join(' ')}
                             </Text>
                           </View>
                           {canEdit ? (
@@ -4451,7 +4452,8 @@ function ClubDetails({ navigation, route }) {
                               numberOfLines={2}
                               style={[Fonts.p1Bold, Fonts.neutral00]}
                             >
-                              {`${user.firstname} ${user.lastname}`}
+                              {/* Recette L11 : un coach invité n'a qu'un prénom (« Coachsept null »). */}
+                              {[user.firstname, user.lastname].filter(Boolean).join(' ')}
                             </Text>
                           </View>
                           {canEdit ? (
