@@ -13,10 +13,9 @@ import {
   View,
 } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
-
-import useAuth from '@/domains/auth/useAuth';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
@@ -159,10 +158,13 @@ function CreateSectionScreen({ navigation, route }) {
         refetchCm(),
         refetchUserData(),
       ]);
-      const sectionName = result?.data?.name || name;
+      const resultData = /** @type {{ documentId?: string, managerInvitation?: boolean, name?: string }} */ (
+        result?.data || {}
+      );
+      const sectionName = resultData.name || name;
       // SECU-RATTACHEMENT (« 119- A ») : le numero d un tiers ne le rattache plus.
       // Le serveur repond `managerInvitation` : on propose le SMS d invitation.
-      if (result?.data?.managerInvitation) {
+      if (resultData.managerInvitation) {
         Alert.alert(
           t('multisport.sectionCreatedTitle', 'Section créée'),
           t('multisport.sectionCreatedInvitation', { name: sectionName, ...SANS_ECHAPPEMENT }),
@@ -171,11 +173,11 @@ function CreateSectionScreen({ navigation, route }) {
             {
               onPress: () => {
                 inviteTrainer({
-                  clubId: result.data.documentId,
+                  clubId: resultData.documentId,
                   clubName: sectionName,
                   firstname: t('addCoach.roles.manager'),
                   isManager: true,
-                  phoneNumber: variables?.managerPhone,
+                  phoneNumber: /** @type {any} */ (variables)?.managerPhone,
                 });
                 navigation.goBack();
               },
