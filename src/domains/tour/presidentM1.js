@@ -205,6 +205,9 @@ const PART_PARTNERS = [
   },
 ];
 
+// Recette L11 (décision du chef, 06/11) : une installation déjà là suffit, on passe à son planning.
+const FACILITY_EXISTING = { goto: 'm1-fac-have', key: 'facility.existing', type: 'action' };
+
 const PART_FACILITIES = [
   {
     id: 'm1-fac-visit',
@@ -223,7 +226,7 @@ const PART_FACILITIES = [
     when: noClubPlan,
   },
   {
-    advanceOn: { key: RouteNames.FacilityList, type: 'route' },
+    advanceOn: [{ key: RouteNames.FacilityList, type: 'route' }, FACILITY_EXISTING],
     id: 'm1-fac',
     missionId: MISSION_ID,
     // Depuis « Passer cette partie » sur l'ajout d'un partenaire : la fiche n'est pas à l'écran.
@@ -236,7 +239,7 @@ const PART_FACILITIES = [
     when: hasClubPlan,
   },
   {
-    advanceOn: { key: RouteNames.FacilityForm, type: 'route' },
+    advanceOn: [{ key: RouteNames.FacilityForm, type: 'route' }, FACILITY_EXISTING],
     id: 'm1-facadd',
     missionId: MISSION_ID,
     resumeFrom: 'm1-fac',
@@ -326,6 +329,25 @@ const planningStep = (step) => Object.defineProperties(
 );
 
 const PART_PLANNING = [
+  {
+    advanceOn: { goto: 'm1-pdemo', key: 'facility.planning.opened', type: 'interaction' },
+    id: 'm1-fac-have',
+    missionId: MISSION_ID,
+    navTarget: facilityListTarget,
+    resumeFrom: 'm1-fac',
+    subMission: 'facilities',
+    targetsFor: (/** @type {any} */ context) => {
+      const facilityId = context?.created?.['facility.existing']?.facilityId;
+      return facilityId ? [`facility.plan.${facilityId}`] : [];
+    },
+    get text() {
+      return t('m1-fac-have', '3/5 · Tu as déjà ton terrain. Ouvre son planning.');
+    },
+    // Seulement par l'aiguillage : après une création, la partie suit son cours.
+    when: (/** @type {any} */ ctx) => hasClubPlan(ctx)
+      && Boolean(ctx?.created?.['facility.existing'])
+      && !ctx?.created?.['facility.created'],
+  },
   {
     advanceOn: { key: 'facility.planning.opened', type: 'interaction' },
     id: 'm1-fplan',

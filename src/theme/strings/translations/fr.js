@@ -25481,6 +25481,7 @@ export default {
       'm1-edit': 'Pour les personnaliser, touche « Modifier ».',
       'm1-email': 'L’email de contact du club.',
       'm1-fac': '3/5 · Tes installations : stade, gymnase, salle…',
+      'm1-fac-have': '3/5 · Tu as déjà ton terrain. Ouvre son planning.',
       'm1-fac-visit': '3/5 · Tes installations et leur planning se créent ici, avec l’offre Club.',
       'm1-facadd': 'Ajoute une installation.',
       'm1-fback': 'Puis retourne sur la fiche du club.',

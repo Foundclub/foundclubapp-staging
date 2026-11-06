@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import i18next from 'i18next';
 import {
-  useCallback, useLayoutEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,7 +24,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { phraseCreneauxEtSeances } from '@/domains/collectivite/collectiviteAccueil';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
-import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import {
   clubSlotParts,
   groupClubInstallations,
@@ -248,6 +248,15 @@ function FacilityList() {
     }));
   }, [facilityContext, isCollectiviteMode]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
+  // Guide Dirigeant (recette L11) : le club a déjà son installation, il n'en crée pas une 2ᵉ.
+  // Seules les siennes comptent : le gymnase de la Ville n'est pas à lui.
+  const ownFacility = isCollectiviteMode || !contextClubId
+    ? null
+    : facilities.find((/** @type {any} */ facility) => !facility?.isShared) || null;
+  const ownFacilityId = ownFacility ? String(ownFacility.documentId || ownFacility.id) : null;
+  useEffect(() => {
+    if (ownFacilityId) emitGuidanceAction('facility.existing', { facilityId: ownFacilityId });
+  }, [ownFacilityId]);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const isDesktop = useIsDesktop();
 

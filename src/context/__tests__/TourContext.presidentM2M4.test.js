@@ -462,3 +462,23 @@ describe('bilan : l’affiche partagée y reste', () => {
     expect(stepId()).toBe('m1-psent');
   });
 });
+
+// Recette L11 (l11-m1g1) : une installation déjà là valide la partie, on passe à son planning.
+describe('M1 : l’installation existante suffit', () => {
+  it('« Tu as déjà ton terrain », puis son planning', () => {
+    start('president_m1');
+    driveTo('m1-facadd');
+    action('facility.existing', { facilityId: 'f1' });
+    expect(stepId()).toBe('m1-fac-have');
+    expect(tour.currentStep.text).toMatch(/déjà ton terrain/);
+    touch('facility.planning.opened');
+    expect(stepId()).toBe('m1-pdemo');
+  });
+
+  it('témoin : sans installation, la création reste le chemin', () => {
+    start('president_m1');
+    driveTo('m1-facadd');
+    route(RouteNames.FacilityForm);
+    expect(stepId()).not.toBe('m1-fac-have');
+  });
+});

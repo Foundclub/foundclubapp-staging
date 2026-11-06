@@ -24421,6 +24421,7 @@ export default {
       'm1-edit': 'To personalize them, tap “Edit”.',
       'm1-email': 'The club’s contact email.',
       'm1-fac': '3/5 · Your facilities: stadium, gym, hall…',
+      'm1-fac-have': '3/5 · You already have your venue. Open its schedule.',
       'm1-fac-visit': '3/5 · Your facilities and their schedule are created here, with the Club plan.',
       'm1-facadd': 'Add a facility.',
       'm1-fback': 'Then return to the club page.',
