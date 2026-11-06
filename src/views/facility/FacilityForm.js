@@ -2,7 +2,9 @@ import { joiResolver } from '@hookform/resolvers/joi';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import i18next from 'i18next';
 import Joi from 'joi';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -36,6 +38,8 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { useTour } from '@/context/useTour';
 
 import {
   useCollectiviteInstallations,
@@ -334,6 +338,20 @@ function FacilityForm() {
   const { userData } = useAuth();
   const routedFacility = route.params?.facility || null;
   const routedFacilityId = sanitizeRouteParam(route.params?.facilityId);
+  // Recette L11 (l11-p8f5, 360×640) : à la bulle de l'adresse, le champ était sous la barre de
+  // gestes. La liste l'amène à l'écran (sortie « un scrollTo par écran » de TourGuideLayer).
+  const { currentStep, tourStatus } = useTour();
+  const isAddressStep = tourStatus === 'active'
+    && Boolean(currentStep?.targets?.includes('facility.address'));
+  const scrollRef = useRef(/** @type {any} */ (null));
+  const fieldsYRef = useRef(0);
+  const addressYRef = useRef(/** @type {number | null} */ (null));
+  useEffect(() => {
+    if (!isAddressStep || addressYRef.current === null) return;
+    scrollRef.current?.scrollTo({
+      animated: true, y: Math.max(0, fieldsYRef.current + addressYRef.current - 16),
+    });
+  }, [isAddressStep]);
   // 🏛️ COLLECTIVITES 1c — MODE COLLECTIVITE (route CollectiviteInstallationForm) : le
   // gestionnaire cree ou modifie une installation de SA collectivite par la route du
   // serveur (liste blanche, horaires compris). Sur le site, seul l identifiant voyage :
@@ -805,7 +823,11 @@ function FacilityForm() {
                     !isActive ? { borderColor: Colors.primary200 } : null,
                   ]}
                   textStyle={!isActive ? { color: Colors.primary200 } : undefined}
-                  title={typeItem.label}
+                  // Recette L11 (l11-p8f5) : « Terrain de rugby » montrait « Terrain de ». Android
+                  // dessine le libellé un peu plus large que mesuré, le dernier mot passait sur une
+                  // ligne invisible (ROLES2, Button.js). ponytail: insécable ici seulement ; sortie :
+                  // corriger Button.js pour tout bouton dimensionné par son libellé.
+                  title={typeItem.label.replace(/ /g, ' ')}
                   variant={isActive ? 'Primary' : 'SecondaryLight'}
                 />
               );
@@ -1312,6 +1334,7 @@ function FacilityForm() {
             Spaces.paddingHorizontal[16],
             Spaces.paddingBottom[24],
           ]}
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
         >
           {/* Pas de bouton retour ici : le navigateur en pose deja un juste
@@ -1365,9 +1388,11 @@ function FacilityForm() {
           {/* marge laterale est passee sur le defilement, ou elle aligne */}
           {/* AUSSI le titre, qui vivait dehors et collait au bord. */}
           <View
+            onLayout={(event) => { fieldsYRef.current = event.nativeEvent.layout.y; }}
             style={[
               Spaces.gap[16],
             ]}
+            testID="facility.champs"
           >
             {isCollectiviteMode ? [
               groupe(
@@ -1397,7 +1422,12 @@ function FacilityForm() {
                   <TourTarget id="facility.field.name">{blocNom}</TourTarget>
                   <TourTarget id="facility.field.type">{blocTypeDuClub}</TourTarget>
                 </TourTarget>
-                <TourTarget id="facility.address">{blocAdresse}</TourTarget>
+                <View
+                  onLayout={(event) => { addressYRef.current = event.nativeEvent.layout.y; }}
+                  testID="facility.adresse.cadre"
+                >
+                  <TourTarget id="facility.address">{blocAdresse}</TourTarget>
+                </View>
                 <TourTarget id="facility.conflict">{blocConflit}</TourTarget>
                 <TourTarget id="facility.capacity">{blocCapacite}</TourTarget>
                 <TourTarget id="facility.color">{blocCouleur}</TourTarget>

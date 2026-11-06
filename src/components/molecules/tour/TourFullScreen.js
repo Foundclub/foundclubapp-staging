@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, View,
@@ -147,6 +148,9 @@ function MissionRow({
  */
 function TourFullScreen({ kind }) {
   const { Colors, Fonts } = useTheme();
+  // Palier « Plus tard » (chef, option A, 06/11) : la clôture, sans les bonus qui restent à faire.
+  const [isLater, setIsLater] = useState(false);
+  const shown = kind === 'milestone' && isLater ? 'closing' : kind;
   const { t: translate } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
@@ -202,7 +206,7 @@ function TourFullScreen({ kind }) {
 
   let content = null;
   let cta = null;
-  if (kind === 'opening') {
+  if (shown === 'opening') {
     content = (
       <>
         <Text style={[Fonts.p3Black, {
@@ -282,7 +286,7 @@ function TourFullScreen({ kind }) {
         </TouchableOpacity>
       </>
     );
-  } else if (kind === 'milestone') {
+  } else if (shown === 'milestone') {
     content = (
       <>
         <View style={{ alignItems: 'center' }}>
@@ -368,7 +372,7 @@ function TourFullScreen({ kind }) {
         {bonuses.length > 0 ? (
           <TouchableOpacity
             accessibilityRole="button"
-            onPress={() => finishGuide({ later: true })}
+            onPress={() => setIsLater(true)}
             style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
@@ -413,7 +417,7 @@ function TourFullScreen({ kind }) {
               </Text>
             </View>
           ))}
-          {bonuses.map((/** @type {any} */ mission) => (
+          {(isLater ? [] : bonuses).map((/** @type {any} */ mission) => (
             <View
               key={mission.id}
               style={{
@@ -469,7 +473,7 @@ function TourFullScreen({ kind }) {
     cta = (
       <>
         <Button
-          onPress={() => finishGuide()}
+          onPress={() => finishGuide(isLater ? { later: true } : undefined)}
           title={t(`tourCatalog.${guideKey}.close.cta`, "Aller à l'accueil")}
           variant="Primary"
         />
@@ -477,7 +481,7 @@ function TourFullScreen({ kind }) {
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => {
-              finishGuide();
+              finishGuide(isLater ? { later: true } : undefined);
               navigateRoot(offerRoute);
             }}
             style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
@@ -505,16 +509,19 @@ function TourFullScreen({ kind }) {
         </Defs>
         <Rect fill="url(#tourFullScreen)" height="100%" width="100%" x={0} y={0} />
       </Svg>
+      {/* Recette L11 (l11-p8-ouv-bas) : la marge de la barre d'état est hors de la liste ; défilé,
+          le titre passait dessous. */}
       <ScrollView
         contentContainerStyle={{
           alignSelf: 'center',
           maxWidth: FULL_SCREEN_MAX_WIDTH,
           paddingBottom: 16,
           paddingHorizontal: 22,
-          paddingTop: Math.max(64, insets.top + 24),
+          paddingTop: Math.max(64, insets.top + 24) - insets.top,
           rowGap: 18,
           width: '100%',
         }}
+        style={{ marginTop: insets.top }}
       >
         {content}
       </ScrollView>
