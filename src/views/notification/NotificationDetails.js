@@ -48,7 +48,6 @@ const toEntityId = (value) => {
  */
 function NotificationDetails() {
   const {
-    Alignments,
     Colors,
     Fonts,
     Spaces,
@@ -206,19 +205,18 @@ function NotificationDetails() {
 
   return (
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.padding[16]]}>
-      <View style={[Alignments.row, Alignments.alignCenter, Spaces.marginBottom[24]]}>
-        <View style={{ width: 48 }}>
+      {/* M0982 (06/11) : le retour seul en haut, le titre dessous sur toute la largeur, comme
+          « Demandes » ; à côté, un titre long l'écrasait en ovale sur iPhone. */}
+      <View style={[Spaces.gap[16], Spaces.marginBottom[24]]}>
+        <View style={{ alignSelf: 'flex-start' }}>
           <HeaderBackButton
             onPress={handleBackPress}
             withDefaultMargin={false}
           />
         </View>
-        <View style={[Alignments.alignCenter, { flex: 1 }]}>
-          <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
-            {screenTitle}
-          </Text>
-        </View>
-        <View style={{ width: 48 }} />
+        <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
+          {screenTitle}
+        </Text>
       </View>
 
       <View

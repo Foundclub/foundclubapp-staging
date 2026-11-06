@@ -4979,11 +4979,9 @@ function ClubDetails({ navigation, route }) {
             disabled={clubArrivalInterestIsBusy}
             onPress={handlePressClubArrivalInterest}
             style={[
+              // M0982 (06/11) : le bouton sous le texte ; à côté, il coupait le titre.
               ApplicationStyle.borderRadius24,
               ApplicationStyle.backgroundColor.primary700,
-              Alignments.row,
-              Alignments.alignCenter,
-              Alignments.justifySpaceBetween,
               Spaces.padding[16],
               Spaces.gap[12],
               {
@@ -4994,7 +4992,7 @@ function ClubDetails({ navigation, route }) {
               modeDemandeEnfant ? { display: 'none' } : null,
             ]}
           >
-            <View style={{ flex: 1 }}>
+            <View>
               <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
                 {t('clubDetails.clubInterest.wholeClubOption', 'Le club en général')}
               </Text>
@@ -5036,18 +5034,17 @@ function ClubDetails({ navigation, route }) {
                   key={`interest-${teamDocumentId || teamItem?.name}`}
                   onPress={() => handleSelectClubInterestTeam(teamItem)}
                   style={[
+                    // M0982 (06/11) : le bouton passe sous le nom de l'équipe (« Senio… » sur iPhone).
                     ApplicationStyle.borderRadius24,
                     ApplicationStyle.backgroundColor.primary700,
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Alignments.justifySpaceBetween,
                     Spaces.padding[16],
+                    Spaces.gap[12],
                     {
                       opacity: isDisabled ? 0.65 : 1,
                     },
                   ]}
                 >
-                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
                     <ClubLogoMark
                       club={teamItem?.club || club}
                       name={teamItem?.club?.name || club?.name || teamItem?.name}

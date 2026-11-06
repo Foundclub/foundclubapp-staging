@@ -1,4 +1,4 @@
-import { Alert, Text } from 'react-native';
+import { Alert, StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -616,6 +616,23 @@ describe("V01 - la fiche d'un club AVEC equipes offre DEUX portes", () => {
 
     expect(Alert.alert).toHaveBeenCalled();
     expect(createClubInterestRequest).not.toHaveBeenCalled();
+  });
+});
+
+// RETOURS-TESTEUR (06/11, M0982 capture 1) : sur iPhone, le bouton à droite mangeait la
+// moitié de la carte et le nom de l'équipe se lisait « Senio… ». Le bouton passe sous le nom,
+// sur toute la largeur.
+describe('M0982 - le nom de l equipe a toute la largeur de la carte', () => {
+  it.each([['Seniors A'], [LIBELLE_CLUB_EN_GENERAL]])('« %s » : le bouton est sous le nom', (libelle) => {
+    const arbre = monter();
+
+    act(() => {
+      pressableAvecTexte(arbre, LIBELLE_INTERESSE).props.onPress();
+    });
+
+    const carte = pressableDeLaFeuilleDInteret(libelle);
+    expect(carte).toBeDefined();
+    expect(StyleSheet.flatten(carte.props.style).flexDirection).not.toBe('row');
   });
 });
 
