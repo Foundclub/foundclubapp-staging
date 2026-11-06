@@ -189,6 +189,17 @@ describe('clôture', () => {
 
   // Décision 5 d'Adel : coach et partenaire se passent, et la jauge va à 100 %. Le bilan dit ce
   // qui reste à faire (tri du chef, 05/11).
+  // Recette L11 (l11-m4d2) : au palier, « Inviter tes coachs » passé était coché vert.
+  it('palier : une mission passée le dit, au lieu d’être cochée', () => {
+    mockTour = tourAt({ skippedSubMissions: ['coach'] });
+    expect(textsOf('milestone')).toContain('Passée');
+  });
+
+  it('témoin : partenaire passé, la mission 1 reste faite', () => {
+    mockTour = tourAt({ skippedSubMissions: ['partners'] });
+    expect(textsOf('milestone')).not.toContain('Passée');
+  });
+
   it('coach et partenaire passés : le bilan dit ce qui reste à faire', () => {
     mockTour = tourAt({ skippedSubMissions: ['coach', 'partners'] });
     const texts = textsOf('closing');

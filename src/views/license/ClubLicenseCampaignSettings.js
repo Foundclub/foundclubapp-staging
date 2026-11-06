@@ -2176,6 +2176,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   // Le guide quitte le tunnel en changeant d'étape : l'état n'a pas encore suivi quand il sort.
   const wasSimulatedRef = useRef(false);
   if (isCampaignSimulated) wasSimulatedRef.current = true;
+  // Recette L11 : sur la campagne d'exemple, le retour quitte l'écran, comme l'annonce d'exemple ;
+  // il reculait le tunnel caché dessous, sans rien changer à l'écran.
+  const isExampleShownRef = useRef(false);
+  isExampleShownRef.current = Boolean(isCampaignSimulated && tourStep?.campaignExample);
   // Une seule feuille ouverte a la fois : `null`, ou la cle de la feuille.
   // Les 8 feuilles du pack de design remplacent les 16 etapes retirees.
   const [openSheet, setOpenSheet] = useState(/** @type {string | null} */ (null));
@@ -3450,7 +3454,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         return;
       }
 
-      if (wizardStepIndex <= 0) {
+      if (wizardStepIndex <= 0 || isExampleShownRef.current) {
         return;
       }
 

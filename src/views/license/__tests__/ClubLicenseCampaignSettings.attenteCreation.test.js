@@ -104,9 +104,6 @@ const campagneDeDepart = {
   seasonLabel: '2026-2027',
 };
 
-let mockTourEtat = { currentStep: null, tourStatus: null };
-jest.mock('@/context/useTour', () => ({ useTour: () => mockTourEtat }));
-
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => mockClientRequeteFige,
 }));
@@ -497,7 +494,7 @@ describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', ()
 const C2 = { id: 'c2', simulatesCampaign: true };
 describe('recette L10 — le montant saisi arrive jusqu à la validation', () => {
   afterEach(() => {
-    mockTourEtat = { currentStep: null, tourStatus: null };
+    mockTour = {};
     jest.restoreAllMocks();
   });
 
@@ -506,7 +503,7 @@ describe('recette L10 — le montant saisi arrive jusqu à la validation', () =>
     ['guide actif', { currentStep: C2, tourStatus: 'active' }],
     ['guide en pause', { currentStep: C2, tourStatus: 'paused' }],
   ])('%s : 250 reste dans le champ, et Suivant passe', async (_cas, etat) => {
-    mockTourEtat = etat;
+    mockTour = etat;
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     /** @type {any} */
     let arbre;
@@ -529,6 +526,53 @@ describe('recette L10 — le montant saisi arrive jusqu à la validation', () =>
     await act(async () => { propsDuTunnel.onNext(); });
     expect(alerte).not.toHaveBeenCalled();
     expect(propsDuTunnel.stepIndex).toBe(etape + 1);
+    arbre.unmount();
+  }, 30000);
+});
+
+// Recette L11 : sur l'écran d'exemple de B1, le retour Android reculait le tunnel en dessous, sans
+// rien changer à l'écran. Il quitte maintenant l'écran, comme sur B4 : le guide dit qu'on l'a
+// quitté.
+describe('recette L11 — retour sur la campagne d exemple', () => {
+  afterEach(() => { mockTour = {}; });
+
+  const retour = () => {
+    const appels = navigationFigee.addListener.mock.calls.filter(([nom]) => nom === 'beforeRemove');
+    const event = { data: { action: { type: 'GO_BACK' } }, preventDefault: jest.fn() };
+    act(() => { appels[appels.length - 1][1](event); });
+    return event;
+  };
+
+  it.each([
+    ['exemple affiché : l écran se quitte', true, 0],
+    ['témoin : tunnel en cours, le retour recule d une étape', false, 1],
+  ])('%s', async (_cas, exemple, empeche) => {
+    navigationFigee.addListener.mockClear();
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
+      );
+    });
+    await act(async () => { propsDuTunnel.onSkip(); });
+    await act(async () => { propsDuTunnel.onSkip(); });
+    mockTour = {
+      currentStep: { campaignExample: exemple, id: 'b1-camp', simulatesCampaign: true },
+      tourStatus: 'active',
+    };
+    await act(async () => {
+      arbre.update(
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
+      );
+    });
+    expect(retour().preventDefault).toHaveBeenCalledTimes(empeche);
     arbre.unmount();
   }, 30000);
 });

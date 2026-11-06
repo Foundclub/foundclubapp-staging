@@ -27,3 +27,18 @@ describe('M1 : la dernière partie ne porte pas de numéro', () => {
     expect(step('m1-poster').text).toMatch(/Dernière étape/);
   });
 });
+
+// Recette L11 (l11-m3e2b, l11-m3e3) : la bulle disait « Suivant » sous un bouton « Continuer sans
+// niveau », et parlait d'un coach « que tu viens d'ajouter » quand M2 était passée.
+describe('M3 : les bulles disent ce que montre l’écran', () => {
+  const textOf = (pattern) => PRESIDENT_GUIDE.steps
+    .map((one) => String(one.text || '')).find((one) => pattern.test(one));
+
+  it('6/8 : le bouton du niveau, par son nom', () => {
+    expect(textOf(/niveau de compétition/)).toContain('Continuer sans niveau');
+  });
+
+  it('7/8 : aucun coach ajouté supposé', () => {
+    expect(textOf(/gérera l’équipe/)).not.toMatch(/viens d’ajouter/);
+  });
+});

@@ -162,8 +162,11 @@ function TourAnnonceExemple({
               <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>
                 {label}
               </Text>
+              {/* Recette L11 : sur 2 lignes, « Départemental » se coupait en plein mot. */}
               <Text
-                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                numberOfLines={1}
                 style={[Fonts.p2Bold, styles.centered, { color: Colors.neutral100 }]}
               >
                 {value}

@@ -235,6 +235,7 @@ function TourCampagneExemple({
                   ) : null}
                   {isPaid ? null : (
                     <View style={{
+                      alignItems: 'center',
                       flexDirection: 'row',
                       gap: licenseSpacing.actionGap,
                       justifyContent: 'flex-end',
@@ -244,6 +245,8 @@ function TourCampagneExemple({
                       <Button
                         onPress={() => setPaidIds((ids) => [...ids, member.documentId])}
                         size="sm"
+                        // Recette L11 : mesuré à sa largeur, le libellé tombait à « A ».
+                        style={{ minWidth: 96 }}
                         title={t('clubLicenses.assignment.markPaid', 'A payé')}
                       />
                     </View>

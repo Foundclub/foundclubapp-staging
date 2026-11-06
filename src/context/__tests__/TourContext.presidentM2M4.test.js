@@ -8,6 +8,7 @@ import {
   emitGuidanceRouteVisit,
   resetGuidanceRuntimeForTests,
 } from '@/domains/guidance/guidanceRuntime';
+import { PRESIDENT_GUIDE } from '@/domains/tour/presidentGuide';
 import { reportTourField, resetTourTargetsForTests } from '@/domains/tour/tourTargetRegistry';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -375,17 +376,27 @@ describe('M3 et M4 de bout en bout', () => {
   });
 });
 
+const driveTo = (target) => {
+  for (let guard = 0; guard < 80 && stepId() !== target; guard += 1) {
+    const step = tour.currentStep;
+    const { steps } = PRESIDENT_GUIDE;
+    const nextId = steps[steps.findIndex((one) => one.id === step.id) + 1]?.id;
+    const advances = [step.advanceOn].flat().filter(Boolean);
+    const signal = advances.find((one) => one.goto === nextId)
+      || advances.find((one) => !one.goto) || advances[0];
+    if (step.nextRequires) act(() => { reportTourField(step.nextRequires.field, true); });
+    if (!signal) next();
+    else if (signal.type === 'route') route(signal.key);
+    else if (signal.type === 'action') action(signal.key);
+    else touch(signal.key);
+  }
+  expect(stepId()).toBe(target);
+};
+
 describe('recette L10 — retour sur l’écran d’exemple de B4', () => {
   const toExample = () => {
     start('president_b4');
-    for (let guard = 0; guard < 40 && stepId() !== 'b4-cand'; guard += 1) {
-      const [signal] = [tour.currentStep.advanceOn].flat();
-      if (!signal) next();
-      else if (signal.type === 'route') route(signal.key);
-      else if (signal.type === 'action') action(signal.key);
-      else touch(signal.key);
-    }
-    expect(stepId()).toBe('b4-cand');
+    driveTo('b4-cand');
   };
 
   it('« Reprendre » rouvre l’annonce d’exemple, sans refaire le tunnel', () => {
@@ -409,5 +420,45 @@ describe('bilan : les parties passées arrivent jusqu’à la clôture', () => {
     expect(tour.skippedSubMissions).toEqual([]);
     act(() => { tour.skipSubMission(); });
     expect(tour.skippedSubMissions).toEqual(['coach']);
+  });
+});
+
+describe('recette L11 — reprise pile sur l’écran d’exemple', () => {
+  it('B4 : après « Reprendre », l’arrivée sur le récap garde l’exemple', () => {
+    start('president_b4');
+    driveTo('b4-cand');
+    route(RouteNames.AdWizardDescription);
+    act(() => { tour.returnToGuide(); });
+    route(RouteNames.AdWizardRecap);
+    expect(stepId()).toBe('b4-cand');
+  });
+
+  it('B1 : retour sur l’exemple, « Reprendre » rouvre la campagne et garde l’exemple', () => {
+    start('president_b1');
+    driveTo('b1-camp');
+    route(RouteNames.ClubLicenses);
+    mockNavigate.mockClear();
+    act(() => { tour.returnToGuide(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ClubStack, {
+      params: { clubId: 'club-1' },
+      screen: RouteNames.ClubLicenseCampaignSettings,
+    });
+    route(RouteNames.ClubLicenseCampaignSettings);
+    expect(stepId()).toBe('b1-camp');
+  });
+});
+
+// Recette L11 (l11-r2-clo) : « Partager » émet l'action puis, au retour, l'interaction, dans le
+// même tour de boucle. La 2ᵉ relisait l'état d'avant la 1ʳᵉ et effaçait l'affiche du bilan.
+describe('bilan : l’affiche partagée y reste', () => {
+  it('action et retour du partage à la suite : l’affiche est comptée', () => {
+    start('president_m1');
+    driveTo('m1-pshare');
+    act(() => {
+      emitGuidanceAction('club.poster.shared');
+      emitGuidanceInteraction('poster.share.returned');
+    });
+    expect(tour.created['club.poster.shared']).toBeTruthy();
+    expect(stepId()).toBe('m1-psent');
   });
 });

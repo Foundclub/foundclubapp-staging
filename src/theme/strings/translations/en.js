@@ -24530,6 +24530,7 @@ export default {
         continue: 'Continue',
         later: 'Later',
         laterHint: 'Later? The bonuses are waiting in My account › Club manager guide.',
+        skipped: 'Skipped',
         subtitle: '{{count}} missions out of {{count}}, the essentials are done.',
         subtitlePartial: '{{done}} missions out of {{total}}: the others are waiting for the app '
           + 'to allow them.',
@@ -24547,8 +24548,8 @@ export default {
       tw3: 'The team’s section, then Next.',
       tw4: 'Search for the sport and tap it: you go straight to the next step.',
       tw5: 'Tap the age category.',
-      tw6: 'Tap the competition level, or Next to continue without one.',
-      tw7: 'Tick who will manage the team: you, or the coach you just added.',
+      tw6: 'Tap the competition level, or “Continue without a level”.',
+      tw7: 'Tick who will manage the team: you, or a coach from the club.',
       tw8: 'All good? Create the team for real.',
       understood: 'Got it',
     },

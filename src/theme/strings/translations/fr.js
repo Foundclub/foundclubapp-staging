@@ -25595,6 +25595,7 @@ export default {
         continue: 'Continuer',
         later: 'Plus tard',
         laterHint: 'Plus tard ? Les bonus t’attendent dans Mon compte › Guide dirigeant·e.',
+        skipped: 'Passée',
         subtitle: '{{count}} missions sur {{count}}, l’essentiel est fait.',
         subtitlePartial: '{{done}} missions sur {{total}} : les autres attendent que l’app te le '
           + 'permette.',
@@ -25612,8 +25613,8 @@ export default {
       tw3: 'La section de l’équipe, puis Suivant.',
       tw4: 'Cherche le sport et touche-le : tu passes directement à l’étape suivante.',
       tw5: 'Touche la catégorie d’âge.',
-      tw6: 'Touche le niveau de compétition, ou Suivant pour continuer sans.',
-      tw7: 'Coche qui gérera l’équipe : toi, ou le coach que tu viens d’ajouter.',
+      tw6: 'Touche le niveau de compétition, ou « Continuer sans niveau ».',
+      tw7: 'Coche qui gérera l’équipe : toi, ou un coach du club.',
       tw8: 'Tout est bon ? Crée l’équipe pour de vrai.',
       understood: 'Compris',
     },

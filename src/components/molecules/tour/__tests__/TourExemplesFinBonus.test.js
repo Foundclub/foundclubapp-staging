@@ -53,9 +53,9 @@ jest.mock('@/components/atoms/button/Button', () => {
   const { Text, TouchableOpacity } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: ({ onPress, title }) => creer(
+    default: ({ onPress, style, title }) => creer(
       TouchableOpacity,
-      { onPress, testID: `bouton-${title}` },
+      { onPress, style, testID: `bouton-${title}` },
       creer(Text, null, title),
     ),
   };
@@ -151,6 +151,13 @@ describe('B1 : la campagne d exemple', () => {
     expect(lu.match(/250,00/g).length).toBe(3);
   });
 
+  // Recette L11 (l11-b1e11) : la place laissée au bouton le réduisait à « A ».
+  it('« A payé » garde la place de son libellé', () => {
+    const [bouton] = hotes(monter(), 'bouton-A payé');
+    const style = Object.assign({}, ...[bouton.props.style].flat().filter(Boolean));
+    expect(style.minWidth).toBeGreaterThanOrEqual(96);
+  });
+
   it('« Relancer » dit que rien n est parti', () => {
     const arbre = monter();
     expect(texte(arbre)).not.toContain('rien n’est envoyé à ce membre');
@@ -195,6 +202,15 @@ describe('B4 : l annonce d exemple', () => {
     ].forEach((mot) => expect(lu).toContain(mot));
     expect(hotes(arbre, 'ancre-ad-cand')).toHaveLength(1);
     expect(hotes(arbre, 'ancre-ad-poster')).toHaveLength(1);
+  });
+
+  // Recette L11 (l11-b4e7) : « Départemental » coupé en « Départemen / tal ».
+  it('le niveau tient sur une ligne, sans mot coupé', () => {
+    const arbre = monter({ levelName: 'Départemental' });
+    const [niveau] = arbre.root.findAll((noeud) => typeof noeud.type === 'string'
+      && noeud.props.children === 'Départemental');
+    expect(niveau.props.numberOfLines).toBe(1);
+    expect(niveau.props.adjustsFontSizeToFit).toBe(true);
   });
 
   it('expire 30 jours après sa publication, comme une vraie', () => {

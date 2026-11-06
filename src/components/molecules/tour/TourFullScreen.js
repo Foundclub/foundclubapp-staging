@@ -153,6 +153,15 @@ function TourFullScreen({ kind }) {
     completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus, pauseTour,
     profileKey, skippedSubMissions,
   } = useTour();
+  // Recette L11 : une mission dont la seule partie a été passée (M2, le coach) n'est pas cochée.
+  const passedMissionIds = new Set((missions || [])
+    .filter((/** @type {any} */ mission) => {
+      const parts = new Set((getTourProfile(profileKey || 'coach')?.steps || [])
+        .filter((/** @type {any} */ step) => step.missionId === mission.id && step.subMission)
+        .map((/** @type {any} */ step) => step.subMission));
+      return parts.size === 1 && (skippedSubMissions || []).includes([...parts][0]);
+    })
+    .map((/** @type {any} */ mission) => mission.id));
   // Textes `tourCatalog.<profil>.*` : chaque guide a les siens (les replis sont ceux du coach).
   const guideKey = profileKey || 'coach';
   const guide = /** @type {any} */ (getTourProfile(guideKey));
@@ -301,17 +310,22 @@ function TourFullScreen({ kind }) {
             )}
         </Text>
         <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => (
-            <MissionRow
-              done={missionStatus?.[mission.id] !== 'blocked'}
-              key={mission.id}
-              label={mission.title}
-              marker={String(index + 1)}
-              right={missionStatus?.[mission.id] === 'blocked'
-                ? t(`tourCatalog.${guideKey}.palier.blocked`, 'Plus tard')
-                : undefined}
-            />
-          ))}
+          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => {
+            const isBlocked = missionStatus?.[mission.id] === 'blocked';
+            const isPassed = passedMissionIds.has(mission.id);
+            let right;
+            if (isBlocked) right = t(`tourCatalog.${guideKey}.palier.blocked`, 'Plus tard');
+            else if (isPassed) right = t(`tourCatalog.${guideKey}.palier.skipped`, 'Passée');
+            return (
+              <MissionRow
+                done={!isBlocked && !isPassed}
+                key={mission.id}
+                label={mission.title}
+                marker={String(index + 1)}
+                right={right}
+              />
+            );
+          })}
         </View>
         {bonuses.length > 0 ? (
           <View style={{ rowGap: 8 }}>

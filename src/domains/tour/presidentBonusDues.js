@@ -161,6 +161,14 @@ export const B1_STEPS = [
     missionId: 'president_b1',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: FROM,
+    // Retour pris sur l'exemple : « Reprendre » rouvre l'écran de campagne sur l'exemple (L11).
+    returnTarget: {
+      params: (/** @type {any} */ context) => ({
+        params: { clubId: context?.userData?.club?.documentId },
+        screen: RouteNames.ClubLicenseCampaignSettings,
+      }),
+      routeName: RouteNames.ClubStack,
+    },
     simulatesCampaign: true,
     targets: ['camp-list', 'camp-relance'],
     get text() {

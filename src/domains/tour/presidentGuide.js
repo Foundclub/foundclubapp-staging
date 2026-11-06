@@ -56,6 +56,7 @@ const FULL_SCREEN_TEXTS = {
   'palier.continue': 'Continuer',
   'palier.later': 'Plus tard',
   'palier.laterHint': 'Plus tard ? Les bonus t’attendent dans Mon compte › Guide dirigeant·e.',
+  'palier.skipped': 'Passée',
   'palier.subtitle': '{{count}} missions sur {{count}}, l’essentiel est fait.',
   'palier.subtitlePartial': '{{done}} missions sur {{total}} : les autres attendent que l’app te '
     + 'le permette.',
