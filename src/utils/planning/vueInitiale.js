@@ -14,8 +14,8 @@ import { toPlanningApiDate } from '@/utils/planning/planningSlots';
  * 🗓️ R17-VUE (19/10/2026, REC17-010) — LA VUE A L ARRIVEE SUR UN PLANNING, ecrite UNE fois pour
  * les 5 plannings (perso, plein ecran, club, omnisport, installation de la Ville).
  *
- * La regle d Adel : le jour (ou la vue de base plus courte que la semaine : « 3 jours » de
- * l onglet perso) est vide ⇒ la semaine ; la semaine est vide mais un evenement vient plus tard
+ * La regle d Adel : le jour (aujourd hui seul, meme sur la vue « 3 jours » de l onglet perso :
+ * RETOURS-TESTEUR-2) est vide ⇒ la semaine ; la semaine est vide mais un evenement vient plus tard
  * ⇒ le MOIS de ce prochain evenement ; sinon la vue de base (et son etat vide).
  * Les valeurs des vues sont celles des plannings : 'day', '3days', 'week', 'month', 'list'.
  */
@@ -49,6 +49,20 @@ const fenetreDeLaVue = (vue, aujourdhui) => {
     endOfWeek(aujourdhui, { weekStartsOn: 1 }),
   ];
 };
+
+/**
+ * Les jours qui decident si la vue de base est « pleine ». Vue courte (jour, 3 jours) :
+ * AUJOURD HUI seul. RETOURS-TESTEUR-2 (06/11/2026, M0204 / M0983, regle relayee par le chef) :
+ * avant, les 3 jours comptaient en entier, et un evenement demain gardait la vue de base sur un
+ * aujourd hui vide (« quand il y a un jour vide rien ne se passe »).
+ * @param {string} vue - La vue de base.
+ * @param {Date} aujourdhui - Aujourd hui.
+ * @returns {[Date, Date]} Debut et fin.
+ */
+const fenetreQuiDecide = (vue, aujourdhui) => fenetreDeLaVue(
+  estCourte(vue) ? 'day' : vue,
+  aujourdhui,
+);
 
 /**
  * Apres quel instant un evenement est-il « plus tard » ? La fin de la semaine, ou celle de la
@@ -96,7 +110,7 @@ export const vueInitiale = ({
   const dans = (/** @type {[Date, Date]} */ [debut, fin]) => jours
     .some((jour) => jour >= debut && jour <= fin);
 
-  if (dans(fenetreDeLaVue(vueDeBase, aujourdhui))) return { date: aujourdhui, vue: vueDeBase };
+  if (dans(fenetreQuiDecide(vueDeBase, aujourdhui))) return { date: aujourdhui, vue: vueDeBase };
   if (estCourte(vueDeBase) && dans(fenetreDeLaVue('week', aujourdhui))) {
     return { date: aujourdhui, vue: 'week' };
   }
@@ -118,6 +132,6 @@ export const vueInitiale = ({
  * @returns {boolean} Vrai si aucun evenement n y tombe.
  */
 export const vueDeBaseVide = (vueDeBase, aujourdhui, dates) => {
-  const [debut, fin] = fenetreDeLaVue(vueDeBase, aujourdhui);
+  const [debut, fin] = fenetreQuiDecide(vueDeBase, aujourdhui);
   return !dates.some((jour) => jour !== null && jour >= debut && jour <= fin);
 };
