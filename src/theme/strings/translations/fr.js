@@ -26,6 +26,9 @@ export default {
   },
   addCoach: {
     actions: {
+      // RETOURS-TESTEUR-2 (06/11, M0077) — sur ordinateur, à la place du SMS.
+      copyInvite: 'Copier le lien d’invitation',
+      emailInvite: 'Envoyer par e-mail',
       invite: 'Inviter',
       save: 'Envoyer l\'invitation',
     },
@@ -42,6 +45,7 @@ export default {
         description: "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
         title: "Impossible d'ajouter cet·te entraîneur·e à l'équipe",
       },
+      inviteCopied: 'Invitation copiée : colle-la dans un e-mail, WhatsApp ou un SMS.',
       success: {
         description: "L'entraîneur·e {{trainerName}} a bien été ajouté·e à ton club.",
         title: 'Ajout réussi !',

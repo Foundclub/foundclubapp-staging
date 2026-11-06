@@ -53,7 +53,7 @@ function CreateTrainerModal({
   onTrainerCreated,
 }) {
   const { t } = useTranslation();
-  const { inviteTrainer, userData } = useAuth();
+  const { invitationDuStaff, inviteTrainer, userData } = useAuth();
   // INVITESMS (29/10/2026, decision d'Adel « 2- A ») — l'entraineur cree ici n'etait prevenu par
   // personne. La feuille d'invitation d'AddCoach (SMS pre-rempli) s'ouvre apres la creation.
   const [entraineurCree, setEntraineurCree] = useState(
@@ -253,6 +253,14 @@ function CreateTrainerModal({
       </BottomModal>
       <TrainerInvitedModal
         isVisible={Boolean(entraineurCree)}
+        // RETOURS-TESTEUR-2 (M0077) : sur ordinateur, ce texte se copie ou part par e-mail.
+        messageDInvitation={entraineurCree ? invitationDuStaff?.({
+          clubId: clubId || undefined,
+          clubName: club?.name || userData?.club?.name
+            || t('addCoach.fallbacks.clubName', 'Club'),
+          firstname: entraineurCree.firstname
+            || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof'),
+        })?.message : ''}
         onClose={() => setEntraineurCree(null)}
         onInvite={() => {
           if (entraineurCree) {

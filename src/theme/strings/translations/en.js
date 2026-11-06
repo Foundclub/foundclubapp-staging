@@ -29,6 +29,8 @@ export default {
   },
   addCoach: {
     actions: {
+      copyInvite: 'Copy the invitation link',
+      emailInvite: 'Send by email',
       invite: 'Invite',
       save: 'Send invitation',
     },
@@ -45,6 +47,7 @@ export default {
         description: 'A user named {{firstname}} {{lastname}} is already a member of another club.',
         title: "Can't add this coach to the team",
       },
+      inviteCopied: 'Invitation copied: paste it into an email, WhatsApp or a text message.',
       success: {
         description: 'Coach {{trainerName}} has been added to your club.',
         title: 'Added successfully!',
