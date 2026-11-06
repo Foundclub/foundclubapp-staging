@@ -7179,7 +7179,7 @@ export default {
     },
     countdownTitle: 'Countdown to opening',
     subtitle: 'League mode is temporarily closed. Classic FoundClub is still available.',
-    title: 'Found Club League is coming soon.',
+    title: 'FoundClub League is coming soon.',
   },
   common: {
     accept: 'Accept',
@@ -8324,7 +8324,7 @@ export default {
       twoTaps: 'Line-up and call-ups in 2 taps',
     },
     subtitle: 'Line-up feature reserved',
-    text: 'Prepare your line-ups, call up your players and track their replies — without leaving FOUNDCLUB.',
+    text: 'Prepare your line-ups, call up your players and track their replies — without leaving FoundClub.',
     title: 'Team plan',
     wall: 'Team line-ups are reserved for the Team plan.',
   },
@@ -9174,7 +9174,7 @@ export default {
     },
     players: {
       add: 'Add a player (first and last name)',
-      addHint: 'No FOUNDCLUB account needed: they count as present. They are suggested again at the next call-up if called up.',
+      addHint: 'No FoundClub account needed: they count as present. They are suggested again at the next call-up if called up.',
       bench: 'Bench',
       calledUp_one: '{{count}} called up',
       calledUp_other: '{{count}} called up',
@@ -9563,7 +9563,7 @@ export default {
     },
     closed: {
       matchmaking: 'Match search closed',
-      platform: 'Found Club League closed',
+      platform: 'FoundClub League closed',
     },
     dispute: {
       comment: 'Comment (optional)',
@@ -14122,7 +14122,7 @@ export default {
       title: 'Access denied',
     },
     loading: {
-      description: 'We are checking the status of Found Club League.',
+      description: 'We are checking the status of FoundClub League.',
       title: 'Preparing the platform',
     },
     loginRequired: {
@@ -14139,7 +14139,7 @@ export default {
     openingDate: 'Opening scheduled for {{openingDate}}.',
     platformClosed: {
       hint: 'Get your squad ready, the competition starts soon.',
-      title: 'Found Club League is coming soon.',
+      title: 'FoundClub League is coming soon.',
     },
   },
   leagueScoreDetails: {
@@ -14527,7 +14527,7 @@ export default {
     chatTitleAnonymous: 'Vs Opponent',
     closed: {
       matchmaking: 'Match search closed',
-      platform: 'Found Club League closed',
+      platform: 'FoundClub League closed',
     },
     config: {
       add: '+ Add',
@@ -22505,7 +22505,7 @@ export default {
     states: {
       errorDescription: 'Unable to load the League dashboard.',
       errorTitle: 'Loading failed',
-      loadingDescription: 'We are consolidating Found Club League global metrics.',
+      loadingDescription: 'We are consolidating FoundClub League global metrics.',
       loadingTitle: 'Loading the League dashboard',
       retry: 'Try again',
     },
@@ -22623,7 +22623,7 @@ export default {
       saveErrorTitle: 'Save failed',
     },
     close: 'Close',
-    description: 'Open or close Found Club League for players, then manage matchmaking availability separately.',
+    description: 'Open or close FoundClub League for players, then manage matchmaking availability separately.',
     matchmaking: {
       clear: 'Remove the search date',
       closed: 'Search closed',
@@ -22636,9 +22636,9 @@ export default {
     platform: {
       clear: 'Remove the date',
       closed: 'Platform closed',
-      description: 'When the platform is closed, players see the Found Club League coming-soon screen. SuperAdmins keep full access.',
+      description: 'When the platform is closed, players see the FoundClub League coming-soon screen. SuperAdmins keep full access.',
       open: 'Platform open',
-      title: 'Found Club League status',
+      title: 'FoundClub League status',
     },
     save: 'Save',
     scheduled: {
@@ -22648,7 +22648,7 @@ export default {
     states: {
       errorDescription: 'Unable to load League settings.',
       errorTitle: 'Loading failed',
-      loadingDescription: 'We are loading the Found Club League opening configuration.',
+      loadingDescription: 'We are loading the FoundClub League opening configuration.',
       loadingTitle: 'Loading League settings',
       retry: 'Try again',
     },

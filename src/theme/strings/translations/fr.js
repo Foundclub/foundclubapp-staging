@@ -2877,15 +2877,15 @@ export default {
       inviteManager: {
         message: 'Bonjour {{coachName}} !'
           + '\nTu as été désigné·e comme dirigeant·e dans le club {{clubName}}.'
-          + "\nTélécharge l'application Found Club pour finaliser la création de ton compte"
+          + "\nTélécharge l'application FoundClub pour finaliser la création de ton compte"
           + ' et commencer à gérer ton club.',
       },
       inviteTrainer: {
         message: 'Bonjour {{coachName}} !'
           + '\nTu as été désigné·e comme coach / prof dans le club {{clubName}}.'
-          + "\nTélécharge l'application Found Club pour finaliser la création de ton compte"
+          + "\nTélécharge l'application FoundClub pour finaliser la création de ton compte"
           + ' et commencer à gérer tes équipes et tes événements.',
-        title: 'Bienvenue sur Found Club !',
+        title: 'Bienvenue sur FoundClub !',
       },
       joinClub: {
         actions: {
@@ -2906,7 +2906,7 @@ export default {
       myClub: {
         actions: {
           cancel: 'Annuler',
-          confirm: 'Contacter Found Club',
+          confirm: 'Contacter FoundClub',
         },
         description: 'Contacte nos équipes pour accéder aux fonctionnalités réservées aux dirigeant·e·s et aux entraîneur·e·s du club.',
         title: 'Tu es dirigeant·e de ce club ?',
@@ -7683,7 +7683,7 @@ export default {
     },
     countdownTitle: 'Compte à rebours avant ouverture',
     subtitle: 'Le mode League est momentanément fermé. FoundClub classique reste disponible.',
-    title: 'Found Club League arrive bientôt.',
+    title: 'FoundClub League arrive bientôt.',
   },
   common: {
     accept: 'Accepter',
@@ -8897,7 +8897,7 @@ export default {
     },
     subtitle: 'Composition réservée',
     text: 'Prépare tes compos, convoque tes joueurs et suis leurs réponses '
-      + '— sans quitter FOUNDCLUB.',
+      + '— sans quitter FoundClub.',
     title: 'Offre Équipe',
     wall: 'La composition d’équipe est réservée à l’offre Équipe.',
   },
@@ -9735,7 +9735,7 @@ export default {
     players: {
       add: 'Ajouter un joueur (nom, prénom)',
       // eslint-disable-next-line max-len
-      addHint: 'Pas besoin de compte FOUNDCLUB : il est compté présent. Il est reproposé à la convocation suivante s’il est convoqué.',
+      addHint: 'Pas besoin de compte FoundClub : il est compté présent. Il est reproposé à la convocation suivante s’il est convoqué.',
       bench: 'Banc',
       calledUp_one: '{{count}} convoqué',
       calledUp_other: '{{count}} convoqués',
@@ -9833,7 +9833,7 @@ export default {
       ok: 'OK',
     },
     alerts: {
-      description: "L'équipe Found Club va examiner ta demande et te recontacter dans les plus brefs délais.",
+      description: "L'équipe FoundClub va examiner ta demande et te recontacter dans les plus brefs délais.",
       title: 'Ta demande de création de club a bien été envoyée',
     },
     fields: {
@@ -10142,7 +10142,7 @@ export default {
     },
     closed: {
       matchmaking: 'Recherche de match fermée',
-      platform: 'Found Club League fermée',
+      platform: 'FoundClub League fermée',
     },
     dispute: {
       comment: 'Commentaire (optionnel)',
@@ -15009,7 +15009,7 @@ export default {
       title: 'Accès refusé',
     },
     loading: {
-      description: "Nous vérifions l'état de Found Club League.",
+      description: "Nous vérifions l'état de FoundClub League.",
       title: 'Préparation de la plateforme',
     },
     loginRequired: {
@@ -15026,7 +15026,7 @@ export default {
     openingDate: 'Ouverture prévue le {{openingDate}}.',
     platformClosed: {
       hint: 'Prépare ta squad, la compétition démarre bientôt.',
-      title: 'Found Club League arrive bientôt.',
+      title: 'FoundClub League arrive bientôt.',
     },
   },
   leagueScoreDetails: {
@@ -15432,7 +15432,7 @@ export default {
     chatTitleAnonymous: 'Vs Adversaire',
     closed: {
       matchmaking: 'Recherche de match fermée',
-      platform: 'Found Club League fermée',
+      platform: 'FoundClub League fermée',
     },
     config: {
       add: '+ Ajouter',
@@ -23489,7 +23489,7 @@ export default {
     states: {
       errorDescription: 'Impossible de charger le dashboard League.',
       errorTitle: 'Chargement impossible',
-      loadingDescription: 'Nous consolidons les métriques globales de Found Club League.',
+      loadingDescription: 'Nous consolidons les métriques globales de FoundClub League.',
       loadingTitle: 'Chargement du dashboard League',
       retry: 'Réessayer',
     },
@@ -23611,7 +23611,7 @@ export default {
     },
     close: 'Fermer',
     // eslint-disable-next-line max-len
-    description: 'Ouvre ou ferme Found Club League pour les joueurs, puis pilote séparément la disponibilité du matchmaking.',
+    description: 'Ouvre ou ferme FoundClub League pour les joueurs, puis pilote séparément la disponibilité du matchmaking.',
     matchmaking: {
       clear: 'Supprimer la date de recherche',
       closed: 'Recherche fermée',
@@ -23626,9 +23626,9 @@ export default {
       clear: 'Supprimer la date',
       closed: 'Plateforme fermée',
       // eslint-disable-next-line max-len
-      description: "Quand la plateforme est fermée, les joueurs voient l'écran Found Club League arrive bientôt. Les SuperAdmin gardent l'accès complet.",
+      description: "Quand la plateforme est fermée, les joueurs voient l'écran FoundClub League arrive bientôt. Les SuperAdmin gardent l'accès complet.",
       open: 'Plateforme ouverte',
-      title: 'État de Found Club League',
+      title: 'État de FoundClub League',
     },
     save: 'Enregistrer',
     scheduled: {
@@ -23638,7 +23638,7 @@ export default {
     states: {
       errorDescription: 'Impossible de charger les paramètres League.',
       errorTitle: 'Chargement impossible',
-      loadingDescription: "Nous chargeons la configuration d'ouverture de Found Club League.",
+      loadingDescription: "Nous chargeons la configuration d'ouverture de FoundClub League.",
       loadingTitle: 'Chargement des paramètres League',
       retry: 'Réessayer',
     },
@@ -24166,7 +24166,7 @@ export default {
         downloadOnIOS: 'Télécharger sur iOS',
         message: 'Bonjour !'
           + '\nVotre équipe {{teamName}} de ton club {{clubName}} t\'attend !'
-          + "\nTélécharge l'application Found Club pour finaliser la création de ton compte"
+          + "\nTélécharge l'application FoundClub pour finaliser la création de ton compte"
           + ' et commencer accéder et participer aux événements de ton équipe.',
         title: 'Tes coéquipiers t\'attendent !',
       },
@@ -24715,9 +24715,9 @@ export default {
       maxTeamLimitReached: {
         actions: {
           cancel: 'Abandon',
-          contact: 'Contacter Found Club',
+          contact: 'Contacter FoundClub',
         },
-        description: 'Tu as atteint le nombre maximum d\'équipes autorisées dans ton club. Merci de contacter Found Club pour débloquer cette limite.',
+        description: 'Tu as atteint le nombre maximum d\'équipes autorisées dans ton club. Merci de contacter FoundClub pour débloquer cette limite.',
         title: 'Limite d\'équipes atteinte',
       },
     },
