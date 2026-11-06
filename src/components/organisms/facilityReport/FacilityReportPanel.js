@@ -46,8 +46,9 @@ import { useIsDesktop } from '@/responsive';
  *   suite… (un mot exige). La fermeture liee finie, il propose « Résolu ».
  * - L AUTEUR : le sien, ou il en est, et le mot de la Ville.
  * Ou vont les gestes : sur ordinateur (panneau ou page), EN LIGNE sous le signalement (planche B) ;
- * au TELEPHONE, dans un PIED FIXE (planche tel 2) : « Prendre en charge », puis « Fermer
- * l installation… » et « + », qui deplie « Résolu… » et « Sans suite… ».
+ * au TELEPHONE, dans un PIED FIXE (planche tel 2) : « Prendre en charge », « Fermer
+ * l installation… », puis « Résolu… » et « Sans suite… » sur leur ligne, toujours visibles
+ * (M0120, Adel « 153- A » : le « + » de la planche est retire).
  * Le serveur est le seul juge : tout autre compte recoit « introuvable ».
  * @param {{ enPanneau?: boolean, onClose?: () => void, reportId: string | null }} props
  * @returns {import('react').ReactElement} Le signalement.
@@ -60,7 +61,6 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
   const fiche = useFacilityReport(reportId);
   const statut = useSetFacilityReportStatus();
   const [feuille, setFeuille] = useState(/** @type {null | 'resolu' | 'sans_suite'} */ (null));
-  const [plus, setPlus] = useState(false);
   const [mot, setMot] = useState('');
   const [erreur, setErreur] = useState(/** @type {string | null} */ (null));
   // Planche B : sur ordinateur, « Catégorie » et « Envoyé par » en rangees ; au telephone, une
@@ -178,7 +178,6 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
   };
 
   const ouvrirLaFeuille = (/** @type {'resolu' | 'sans_suite'} */ sorte) => {
-    setPlus(false);
     setFeuille(sorte);
   };
 
@@ -386,7 +385,8 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
     </View>
   ) : null;
 
-  // Planche tel 2 : le pied FIXE. « + » deplie « Résolu… » et « Sans suite… » au-dessus du pied.
+  // Planche tel 2 : le pied FIXE. M0120 (« 153- A ») : « Résolu… » et « Sans suite… » toujours
+  // visibles, en Secondary, sur leur propre ligne ; plus de « + ».
   const pied = auPied && ville && ouvert ? (
     <View
       style={{
@@ -398,22 +398,6 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
       }}
       testID="signalement-pied"
     >
-      {plus ? (
-        <View style={{ flexDirection: 'row', gap: 8 }} testID="signalement-plus-menu">
-          <Button
-            onPress={() => ouvrirLaFeuille('resolu')}
-            style={{ flex: 1 }}
-            title={t('facilityReports.ville.resoudre', 'Résolu…')}
-            variant="Ghost"
-          />
-          <Button
-            onPress={() => ouvrirLaFeuille('sans_suite')}
-            style={{ flex: 1 }}
-            title={t('facilityReports.ville.sansSuite', 'Sans suite…')}
-            variant="Ghost"
-          />
-        </View>
-      ) : null}
       {report.status === 'envoye' ? (
         <Button
           isLoading={statut.isPending && !feuilleOuverte}
@@ -422,38 +406,27 @@ function FacilityReportPanel({ enPanneau = false, onClose, reportId }) {
           variant="Primary"
         />
       ) : null}
-      <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+      <Button
+        onPress={fermerLInstallation}
+        size="sm"
+        title={t('facilityReports.ville.fermer', 'Fermer l’installation…')}
+        variant="Secondary"
+      />
+      <View style={{ flexDirection: 'row', gap: 8 }} testID="signalement-pied-clore">
         <Button
-          onPress={fermerLInstallation}
+          onPress={() => ouvrirLaFeuille('resolu')}
           size="sm"
           style={{ flex: 1 }}
-          title={t('facilityReports.ville.fermer', 'Fermer l’installation…')}
+          title={t('facilityReports.ville.resoudre', 'Résolu…')}
           variant="Secondary"
         />
-        <TouchableOpacity
-          accessibilityLabel={t(
-            'facilityReports.ville.plusDActions',
-            'Plus d’actions : résolu, sans suite',
-          )}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: plus }}
-          onPress={() => setPlus((avant) => !avant)}
-          style={{
-            alignItems: 'center',
-            borderColor: withAlpha(Colors.neutral00, 0.16),
-            borderRadius: 12,
-            borderWidth: 1,
-            height: 44,
-            justifyContent: 'center',
-            width: 44,
-          }}
-          testID="signalement-plus"
-        >
-          <Image
-            source={Images.plus}
-            style={{ height: 16, tintColor: Colors.neutral200, width: 16 }}
-          />
-        </TouchableOpacity>
+        <Button
+          onPress={() => ouvrirLaFeuille('sans_suite')}
+          size="sm"
+          style={{ flex: 1 }}
+          title={t('facilityReports.ville.sansSuite', 'Sans suite…')}
+          variant="Secondary"
+        />
       </View>
     </View>
   ) : null;
