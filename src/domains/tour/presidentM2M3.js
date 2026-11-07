@@ -286,8 +286,18 @@ const M3_STEPS = [
           + 'glisse ton doigt depuis le bord gauche.',
       );
     },
-    // Le geste du bord, seul retour d'un iPhone, doit passer.
-    veil: false,
+    // Le geste du bord, seul retour d'un iPhone, doit passer ; le reste sous le voile (TG-16).
+    edgeSwipe: true,
+    // GUIDE-D-CORR TG-07 (tournée du 07/11, r62-r65, M1033) : revenu de la messagerie sur la fiche
+    // et non sur Staff, la bulle disait « sur Staff ». La rangée « Nos équipes » ne se mesure que
+    // sur la fiche à l'écran : elle dit où l'on est, et la bulle passe à la suite.
+    variants: [{
+      targets: ['club.m.teams'],
+      get text() {
+        return t('m2-back-hub', 'De retour sur la fiche de ton club. Crée maintenant une équipe : '
+          + 'ouvre « Nos équipes ».');
+      },
+    }],
     when: coachAdded,
   },
   {

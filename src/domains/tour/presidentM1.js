@@ -261,8 +261,9 @@ const PART_PARTNERS = [
     subMission: 'partners',
     targets: ['header.back'],
     get text() { return t('m1-pback', 'Reviens sur la fiche du club.'); },
-    // Laisse le geste du bord, seul retour d'un iPhone sans flèche à portée.
-    veil: false,
+    // Laisse le geste du bord, seul retour d'un iPhone sans flèche à portée ; le reste sous le
+    // voile (GUIDE-D-CORR TG-16 : la poubelle du partenaire restait touchable).
+    edgeSwipe: true,
     // Seulement par l'aiguillage de `m1-pform` (TG-06) : jamais au fil d'une partie rejouée.
     when: () => false,
   },
@@ -339,21 +340,38 @@ const PART_FACILITIES = [
       + 'liste, puis « Sélectionner ».'),
     () => t('m1-ffaddr-guard', 'Choisis d’abord l’adresse de l’installation.'),
   ),
+  // GUIDE-D-CORR TG-10 (tournée du 07/11, r25) : une bulle pour trois réglages se posait sur la
+  // capacité et les couleurs, sans voile. Une bulle par réglage, à côté du sien ; on peut y toucher.
   {
     id: 'm1-ff2',
     missionId: MISSION_ID,
     get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: 'm1-fac',
     subMission: 'facilities',
-    targets: ['facility.conflict', 'facility.capacity', 'facility.color'],
+    targets: ['facility.conflict'],
     get text() {
-      return t(
-        'm1-ff2',
-        'Conflit de créneaux : à valider, ou réservé tout de suite. Capacité : équipes en même '
-          + 'temps. Couleur : son repère.',
-      );
+      return t('m1-ff2', 'Conflit de créneaux : une demande à valider, ou réservée tout de suite.');
     },
-    veil: false,
+  },
+  {
+    id: 'm1-ff2-cap',
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-fac',
+    subMission: 'facilities',
+    targets: ['facility.capacity'],
+    get text() {
+      return t('m1-ff2-cap', 'Capacité : combien d’équipes peuvent l’utiliser en même temps.');
+    },
+  },
+  {
+    id: 'm1-ff2-color',
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-fac',
+    subMission: 'facilities',
+    targets: ['facility.color'],
+    get text() { return t('m1-ff2-color', 'Couleur : son repère dans le planning.'); },
   },
   {
     advanceOn: { key: 'facility.created', type: 'action' },
@@ -516,7 +534,7 @@ const PART_PLANNING = [
     subMission: 'facilities',
     targets: ['header.back'],
     get text() { return t('m1-pb1', 'Reviens à tes installations.'); },
-    veil: false,
+    edgeSwipe: true,
   },
   {
     advanceOn: { key: RouteNames.Club, type: 'route' },
@@ -526,7 +544,8 @@ const PART_PLANNING = [
     subMission: 'facilities',
     targets: ['header.back'],
     get text() { return t('m1-fback', 'Puis retourne sur la fiche du club.'); },
-    veil: false,
+    // TG-16 : « + Ajouter une installation » restait touchable.
+    edgeSwipe: true,
   },
 ];
 

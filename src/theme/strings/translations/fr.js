@@ -25614,8 +25614,9 @@ export default {
         + 'Passe cette partie.',
       'm1-facadd': 'Ajoute une installation.',
       'm1-fback': 'Puis retourne sur la fiche du club.',
-      'm1-ff2': 'Conflit de créneaux : à valider, ou réservé tout de suite. Capacité : équipes en '
-        + 'même temps. Couleur : son repère.',
+      'm1-ff2': 'Conflit de créneaux : une demande à valider, ou réservée tout de suite.',
+      'm1-ff2-cap': 'Capacité : combien d’équipes peuvent l’utiliser en même temps.',
+      'm1-ff2-color': 'Couleur : son repère dans le planning.',
       'm1-ff3': 'Tout est bon ? Crée l’installation.',
       'm1-ff3-refused': 'Ton offre gratuite compte déjà son installation : la suivante demande '
         + 'l’offre Club. Ferme l’offre et passe cette partie.',
@@ -25673,6 +25674,8 @@ export default {
       'm2-add': 'Touche le « + » à côté de tes coachs.',
       'm2-back': 'De retour dans l’app, sur Staff. Reviens sur la fiche de ton club : touche la '
         + 'flèche, ou glisse ton doigt depuis le bord gauche.',
+      'm2-back-hub': 'De retour sur la fiche de ton club. Crée maintenant une équipe : ouvre « '
+        + 'Nos équipes ».',
       'm2-fields': 'Son numéro (requis) et son prénom. Un compte est créé à ce numéro, et le SMS, '
         + 'c’est toi qui l’envoies juste après.',
       'm2-fields-required': 'Donne d’abord son numéro.',

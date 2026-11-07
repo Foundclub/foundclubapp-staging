@@ -122,7 +122,8 @@ describe('M3 : créer une équipe', () => {
   it('le retour se fait depuis Staff : une étape en plus, si M2 y a laissé', () => {
     expect(step('m2-back').missionId).toBe('president_m3');
     expect(step('m2-back').targets).toEqual(['header.back']);
-    expect(step('m2-back').veil).toBe(false);
+    // GUIDE-D-CORR TG-16 : le bord gauche reste libre (geste du retour), le reste sous le voile.
+    expect(step('m2-back').edgeSwipe).toBe(true);
     expect(idAt(send('m2-back', { key: 'club.section.closed', kind: 'interaction' }).index))
       .toBe('m3-teams');
     const backWith = (created) => isStepAvailable(step('m2-back'), { created, flags: {} });

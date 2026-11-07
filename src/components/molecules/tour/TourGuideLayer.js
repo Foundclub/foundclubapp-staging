@@ -109,6 +109,9 @@ const IN_HEADER_IDS = [...HEADER_IDS, 'team.more'];
 const SLOT_ID = 'tour.bubbleSlot';
 // FIN-GUIDE, point 3 : la liste d'un tunnel, qui doit rester à portée du doigt (petit écran).
 const WIZARD_LIST_ID = 'teamWizard.viewport';
+// GUIDE-D-CORR TG-16 : bande du bord gauche laissée libre aux étapes de retour (`edgeSwipe`) : le
+// geste du retour de l'iPhone y part ; le reste de l'écran reste sous le voile.
+const EDGE_SWIPE_WIDTH = 20;
 
 /**
  * Police de la bulle à l'échelle du téléphone, plafonnée.
@@ -429,15 +432,23 @@ function TourGuideLayer() {
   // ponytail: une cible à toucher garde son trou, donc un glissement parti d'elle fait défiler : le
   // voile tombe et la bulle donne le sens. Sortie : bloquer le défilement de chaque écran ancré.
   const reachable = currentStep?.lookOnly ? headerHoles : passThrough;
-  const touchable = listScrolls && rects[WIZARD_LIST_ID]
+  const withList = listScrolls && rects[WIZARD_LIST_ID]
     ? [...reachable, toCutout(rects[WIZARD_LIST_ID], width, height)]
     : reachable;
+  const touchable = currentStep?.edgeSwipe
+    ? [...withList, {
+      height, width: EDGE_SWIPE_WIDTH, x: 0, y: 0,
+    }]
+    : withList;
   const primary = cutouts[0] || null;
   // GUIDE-STORES, règle du voile (recette du 04/11) : sous le voile, l'écran ne défile que si le
   // doigt part de la cible. Une cible entière n'a besoin que d'un toucher, le voile reste. Une
   // cible coupée doit pouvoir être amenée d'où qu'on pose le doigt : pas de voile, et la bulle le
   // dit. Le voile revient quand elle est entière. Les tunnels gardent leur liste touchable.
+  // GUIDE-D-CORR TG-16 (g13) : clavier ouvert, le champ en cours de saisie est tenu à l'écran par
+  // le système ; un bord rogné par le clavier ne fait plus tomber le voile (Enregistrer touchable).
   const isTargetCut = !currentStep?.bubbleSlot && currentStep?.veil !== false && !sheetGuide
+    && !keyboard
     && measuredTargets.some((id) => (
       clipSides[id]
       || visibleRects[id].height < rects[id].height - 1

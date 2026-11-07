@@ -214,6 +214,11 @@ describe('③ les installations, avec l’offre Club', () => {
     act(() => { reportTourField('facility.address', true); });
     next();
     expectStep('m1-ff2');
+    // GUIDE-D-CORR TG-10 : une bulle par réglage (conflit, capacité, couleur).
+    next();
+    expectStep('m1-ff2-cap');
+    next();
+    expectStep('m1-ff2-color');
     next();
     expectStep('m1-ff3');
   });
@@ -222,10 +227,8 @@ describe('③ les installations, avec l’offre Club', () => {
     toForm();
     ['facility.name', 'facility.type', 'facility.address']
       .forEach((field) => reportTourField(field, true));
-    next();
-    next();
-    next();
-    next();
+    // Nom, type, adresse, puis conflit, capacité et couleur (GUIDE-D-CORR TG-10).
+    for (let i = 0; i < 6; i += 1) next();
     expectStep('m1-ff3');
     act(() => { emitGuidanceRefusal('paywall.facility-manage-required'); });
     expectStep('m1-ff3');
@@ -260,6 +263,11 @@ describe('sans offre Club (Adel « 77- C » : le premier de chaque est offert)',
     next();
     next();
     expectStep('m1-ff2');
+    // GUIDE-D-CORR TG-10 : une bulle par réglage (conflit, capacité, couleur).
+    next();
+    expectStep('m1-ff2-cap');
+    next();
+    expectStep('m1-ff2-color');
     next();
     expectStep('m1-ff3');
     action('facility.created', { facilityId: 'f-9' });

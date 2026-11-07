@@ -24548,8 +24548,9 @@ export default {
         + 'this part.',
       'm1-facadd': 'Add a facility.',
       'm1-fback': 'Then return to the club page.',
-      'm1-ff2': 'Slot conflicts: to approve, or booked straight away. Capacity: teams at the same '
-        + 'time. Color: its marker.',
+      'm1-ff2': 'Slot conflict: a request to approve, or booked straight away.',
+      'm1-ff2-cap': 'Capacity: how many teams can use it at the same time.',
+      'm1-ff2-color': 'Colour: its marker in the schedule.',
       'm1-ff3': 'All good? Create the facility.',
       'm1-ff3-refused': 'Your free plan already has its facility: the next one needs the Club '
         + 'plan. Close the offer and skip this part.',
@@ -24605,6 +24606,7 @@ export default {
       'm2-add': 'Tap the “+” next to your coaches.',
       'm2-back': 'Back in the app, on Staff. Return to your club page: tap the arrow, or swipe '
         + 'from the left edge.',
+      'm2-back-hub': 'Back on your club page. Now create a team: open “Our teams”.',
       'm2-fields': 'Their number (required) and first name. An account is created for this '
         + 'number, and you send the text yourself right after.',
       'm2-fields-required': 'First give their number.',

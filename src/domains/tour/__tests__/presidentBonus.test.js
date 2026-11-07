@@ -95,7 +95,8 @@ describe('B3 : créer un groupe', () => {
   it('le retour : ailleurs que sur le canal, l étape passe toute seule', () => {
     expect(idAt(send('b3-back', { key: RouteNames.Chat, kind: 'route' }).index)).toBe('b3-new');
     expect(send('b3-back', { key: RouteNames.Conversation, kind: 'route' })).toBeNull();
-    expect(step('b3-back').veil).toBe(false);
+    // GUIDE-D-CORR TG-16 : le bord gauche reste libre (geste du retour), le reste sous le voile.
+    expect(step('b3-back').edgeSwipe).toBe(true);
   });
 
   it('moins de 2 membres : une visite, sans rien créer et sans cul-de-sac', () => {

@@ -114,8 +114,8 @@ export const B3_STEPS = [
       return t('b3-back', 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou '
         + 'glisse ton doigt depuis le bord gauche.');
     },
-    // Le geste du bord, seul retour d'un iPhone, doit passer.
-    veil: false,
+    // Le geste du bord, seul retour d'un iPhone, doit passer ; le reste sous le voile (TG-16).
+    edgeSwipe: true,
   },
   {
     advanceOn: { key: RouteNames.NewConversation, type: 'route' },
