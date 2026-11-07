@@ -17,6 +17,14 @@
  * ⛔ REGLE ABSOLUE : jamais « vs » suivi d'un blanc.
  */
 
+/**
+ * EVT-AUTRE-NOM (07/11) — le nom qu'un humain donne a un evenement « Autre ».
+ * Jumeau de `CUSTOM_NAME_MIN_LENGTH` / `CUSTOM_NAME_MAX_LENGTH` cote serveur,
+ * qui refuse aussi une longueur hors bornes (frontiere de confiance).
+ */
+export const EVENT_CUSTOM_NAME_MIN_LENGTH = 3;
+export const EVENT_CUSTOM_NAME_MAX_LENGTH = 60;
+
 /** Un nom d'adversaire ne depasse pas cette longueur (la colonne est un varchar 120). */
 export const OPPONENT_NAME_MAX_LENGTH = 120;
 
@@ -49,6 +57,61 @@ const comparable = (/** @type {any} */ value) => texte(value)
  * @returns {boolean} Vrai pour « Match », « Match amical »…
  */
 export const isMatchTypeName = (typeName) => comparable(typeName).includes('match');
+
+/**
+ * Le type d'evenement est-il « Autre » ? Seul ce type prend un nom libre.
+ * @param {any} typeName Nom du type d'evenement.
+ * @returns {boolean} Vrai pour « Autre ».
+ */
+export const isOtherTypeName = (typeName) => comparable(typeName) === 'autre';
+
+/**
+ * Nettoie un nom libre : blancs retires aux bords et ecrases au milieu.
+ * @param {any} value Nom brut.
+ * @returns {string} Nom nettoye, chaine vide s'il n'y a rien.
+ */
+export const normalizeEventCustomName = (value) => texte(value).replace(/\s+/g, ' ');
+
+/**
+ * Le nom saisi tient-il dans les bornes (3 a 60 caracteres, une fois nettoye) ?
+ * @param {any} value Nom brut.
+ * @returns {boolean} Vrai si le nom peut partir au serveur.
+ */
+export const isEventCustomNameValid = (value) => {
+  const nom = normalizeEventCustomName(value);
+  return nom.length >= EVENT_CUSTOM_NAME_MIN_LENGTH && nom.length <= EVENT_CUSTOM_NAME_MAX_LENGTH;
+};
+
+/**
+ * Un nom saisi a l'edition est-il refuse ? Vide est accepte (un ancien « Autre »
+ * sans nom se modifie sans en recevoir un) ; sinon il doit tenir dans les bornes.
+ * @param {any} value Nom brut.
+ * @returns {boolean} Vrai si la saisie doit etre corrigee avant l'envoi.
+ */
+export const isEventCustomNameRejected = (value) => (
+  Boolean(normalizeEventCustomName(value)) && !isEventCustomNameValid(value)
+);
+
+/**
+ * Ce que la requete porte pour le nom : `customName` (nettoye, `null` si vide)
+ * pour un « Autre », RIEN pour les autres types.
+ * @param {any} typeName Nom du type d'evenement.
+ * @param {any} value Nom brut.
+ * @returns {{ customName?: string | null }} Le morceau de requete a fusionner.
+ */
+export const buildEventCustomNamePayload = (typeName, value) => (
+  isOtherTypeName(typeName) ? { customName: normalizeEventCustomName(value) || null } : {}
+);
+
+/**
+ * Le nom donne a un « Autre », vide pour tout autre type ou sans nom.
+ * @param {any} eventLike Evenement, tel que l'API le sert.
+ * @returns {string} Le nom donne, ou chaine vide.
+ */
+export const resolveEventCustomName = (eventLike) => {
+  const typeName = eventLike?.type?.name || eventLike?.typeName;
+  return isOtherTypeName(typeName) ? normalizeEventCustomName(eventLike?.customName) : '';
+};
 
 /**
  * Nettoie un nom d'adversaire.
@@ -157,6 +220,11 @@ export const resolveEventDisplayName = (eventLike, replis = 'Événement') => {
   if (adversaire && isMatchTypeName(typeName)) {
     return `${typeName || 'Match'} vs ${adversaire}`;
   }
+
+  // EVT-AUTRE-NOM — un « Autre » nomme porte son nom, meme quand `name` est
+  // encore le nom machine (evenement relu avant son prochain enregistrement).
+  const nomDonne = resolveEventCustomName(eventLike);
+  if (nomDonne) return nomDonne;
 
   const nomExistant = [eventLike?.name, eventLike?.description, typeName]
     .map(texte)

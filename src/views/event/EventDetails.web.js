@@ -11,6 +11,7 @@ import { Image, useWindowDimensions } from 'react-native';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  resolveEventCustomName,
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
@@ -2257,7 +2258,11 @@ function EventDetails({ navigation, route }) {
                       {t('eventDetails.breadcrumb.planning', 'Planning')}
                     </button>
                     <span aria-hidden="true">›</span>
-                    <span>{event?.type?.name || t('eventDetails.eventFallback', 'Événement')}</span>
+                    <span>
+                      {resolveEventCustomName(event)
+                        || event?.type?.name
+                        || t('eventDetails.eventFallback', 'Événement')}
+                    </span>
                   </nav>
                 ) : (
                   <button

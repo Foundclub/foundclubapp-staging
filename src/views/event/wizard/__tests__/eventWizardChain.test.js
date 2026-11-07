@@ -13,6 +13,7 @@ import {
 } from '../eventWizardDetectionUtils';
 import EventWizardLocation from '../EventWizardLocation';
 import EventWizardLogistics from '../EventWizardLogistics';
+import EventWizardName from '../EventWizardName';
 import EventWizardOpponent from '../EventWizardOpponent';
 import EventWizardParticipants from '../EventWizardParticipants';
 import EventWizardRecap from '../EventWizardRecap';
@@ -340,6 +341,7 @@ const ECRANS = {
   [RouteNames.EventWizardDescription]: EventWizardDescription,
   [RouteNames.EventWizardLocation]: EventWizardLocation,
   [RouteNames.EventWizardLogistics]: EventWizardLogistics,
+  [RouteNames.EventWizardName]: EventWizardName,
   [RouteNames.EventWizardOpponent]: EventWizardOpponent,
   [RouteNames.EventWizardParticipants]: EventWizardParticipants,
   [RouteNames.EventWizardRecap]: EventWizardRecap,
@@ -350,8 +352,16 @@ const ECRANS = {
   [RouteNames.EventWizardType]: EventWizardType,
 };
 
-/** Les deux ecrans dont l'avancement passe par une carte a presser. */
-const ECRANS_A_CARTES = new Set([RouteNames.EventWizardTeam, RouteNames.EventWizardType]);
+/**
+ * Les ecrans dont le CONTENU doit etre rendu : les deux qui avancent par une
+ * carte a presser, et l'etape du nom (EVT-AUTRE-NOM), qu'on ne quitte qu'apres
+ * avoir saisi un nom.
+ */
+const ECRANS_A_CARTES = new Set([
+  RouteNames.EventWizardName,
+  RouteNames.EventWizardTeam,
+  RouteNames.EventWizardType,
+]);
 
 /** Le dispatch du tunnel, capte pour semer l'etat de depart d'un parcours. */
 let semer = () => {};
@@ -491,6 +501,12 @@ const marcherDansLeTunnel = ({ avantDeMarcher, nomDuType }) => {
       semerLEtatDeDepart();
     } else if (routeCourante === RouteNames.EventWizardTeam) {
       presserLeTexte(arbre, NOM_DE_L_EQUIPE);
+    } else if (routeCourante === RouteNames.EventWizardName) {
+      // EVT-AUTRE-NOM : vide, « Suivant » ne mene nulle part ; on saisit d'abord.
+      if (!gabarit.isNextDisabled) throw new Error('le nom vide devrait bloquer « Suivant »');
+      const champ = arbre.root.findByProps({ testID: 'event-wizard-name-input' });
+      act(() => champ.props.onChangeText('Repas du club'));
+      appuyerSurSuivant(mockProprietesDuGabarit[mockProprietesDuGabarit.length - 1]);
     } else {
       appuyerSurSuivant(gabarit);
     }
@@ -719,7 +735,8 @@ describe('D58 — chaque type traverse son parcours, et annonce son compte', () 
     ['Entrainement', 7],
     ['Stage', 8],
     ['Tournoi', 10],
-    ['Autre', 8],
+    // EVT-AUTRE-NOM (07/11) : 8 → 9, l'etape du nom.
+    ['Autre', 9],
   ])('un parcours %s annonce %i etapes de bout en bout', (nomDuType, attendu) => {
     const marche = marcherDansLeTunnel({ nomDuType });
 
@@ -744,9 +761,11 @@ describe('D58 — chaque type traverse son parcours, et annonce son compte', () 
     expect(chaine).toContain(RouteNames.EventWizardParticipants);
   });
 
-  test('« Autre » suit exactement le parcours d un evenement standard', () => {
+  // EVT-AUTRE-NOM (07/11) : le parcours standard, plus l'etape du nom juste apres la tuile.
+  test('« Autre » suit le parcours d un evenement standard, son nom en plus', () => {
     expect(marcherDansLeTunnel({ nomDuType: 'Autre' }).chaine).toEqual([
       RouteNames.EventWizardType,
+      RouteNames.EventWizardName,
       RouteNames.EventWizardTeam,
       RouteNames.EventWizardLocation,
       RouteNames.EventWizardLogistics,

@@ -11540,6 +11540,15 @@ export default {
         subtitle: 'Set the date, times and access rules.',
         title: 'Logistics',
       },
+      name: {
+        counter: '{{count}}/{{max}}',
+        hint: '3 to 60 characters.',
+        lengthError: 'The name must be 3 to 60 characters.',
+        placeholder: 'E.g. End-of-season dinner',
+        recapLabel: 'Name',
+        subtitle: 'It will replace the “Other” label on the schedule, the event page and messages.',
+        title: 'What is the name of your event?',
+      },
       opponent: {
         clubResultsTitle: 'Clubs found',
         clubSelected: 'Club found. Specify their team by editing the name if needed.',

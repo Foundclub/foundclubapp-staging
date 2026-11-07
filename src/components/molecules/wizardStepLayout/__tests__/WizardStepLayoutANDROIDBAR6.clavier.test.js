@@ -492,8 +492,10 @@ const assistants = () => {
 describe('ANDROIDBAR-6 — les assistants rendent le gabarit en racine, sans évitement à eux', () => {
   const fichiers = assistants();
 
-  it('53 assistants, dont un d événement, un d équipe et un de club', () => {
-    expect(fichiers).toHaveLength(53);
+  // EVT-AUTRE-NOM (07/11) : 53 → 54, l'étape « Quel est le nom de votre événement ? »
+  // (`EventWizardName.js`), qui rend le gabarit en racine comme les autres.
+  it('54 assistants, dont un d événement, un d équipe et un de club', () => {
+    expect(fichiers).toHaveLength(54);
     expect(fichiers).toEqual(expect.arrayContaining(ASSISTANTS_NOMMES));
   });
 

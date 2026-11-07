@@ -886,7 +886,8 @@ describe('AC04 — le compteur d etapes ne bouge pas', () => {
       // S10-B : 10 → 9 pour les deux formes de match, et pour elles seules.
       ['Match', 9],
       ['Match amical', 9],
-      ['Autre', 8],
+      // EVT-AUTRE-NOM (07/11) : 8 → 9, l'etape du nom.
+      ['Autre', 9],
       ['Réservation', 8],
     ]);
   });

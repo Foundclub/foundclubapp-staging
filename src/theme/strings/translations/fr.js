@@ -12262,6 +12262,17 @@ export default {
         subtitle: "Configure date, horaires et règles d'accès.",
         title: 'Logistique',
       },
+      // EVT-AUTRE-NOM (07/11) — l'etape du nom, posee uniquement apres la tuile « Autre ».
+      name: {
+        counter: '{{count}}/{{max}}',
+        hint: 'De 3 à 60 caractères.',
+        lengthError: 'Le nom doit faire de 3 à 60 caractères.',
+        placeholder: 'Ex. Repas de fin de saison',
+        recapLabel: 'Nom',
+        subtitle:
+          'Il s’affichera à la place de « Autre » sur le planning, la fiche et les messages.',
+        title: 'Quel est le nom de votre événement ?',
+      },
       // Y02 — l'etape « Contre qui ? » du tunnel, posee uniquement pour un match.
       // Idee d'Adel du 2026-08-19 : l'evenement doit s'appeler « Match vs X ».
       opponent: {

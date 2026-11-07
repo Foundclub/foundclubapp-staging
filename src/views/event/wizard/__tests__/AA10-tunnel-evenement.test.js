@@ -594,7 +594,8 @@ describe('AA10 — le compteur d etapes, avant et apres', () => {
       // faire.
       ['Match', 9],
       ['Match amical', 9],
-      ['Autre', 8],
+      // EVT-AUTRE-NOM (07/11) : 8 → 9, l'etape « Quel est le nom de votre evenement ? ».
+      ['Autre', 9],
       ['Réservation', 8],
     ]);
   });

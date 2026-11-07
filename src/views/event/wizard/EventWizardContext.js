@@ -35,6 +35,7 @@ const normalizeTypeLabel = (value = '') => String(value || '')
 const isStageTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('stage');
 const isTournamentTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('tournoi');
 const isMatchTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('match');
+const isOtherTypeName = (typeName = '') => normalizeTypeLabel(typeName) === 'autre';
 
 const createInitialState = () => {
   const { end, start } = createDefaultTimeRange();
@@ -117,6 +118,8 @@ const createInitialState = () => {
     // dans le compte rendu du lot).
     opponentClubId: null,
     opponentName: '',
+    // EVT-AUTRE-NOM : le nom d'un « Autre », saisi a l'etape qui suit la tuile.
+    customName: '',
     participantIdentityVisibility: 'VISIBLE',
     // 🔒 AA10 ③ — UN BROUILLON D'EVENEMENT NAIT PRIVE. Le type n'est pas encore
     // choisi a cet instant : on part donc du cote qui n'expose personne, et
@@ -328,6 +331,8 @@ function eventWizardReducer(state, action) {
         // entrainement ») resterait accroche a l'evenement sans qu'aucun ecran
         // ne le montre plus.
         opponentName: isMatch ? state.opponentName : '',
+        // EVT-AUTRE-NOM : meme regle que l'adversaire — le nom ne vit que sur un « Autre ».
+        customName: isOtherTypeName(action.payload?.name) ? state.customName : '',
         sessionStatus: hasTypeChanged
           ? getDefaultSessionStatusForEventType(action.payload?.name)
           : state.sessionStatus,

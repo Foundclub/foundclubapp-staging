@@ -27,6 +27,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   isMatchTypeName,
   OPPONENT_NAME_MAX_LENGTH,
+  resolveEventCustomName,
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
@@ -3797,6 +3798,10 @@ function EventDetails({ navigation, route }) {
     if (nomAvecAdversaire && isMatchTypeName(event?.type?.name) && / vs /i.test(nomAvecAdversaire)) {
       return nomAvecAdversaire;
     }
+
+    // EVT-AUTRE-NOM : un « Autre » nomme porte son nom, avant la description.
+    const nomDonne = resolveEventCustomName(event);
+    if (nomDonne) return nomDonne;
 
     const preferredLabel = [eventDescriptionText, event?.name, event?.description]
       .find((value) => typeof value === 'string' && value.trim());

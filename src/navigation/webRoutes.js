@@ -121,6 +121,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.MyEventList]: '/events/mine',
   [RouteNames.EventFilters]: '/events/filters',
   [RouteNames.EventWizardType]: '/events/wizard/type',
+  [RouteNames.EventWizardName]: '/events/wizard/name',
   [RouteNames.EventWizardTeam]: '/events/wizard/team',
   [RouteNames.EventWizardLogistics]: '/events/wizard/logistics',
   [RouteNames.EventWizardStageProgram]: '/events/wizard/stage-program',
