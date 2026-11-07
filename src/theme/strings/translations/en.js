@@ -15600,7 +15600,7 @@ export default {
           placeholder: 'Search for an address',
         },
         managerPhone: {
-          help: 'This number will be used to link the club manager to the section.',
+          help: 'Your own number links you to the section. Any other number gets an invitation: that person chooses whether to join.',
           label: "Club manager's number (optional)",
           placeholder: 'e.g. 0612345678',
         },
@@ -15720,6 +15720,7 @@ export default {
       userErrorTitle: 'Schedule unavailable',
     },
     sectionCreated: 'The section was created successfully.',
+    sectionCreatedInvitation: 'The section "{{name}}" has been created. Nobody is linked to it without their consent: send an invitation to this number, and that person will choose whether to join the section.',
     sectionCreatedMessage: 'The section "{{name}}" was created successfully.',
     sectionCreatedTitle: 'Section created',
     sectionDeleted: 'The section was deleted successfully.',

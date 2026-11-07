@@ -16561,7 +16561,7 @@ export default {
           placeholder: 'Rechercher une adresse',
         },
         managerPhone: {
-          help: 'Ce numéro sera utilisé pour rattacher le dirigeant à la section.',
+          help: 'Ton numéro te rattache à la section. Un autre numéro reçoit une invitation : la personne choisit de rejoindre.',
           label: 'Numéro du dirigeant (optionnel)',
           placeholder: 'Ex : 0612345678',
         },
@@ -16681,6 +16681,7 @@ export default {
       userErrorTitle: 'Planning indisponible',
     },
     sectionCreated: 'La section a été créée avec succès.',
+    sectionCreatedInvitation: 'La section « {{name}} » est créée. Personne n’y est rattaché sans son accord : envoie une invitation à ce numéro, la personne choisira de rejoindre la section.',
     sectionCreatedMessage: 'La section "{{name}}" a été créée avec succès.',
     sectionCreatedTitle: 'Section créée',
     sectionDeleted: 'La section a été supprimée avec succès.',
