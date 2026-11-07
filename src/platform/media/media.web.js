@@ -40,6 +40,12 @@ export const capturePhoto = async () => selectFile('image/*', { capture: 'enviro
  */
 export const getLocalFileSize = async () => undefined;
 
+/**
+ * GUIDE-E-CORR (TG-03) — parité d'API avec le natif : un `File` du navigateur ne disparaît pas.
+ * @returns {Promise<boolean>} Toujours faux.
+ */
+export const localFileIsGone = async () => false;
+
 const getSupportedVoiceMimeType = () => {
   if (typeof MediaRecorder === 'undefined') return '';
 
@@ -158,6 +164,7 @@ export const recordVoiceNote = async () => {
 export default {
   capturePhoto,
   getLocalFileSize,
+  localFileIsGone,
   pickDocument,
   pickImage,
   recordVoiceNote,

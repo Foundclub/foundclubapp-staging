@@ -111,6 +111,8 @@ export default {
       save: 'Add partner',
     },
     errors: {
+      logoGone: 'The chosen logo is no longer available on your phone. Choose the logo again, '
+        + 'then try again.',
       save: 'Unable to save this sponsor right now.',
     },
     fields: {
