@@ -18,8 +18,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { registerTourTarget } from '@/domains/tour/tourTargetRegistry';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+import TourSheetContext, {
+  measureTourSheet,
+  TOUR_SHEET_TARGET,
+} from '@/components/molecules/tour/tourSheetContext';
 
 import { STARTUP_PHASES, useStartupPhase } from '@/context/StartupPhaseContext';
 
@@ -305,6 +311,17 @@ function BottomModal({
   const {
     Alignments, ApplicationStyle, Colors, Images, Spaces,
   } = useTheme();
+  /**
+   * GUIDE-D-CORR TG-01/TG-02 : une ancre du guide posée dans la feuille le dit (`TourTarget`).
+   * ponytail: seul le contenu est enveloppé ; l'en-tête et le pied fixes ne le sont pas (leur
+   * forme est figée par les témoins de mise en page). Aucune cible du guide n'y vit au 07/11 ;
+   * sortie : y poser le contexte si une étape y met sa cible.
+   * @param {React.ReactNode} node - Contenu de la feuille.
+   * @returns {React.ReactNode} Le même contenu.
+   */
+  const dansLaFeuille = (node) => (node
+    ? <TourSheetContext.Provider value>{node}</TourSheetContext.Provider>
+    : node);
   const canPresentDuringStartup = !preventStartupPresentation
     || startupPhase === STARTUP_PHASES.SCREEN_LOCAL_PROMPTS
     || startupPhase === STARTUP_PHASES.STEADY_STATE;
@@ -314,6 +331,13 @@ function BottomModal({
       setShouldRender(true);
     }
   }, [isVisible]);
+
+  // GUIDE-D-CORR TG-01/TG-02 (tournée du 07/11) : la feuille s'ouvre SOUS la couche du guide
+  // (« Prendre une photo / Choisir depuis la galerie » grisée, intouchable, ou cachée par la
+  // bulle). Ouverte, elle le dit au guide, qui se retire tant que sa cible n'est pas dedans.
+  useEffect(() => (isVisible
+    ? registerTourTarget(TOUR_SHEET_TARGET, measureTourSheet)
+    : undefined), [isVisible]);
 
   useEffect(() => {
     if (!shouldRender) return;
@@ -696,7 +720,7 @@ function BottomModal({
               />
             ) : null}
             {enTeteMesure}
-            {children}
+            {dansLaFeuille(children)}
             {piedMesure}
           </BottomSheetScrollView>
         ) : (
@@ -710,7 +734,7 @@ function BottomModal({
           ])}
           >
             {enTeteMesure}
-            {children}
+            {dansLaFeuille(children)}
             {piedMesure}
           </BottomSheetView>
         )}

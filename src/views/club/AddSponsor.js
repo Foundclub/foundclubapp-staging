@@ -28,6 +28,8 @@ import { getMultisportClubById, updateMultisportClub } from '@/services/multispo
 
 import { getFieldError } from '@/utils/form/formUtils';
 
+import useKeyboardFrame from '@/hooks/useKeyboardFrame';
+
 const defaultValues = {
   link: '',
   title: '',
@@ -59,6 +61,7 @@ const sanitizeRouteParam = (value) => {
  * @returns {import('react').ReactElement} Add sponsor screen component
  */
 function AddSponsor({ navigation, route }) {
+  const keyboard = useKeyboardFrame();
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routeCmId = sanitizeRouteParam(route?.params?.cmId);
   const isMultisportFlow = !routeClubId && !!routeCmId;
@@ -317,7 +320,10 @@ function AddSponsor({ navigation, route }) {
                   },
                 }) => (
                   <Input
+                    // GUIDE-D-CORR TG-08 : un lien n'a ni majuscule (« Https:// ») ni correction.
+                    autoCapitalize="none"
                     autoComplete="url"
+                    autoCorrect={false}
                     enterKeyHint="done"
                     error={getFieldError({ errors: formErrors, fieldName: name })}
                     inputMode="url"
@@ -341,7 +347,9 @@ function AddSponsor({ navigation, route }) {
           </TourTarget>
         </ScrollView>
 
-        <View style={[Spaces.gap[4]]}>
+        {/* GUIDE-D-CORR TG-08 (g28-g31) : clavier ouvert, ces deux boutons remontaient sur le
+            champ « Lien vers le site » ; ils reviennent quand le clavier se ferme (« OK »). */}
+        <View style={[Spaces.gap[4], keyboard ? { display: 'none' } : null]}>
           <TourTarget id="sponsor.save">
             <Button
               disabled={!!Object.keys(formErrors).length || !logo || !currentTarget || isLoadingTarget}

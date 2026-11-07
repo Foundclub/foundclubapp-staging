@@ -42,6 +42,7 @@ import {
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
   getSubscriptionStatusMeta,
+  hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { scrollTutorialTargetIntoViewOnWeb } from '@/domains/tutorial/tutorialWebRuntime';
@@ -1613,11 +1614,14 @@ function HomeHubContent({ auth, navigation, route }) {
   // Badges d'offre informatifs sur les cartes du hub (handoff 12).
   // CORR-TEXTES (point 27) : un club que la Ville paie n'a rien à acheter ; un
   // badge « Offre Équipe / Offre Club » y fait croire au coach qu'il doit payer.
+  // GUIDE-D-CORR TG-21 : l'offre Club en cadeau (club pas encore vérifié, `CLUB_UNVERIFIED`)
+  // ouvre les mêmes droits ; les badges disaient « Offre Équipe / Club » à qui l'a déjà.
+  const hasClubOffer = hasActiveClubOffer(subscriptionAccessLevel);
   const teamCardPremiumScope = (clubCouvertParLaVille
-    || subscriptionAccessLevel === 'TEAM' || subscriptionAccessLevel === 'CLUB')
+    || subscriptionAccessLevel === 'TEAM' || hasClubOffer)
     ? undefined
     : /** @type {'team'} */ ('team');
-  const clubCardPremiumScope = (clubCouvertParLaVille || subscriptionAccessLevel === 'CLUB')
+  const clubCardPremiumScope = (clubCouvertParLaVille || hasClubOffer)
     ? undefined
     : /** @type {'club'} */ ('club');
 

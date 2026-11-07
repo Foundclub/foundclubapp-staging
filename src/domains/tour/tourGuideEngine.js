@@ -2,8 +2,8 @@
  * Règles pures du guide à missions (TUTOE, pack design_handoff_tutoriels,
  * 01_ARCHITECTURE §1-§2). Le TourContext s'en sert pour les profils
  * `version: 3` ; les profils v2 (joueur, dirigeant) gardent leur moteur.
- * @typedef {{ goto?: string; key?: string; meta?: Record<string, any>; not?: string;
- *   type: 'action' | 'interaction' | 'route'; when?: (ctx: any) => boolean;
+ * @typedef {{ commits?: boolean; goto?: string; key?: string; meta?: Record<string, any>;
+ *   not?: string; type: 'action' | 'interaction' | 'route'; when?: (ctx: any) => boolean;
  *   completes?: boolean }} TourAdvance
  * @typedef {{ id: string; locked: boolean; gaugeStep: number; title: string;
  *   estimatedSeconds?: number }} TourMission
