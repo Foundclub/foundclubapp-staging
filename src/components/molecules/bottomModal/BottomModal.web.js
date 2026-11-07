@@ -8,10 +8,15 @@ import {
   View,
 } from 'react-native';
 
+import { registerTourTarget } from '@/domains/tour/tourTargetRegistry';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
+import TourSheetContext, {
+  measureTourSheet,
+  TOUR_SHEET_TARGET,
+} from '@/components/molecules/tour/tourSheetContext';
 
 /** Les feuilles ouvertes, de la plus ancienne à celle du dessus (Échap ferme la dernière). */
 /** @type {Array<() => void>} */
@@ -111,6 +116,11 @@ function BottomModal({
     };
   }, [isVisible]);
 
+  // GUIDE-D-CORR TG-01/TG-02 : comme sur le téléphone, la feuille ouverte le dit au guide.
+  useEffect(() => (isVisible
+    ? registerTourTarget(TOUR_SHEET_TARGET, measureTourSheet)
+    : undefined), [isVisible]);
+
   if (!isVisible) {
     return null;
   }
@@ -149,7 +159,7 @@ function BottomModal({
       keyboardShouldPersistTaps="handled"
       style={[Alignments.fill, listeRemplit ? null : { maxHeight: isDialog ? 520 : 420 }]}
     >
-      {children}
+      <TourSheetContext.Provider value>{children}</TourSheetContext.Provider>
     </ScrollView>
   ) : (
     <View
@@ -160,7 +170,7 @@ function BottomModal({
         contentContainerStyle,
       ]}
     >
-      {children}
+      <TourSheetContext.Provider value>{children}</TourSheetContext.Provider>
     </View>
   );
 
@@ -209,7 +219,7 @@ function BottomModal({
       >
         {headerComponent ? (
           <View style={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[12]]}>
-            {headerComponent}
+            <TourSheetContext.Provider value>{headerComponent}</TourSheetContext.Provider>
           </View>
         ) : null}
         {content}
@@ -226,7 +236,7 @@ function BottomModal({
               },
             ]}
           >
-            {footerComponent}
+            <TourSheetContext.Provider value>{footerComponent}</TourSheetContext.Provider>
           </View>
         ) : null}
         {!hideCloseButton ? (

@@ -10,7 +10,10 @@
 // Plusieurs écrans d'une pile peuvent porter le même id (« Suivant » d'un
 // tunnel) : chaque ancre garde sa propre entrée, et la mesure prend la plus
 // récente des ancres actives (son écran a le focus, lu au moment de mesurer).
-/** @typedef {{ clipTo?: string; isActive?: () => boolean; measure: TourMeasure }} TourEntry */
+/**
+ * @typedef {{ clipTo?: string; inSheet?: boolean; isActive?: () => boolean;
+ *   measure: TourMeasure }} TourEntry
+ */
 /** @type {Map<string, TourEntry[]>} */
 const targets = new Map();
 /** @type {Set<() => void>} */
@@ -24,14 +27,17 @@ const notify = () => {
  * Dépose la mesure d’une ancre.
  * @param {string} id
  * @param {TourMeasure} measure
- * @param {{ clipTo?: string; isActive?: () => boolean }} [options] - `clipTo` :
- *   ancre de la zone visible qui la contient (ex. un ScrollView) ; la mesure y
+ * @param {{ clipTo?: string; inSheet?: boolean; isActive?: () => boolean }} [options] -
+ *   `clipTo` : ancre de la zone visible qui la contient (ex. un ScrollView) ; la mesure y
  *   est coupée. `isActive` : l'ancre compte-t-elle en ce moment (focus) ?
+ *   `inSheet` : l'ancre vit dans une feuille du bas (BottomModal), au-dessus de l'écran.
  * @returns {() => void} désinscription (ne retire que SA mesure)
  */
 export const registerTourTarget = (id, measure, options = {}) => {
   /** @type {TourEntry} */
-  const entry = { clipTo: options.clipTo, isActive: options.isActive, measure };
+  const entry = {
+    clipTo: options.clipTo, inSheet: options.inSheet, isActive: options.isActive, measure,
+  };
   targets.set(id, [...(targets.get(id) || []), entry]);
   notify();
   return () => {
@@ -124,6 +130,14 @@ export const measureTourTargetClipSide = async (id) => {
   if (rect.y < clip.y) return 'above';
   return rect.y + rect.height > clip.y + clip.height ? 'below' : null;
 };
+
+/**
+ * GUIDE-D-CORR TG-01/TG-02 : l'ancre vit-elle dans une feuille du bas ? Une feuille ouverte
+ * pendant le guide passe sous sa couche ; le guide ne se retire pas si sa cible y est.
+ * @param {string} id
+ * @returns {boolean}
+ */
+export const isTourTargetInSheet = (id) => Boolean(activeEntry(id)?.inSheet);
 
 /**
  * Prévient quand une ancre apparaît, part ou bouge.

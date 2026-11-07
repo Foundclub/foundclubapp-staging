@@ -18,6 +18,7 @@ import Svg, {
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { getTourProfile } from '@/domains/tour/tourCatalog';
 import {
+  isTourTargetInSheet,
   measureTourTarget,
   measureTourTargetClipSide,
   subscribeToTourTargets,
@@ -32,6 +33,7 @@ import loadTourTeamChoice from '@/components/molecules/tour/loadTourTeamChoice';
 import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import { TOUR_BUBBLE_SLOT_HEIGHT } from '@/components/molecules/tour/TourBubbleSlot';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
+import { TOUR_SHEET_TARGET } from '@/components/molecules/tour/tourSheetContext';
 import {
   bubbleRoom,
   clipAboveDock,
@@ -252,6 +254,7 @@ function TourGuideLayer() {
   const allTargetIds = isStepVisible
     ? [...new Set([
       SELECT_SHEET_ID,
+      TOUR_SHEET_TARGET,
       ...(currentStep.bubbleSlot ? [SLOT_ID, WIZARD_LIST_ID] : []),
       ...(currentStep.listScrolls ? [WIZARD_LIST_ID] : []),
       ...(currentStep.belowTargets || []),
@@ -444,8 +447,14 @@ function TourGuideLayer() {
   const isChoosingVariant = hasVariants && !isVariantWaitOver && !sheetGuide
     && ![...stepTargets, ...currentStep.variants.flatMap((/** @type {any} */ v) => v.targets || [])]
       .some((id) => rects[id]);
+  // GUIDE-D-CORR TG-01/TG-02 (tournée du 07/11, g05-g09, g24-g26) : une feuille du bas ouverte
+  // passe sous la couche (« Choisir depuis la galerie » sous le voile, ou sous la bulle). Le guide
+  // se retire le temps du choix, sauf si sa cible est dans la feuille (« Inviter », « Répéter »).
+  const isSheetOver = Boolean(rects[TOUR_SHEET_TARGET]) && !sheetGuide
+    && !variant.targets.some((id) => rects[id] && isTourTargetInSheet(id));
   // GUIDE-STORES : une liste de choix ouverte ; la bulle recouvrait sa recherche et sa croix.
-  const isHidden = (isStale && !isLost) || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
+  const isHidden = (isStale && !isLost) || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID])
+    || isSheetOver;
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
   // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
   // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
