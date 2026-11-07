@@ -9764,6 +9764,7 @@ export default {
       absent: 'Absents · {{count}}',
       pending: 'Sans réponse · {{count}}',
       present: 'Présents · {{count}}',
+      standby: 'Présents si besoin · {{count}}',
       title: 'RÉPONSES',
     },
     send: 'Envoyer la convocation',
@@ -18307,6 +18308,8 @@ export default {
     actions: {
       absent: 'Absent',
       present: 'Présent',
+      // CONVOC-HORS-LISTE-2 (Adel, 07/11, « 158 ») : le membre hors de la convocation publiée.
+      standby: 'Présent si besoin',
     },
     alerts: {
       error: {
@@ -18319,6 +18322,7 @@ export default {
     answer: {
       absent: 'Tu as répondu Absent',
       present: 'Tu as répondu Présent',
+      standby: 'Tu as répondu Présent si besoin',
     },
     // CORR-EVENEMENTS 120 : la convocation d'un match annulé.
     cancelled: {
@@ -18377,6 +18381,7 @@ export default {
     staff: {
       title: 'Staff',
     },
+    standbyHelp: 'Au cas où il manque un joueur, le coach pourra faire appel à toi.',
     title: 'Tu es convoqué',
     version: 'Version {{version}}',
   },

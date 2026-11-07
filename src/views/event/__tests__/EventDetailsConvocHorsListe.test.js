@@ -251,11 +251,18 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
 jest.mock('@/components/molecules/eventAnswerButtons/EventAnswerButtons', () => {
   const react = require('react');
   const rn = require('react-native');
-  return function EventAnswerButtonsDouble(/** @type {any} */ { notice }) {
+  return function EventAnswerButtonsDouble(/** @type {any} */ { isStandby, notice }) {
+    // CONVOC-HORS-LISTE-2 : `isStandby` (« Présent si besoin ») se lit a part, pour ne pas
+    // changer ce que les temoins du lot precedent lisent de la rangee.
     return react.createElement(
-      rn.Text,
+      rn.View,
       null,
-      notice ? `DOUBLURE_EventAnswerButtons AVIS:${notice}` : 'DOUBLURE_EventAnswerButtons',
+      react.createElement(
+        rn.Text,
+        null,
+        notice ? `DOUBLURE_EventAnswerButtons AVIS:${notice}` : 'DOUBLURE_EventAnswerButtons',
+      ),
+      isStandby ? react.createElement(rn.Text, null, 'DOUBLURE_SI_BESOIN') : null,
     );
   };
 });
@@ -555,5 +562,83 @@ describe('CONVOC-HORS-LISTE · TEMOIN 5 — 🔒 le coach ne le lit pas', () => 
     const root = monter({ auth: authPour('coach-1', true), event: matchSansLui() });
 
     expect(textesVisibles(root).join(' | ')).not.toContain(`AVIS:${AVIS}`);
+  });
+});
+
+// ==========================================================================
+// CONVOC-HORS-LISTE-2 (decision d'Adel du 07/11, « 158 »)
+//   2. la fiche dit « Présent si besoin » a ce meme joueur (`isStandby`), comme la carte ;
+//   4. match entre deux clubs ou seul l'ADVERSAIRE a publie : « Tu n'es pas dans la
+//      composition publiée. » ne s'affiche plus — la ligne ne regarde que SON equipe.
+// ==========================================================================
+const SI_BESOIN = 'DOUBLURE_SI_BESOIN';
+const PAS_DEDANS = 'Tu n’es pas dans la composition publiée.';
+const SEUL_L_ADVERSAIRE = {
+  ...CONVOCATION,
+  branches: [{
+    ...CONVOCATION.branches[0],
+    team: { documentId: 'team-adverse', name: 'Saint-Julien' },
+  }],
+};
+const matchContreUnAutreClub = () => ({
+  ...matchSansLui(),
+  invitedTeams: [{
+    club: { documentId: 'club-adverse' },
+    documentId: 'team-adverse',
+    name: 'Saint-Julien',
+    players: [{ documentId: 'adverse-1' }],
+    trainers: [{ documentId: 'coach-adverse' }],
+  }],
+});
+
+describe('CONVOC-HORS-LISTE-2 · 2 — la fiche dit « Présent si besoin »', () => {
+  test('non convoque, convocation de son equipe publiee : « si besoin »', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: matchSansLui() });
+
+    expect(textesVisibles(root)).toContain(SI_BESOIN);
+  });
+
+  test('🔒 convoque : jamais', () => {
+    const root = monter({ auth: authPour(JOUEUR), event: matchSansLui() });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+
+  test('🔒 convocation non publiee : jamais', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), convocation: null, event: matchSansLui() });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+
+  test('🔒 seule l adversaire a publie : jamais', () => {
+    const root = monter({
+      auth: authPour(SPECTATEUR), convocation: SEUL_L_ADVERSAIRE, event: matchContreUnAutreClub(),
+    });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+
+  test('🔒 le coach : jamais', () => {
+    const root = monter({ auth: authPour('coach-1', true), event: matchSansLui() });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+});
+
+describe('CONVOC-HORS-LISTE-2 · 4 — la ligne d etat ne regarde que l equipe du joueur', () => {
+  test('seul l adversaire a publie : « pas encore publiée »', () => {
+    const root = monter({
+      auth: authPour(SPECTATEUR), convocation: SEUL_L_ADVERSAIRE, event: matchContreUnAutreClub(),
+    });
+    const page = textesVisibles(root).join(' | ');
+
+    expect(page).not.toContain(PAS_DEDANS);
+    expect(page).toContain('La composition n’est pas encore publiée.');
+  });
+
+  test('🔒 sa propre equipe a publie sans lui : la ligne reste', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: matchContreUnAutreClub() });
+
+    expect(textesVisibles(root).join(' | ')).toContain(PAS_DEDANS);
   });
 });

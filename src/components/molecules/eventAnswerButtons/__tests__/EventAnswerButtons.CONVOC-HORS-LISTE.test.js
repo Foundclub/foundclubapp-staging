@@ -204,3 +204,44 @@ test('CONVOC-HORS-LISTE/6 🔒 — match fini : « faire appel a toi » n a plus
   expect(textsOf(tree)).not.toContain(AVIS);
   expect(titlesOf(tree)).toContain('eventList.actions.declareLatePresence');
 });
+
+// CONVOC-HORS-LISTE-2 (decision d Adel du 07/11, « 158 ») — pour ce meme joueur, la fiche
+// dit « Présent si besoin » au lieu de « Présent » (`isStandby`), comme la carte du fil.
+test('CONVOC-HORS-LISTE-2/1 — non convoque : « Présent si besoin » / Absent', () => {
+  mockUserData.mockReturnValue(joueur);
+
+  const tree = render({
+    event: buildEvent(), isStandby: true, notice: AVIS, ...handlers,
+  });
+
+  expect(textsOf(tree)).toContain(AVIS);
+  expect(titlesOf(tree)).toEqual(['playerConvocation.actions.standby', 'eventList.actions.absent']);
+});
+
+test('CONVOC-HORS-LISTE-2/2 — deja present : « present si besoin », pas « Je participe »', () => {
+  mockUserData.mockReturnValue(joueur);
+
+  const tree = render({
+    event: buildEvent({ participations: [{ documentId: PLAYER_ID }] }),
+    isStandby: true,
+    notice: AVIS,
+    onDeleteParticipation: () => {},
+    ...handlers,
+  });
+
+  expect(textsOf(tree)).toContain('playerConvocation.answer.standby');
+  expect(textsOf(tree)).not.toContain('eventList.info.alreadyJoined');
+  expect(titlesOf(tree)).toContain('eventDetails.actions.cancelResponse');
+});
+
+test('CONVOC-HORS-LISTE-2/3 🔒 — sans `isStandby`, deja present : « Je participe »', () => {
+  mockUserData.mockReturnValue(joueur);
+
+  const tree = render({
+    event: buildEvent({ participations: [{ documentId: PLAYER_ID }] }),
+    onDeleteParticipation: () => {},
+    ...handlers,
+  });
+
+  expect(textsOf(tree)).toContain('eventList.info.alreadyJoined');
+});

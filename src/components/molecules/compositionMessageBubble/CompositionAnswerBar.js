@@ -10,12 +10,13 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
+  estHorsDeSaConvocation,
   findPublishedBranchForTeam,
   getConvocationPlayerResponse,
   getViewerConvocationRole,
 } from '@/views/playerConvocation/playerConvocationUtils';
 
-import { useGetEventConvocation } from '@/services/event/eventQueries';
+import { useGetEvent, useGetEventConvocation } from '@/services/event/eventQueries';
 
 /**
  * BULLE (decision d'Adel du 29/09, « bulle A ») — LA CARTE « COMPOSITION
@@ -67,8 +68,20 @@ import { useGetEventConvocation } from '@/services/event/eventQueries';
  *   · la carte est DEPASSEE : sa version n'est plus celle publiee. C'est le
  *     choix le plus sur — repondre depuis une compo perimee, c'est repondre a
  *     une convocation qui n'existe plus ; la carte en cours, elle, repond.
+ *
+ * 🙋 CONVOC-HORS-LISTE-2 (decision d'Adel du 07/11, « 158 ») — LE JOUEUR DE L'EQUIPE QUE
+ * LA CONVOCATION PUBLIEE DE SON EQUIPE LAISSE DEHORS repond aussi (`standby`) : « Présent
+ * si besoin », au cas ou il manque un joueur. Memes portes que le convoque (reponses
+ * ouvertes, demande de reponse, version en cours), plus deux : il est JOUEUR de cette
+ * equipe sans l'entrainer (`isTeamPlayer`, lu par la carte), et la convocation publiee
+ * est celle de SON equipe (`estHorsDeSaConvocation`, correspondance stricte : celle de
+ * l'adversaire ne dit rien de lui). Sa reponse n'est pas dans la convocation (le serveur
+ * n'y range que les convoques) : `answer` vaut alors `pending`, la barre la lit dans
+ * l'evenement (`readOwnEventAnswer`).
  * @param {object} input
  * @param {any} [input.convocation] Charge de `GET /events/:id/convocation`.
+ * @param {boolean} [input.isTeamPlayer] Le lecteur joue dans l'equipe de la carte, sans
+ *   l'entrainer.
  * @param {number | string | null} [input.publishedVersion] Version portee par la carte.
  * @param {string} [input.teamId] Equipe de la carte.
  * @param {string} [input.viewerId] `documentId` du lecteur.
@@ -76,10 +89,13 @@ import { useGetEventConvocation } from '@/services/event/eventQueries';
  *   answer: 'present' | 'absent' | 'pending',
  *   canAnswer: boolean,
  *   currentVersion: number,
- * }} `currentVersion` : la version publiee selon la copie (0 = inconnue).
+ *   standby: boolean,
+ * }} `currentVersion` : la version publiee selon la copie (0 = inconnue) ; `standby` : il
+ *   repond « Présent si besoin ».
  */
 export const resolveCompositionAnswer = ({
   convocation = null,
+  isTeamPlayer = false,
   publishedVersion = null,
   teamId = '',
   viewerId = '',
@@ -88,12 +104,16 @@ export const resolveCompositionAnswer = ({
   const published = branch?.published;
   const versionEnCours = Number(published?.version) || 0;
 
-  const canAnswer = Boolean(published)
-    && Boolean(getViewerConvocationRole({ published }, viewerId))
+  const reponsesOuvertes = Boolean(published)
     && isRsvpEnabled(convocation?.event)
     && published.requireResponse !== false
     && versionEnCours > 0
     && versionEnCours === (Number(publishedVersion) || 0);
+  const estConvoque = Boolean(getViewerConvocationRole({ published }, viewerId));
+  const standby = reponsesOuvertes
+    && !estConvoque
+    && isTeamPlayer
+    && estHorsDeSaConvocation(convocation, teamId, viewerId);
 
   const response = getConvocationPlayerResponse(
     { responsesByPlayerId: branch?.responses?.byPlayerId },
@@ -101,16 +121,37 @@ export const resolveCompositionAnswer = ({
   );
 
   return {
-    answer: response === 'present' || response === 'absent' ? response : 'pending',
-    canAnswer,
+    answer: !standby && (response === 'present' || response === 'absent') ? response : 'pending',
+    canAnswer: reponsesOuvertes && (estConvoque || standby),
     currentVersion: versionEnCours,
+    standby,
   };
+};
+
+/**
+ * CONVOC-HORS-LISTE-2 — la reponse du lecteur, lue dans l'evenement (`GET /events/:id`), la
+ * ou `applyRsvp` l'ecrit : `missings` (absent) l'emporte sur `participations` (present),
+ * comme `buildConvocationResponses` au serveur.
+ * @param {any} event L'evenement, tel que la fiche le lit.
+ * @param {string} viewerId `documentId` (ou `id`) du lecteur.
+ * @returns {'present' | 'absent' | 'pending'}
+ */
+export const readOwnEventAnswer = (event, viewerId) => {
+  const wanted = String(viewerId || '').trim();
+  if (!wanted) return 'pending';
+  const contient = (/** @type {any} */ liste) => (Array.isArray(liste) ? liste : [])
+    .some((/** @type {any} */ personne) => [personne?.documentId, personne?.id]
+      .some((valeur) => String(valeur ?? '').trim() === wanted));
+  if (contient(event?.missings)) return 'absent';
+  if (contient(event?.participations)) return 'present';
+  return 'pending';
 };
 
 /**
  * Les boutons Present / Absent sous la carte, et la reponse deja donnee.
  * @param {object} props
  * @param {string} props.eventId
+ * @param {boolean} [props.isTeamPlayer] CONVOC-HORS-LISTE-2 : joueur de l'equipe, pas entraineur.
  * @param {number | string | null} [props.publishedVersion]
  * @param {string} [props.teamId]
  * @param {string} props.viewerId
@@ -118,6 +159,7 @@ export const resolveCompositionAnswer = ({
  */
 function CompositionAnswerBar({
   eventId,
+  isTeamPlayer = false,
   publishedVersion = null,
   teamId = '',
   viewerId,
@@ -138,12 +180,22 @@ function CompositionAnswerBar({
     submittingEventId,
   } = useEventAnswerMutations();
 
-  const { answer, canAnswer, currentVersion } = resolveCompositionAnswer({
+  const {
+    answer: convocationAnswer, canAnswer, currentVersion, standby,
+  } = resolveCompositionAnswer({
     convocation: convocationQuery.data,
+    isTeamPlayer,
     publishedVersion,
     teamId,
     viewerId,
   });
+  // CONVOC-HORS-LISTE-2 — la reponse du non-convoque vit dans l'evenement : la requete de la
+  // fiche (meme cle, invalidee par `answerEvent`), lue pour lui seul et canal a l'ecran.
+  const eventQuery = useGetEvent(eventId, {
+    enabled: Boolean(eventId) && standby && isFocused,
+    refetchOnMount: true,
+  });
+  const answer = standby ? readOwnEventAnswer(eventQuery.data, viewerId) : convocationAnswer;
 
   // 🔁 L'ENTRAINEUR REPUBLIE PENDANT QUE LE JOUEUR LIT LE CANAL : la carte
   // neuve arrive alors que la copie dit encore l'ancienne version (fraiche de
@@ -165,9 +217,15 @@ function CompositionAnswerBar({
   if (!canAnswer) return null;
 
   const pendingAnswer = submittingEventId === String(eventId) ? submittingAnswer : '';
-  const answerLabel = answer === 'present' || answer === 'absent'
-    ? t(`playerConvocation.answer.${answer}`)
-    : '';
+  let answerLabel = '';
+  if (answer === 'present') {
+    answerLabel = t(standby
+      ? 'playerConvocation.answer.standby'
+      : 'playerConvocation.answer.present');
+  } else if (answer === 'absent') {
+    answerLabel = t('playerConvocation.answer.absent');
+  }
+  const mutedText = { color: withAlpha(Colors.neutral00, 0.72) };
 
   const handleAnswer = (/** @type {'present' | 'absent'} */ nextAnswer) => {
     if (respondToEventRsvpMutation.isPending) return;
@@ -176,6 +234,12 @@ function CompositionAnswerBar({
 
   return (
     <View style={[styles.bar, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
+      {/* CONVOC-HORS-LISTE-2 — le message du lot CONVOC-HORS-LISTE, au-dessus de sa reponse. */}
+      {standby ? (
+        <Text style={[Fonts.p4, mutedText]}>
+          {t('eventDetails.convocation.notCalledUpCanAnswer')}
+        </Text>
+      ) : null}
       {answerLabel ? (
         <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{answerLabel}</Text>
       ) : null}
@@ -185,7 +249,9 @@ function CompositionAnswerBar({
           onPress={() => handleAnswer('present')}
           size="sm"
           style={styles.cta}
-          title={t('playerConvocation.actions.present')}
+          title={t(standby
+            ? 'playerConvocation.actions.standby'
+            : 'playerConvocation.actions.present')}
           variant={answer === 'present' ? 'Primary' : 'Secondary'}
         />
         <Button
@@ -197,6 +263,9 @@ function CompositionAnswerBar({
           variant={answer === 'absent' ? 'Primary' : 'Secondary'}
         />
       </View>
+      {standby ? (
+        <Text style={[Fonts.p4, mutedText]}>{t('playerConvocation.standbyHelp')}</Text>
+      ) : null}
     </View>
   );
 }
