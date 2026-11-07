@@ -96,6 +96,11 @@ beforeEach(() => {
       documentId: 'user-1',
       firstname: 'Sam',
       role: { name: 'President', type: 'president' },
+      // GUIDE-D-CORR TG-04 : le tunnel de B4 part d'une équipe qu'il encadre ; sans elle, le
+      // bonus est annoncé puis passé (TourContext.GUIDEDCORR).
+      trainedTeams: [{
+        club: { documentId: 'club-1' }, documentId: 'team-1', trainers: [{ documentId: 'user-1' }],
+      }],
     },
   };
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_name, handler) => {
