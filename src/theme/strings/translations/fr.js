@@ -111,6 +111,8 @@ export default {
       save: 'Ajouter le partenaire',
     },
     errors: {
+      logoGone: 'Le logo choisi n’est plus disponible sur ton téléphone. Choisis à nouveau le '
+        + 'logo, puis réessaie.',
       save: "Impossible d'enregistrer ce sponsor pour le moment.",
     },
     fields: {
@@ -25344,11 +25346,13 @@ export default {
         + 't’attend : dès qu’elle est acceptée, ta mission 1 est validée. En attendant, explore '
         + 'l’app librement.',
       'm1-wait-team-pill': 'En attente de ton équipe · Reprendre',
+      'm2-cancel': 'Partage fermé : rien n’est parti. Rouvre ce menu pour envoyer le lien.',
       'm2-card': 'Fais entrer tes joueur·se·s : ouvre ton équipe.',
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
-      'm2-sent': 'Le lien est parti ? Touche « C’est envoyé ». Sinon, rouvre ce menu pour le partager.',
-      'm2-sent-next': 'C’est envoyé',
+      'm2-pick-next': 'Continuer',
+      'm2-sent': 'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le partager.',
+      'm2-sent-next': 'Oui, c’est envoyé',
       'm2-share': 'Le plus simple : un lien d’invitation.',
       'm3-access': 'Pour un entraînement, garde Privé : ton équipe et tes invités.',
       'm3-card': 'Touche « Ajouter un événement ».',
@@ -25389,14 +25393,8 @@ export default {
         + 'cette étape ».',
       'm4-am7': 'Tout est bon ? Publie : les équipes de ta zone pourront te proposer un match.',
       'm4-back': 'Ta séance est en ligne. Dernière mission : retourne à l’accueil.',
-      'm4-card': 'Il te manque un·e joueur·se ? Les profils ouverts au recrutement sont ici.',
+      'm4-card': 'Propose un match amical : ouvre « Matchs amicaux ».',
       'm4-frc': 'À toi : crée ton annonce de match amical.',
-      'm4-read': 'Fais défiler pour voir les profils. Pour trouver le bon, utilise les filtres, puis ouvre une carte.',
-      'm4-tab-club': 'Les événements. Ouvre maintenant « Club ».',
-      'm4-tab-ev': 'Ouvre l’onglet Événement (le calendrier) : tu y trouves les tournois et '
-        + 'détections près de chez toi.',
-      'm4-tab-fr': 'Les clubs. Dernier onglet : « Matchs amicaux ».',
-      'm4-tab-fr-site': 'Les événements. Dernier onglet : « Matchs amicaux ».',
       missions: {
         b1: 'Voir qui vient et relancer',
         b2: 'Convoquer pour un match',

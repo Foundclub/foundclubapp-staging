@@ -9,8 +9,23 @@ import {
 const mockShare = jest.fn();
 const mockOpenURL = jest.fn(() => Promise.resolve());
 const mockPlatform = { OS: 'ios' };
+// GUIDE-E-CORR (TG-14) : sur Android et pour le SMS, le guide demande au RETOUR dans l'app.
+const mockAppState = { currentState: 'active', listeners: [] };
+const backInApp = () => {
+  ['background', 'active'].forEach((state) => {
+    mockAppState.currentState = state;
+    [...mockAppState.listeners].forEach((listener) => listener(state));
+  });
+};
 
 jest.mock('react-native', () => ({
+  AppState: {
+    addEventListener: (type, listener) => {
+      mockAppState.listeners.push(listener);
+      return { remove: () => { mockAppState.listeners = []; } };
+    },
+    get currentState() { return mockAppState.currentState; },
+  },
   Linking: { openURL: (...args) => mockOpenURL(...args) },
   Platform: mockPlatform,
   Share: { dismissedAction: 'dismissedAction', sharedAction: 'sharedAction' },
@@ -58,6 +73,7 @@ describe('repartage d’un lien existant', () => {
     mockPlatform.OS = 'android';
     mockShare.mockResolvedValue({ action: 'sharedAction' });
     await existing();
+    backInApp();
     expect(signals).toContain('interaction:team.invite.returned');
   });
 });
@@ -65,6 +81,7 @@ describe('repartage d’un lien existant', () => {
 describe('SMS d’invitation', () => {
   it('au retour, le guide demande : l’app ne sait pas si le SMS est parti', async () => {
     await openInviteSms({ message: 'Viens', phoneNumber: '0612345678', url: 'https://x' });
+    backInApp();
     expect(signals).toContain('interaction:team.invite.returned');
   });
 });
