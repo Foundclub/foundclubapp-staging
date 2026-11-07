@@ -21,6 +21,7 @@ const mockPaywall = jest.fn();
 const mockReplace = jest.fn();
 const mockGoBack = jest.fn();
 let mockParticipantsDuGroupe = /** @type {any[]} */ ([]);
+let mockMembresDuServeur = /** @type {any[] | null} */ (null);
 
 const MEMBRES = [
   {
@@ -116,7 +117,8 @@ jest.mock('@/domains/subscription/subscriptionDecision', () => ({
 }));
 jest.mock('@/services/client', () => ({
   __esModule: true,
-  default: { get: () => Promise.resolve({ data: MEMBRES }) },
+  // GUIDE-D-CORR TG-11 : la liste rendue par le serveur peut contenir le compte connecté.
+  default: { get: () => Promise.resolve({ data: mockMembresDuServeur || MEMBRES }) },
 }));
 jest.mock('@/services/chat/chatQueriesCompat', () => ({
   useGetChatById: () => ({ data: { participants: mockParticipantsDuGroupe } }),
@@ -448,5 +450,18 @@ describe('Guide Dirigeant·e, B3 : ce que l écran dit au guide', () => {
     mockTour = { currentStep: { checksMembers: true } };
     await monter();
     expect(cles()).not.toContain('conversation.members.few');
+  });
+
+  // GUIDE-D-CORR TG-11 (tournée du 07/11, b14-b16) : le dirigeant et son seul coach ; la liste
+  // du serveur contient le dirigeant lui-même, l'écran le retire, mais le compte le gardait : 2.
+  test('soi-même et un seul autre membre : pas assez pour un groupe, le guide le sait', async () => {
+    mockMembresDuServeur = [
+      { documentId: 'moi', firstname: 'Adel', lastname: 'F', role: { name: 'Dirigeant' } },
+      MEMBRES[0],
+    ];
+    mockTour = { currentStep: { checksMembers: true } };
+    await monter();
+    mockMembresDuServeur = null;
+    expect(cles()).toContain('conversation.members.few');
   });
 });

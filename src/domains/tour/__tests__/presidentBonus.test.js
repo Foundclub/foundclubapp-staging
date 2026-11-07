@@ -68,13 +68,14 @@ describe('B2 : le canal du club', () => {
     expect(step('b2-foot').completesMission).toBe(true);
   });
 
-  it('pas de canal (moins de 2 membres) : la bulle le dit, avec une sortie', () => {
+  // GUIDE-D-CORR TG-13 : la règle dite est celle de l'app, et le bonus est PASSÉ, pas fait.
+  it('pas de canal : la bulle dit comment il naît, avec une sortie', () => {
     expect(step('b2-canal').checksCanal).toBe(true);
     expect(idAt(send('b2-canal', { key: 'messaging.canal.absent', kind: 'interaction' }).index))
       .toBe('b2-none');
     expect(step('b2-none').nextLabel).toBeTruthy();
-    expect(step('b2-none').completesMission).toBe(true);
-    expect(step('b2-none').text).toMatch(/2 membres/);
+    expect(step('b2-none').skipsMission).toBe(true);
+    expect(step('b2-none').text).toMatch(/Contacter les entraîneur/);
     expect(step('b2-none').veil).toBe(false);
   });
 });

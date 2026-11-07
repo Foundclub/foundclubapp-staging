@@ -24476,8 +24476,8 @@ export default {
       'b2-dock': 'Open Messages.',
       'b2-foot': 'You write, they read: ideal for official announcements.',
       'b2-info': 'Your announcement channel: every club member receives it.',
-      'b2-none': 'Your channel doesn’t exist yet: it starts once your club has 2 members and a '
-        + 'team. It will appear here.',
+      'b2-none': 'Your channel is not open yet: it is created the first time you tap “Contact the '
+        + 'coaches”, in “Staff” on the club page. It will show up here.',
       'b3-back': 'Now create a group. Go back to messages: tap the arrow, or swipe from the left '
         + 'edge.',
       'b3-create': 'Create the group: it’s real, your members will see it.',
@@ -24486,7 +24486,8 @@ export default {
       'b3-name': 'Give it a name. In “Group permissions”, turn off “Send messages” so only admins '
         + 'can write.',
       'b3-new': 'Tap this button for a new conversation.',
-      'b3-sel': 'One member: a one-to-one chat. Several: a group. Tick at least 2, then Next.',
+      'b3-sel': 'One member ticked: a one-to-one chat, “Start”. For a group, tick at least 2, '
+        + 'then “Next”.',
       'b3-whisper': 'That’s a one-to-one chat. For a group, tick at least 2 people from the same '
         + 'button. Let’s continue.',
       'b4-cand': 'Your example ad is online. Applications arrive here, and you can turn it into a '
@@ -24533,7 +24534,8 @@ export default {
         yourTeam: 'Your team',
       },
       kicker: 'Club manager guide',
-      'm1-addr': 'The club’s address. “Place on the map” lets players find you near them.',
+      'm1-addr': 'The club address: tap the field, type it and pick it from the list. It puts '
+        + 'your club on the map, so players can find you near them.',
       'm1-card': 'It all starts here: open “Manage my club”.',
       'm1-create': 'Do your coaches create their own teams? And do you have to approve them?',
       'm1-deleg': 'Who accepts players into teams: only you, or each coach for their team.',

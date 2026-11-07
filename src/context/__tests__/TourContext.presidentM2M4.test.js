@@ -238,14 +238,16 @@ describe('M2 de bout en bout', () => {
 });
 
 describe('les bonus de bout en bout', () => {
-  it('B2 sans canal : la bulle dit pourquoi, le bonus finit au bouton, B3 suit', () => {
+  // GUIDE-D-CORR TG-13 : rien n'a été vu, le bonus est passé (PASSÉ au bilan), pas validé.
+  it('B2 sans canal : la bulle dit pourquoi, le bonus est passé au bouton, B3 suit', () => {
     start('president_b2');
     route(RouteNames.Chat);
     expect(stepId()).toBe('b2-canal');
     touch('messaging.canal.absent');
     expect(stepId()).toBe('b2-none');
     next();
-    expect(tour.reward).toMatchObject({ isBonus: true, missionId: 'president_b2' });
+    expect(tour.reward).toBeNull();
+    expect(tour.missionStatus.president_b2).toBe('skipped');
     flush();
     // Déjà sur les messages : l'étape du retour passe toute seule.
     expect(stepId()).toBe('b3-new');

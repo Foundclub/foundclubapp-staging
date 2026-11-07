@@ -81,14 +81,18 @@ export const B2_STEPS = [
   },
   {
     bubblePlacement: 'top',
-    completesMission: true,
     id: 'b2-none',
     missionId: 'president_b2',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: 'b2-dock',
+    // GUIDE-D-CORR TG-13 (tournée du 07/11, b13, b28) : rien n'a été vu, le bonus est PASSÉ au
+    // bilan, pas fait. Et la règle dite est celle de l'app : le canal se crée la première fois
+    // que le dirigeant touche « Contacter les entraîneur·e·s » (ClubDetails, `startClubChat`).
+    skipsMission: true,
     get text() {
-      return t('b2-none', 'Ton canal n’existe pas encore : il naît quand ton club compte 2 membres '
-        + 'et une équipe. Il apparaîtra ici.');
+      return t('b2-none', 'Ton canal n’est pas encore ouvert : il se crée la première fois que tu '
+        + 'touches « Contacter les entraîneur·e·s », dans « Staff » sur la fiche du club. Il '
+        + 'apparaîtra ici.');
     },
     veil: false,
     // Seulement par l'aiguillage de b2-canal.
@@ -136,9 +140,12 @@ export const B3_STEPS = [
     resumeFrom: 'b3-new',
     targets: ['conv-list', 'conv-next'],
     get text() {
+      // GUIDE-D-CORR TG-11 : le bouton s'appelle « Démarrer » pour un membre, « Suivant » pour
+      // plusieurs (NewConversation, MSG1A).
       return t(
         'b3-sel',
-        'Un membre : discussion à deux. Plusieurs : un groupe. Coche-en au moins 2, puis Suivant.',
+        'Un membre coché : discussion à deux, « Démarrer ». Pour un groupe, coche-en au moins 2, '
+          + 'puis « Suivant ».',
       );
     },
     veil: false,

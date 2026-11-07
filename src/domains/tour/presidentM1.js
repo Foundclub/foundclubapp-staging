@@ -119,9 +119,12 @@ const PART_INFOS = [
   )),
   editStep('m1-email', 'clubEdit.email', () => t('m1-email', 'L’email de contact du club.')),
   editStep('m1-phone', 'clubEdit.phone', () => t('m1-phone', 'Le téléphone du club.')),
+  // GUIDE-D-CORR TG-09 (tournée du 07/11, g15) : « Placer sur la carte » n'est pas à l'écran ; la
+  // bulle ne nomme que ce qu'on voit.
   editStep('m1-addr', 'clubEdit.address', () => t(
     'm1-addr',
-    'L’adresse du club. « Placer sur la carte » permet aux joueur·se·s de te trouver autour d’eux.',
+    'L’adresse du club : touche le champ, tape-la et choisis-la dans la liste. Elle place ton '
+      + 'club sur la carte, pour que les joueur·se·s te trouvent autour d’eux.',
   )),
   editStep('m1-deleg', 'clubEdit.delegation', () => t(
     'm1-deleg',

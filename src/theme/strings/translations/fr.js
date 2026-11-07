@@ -25538,8 +25538,9 @@ export default {
       'b2-dock': 'Ouvre les Messages.',
       'b2-foot': 'Toi tu écris, eux lisent : idéal pour les annonces officielles.',
       'b2-info': 'Ton canal d’annonce : tous les membres du club le reçoivent.',
-      'b2-none': 'Ton canal n’existe pas encore : il naît quand ton club compte 2 membres et une '
-        + 'équipe. Il apparaîtra ici.',
+      'b2-none': 'Ton canal n’est pas encore ouvert : il se crée la première fois que tu touches '
+        + '« Contacter les entraîneur·e·s », dans « Staff » sur la fiche du club. Il apparaîtra '
+        + 'ici.',
       'b3-back': 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou glisse '
         + 'ton doigt depuis le bord gauche.',
       'b3-create': 'Crée le groupe : il est réel, tes membres le verront.',
@@ -25548,8 +25549,8 @@ export default {
       'b3-name': 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
         + 'messages » pour que seuls les admins écrivent.',
       'b3-new': 'Touche ce bouton pour une nouvelle discussion.',
-      'b3-sel': 'Un membre : discussion à deux. Plusieurs : un groupe. Coche-en au moins 2, puis '
-        + 'Suivant.',
+      'b3-sel': 'Un membre coché : discussion à deux, « Démarrer ». Pour un groupe, coche-en au '
+        + 'moins 2, puis « Suivant ».',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
         + 'depuis le même bouton. On continue.',
       'b4-cand': 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et tu peux '
@@ -25597,8 +25598,8 @@ export default {
         yourTeam: 'Ton équipe',
       },
       kicker: 'Guide dirigeant·e',
-      'm1-addr': 'L’adresse du club. « Placer sur la carte » permet aux joueur·se·s de te trouver '
-        + 'autour d’eux.',
+      'm1-addr': 'L’adresse du club : touche le champ, tape-la et choisis-la dans la liste. Elle '
+        + 'place ton club sur la carte, pour que les joueur·se·s te trouvent autour d’eux.',
       'm1-card': 'Tout part d’ici : ouvre « Gérer mon club ».',
       'm1-create': 'Tes coachs créent-ils leurs équipes eux-mêmes ? Et dois-tu les valider ?',
       'm1-deleg': 'Qui accepte les joueur·se·s dans les équipes : toi seul·e, ou chaque coach '
