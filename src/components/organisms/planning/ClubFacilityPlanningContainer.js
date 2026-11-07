@@ -20,8 +20,6 @@ import PlanningFullscreenButton from '@/components/organisms/planning/PlanningFu
 import PlanningCalendarView from '@/components/organisms/planningCalendarView';
 import PlanningWeekTimelineView from '@/components/organisms/planningWeekTimelineView';
 
-import { useTour } from '@/context/useTour';
-
 import { RouteNames } from '@/navigation/routeNames';
 
 import { getClubPlanning } from '@/services/event/eventService';
@@ -41,6 +39,7 @@ import {
   normalizePlanningItems,
 } from '@/utils/planning/planningSlots';
 
+import { useTour } from '@/context/useTour';
 import useVueInitiale from '@/hooks/useVueInitiale';
 
 const getFacilityId = (facility) => facility?.documentId || facility?.id || null;
@@ -212,7 +211,7 @@ function ClubFacilityPlanningContainer({
   // Guide Dirigeant : l'exemple vit au rendu, le temps de ses étapes, et seulement sur un vide.
   const realEvents = planningScope === 'shared' ? sharedEvents : filteredClubEvents;
   const exampleFacility = displayedFacilities.find(
-    (facility) => getFacilityId(facility) === selectedFacilityId,
+    (/** @type {any} */ facility) => getFacilityId(facility) === selectedFacilityId,
   ) || displayedFacilities[0] || null;
   const displayedEvents = useMemo(() => (showsTourExamples && !realEvents.length
     ? normalizePlanningItems(examplePlanningEvents({ facility: exampleFacility }))

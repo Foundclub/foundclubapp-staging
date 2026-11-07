@@ -30,6 +30,7 @@ import useTheme from '@/theme/themeContext';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import loadTourTeamChoice from '@/components/molecules/tour/loadTourTeamChoice';
 import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
+import { TOUR_BUBBLE_SLOT_HEIGHT } from '@/components/molecules/tour/TourBubbleSlot';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
   bubbleRoom,
@@ -42,6 +43,7 @@ import {
   isOnScreen,
   isUnderHeader,
   placeBubble,
+  slotBubbleTop,
   stableHeight,
   toAbsoluteStyle,
   toCutout,
@@ -216,6 +218,7 @@ function TourGuideLayer() {
   // l'écran qui a ouvert l'étape, le voile tombe pour qu'on puisse corriger.
   const [route, setRoute] = useState(/** @type {string | null} */ (null));
   const routeRef = useRef(/** @type {string | null} */ (null));
+  const slotSeenOnStepRef = useRef(/** @type {string | null | undefined} */ (null));
   // G93 : le dernier refus de l'écran (offre), pour la bulle `refused` d'un sous-guide.
   const [refusalKey, setRefusalKey] = useState(/** @type {string | null} */ (null));
   useEffect(() => subscribeToGuidanceSignals((/** @type {any} */ signal) => {
@@ -482,18 +485,29 @@ function TourGuideLayer() {
   // Étape `bubbleSlot` : la bulle se pose dans la place que l'écran lui a gardée
   // sous son titre (tunnel équipe, composition), sinon comme avant.
   const slotRect = currentStep?.bubbleSlot && !sheetGuide && !isCompact ? rects[SLOT_ID] : null;
-  const slot = slotRect && isOnScreen(slotRect, width, height) ? slotRect : null;
+  // Recette L10 (l10-n8) : liste défilée, la mesure coupée par la liste n'est que la lamelle
+  // restante de la place ; la bulle s'y réduisait à son en-tête. Coupée ou partie, elle flotte
+  // sous l'en-tête.
+  const isSlotWhole = Boolean(slotRect) && isOnScreen(slotRect, width, height)
+    && slotRect.height >= TOUR_BUBBLE_SLOT_HEIGHT - 1;
+  const slot = isSlotWhole ? slotRect : null;
+  if (slotRect) slotSeenOnStepRef.current = currentStep?.id;
+  const isSlotCut = Boolean(!isSlotWhole && currentStep?.bubbleSlot && !isCompact && !sheetGuide
+    && slotSeenOnStepRef.current === currentStep?.id);
   const keyboardTop = keyboard ? keyboard.screenY - originRef.current.y : height;
   // Bas utile : la barre d'onglets flottante, sinon le bas sûr de l'écran.
   const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height, keyboardTop);
   const position = slot
     ? {
-      arrow: 'none', arrowX: 0, ...wideBubbleFrame(width), top: slot.y,
+      arrow: 'none',
+      arrowX: 0,
+      ...wideBubbleFrame(width),
+      top: slotBubbleTop(slot, wantedHeight, insets.top, headerBottom),
     }
     : placeBubble({
       bottomLimit,
       bubbleHeight: wantedHeight,
-      compact: isCompact,
+      compact: isCompact || isSlotCut,
       headerBottom,
       height,
       insetTop: insets.top,
@@ -508,7 +522,7 @@ function TourGuideLayer() {
     headerBottom,
     insetTop: insets.top,
     position,
-    primary: isCompact ? null : primary,
+    primary: isCompact || isSlotCut ? null : primary,
     slot,
   });
   // G93 (rejeu, captures m3 et m7) : bulle en haut, la tête de la cible est sous elle

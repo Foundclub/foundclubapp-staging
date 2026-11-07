@@ -46,6 +46,8 @@ let mockFacilityQuery;
 /** @type {any} */
 let mockUserData;
 
+let mockTour = {};
+jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
   useRoute: () => mockRoute,
@@ -225,7 +227,9 @@ const aplatirTexte = (enfants) => {
 const texteDe = (noeud) => noeud
   .findAllByType(Text)
   .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children))
-  .join(' ');
+  .join(' ')
+  // Les pastilles de type ont des espaces insécables (recette L11) : à l'écran, le même texte.
+  .replace(/\u00A0/g, ' ');
 
 /**
  * Appuie sur l'element pressable qui porte ce libelle.
@@ -345,7 +349,7 @@ const LIBELLES_ATTENDUS = [
  * @returns {string[]}
  */
 const pastillesDeType = () => {
-  const titres = mockButtonProps.map((props) => props.title);
+  const titres = mockButtonProps.map((props) => String(props.title).replace(/\u00A0/g, ' '));
   const debut = titres.lastIndexOf('Terrain');
   return debut < 0 ? [] : titres.slice(debut, debut + LIBELLES_ATTENDUS.length);
 };
@@ -403,5 +407,43 @@ describe('COLL1D — les types d installation des mairies (D28), dans les DEUX f
     expect(createFacility).toHaveBeenCalledWith(expect.objectContaining({
       type: 'Piste d\'athlétisme',
     }));
+  });
+});
+
+// Recette L11 (l11-p8f5, 360×640) : la puce « Terrain de rugby » montrait « Terrain de » ; Android
+// dessine le libellé un peu plus large que mesuré et son dernier mot passe sur une ligne invisible
+// (même cause que ROLES2 dans Button.js). Insécable, le libellé ne se coupe plus.
+describe('L11 bis — les pastilles de type ne perdent pas leur dernier mot', () => {
+  it('aucune espace sécable dans un libellé de pastille', async () => {
+    await monterEcran();
+    const titres = mockButtonProps.map((props) => String(props.title));
+    const debut = titres.findIndex((titre) => titre === 'Terrain');
+    const pastilles = titres.slice(debut, debut + LIBELLES_ATTENDUS.length);
+    expect(pastilles.filter((titre) => / /.test(titre))).toEqual([]);
+  });
+});
+
+// Recette L11 (l11-p8f5, 360×640) : à la bulle de l'adresse, le champ était sous la barre de
+// gestes ; il fallait deviner qu'il fallait défiler. Le formulaire l'amène à l'écran.
+describe('L11 bis — la bulle de l’adresse amène le champ à l’écran', () => {
+  afterEach(() => { mockTour = {}; });
+
+  it('étape de l’adresse : la liste défile jusqu’au champ', async () => {
+    mockTour = { currentStep: { targets: ['facility.field.type'] }, tourStatus: 'active' };
+    const arbre = await monterEcran();
+    const liste = arbre.root.findAll((noeud) => typeof noeud.props?.scrollTo === 'function'
+      || (noeud.instance && typeof noeud.instance.scrollTo === 'function'))[0];
+    const scrollTo = jest.fn();
+    liste.instance.scrollTo = scrollTo;
+    const posees = (id) => arbre.root.findAll((noeud) => noeud.props?.testID === id
+      && typeof noeud.props.onLayout === 'function')[0];
+    await act(async () => {
+      posees('facility.champs').props.onLayout({ nativeEvent: { layout: { y: 100 } } });
+      posees('facility.adresse.cadre').props.onLayout({ nativeEvent: { layout: { y: 400 } } });
+    });
+    expect(scrollTo).not.toHaveBeenCalled();
+    mockTour = { currentStep: { targets: ['facility.address'] }, tourStatus: 'active' };
+    await act(async () => { arbre.update(<FacilityForm />); });
+    expect(scrollTo).toHaveBeenCalledWith({ animated: true, y: 484 });
   });
 });

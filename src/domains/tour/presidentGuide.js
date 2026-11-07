@@ -56,6 +56,7 @@ const FULL_SCREEN_TEXTS = {
   'palier.continue': 'Continuer',
   'palier.later': 'Plus tard',
   'palier.laterHint': 'Plus tard ? Les bonus t’attendent dans Mon compte › Guide dirigeant·e.',
+  'palier.skipped': 'Passée',
   'palier.subtitle': '{{count}} missions sur {{count}}, l’essentiel est fait.',
   'palier.subtitlePartial': '{{done}} missions sur {{total}} : les autres attendent que l’app te '
     + 'le permette.',
@@ -97,7 +98,7 @@ export const PRESIDENT_GUIDE = Object.freeze({
     created?.['facility.created']
       && text('tourCatalog.president.close.facility', 'Installation créée'),
     created?.['club.poster.shared']
-      && text('tourCatalog.president.close.poster', 'Affiche partagée'),
+      && text('tourCatalog.president.close.poster', 'Affiche prête à partager'),
     (created?.['staff.invited'] || created?.['staff.linked'])
       && text('tourCatalog.president.close.coach', 'Coach ajouté au club'),
     created?.['team.created']
@@ -109,6 +110,19 @@ export const PRESIDENT_GUIDE = Object.freeze({
     created?.['conversation.group.created']
       && text('tourCatalog.president.close.group', 'Groupe créé'),
   ].filter(Boolean),
+  /**
+   * Décision 5 : coach et partenaire se passent, la jauge va quand même à 100 % ; le bilan dit ce
+   * qui reste à faire.
+   * @param {(key: string, ...args: any[]) => string} text - `t` de l'écran.
+   * @param {string[]} [skipped] - Les parties passées.
+   * @returns {string[]} Lignes.
+   */
+  closingTodoLines: (text, skipped = []) => /** @type {string[]} */ ([
+    skipped.includes('coach')
+      && text('tourCatalog.president.close.todoCoach', 'À faire : ton coach'),
+    skipped.includes('partners')
+      && text('tourCatalog.president.close.todoPartner', 'À faire : ton partenaire'),
+  ].filter(Boolean)),
   /**
    * Décision 1 : sans droit ouvert, l'achat est proposé en fin de guide ; rien n'est forcé.
    * @param {{ hasClubPlan?: boolean }} [flags] - Situation au départ.

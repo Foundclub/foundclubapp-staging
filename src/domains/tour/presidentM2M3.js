@@ -258,9 +258,9 @@ const M3_TUNNEL = teamWizardSteps({
       'Cherche le sport et touche-le : tu passes directement à l’étape suivante.',
     ),
     tw5: () => t('tw5', 'Touche la catégorie d’âge.'),
-    tw6: () => t('tw6', 'Touche le niveau de compétition, ou Suivant pour continuer sans.'),
-    // Vrai aussi si M2 a été passée : il n'y a alors que toi dans la liste.
-    tw7: () => t('tw7', 'Coche qui gérera l’équipe : toi, ou le coach que tu viens d’ajouter.'),
+    tw6: () => t('tw6', 'Touche le niveau de compétition, ou « Continuer sans niveau ».'),
+    // Vrai aussi si M2 a été passée (recette L11) : il n'y a alors que toi dans la liste.
+    tw7: () => t('tw7', 'Coche qui gérera l’équipe : toi, ou un coach du club.'),
     tw8: () => t('tw8', 'Tout est bon ? Crée l’équipe pour de vrai.'),
   },
 }).map((step) => (step.id === 'tw8' ? extendStep(step, { listScrolls: true }) : step));
@@ -271,6 +271,9 @@ const M3_STEPS = [
     advanceOn: [
       { key: 'club.section.closed', type: 'interaction' },
       { not: RouteNames.Club, type: 'route' },
+      // Recette L11 (l11-r2-m3a) : Staff fermé pendant le bandeau de M2, son signal est perdu ;
+      // déjà sur la fiche, on ouvre « Nos équipes » : M3 suit.
+      { goto: 'm3-create', key: 'club.section.teams', type: 'interaction' },
     ],
     id: 'm2-back',
     missionId: 'president_m3',

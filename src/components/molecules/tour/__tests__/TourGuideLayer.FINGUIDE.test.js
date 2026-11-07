@@ -185,6 +185,28 @@ describe('point 3 — clavier ouvert dans le tunnel équipe', () => {
     expect(textsOf(tree).join(' ')).toMatch(/Donne un nom/);
   });
 
+  // Recette L10 (l10-n8) : le clavier fermé, la liste reste défilée. La mesure de la place est
+  // coupée par la liste, il en reste 41 pt, et la bulle s'y réduisait à son en-tête.
+  it('place coupée par la liste : la bulle garde sa consigne et son en-tête', async () => {
+    WIZARD_RECTS();
+    mountTarget('tour.bubbleSlot', { ...SLOT, height: 41, y: 174 });
+    mountTarget('teamWizard.field', {
+      height: 120, width: 361, x: 16, y: 234,
+    });
+    mockTour = activeTour(step('tw1'));
+    const tree = await renderLayer();
+    expect(styleOf(hostBubbleOf(tree)).maxHeight).toBeGreaterThan(112);
+    expect(textsOf(tree).join(' ')).toMatch(/Mission 1\/4/);
+    expect(textsOf(tree).join(' ')).toMatch(/Donne un nom/);
+  });
+
+  it('témoin : place entière, la bulle y reste', async () => {
+    WIZARD_RECTS();
+    mockTour = activeTour(step('tw1'));
+    const tree = await renderLayer();
+    expect(styleOf(hostBubbleOf(tree)).maxHeight).toBe(SLOT.height);
+  });
+
   it('clavier ouvert : la bulle ne descend jamais sous le haut du clavier', async () => {
     WIZARD_RECTS();
     mockTour = activeTour(step('tw1'));

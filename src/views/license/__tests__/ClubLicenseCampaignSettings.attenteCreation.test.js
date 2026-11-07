@@ -390,6 +390,11 @@ describe('T03 — le modele a telecharger ne rallonge que ceux qui en posent un'
 /** Étape du guide lue par l'écran. */
 let mockTour = {};
 jest.mock('@/context/useTour', () => ({ useTour: () => mockTour }));
+const mockCampagneExemple = () => null;
+jest.mock('@/components/molecules/tour/TourCampagneExemple', () => ({
+  __esModule: true,
+  get default() { return mockCampagneExemple; },
+}));
 
 describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', () => {
   /** @type {any[]} */
@@ -421,6 +426,27 @@ describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', ()
     expect(uploadLicenseDocumentRequestTemplate).not.toHaveBeenCalled();
     expect(upsertLicenseDocumentRequest).not.toHaveBeenCalled();
     expect(cles()).toContain('licenseCampaign.open.example');
+  });
+
+  it('« 80- B » : à b1-camp, la campagne d exemple remplace le récap, rien ne part', async () => {
+    mockTour = SIMULATION;
+    const arbre = await monterSurLaDerniereEtape();
+    mockTour = {
+      currentStep: { campaignExample: true, simulatesCampaign: true },
+      tourStatus: 'active',
+    };
+    await act(async () => {
+      arbre.update(
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { campaign: campagneDeDepart, clubId: 'club-T03' } }}
+        />,
+      );
+    });
+    expect(arbre.root.findAllByType(mockCampagneExemple)).toHaveLength(1);
+    expect(arbre.root.findByType(mockCampagneExemple).props.name).toBeTruthy();
+    expect(mockJournalReseau).toEqual([]);
+    arbre.unmount();
   });
 
   it('guide en pause ou hors guide : la vraie campagne part, comme avant', async () => {
@@ -465,10 +491,19 @@ describe('Guide Dirigeant·e, B1 : la campagne ne part pas pendant le bonus', ()
 // Recette L10 : « Prix par défaut » restait à zéro, puis « Montant obligatoire ». Le champ partait
 // de la VALEUR « 0,00 » : un chiffre tapé au bout donnait « 0,002 », ramené à « 0,00 » par la
 // limite de 2 décimales. Le témoin tape comme un clavier : la valeur affichée, plus la touche.
+const C2 = { id: 'c2', simulatesCampaign: true };
 describe('recette L10 — le montant saisi arrive jusqu à la validation', () => {
-  afterEach(() => { jest.restoreAllMocks(); });
+  afterEach(() => {
+    mockTour = {};
+    jest.restoreAllMocks();
+  });
 
-  it('250 reste dans le champ, et Suivant passe', async () => {
+  it.each([
+    ['hors du guide', { currentStep: null, tourStatus: null }],
+    ['guide actif', { currentStep: C2, tourStatus: 'active' }],
+    ['guide en pause', { currentStep: C2, tourStatus: 'paused' }],
+  ])('%s : 250 reste dans le champ, et Suivant passe', async (_cas, etat) => {
+    mockTour = etat;
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     /** @type {any} */
     let arbre;
@@ -491,6 +526,84 @@ describe('recette L10 — le montant saisi arrive jusqu à la validation', () =>
     await act(async () => { propsDuTunnel.onNext(); });
     expect(alerte).not.toHaveBeenCalled();
     expect(propsDuTunnel.stepIndex).toBe(etape + 1);
+    arbre.unmount();
+  }, 30000);
+});
+
+// Recette L11 : sur l'écran d'exemple de B1, le retour Android reculait le tunnel en dessous, sans
+// rien changer à l'écran. Il quitte maintenant l'écran, comme sur B4 : le guide dit qu'on l'a
+// quitté.
+describe('recette L11 — retour sur la campagne d exemple', () => {
+  afterEach(() => { mockTour = {}; });
+
+  const retour = () => {
+    const appels = navigationFigee.addListener.mock.calls.filter(([nom]) => nom === 'beforeRemove');
+    const event = { data: { action: { type: 'GO_BACK' } }, preventDefault: jest.fn() };
+    act(() => { appels[appels.length - 1][1](event); });
+    return event;
+  };
+
+  it.each([
+    ['exemple affiché : l écran se quitte', true, 0],
+    ['témoin : tunnel en cours, le retour recule d une étape', false, 1],
+  ])('%s', async (_cas, exemple, empeche) => {
+    navigationFigee.addListener.mockClear();
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
+      );
+    });
+    await act(async () => { propsDuTunnel.onSkip(); });
+    await act(async () => { propsDuTunnel.onSkip(); });
+    mockTour = {
+      currentStep: { campaignExample: exemple, id: 'b1-camp', simulatesCampaign: true },
+      tourStatus: 'active',
+    };
+    await act(async () => {
+      arbre.update(
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
+      );
+    });
+    expect(retour().preventDefault).toHaveBeenCalledTimes(empeche);
+    arbre.unmount();
+  }, 30000);
+});
+
+// Recette L11 (l11-b1x6) : au retour 2/6 → 1/6, le relevé d'écran disait le nom « vide, indice =
+// nom par défaut ». La capture le montre écrit en blanc, couleur d'une valeur : valeur et indice
+// portent le même texte, et le relevé ne sait pas les distinguer. Le témoin lit la valeur.
+describe('recette L11 — le nom de la campagne revient au retour sur 1/6', () => {
+  afterEach(() => { mockTour = {}; });
+
+  it('nom pré-rempli à 1/6, toujours là après 2/6 et retour', async () => {
+    mockTour = { currentStep: { id: 'c1', simulatesCampaign: true }, tourStatus: 'active' };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <ClubLicenseCampaignSettings
+          navigation={navigationFigee}
+          route={{ params: { clubId: 'c' } }}
+        />,
+      );
+    });
+    const nom = () => arbre.root.findAllByType(TextInput)
+      .find((noeud) => /^Cotisation licences/.test(String(noeud.props.placeholder)));
+    expect(propsDuTunnel.stepIndex).toBe(1);
+    expect(nom().props.value).toMatch(/^Cotisation licences \d{4}\/\d{4}$/);
+    await act(async () => { propsDuTunnel.onNext(); });
+    expect(propsDuTunnel.stepIndex).toBe(2);
+    await act(async () => { propsDuTunnel.onBack(); });
+    expect(propsDuTunnel.stepIndex).toBe(1);
+    expect(nom().props.value).toMatch(/^Cotisation licences \d{4}\/\d{4}$/);
     arbre.unmount();
   }, 30000);
 });

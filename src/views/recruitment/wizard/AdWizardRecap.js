@@ -15,6 +15,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourAnnonceExemple from '@/components/molecules/tour/TourAnnonceExemple';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
@@ -577,6 +578,22 @@ function AdWizardRecap({ navigation }) {
       setIsSubmitting(false);
     }
   };
+
+  // Guide Dirigeant·e, fin de B4 (« 80- B ») : l'annonce d'exemple, le temps de l'étape.
+  if (isAdSimulated && tourStep?.adExample) {
+    return (
+      <TourAnnonceExemple
+        address={displayAddress}
+        categoryName={state.category?.name}
+        club={state.team?.club}
+        description={state.description}
+        levelName={state.minLevel?.name}
+        positionLabel={isCoachAd ? coachRoleLabel : state.positions[0]?.name}
+        sectionName={state.section?.name}
+        teamName={state.team?.name}
+      />
+    );
+  }
 
   return (
     <>

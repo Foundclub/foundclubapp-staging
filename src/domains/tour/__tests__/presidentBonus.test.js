@@ -144,7 +144,7 @@ describe('B5 : rechercher', () => {
 describe('B4 : recruter, rien n est publié', () => {
   it('le chemin, puis le tunnel de l app, Validation comprise', () => {
     expect(playedOf('president_b4')).toEqual(
-      ['b4-dock', 'b4-card', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a-stop'],
+      ['b4-dock', 'b4-card', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'b4-cand'],
     );
     expect(step('b4-card').targets).toEqual(['home.card.manage-add-ad']);
     expect(idAt(send('a5', { key: RouteNames.AdWizardValidation, kind: 'route' }).index))
@@ -174,17 +174,22 @@ describe('B4 : recruter, rien n est publié', () => {
 
   it('arrêt au récap, puis une bulle (décision 8, un seul réglage)', () => {
     expect(idAt(send('a7', { key: 'ad.publish.example', kind: 'interaction' }).index))
-      .toBe('a-stop');
-    expect(step('a-stop').completesMission).toBe(true);
-    expect(step('a-stop').nextLabel).toBeTruthy();
-    expect(step('a7').completesMission).toBe(false);
+      .toBe('b4-cand');
+    // Décision « 80- B » : l'annonce d'exemple EN LIGNE, à lire, puis « Compris ».
+    expect(step('b4-cand').adExample).toBe(true);
+    expect(step('b4-cand').simulatesAd).toBe(true);
+    expect(step('b4-cand').lookOnly).toBe(true);
+    expect(step('b4-cand').targets).toEqual(['ad-cand', 'ad-poster']);
+    expect(step('b4-cand').completesMission).toBe(true);
+    expect(step('b4-cand').nextLabel).toBeTruthy();
+    expect(step('a7').completesMission).toBeFalsy();
   });
 });
 
 describe('B1 : campagne de cotisation, rien n est envoyé', () => {
   it('le chemin, puis les 6 écrans du tunnel, et l arrêt au récap', () => {
     expect(playedOf('president_b1')).toEqual(
-      ['b1-card', 'b1-sum', 'b1-new', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c-stop'],
+      ['b1-card', 'b1-sum', 'b1-new', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'b1-open', 'b1-camp'],
     );
     expect(profile.bonusFromMission).toBe('president_b1');
     stepsOf('president_b1').forEach((one) => expect(one.simulatesCampaign).toBe(true));
@@ -211,10 +216,19 @@ describe('B1 : campagne de cotisation, rien n est envoyé', () => {
 
   it('arrêt au récap, puis une bulle (décision 8, un seul réglage)', () => {
     expect(idAt(send('c6', { key: 'licenseCampaign.open.example', kind: 'interaction' }).index))
-      .toBe('c-stop');
-    expect(step('c6').completesMission).toBe(false);
+      .toBe('b1-open');
+    expect(step('c6').completesMission).toBeFalsy();
     expect(step('c6').listScrolls).toBe(true);
-    expect(step('c-stop').completesMission).toBe(true);
-    expect(step('c-stop').nextLabel).toBeTruthy();
+    // Décision « 80- B » : « Campagne ouverte » sans alerte native, puis la campagne d'exemple.
+    expect(step('b1-open').simulatesCampaign).toBe(true);
+    expect(step('b1-open').campaignExample).toBeFalsy();
+    expect(step('b1-open').completesMission).toBeFalsy();
+    expect(step('b1-camp').campaignExample).toBe(true);
+    expect(step('b1-camp').simulatesCampaign).toBe(true);
+    expect(step('b1-camp').targets).toEqual(['camp-list', 'camp-relance']);
+    // Pas `lookOnly` : « A payé » et « Relancer » se touchent, en local.
+    expect(step('b1-camp').lookOnly).toBeFalsy();
+    expect(step('b1-camp').completesMission).toBe(true);
+    expect(step('b1-camp').nextLabel).toBeTruthy();
   });
 });

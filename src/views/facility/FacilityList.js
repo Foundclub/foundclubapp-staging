@@ -20,11 +20,11 @@ import {
   View,
 } from 'react-native';
 
-import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useAuth from '@/domains/auth/useAuth';
 import { phraseCreneauxEtSeances } from '@/domains/collectivite/collectiviteAccueil';
 import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { closuresOfBanner } from '@/domains/facilityClosure/facilityClosureDisplay';
+import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import {
   clubSlotParts,
   groupClubInstallations,
@@ -262,6 +262,16 @@ function FacilityList() {
     }));
   }, [facilityContext, isCollectiviteMode]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
+  // Guide Dirigeant (recette L11) : le club a déjà son installation, il n'en crée pas une 2ᵉ.
+  // Seules les siennes comptent : le gymnase de la Ville n'est pas à lui.
+  const ownFacility = isCollectiviteMode || !contextClubId
+    ? null
+    : facilities.find((/** @type {any} */ facility) => !facility?.isShared) || null;
+  const ownFacilityId = ownFacility ? String(ownFacility.documentId || ownFacility.id) : null;
+  // Train 5 : avant « place offerte prise », pour que le guide aille au planning.
+  useEffect(() => {
+    if (ownFacilityId) emitGuidanceAction('facility.existing', { facilityId: ownFacilityId });
+  }, [ownFacilityId]);
   // GUIDE-D-QUOTA-CLUB : la place offerte du club déjà prise, le guide le dit avant le formulaire.
   // Seules les installations À LUI comptent : le gymnase de la Ville ne prend pas sa place.
   const isFreeFacilityTaken = !isCollectiviteMode && Boolean(contextClubId) && isClubFreeSlotTaken(

@@ -173,6 +173,10 @@ export function TourProvider({ children }) {
   );
 
   const persist = useCallback((/** @type {any} */ nextState) => {
+    // Recette L11 : deux signaux d'un même geste (« Partager » : l'action, puis le retour) arrivent
+    // avant le rendu ; le 2ᵉ relisait l'état d'avant le 1ᵉʳ et l'effaçait (affiche hors du bilan).
+    // Chaque état posé est enregistré ici : le signal suivant lit celui-là.
+    tourStateRef.current = nextState;
     if (!userId) return;
     // La visite « sans rien créer » ne touche jamais la progression gardée.
     if (nextState?.review || (!nextState && tourStateRef.current?.review)) return;
@@ -745,6 +749,19 @@ export function TourProvider({ children }) {
       return;
     }
     const step = profile.steps[current.stepIndex];
+    // L'écran de l'étape se rouvre tel quel : rien à refaire (B4, annonce d'exemple).
+    if (step?.returnTarget) {
+      // L'écran rouvert est celui de l'étape : y arriver ne ramène pas à l'étape d'avant (L11).
+      const top = historyRef.current[historyRef.current.length - 1];
+      const params = typeof step.returnTarget.params === 'function'
+        ? step.returnTarget.params(guideContext(current))
+        : step.returnTarget.params;
+      if (top?.index === current.stepIndex) {
+        top.route = params?.screen || step.returnTarget.routeName;
+      }
+      navigateToTarget(step.returnTarget, guideContext(current));
+      return;
+    }
     const from = step?.resumeFrom ? indexOfStep(profile, step.resumeFrom) : -1;
     const wanted = from === -1 ? current.stepIndex : from;
     const index = isStepAvailable(profile.steps[wanted], guideContext(current))
@@ -765,6 +782,9 @@ export function TourProvider({ children }) {
     const history = historyRef.current;
     const top = history[history.length - 1];
     if (!top || top.index !== current.stepIndex) return;
+    // Recette L11 : un écran d'exemple quitté ne ramène pas en arrière ; la bulle dit qu'on l'a
+    // quitté, et « Reprendre » le rouvre (`returnTarget`).
+    if (getTourProfile(current.profileKey)?.steps?.[current.stepIndex]?.returnTarget) return;
     // Écran de l'étape encore inconnu (départ, reprise) : c'est le premier vu.
     if (!top.route) top.route = routeKey;
     if (top.route === routeKey) return;
@@ -961,6 +981,7 @@ export function TourProvider({ children }) {
     reward: tourState?.reward || null,
     skipBlockedMission,
     skipMission,
+    skippedSubMissions: tourState?.skippedSubMissions || [],
     skipSubMission,
     startTour,
     stepIndex: Number(tourState?.stepIndex || 0),

@@ -228,3 +228,27 @@ jest.mock(
   '@/components/organisms/planning/PlanningDesInstallations',
   () => function PlanningDesInstallationsDouble() { return null; },
 );
+
+// Recette L11 (l11-m1g1) : le guide exigeait une 2ᵉ installation. L'écran dit au guide que le club
+// a déjà la sienne ; celles de la Ville ne comptent pas.
+describe('guide Dirigeant : le club a déjà son installation', () => {
+  const signauxDe = (/** @type {any[]} */ installations) => {
+    const { subscribeToGuidanceSignals } = jest.requireActual('@/domains/guidance/guidanceRuntime');
+    /** @type {any[]} */
+    const signaux = [];
+    const arreter = subscribeToGuidanceSignals((/** @type {any} */ s) => signaux.push(s));
+    avecInstallations(installations);
+    rendre();
+    arreter();
+    return signaux.filter((/** @type {any} */ s) => s.key === 'facility.existing');
+  };
+
+  it('une installation du club : le signal porte son identifiant', () => {
+    const [signal] = signauxDe([SALLE]);
+    expect(signal?.facilityId).toBe('salle-annexe');
+  });
+
+  it('témoin : seulement le gymnase de la Ville, aucun signal', () => {
+    expect(signauxDe([DOJO])).toHaveLength(0);
+  });
+});

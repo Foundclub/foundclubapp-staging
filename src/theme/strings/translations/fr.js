@@ -25526,8 +25526,6 @@ export default {
       title: 'Mon profil',
     },
     president: {
-      'a-stop': 'Rien n’est parti. Une vraie annonce passe en ligne, et les candidatures arrivent '
-        + 'sur sa fiche, avec une affiche à partager.',
       a1: 'Tu recrutes des joueur·se·s ou un coach ?',
       a2: 'L’équipe qui recrute.',
       a3: 'Active le poste qui te manque (au foot, par exemple « Ailier gauche »), puis Suivant.',
@@ -25537,9 +25535,12 @@ export default {
       a5v: 'Cette annonce a une validation : choisis comment, puis Suivant.',
       a6: 'Facultatif : les idées à inclure t’aident. Tu peux passer.',
       a7: 'Relis ton annonce, puis touche le bouton : simulation, rien ne sera publié.',
+      'b1-camp': 'Touche « A payé » quand un membre règle en espèces, ou « Relancer » pour lui '
+        + 'envoyer un rappel.',
       'b1-card': 'Les cotisations du club se gèrent ici. Ouvre-les.',
       'b1-new': 'Lance une campagne. C’est une simulation : rien ne sera envoyé.',
       'b1-new-setup': 'Touche « Continuer ». C’est une simulation : rien ne sera envoyé.',
+      'b1-open': 'Ta campagne est ouverte : les membres concernés sont ajoutés automatiquement.',
       'b1-sum': 'En un coup d’œil : ce qui est encaissé, ce qui reste, les retards.',
       'b1-sum-new': 'Ton club n’a pas encore de campagne : tout part d’ici. Ce résumé se remplira '
         + 'avec la première.',
@@ -25561,6 +25562,8 @@ export default {
         + 'Suivant.',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
         + 'depuis le même bouton. On continue.',
+      'b4-cand': 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et tu peux '
+        + 'en faire une affiche à partager.',
       'b4-card': 'Ouvre « Recruter ». C’est une simulation : rien ne sera publié.',
       'b4-dock': 'Bonus suivant : recruter. Retourne à l’accueil.',
       'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
@@ -25570,8 +25573,6 @@ export default {
       'b5-pr': 'Profils : les joueur·se·s et coachs ouverts au recrutement.',
       'b5-re': 'Réservations : les créneaux de terrains à réserver près de toi.',
       bonusDetail: 'Cotisation, canal, groupe, recrutement, recherche',
-      'c-stop': 'Rien n’est parti. Une vraie campagne ajoute les membres concernés, et tu suis '
-        + 'ensuite qui a payé dans les cotisations.',
       c1: 'Choisis le type : le nom se remplit tout seul. Puis la période, et Suivant.',
       c2: 'Le montant par membre. Un tarif différent ? Ajoute une règle dans cet écran. Puis '
         + 'Suivant.',
@@ -25591,13 +25592,15 @@ export default {
         group: 'Groupe créé',
         offer: 'Voir l’offre Club',
         partner: 'Partenaire ajouté',
-        poster: 'Affiche partagée',
+        poster: 'Affiche prête à partager',
         real: 'RÉEL',
         skipped: 'PASSÉ',
         subtitle: 'Bonne saison !',
         team: '{{team}} créée',
         title: 'Ton club est prêt',
         titlePartial: 'Le guide est fini',
+        todoCoach: 'À faire : ton coach',
+        todoPartner: 'À faire : ton partenaire',
         yourTeam: 'Ton équipe',
       },
       kicker: 'Guide dirigeant·e',
@@ -25610,6 +25613,9 @@ export default {
       'm1-edit': 'Pour les personnaliser, touche « Modifier ».',
       'm1-email': 'L’email de contact du club.',
       'm1-fac': '3/5 · Tes installations : stade, gymnase, salle…',
+      'm1-fac-have': '3/5 · Tu as déjà ton terrain. Ouvre son planning.',
+      'm1-fac-home': '3/5 · Tes installations : stade, gymnase, salle… Ouvre « Gérer mon '
+        + 'club ».',
       'm1-fac-taken': 'Ton installation offerte est déjà là : la suivante demande l’offre Club. '
         + 'Passe cette partie.',
       'm1-facadd': 'Ajoute une installation.',
@@ -25634,6 +25640,8 @@ export default {
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
       'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
+      'm1-partners-home': '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos '
+        + 'partenaires ».',
       'm1-partners-taken': 'Ton partenaire offert est déjà là : le suivant demande l’offre Club. '
         + 'Passe cette partie.',
       'm1-pb1': 'Reviens à tes installations.',
@@ -25642,8 +25650,7 @@ export default {
         + 'chargé et les places encore libres.',
       'm1-pchips': 'Choisis l’installation affichée. « Toutes installations » regroupe tout ton '
         + 'club : touche-le.',
-      'm1-pclose': 'Envoyée ! Tu restes sur ton affiche pour la partager ailleurs. Quand tu as '
-        + 'fini, ferme-la avec la croix.',
+      'm1-pclose': 'Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, ferme-la avec la croix.',
       'm1-pdemo': 'Ton planning est encore vide : on y a mis quelques événements d’exemple pour '
         + 'te montrer. Ils disparaissent à la fin du guide.',
       'm1-pempty': 'Une période sans événement s’affiche comme ça. Les créneaux de tes coachs '
@@ -25656,11 +25663,11 @@ export default {
       'm1-phone': 'Le téléphone du club.',
       'm1-pmodel': 'Choisis un modèle : Écusson ou Famille.',
       'm1-pmonth': 'En vue Mois, un point signale chaque jour où l’installation est occupée.',
-      'm1-poster': '5/5 · Dernière étape : l’affiche « Rejoindre le club ».',
+      'm1-poster': 'Dernière étape : l’affiche « Rejoindre le club ».',
       'm1-pposter': 'Voici ton affiche : le nom du club, ton sport et le QR code qui mène à ton '
         + 'club. Tu pourras changer de modèle à tout moment.',
       'm1-psent': 'Tu peux la partager encore, ou continuer quand c’est fait.',
-      'm1-psent-next': 'C’est envoyé',
+      'm1-psent-next': 'C’est fait',
       'm1-pshare': 'Le QR code mène directement à ton club. Partage l’affiche, ou imprime-la pour '
         + 'le club-house.',
       'm1-ptext': 'Tu peux aussi adapter les textes de l’affiche. Touche « Personnaliser le texte '
@@ -25709,6 +25716,7 @@ export default {
         m4: 'Gérer les demandes',
       },
       next: 'Suivant',
+      ok: 'OK',
       open: {
         cta: "C'est parti",
         gauge: '{{count}} missions pour le mettre en route. Chacune fait monter ta jauge de 25 %.',
@@ -25725,6 +25733,7 @@ export default {
         continue: 'Continuer',
         later: 'Plus tard',
         laterHint: 'Plus tard ? Les bonus t’attendent dans Mon compte › Guide dirigeant·e.',
+        skipped: 'Passée',
         subtitle: '{{count}} missions sur {{count}}, l’essentiel est fait.',
         subtitlePartial: '{{done}} missions sur {{total}} : les autres attendent que l’app te le '
           + 'permette.',
@@ -25742,8 +25751,8 @@ export default {
       tw3: 'La section de l’équipe, puis Suivant.',
       tw4: 'Cherche le sport et touche-le : tu passes directement à l’étape suivante.',
       tw5: 'Touche la catégorie d’âge.',
-      tw6: 'Touche le niveau de compétition, ou Suivant pour continuer sans.',
-      tw7: 'Coche qui gérera l’équipe : toi, ou le coach que tu viens d’ajouter.',
+      tw6: 'Touche le niveau de compétition, ou « Continuer sans niveau ».',
+      tw7: 'Coche qui gérera l’équipe : toi, ou un coach du club.',
       tw8: 'Tout est bon ? Crée l’équipe pour de vrai.',
       understood: 'Compris',
     },
@@ -25785,6 +25794,30 @@ export default {
     },
   },
   tourExamples: {
+    ad: {
+      candidates: 'Candidatures (0)',
+      example: 'Exemple',
+      online: 'EN LIGNE',
+      position: 'Ailier gauche',
+    },
+    campaign: {
+      filterAll: 'Tous',
+      filterOverdue: 'En retard',
+      filterPartial: 'Partiel',
+      filterPending: 'En attente',
+      memberTeam: 'Senior',
+      name: 'Cotisation licences',
+      paid: 'Encaissé',
+      reminded: 'Une vraie relance partirait ici : rien n’est envoyé à ce membre.',
+      search: 'Rechercher un membre',
+      settled: 'Réglé',
+      statusPaid: 'Payé',
+      subtitle: 'Détail complet de la campagne {{name}}.',
+      tabMembers: 'Membres',
+      tabOverview: 'Vue d’ensemble',
+      tabPayments: 'Paiements',
+      title: 'Cotisations',
+    },
     match: {
       label: 'Exemple · contre US Monpeyroux',
       nonePlaced: 'Place au moins un joueur sur le terrain.',
@@ -26017,9 +26050,11 @@ export default {
     enterTwoValidScoresFor: 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.',
     facility: 'Installation',
     facilityLine: 'Installation : {{name}}',
-    forfeitNotice: 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, modifiable.',
+    forfeitNotice: 'Forfait {{teamName}} : score pré-rempli à 3-0 pour l\'autre équipe, '
+      + 'modifiable.',
     forfeitOf: 'Forfait {{teamName}}',
-    forfeitScoreRefused: 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. Corrige le score.',
+    forfeitScoreRefused: 'L\'équipe forfait ({{teamName}}) ne peut ni gagner ni faire match nul. '
+      + 'Corrige le score.',
     forfeitScoreRefusedTitle: 'Score refusé',
     groupLabel: '{{label}}',
     incompleteScore: 'Score incomplet',
@@ -28162,8 +28197,10 @@ export default {
         bullet2: '2 événements et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",
+        kickerAfterGift: 'Après les 7 jours',
         title: 'Commence sans payer',
       },
+      giftSubtitle: 'Offre Club offerte 7 jours',
       hint: 'Tu retrouveras les offres à tout moment dans Profil, rubrique Mon abonnement.',
       team: {
         bullet1: 'Événements et matchs illimités',

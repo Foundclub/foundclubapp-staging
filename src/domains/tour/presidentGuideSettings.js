@@ -15,8 +15,6 @@ export const PRESIDENT_GUIDE_SETTINGS = Object.freeze({
   // Décision 4 : la partie ② (partenaire) se passe. Décision 5 : M2 aussi.
   coachPassable: true,
   partnerPassable: true,
-  // Décision 8, A : B1 et B4 s'arrêtent au récap, puis une bulle.
-  stopBonusAtRecap: true,
 });
 
 export default PRESIDENT_GUIDE_SETTINGS;
