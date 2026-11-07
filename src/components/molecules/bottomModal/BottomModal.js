@@ -313,6 +313,9 @@ function BottomModal({
   } = useTheme();
   /**
    * GUIDE-D-CORR TG-01/TG-02 : une ancre du guide posée dans la feuille le dit (`TourTarget`).
+   * ponytail: seul le contenu est enveloppé ; l'en-tête et le pied fixes ne le sont pas (leur
+   * forme est figée par les témoins de mise en page). Aucune cible du guide n'y vit au 07/11 ;
+   * sortie : y poser le contexte si une étape y met sa cible.
    * @param {React.ReactNode} node - Contenu de la feuille.
    * @returns {React.ReactNode} Le même contenu.
    */
@@ -573,7 +576,7 @@ function BottomModal({
   const ecartDuContenu = Number(StyleSheet.flatten(contentContainerStyle)?.gap) || 0;
   const enTeteMesure = enTeteDansLaMesure ? (
     <View style={[Spaces.paddingTop[24], { paddingBottom: Math.max(0, 16 - ecartDuContenu) }]}>
-      {dansLaFeuille(headerComponent)}
+      {headerComponent}
     </View>
   ) : null;
   // T3-FEUILLES-PIED (M0096, « Q5 A ») — MEME CAUSE POUR LE PIED : la bibliotheque ne le mesure
@@ -585,7 +588,7 @@ function BottomModal({
   const piedDansLaMesure = Boolean(footerComponent) && !snapPoints;
   const piedMesure = piedDansLaMesure ? (
     <View style={Spaces.paddingTop[16]}>
-      {dansLaFeuille(footerComponent)}
+      {footerComponent}
     </View>
   ) : null;
   const contentBottomPadding = useMemo(
@@ -671,7 +674,7 @@ function BottomModal({
           <View
             style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[16], { zIndex: 1 }]}
           >
-            {dansLaFeuille(headerComponent)}
+            {headerComponent}
           </View>
         )}
 
@@ -749,7 +752,7 @@ function BottomModal({
             },
           ]}
           >
-            {dansLaFeuille(footerComponent)}
+            {footerComponent}
           </View>
         )}
       </ChampsSuivisParLeClavier>

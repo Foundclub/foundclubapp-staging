@@ -219,7 +219,7 @@ function BottomModal({
       >
         {headerComponent ? (
           <View style={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[12]]}>
-            <TourSheetContext.Provider value>{headerComponent}</TourSheetContext.Provider>
+            {headerComponent}
           </View>
         ) : null}
         {content}
@@ -236,7 +236,7 @@ function BottomModal({
               },
             ]}
           >
-            <TourSheetContext.Provider value>{footerComponent}</TourSheetContext.Provider>
+            {footerComponent}
           </View>
         ) : null}
         {!hideCloseButton ? (
