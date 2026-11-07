@@ -7,6 +7,7 @@ import {
   isEventCustomNameValid,
   normalizeEventCustomName,
 } from '@/domains/event/eventDisplayName';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -48,8 +49,8 @@ function EventWizardName({ navigation, route }) {
   const nomNettoye = normalizeEventCustomName(customName);
   const estValide = isEventCustomNameValid(customName);
   const fieldSurfaceStyle = {
-    backgroundColor: 'rgba(1, 179, 244, 0.08)',
-    borderColor: 'rgba(1, 179, 244, 0.26)',
+    backgroundColor: withAlpha(Colors.primary500, 0.08),
+    borderColor: withAlpha(Colors.primary500, 0.26),
   };
 
   const handleNext = () => {
