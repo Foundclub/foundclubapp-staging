@@ -17688,6 +17688,7 @@ export default {
       expand: 'Enlarge',
       openFullScreen: 'See the line-up full screen',
     },
+    notCalledUp: 'You’re not called up for this match and you’re not counted in the call-up.',
     note: {
       title: 'Info',
     },

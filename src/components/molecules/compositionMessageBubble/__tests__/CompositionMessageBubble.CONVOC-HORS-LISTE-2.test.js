@@ -31,9 +31,10 @@ const EQUIPE = 'team-1';
 const A_VENIR = '2099-06-14T16:00:00.000Z';
 const PASSE = '2020-06-14T16:00:00.000Z';
 
-const AVIS = 'Tu n’es pas convoqué pour ce match et tu n’es pas compté dans la convocation. '
-  + 'Tu peux quand même te marquer présent : s’il manque des joueurs, '
-  + 'le coach pourra faire appel à toi.';
+// Reponse 2 B du chef (07/11) : sur la carte, le message se reduit a sa premiere phrase ;
+// la suite du message de la fiche ne s'y lit plus.
+const AVIS = 'Tu n’es pas convoqué pour ce match et tu n’es pas compté dans la convocation.';
+const SUITE_DE_LA_FICHE = 'Tu peux quand même te marquer présent';
 const AIDE = 'Au cas où il manque un joueur, le coach pourra faire appel à toi.';
 const SI_BESOIN = 'Présent si besoin';
 
@@ -255,7 +256,7 @@ afterEach(() => {
 });
 
 describe('CONVOC-HORS-LISTE-2 · 1 — le non-convoque de l equipe repond depuis la carte', () => {
-  it('pas encore repondu : le message, « Présent si besoin », « Absent », l aide', async () => {
+  it('pas encore repondu : message court et aide au-dessus des boutons', async () => {
     const arbre = await monter();
     await attendre(() => boutons(arbre, SI_BESOIN).length > 0);
 
@@ -264,10 +265,12 @@ describe('CONVOC-HORS-LISTE-2 · 1 — le non-convoque de l equipe repond depuis
     expect(boutons(arbre, 'Présent')).toHaveLength(0);
     const texte = texteVisible(arbre);
     expect(texte).toContain(AVIS);
+    expect(texte).not.toContain(SUITE_DE_LA_FICHE);
     expect(texte).toContain(AIDE);
     expect(texte).not.toContain('Tu as répondu');
-    // La phrase d'aide se lit SOUS les boutons.
-    expect(texte.lastIndexOf(AIDE)).toBeGreaterThan(texte.indexOf(`| ${SI_BESOIN} |`));
+    // Le message, puis l'aide, AU-DESSUS des boutons.
+    expect(texte.indexOf(AVIS)).toBeLessThan(texte.indexOf(AIDE));
+    expect(texte.indexOf(AIDE)).toBeLessThan(texte.indexOf(`| ${SI_BESOIN} |`));
   });
 
   it('appui sur « Présent si besoin » : la route de la fiche, puis la reponse', async () => {

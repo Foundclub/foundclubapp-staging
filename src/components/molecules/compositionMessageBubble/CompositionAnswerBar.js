@@ -234,11 +234,14 @@ function CompositionAnswerBar({
 
   return (
     <View style={[styles.bar, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
-      {/* CONVOC-HORS-LISTE-2 — le message du lot CONVOC-HORS-LISTE, au-dessus de sa reponse. */}
+      {/* CONVOC-HORS-LISTE-2 (chef, 07/11, reponse 2 B) — sur la carte, le message court, puis
+          « Au cas ou il manque un joueur... » au-dessus des boutons : le message entier du lot
+          precedent le redisait. La fiche du match garde le message entier. */}
       {standby ? (
-        <Text style={[Fonts.p4, mutedText]}>
-          {t('eventDetails.convocation.notCalledUpCanAnswer')}
-        </Text>
+        <>
+          <Text style={[Fonts.p4, mutedText]}>{t('playerConvocation.notCalledUp')}</Text>
+          <Text style={[Fonts.p4, mutedText]}>{t('playerConvocation.standbyHelp')}</Text>
+        </>
       ) : null}
       {answerLabel ? (
         <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{answerLabel}</Text>
@@ -263,9 +266,6 @@ function CompositionAnswerBar({
           variant={answer === 'absent' ? 'Primary' : 'Secondary'}
         />
       </View>
-      {standby ? (
-        <Text style={[Fonts.p4, mutedText]}>{t('playerConvocation.standbyHelp')}</Text>
-      ) : null}
     </View>
   );
 }

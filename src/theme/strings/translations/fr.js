@@ -18356,6 +18356,8 @@ export default {
       expand: 'Agrandir',
       openFullScreen: 'Voir la composition en plein écran',
     },
+    // CONVOC-HORS-LISTE-2 — sur la carte du fil, le message court du non-convoque.
+    notCalledUp: 'Tu n’es pas convoqué pour ce match et tu n’es pas compté dans la convocation.',
     // COMPOMSG — le texte libre de l'événement (souvent le RDV), tel qu'écrit.
     note: {
       title: 'Infos',
