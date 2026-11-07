@@ -2163,6 +2163,9 @@ function ClubDetails({ navigation, route }) {
       getSubscriptionAccessLevelForClub?.(clubId) || subscriptionAccessLevel,
     )) {
       emitGuidanceAction('sponsor.free.taken');
+    } else if (sectionName === 'partners' && clubSponsorsCount > 0) {
+      // GUIDE-D-CORR TG-06 : un partenaire déjà là ; le guide ne demande pas « ton premier ».
+      emitGuidanceAction('sponsor.existing');
     }
     if (typeof navigation.push === 'function') {
       navigation.push(RouteNames.Club, params);

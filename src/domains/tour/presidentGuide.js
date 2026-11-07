@@ -34,7 +34,8 @@ const canStart = (userData) => Boolean(userData?.club?.documentId);
 const FULL_SCREEN_TEXTS = {
   'close.bonus': 'BONUS',
   'close.cta': "Aller à l'accueil",
-  'close.example': 'Les exemples du guide sont effacés : rien n’a été envoyé.',
+  // GUIDE-D-CORR TG-23 (r87) : le SMS d'invitation de M2, lui, est réellement parti.
+  'close.example': 'Les exemples du guide sont effacés.',
   'close.footer': 'Retrouve ce guide dans Mon compte › Guide dirigeant·e.',
   'close.offer': 'Voir l’offre Club',
   'close.real': 'RÉEL',
@@ -115,12 +116,15 @@ export const PRESIDENT_GUIDE = Object.freeze({
    * qui reste à faire.
    * @param {(key: string, ...args: any[]) => string} text - `t` de l'écran.
    * @param {string[]} [skipped] - Les parties passées.
+   * @param {any} [created] - Ce qui existe : une partie passée APRÈS avoir été faite (rejouée
+   *   après un retour, TG-06) n'est plus « à faire ».
    * @returns {string[]} Lignes.
    */
-  closingTodoLines: (text, skipped = []) => /** @type {string[]} */ ([
-    skipped.includes('coach')
+  closingTodoLines: (text, skipped = [], created = {}) => /** @type {string[]} */ ([
+    skipped.includes('coach') && !created?.['staff.invited'] && !created?.['staff.linked']
       && text('tourCatalog.president.close.todoCoach', 'À faire : ton coach'),
-    skipped.includes('partners')
+    skipped.includes('partners') && !created?.['sponsor.created']
+      && !created?.['sponsor.existing']
       && text('tourCatalog.president.close.todoPartner', 'À faire : ton partenaire'),
   ].filter(Boolean)),
   /**

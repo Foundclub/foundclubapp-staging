@@ -149,8 +149,9 @@ export const B1_STEPS = [
     resumeFrom: FROM,
     simulatesCampaign: true,
     get text() {
-      return t('b1-open', 'Ta campagne est ouverte : les membres concernés sont ajoutés '
-        + 'automatiquement.');
+      // GUIDE-D-CORR TG-19 (b10-b11) : rien n'est créé ; la bulle ne le dit plus comme réel.
+      return t('b1-open', 'Simulation : à l’ouverture, les membres concernés sont ajoutés à la '
+        + 'campagne. Voici un exemple : rien n’est créé.');
     },
     veil: false,
   },
@@ -172,8 +173,9 @@ export const B1_STEPS = [
     simulatesCampaign: true,
     targets: ['camp-list', 'camp-relance'],
     get text() {
-      return t('b1-camp', 'Touche « A payé » quand un membre règle en espèces, ou « Relancer » '
-        + 'pour lui envoyer un rappel.');
+      // TG-19 : la marque « Exemple » de l'écran sort du cadre (il défile jusqu'aux membres).
+      return t('b1-camp', 'Exemple, rien n’est créé : touche « A payé » quand un membre règle en '
+        + 'espèces, ou « Relancer » pour lui envoyer un rappel.');
     },
   },
 ];

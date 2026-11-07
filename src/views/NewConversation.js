@@ -316,8 +316,13 @@ function NewConversation({ navigation, route }) {
   const isLoading = modeVille ? contactsDeLaVille.isLoading : chargementDesMembres;
   // Guide Dirigeant·e, B3 : un club neuf n'a pas de quoi faire un groupe ; le guide doit le savoir.
   const { currentStep: tourStep } = useTour();
+  // GUIDE-D-CORR TG-11 : la liste du serveur peut contenir le compte connecté, que l'écran retire
+  // (`processedSections`) ; on compte comme lui, sinon « soi + 1 coach » passait pour 2 membres.
+  const autresMembres = new Set((/** @type {any[]} */ (users) || [])
+    .map((/** @type {User} */ membre) => getUserIdentifier(membre))
+    .filter((id) => id && id !== getUserIdentifier(userData))).size;
   const membresManquants = Boolean(tourStep?.checksMembers && !isLoading
-    && !modeVille && (/** @type {any} */ (users)?.length || 0) < 2);
+    && !modeVille && autresMembres < 2);
   useEffect(() => {
     if (membresManquants) emitGuidanceInteraction('conversation.members.few');
   }, [membresManquants]);

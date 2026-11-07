@@ -514,3 +514,22 @@ describe('BH12 P12-17 — categories en double', () => {
     expect(textes.filter((texte) => texte === 'U15').length).toBe(1);
   });
 });
+
+// GUIDE-D-CORR TG-22 (tournée du 07/11, r72) : club 100 % football, le sport n'était ni en tête ni
+// marqué : le serveur range les sports du club sous `activites` (getClubById), l'étape lisait
+// `activities`, toujours vide.
+describe('TG-22 — le sport du club est proposé en premier', () => {
+  test('les sports du club (champ `activites` du serveur) passent avant « Autres sports »', () => {
+    mockClub.data = {
+      activites: [{ documentId: 'act-2', name: 'Rugby' }],
+      documentId: 'club-1',
+      members: [],
+      name: 'FC Test',
+    };
+    const { textes } = afficherLEtape(TeamWizardActivity);
+    const enTete = textes.indexOf('Les sports de ton club');
+    expect(enTete).toBeGreaterThan(-1);
+    expect(textes.indexOf('Rugby')).toBeGreaterThan(enTete);
+    expect(textes.indexOf('Rugby')).toBeLessThan(textes.indexOf('Autres sports'));
+  });
+});

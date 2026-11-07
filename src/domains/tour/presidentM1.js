@@ -119,9 +119,12 @@ const PART_INFOS = [
   )),
   editStep('m1-email', 'clubEdit.email', () => t('m1-email', 'L’email de contact du club.')),
   editStep('m1-phone', 'clubEdit.phone', () => t('m1-phone', 'Le téléphone du club.')),
+  // GUIDE-D-CORR TG-09 (tournée du 07/11, g15) : « Placer sur la carte » n'est pas à l'écran ; la
+  // bulle ne nomme que ce qu'on voit.
   editStep('m1-addr', 'clubEdit.address', () => t(
     'm1-addr',
-    'L’adresse du club. « Placer sur la carte » permet aux joueur·se·s de te trouver autour d’eux.',
+    'L’adresse du club : touche le champ, tape-la et choisis-la dans la liste. Elle place ton '
+      + 'club sur la carte, pour que les joueur·se·s te trouvent autour d’eux.',
   )),
   editStep('m1-deleg', 'clubEdit.delegation', () => t(
     'm1-deleg',
@@ -142,10 +145,25 @@ const PART_INFOS = [
 ];
 
 const PARTNER_TAKEN = { goto: 'm1-partners-taken', key: 'sponsor.free.taken', type: 'action' };
+// GUIDE-D-CORR TG-06 (tournée du 07/11, r12-r14) : un partenaire déjà là, comme l'installation
+// (`facility.existing`) ; on ne demande pas « ton premier partenaire ».
+const PARTNER_EXISTING = { goto: 'm1-partners-have', key: 'sponsor.existing', type: 'action' };
+/**
+ * TG-06 : la partie 2/5 est faite (partenaire créé pendant le guide, ou déjà là) ; rejouée après un
+ * retour en arrière, elle ne se redemande pas.
+ * @param {any} ctx - Contexte du guide.
+ * @returns {boolean} La partie reste à faire.
+ */
+const isPartnerToDo = (ctx) => !ctx?.created?.['sponsor.created']
+  && !ctx?.created?.['sponsor.existing'];
 
 const PART_PARTNERS = [
   {
-    advanceOn: [{ key: 'club.section.partners', type: 'interaction' }, PARTNER_TAKEN],
+    advanceOn: [
+      { key: 'club.section.partners', type: 'interaction' },
+      PARTNER_TAKEN,
+      PARTNER_EXISTING,
+    ],
     fallback: fromHome(() => t(
       'm1-partners-home',
       '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos partenaires ».',
@@ -158,9 +176,10 @@ const PART_PARTNERS = [
     subMission: 'partners',
     targets: ['club.m.partners'],
     get text() { return t('m1-partners', '2/5 · Tes partenaires. Ouvre « Nos partenaires ».'); },
+    when: isPartnerToDo,
   },
   {
-    advanceOn: [{ key: RouteNames.AddSponsor, type: 'route' }, PARTNER_TAKEN],
+    advanceOn: [{ key: RouteNames.AddSponsor, type: 'route' }, PARTNER_TAKEN, PARTNER_EXISTING],
     id: 'm1-padd',
     missionId: MISSION_ID,
     passable: PRESIDENT_GUIDE_SETTINGS.partnerPassable,
@@ -168,6 +187,7 @@ const PART_PARTNERS = [
     subMission: 'partners',
     targets: ['club.partners.add'],
     get text() { return t('m1-padd', 'Ajoute ton premier partenaire avec « + ».'); },
+    when: isPartnerToDo,
   },
   {
     id: 'm1-partners-taken',
@@ -183,10 +203,33 @@ const PART_PARTNERS = [
         'Ton partenaire offert est déjà là : le suivant demande l’offre Club. Passe cette partie.',
       );
     },
-    when: isTaken('sponsor.free.taken'),
+    when: (/** @type {any} */ ctx) => isTaken('sponsor.free.taken')(ctx)
+      && !ctx?.created?.['sponsor.created'],
   },
   {
-    advanceOn: { key: 'sponsor.created', type: 'action' },
+    id: 'm1-partners-have',
+    lookOnly: true,
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-partners',
+    subMission: 'partners',
+    targets: ['club.partners.add'],
+    get text() {
+      return t(
+        'm1-partners-have',
+        '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en ajoute un autre plus '
+          + 'tard. On passe à tes installations.',
+      );
+    },
+    // Seulement par l'aiguillage `sponsor.existing`.
+    when: (/** @type {any} */ ctx) => Boolean(ctx?.created?.['sponsor.existing'])
+      && !ctx?.created?.['sponsor.created'],
+  },
+  {
+    // TG-06 : « Reviens sur la fiche » ne suit que la création ; rejouée, la partie est sautée.
+    advanceOn: {
+      commits: true, goto: 'm1-pback', key: 'sponsor.created', type: 'action',
+    },
     id: 'm1-pform',
     missionId: MISSION_ID,
     passable: PRESIDENT_GUIDE_SETTINGS.partnerPassable,
@@ -208,6 +251,7 @@ const PART_PARTNERS = [
       );
     },
     veil: false,
+    when: isPartnerToDo,
   },
   {
     advanceOn: { key: 'club.section.closed', type: 'interaction' },
@@ -217,8 +261,11 @@ const PART_PARTNERS = [
     subMission: 'partners',
     targets: ['header.back'],
     get text() { return t('m1-pback', 'Reviens sur la fiche du club.'); },
-    // Laisse le geste du bord, seul retour d'un iPhone sans flèche à portée.
-    veil: false,
+    // Laisse le geste du bord, seul retour d'un iPhone sans flèche à portée ; le reste sous le
+    // voile (GUIDE-D-CORR TG-16 : la poubelle du partenaire restait touchable).
+    edgeSwipe: true,
+    // Seulement par l'aiguillage de `m1-pform` (TG-06) : jamais au fil d'une partie rejouée.
+    when: () => false,
   },
 ];
 
@@ -293,21 +340,38 @@ const PART_FACILITIES = [
       + 'liste, puis « Sélectionner ».'),
     () => t('m1-ffaddr-guard', 'Choisis d’abord l’adresse de l’installation.'),
   ),
+  // GUIDE-D-CORR TG-10 (tournée du 07/11, r25) : une bulle pour trois réglages se posait sur la
+  // capacité et les couleurs, sans voile. Une bulle par réglage, à côté du sien (touchable).
   {
     id: 'm1-ff2',
     missionId: MISSION_ID,
     get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: 'm1-fac',
     subMission: 'facilities',
-    targets: ['facility.conflict', 'facility.capacity', 'facility.color'],
+    targets: ['facility.conflict'],
     get text() {
-      return t(
-        'm1-ff2',
-        'Conflit de créneaux : à valider, ou réservé tout de suite. Capacité : équipes en même '
-          + 'temps. Couleur : son repère.',
-      );
+      return t('m1-ff2', 'Conflit de créneaux : une demande à valider, ou réservée tout de suite.');
     },
-    veil: false,
+  },
+  {
+    id: 'm1-ff2-cap',
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-fac',
+    subMission: 'facilities',
+    targets: ['facility.capacity'],
+    get text() {
+      return t('m1-ff2-cap', 'Capacité : combien d’équipes peuvent l’utiliser en même temps.');
+    },
+  },
+  {
+    id: 'm1-ff2-color',
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-fac',
+    subMission: 'facilities',
+    targets: ['facility.color'],
+    get text() { return t('m1-ff2-color', 'Couleur : son repère dans le planning.'); },
   },
   {
     advanceOn: { key: 'facility.created', type: 'action' },
@@ -383,6 +447,8 @@ const PART_PLANNING = [
   },
   planningStep({
     bubblePlacement: 'top',
+    // GUIDE-D-CORR TG-17 : la grille d'exemples est sous le bas de l'écran à l'arrivée.
+    hintWhenCut: true,
     id: 'm1-pdemo',
     get nextLabel() { return t('next', 'Suivant'); },
     targets: ['planning.grid'],
@@ -400,10 +466,13 @@ const PART_PLANNING = [
     get nextLabel() { return t('next', 'Suivant'); },
     targets: ['planning.capacity'],
     get text() {
+      // GUIDE-D-CORR TG-17 (r30) : sur une installation neuve, les exemples l'ont déjà remplie
+      // (« capacité atteinte », en orange) ; la bulle ne promet plus de « places libres ».
       return t(
         'm1-pcap',
-        'La capacité : combien d’équipes peuvent jouer en même temps, le moment le plus chargé '
-          + 'et les places encore libres.',
+        'La capacité : combien d’équipes peuvent jouer en même temps, et le moment le plus chargé. '
+          + 'Ici, les événements d’exemple la remplissent : c’est voulu, ils partent à la fin du '
+          + 'guide.',
       );
     },
   }),
@@ -464,13 +533,13 @@ const PART_PLANNING = [
   }),
   {
     advanceOn: { key: RouteNames.FacilityList, type: 'route' },
+    edgeSwipe: true,
     id: 'm1-pb1',
     missionId: MISSION_ID,
     resumeFrom: 'm1-fplan',
     subMission: 'facilities',
     targets: ['header.back'],
     get text() { return t('m1-pb1', 'Reviens à tes installations.'); },
-    veil: false,
   },
   {
     advanceOn: { key: RouteNames.Club, type: 'route' },
@@ -480,7 +549,8 @@ const PART_PLANNING = [
     subMission: 'facilities',
     targets: ['header.back'],
     get text() { return t('m1-fback', 'Puis retourne sur la fiche du club.'); },
-    veil: false,
+    // TG-16 : « + Ajouter une installation » restait touchable.
+    edgeSwipe: true,
   },
 ];
 
@@ -593,10 +663,11 @@ const PART_POSTER = [
     resumeFrom: 'm1-poster',
     targets: ['poster.close'],
     get text() {
+      // GUIDE-D-CORR TG-18 (r50) : « Partager » est sous le voile à cette étape ; la bulle ne
+      // propose plus de partager ici.
       return t(
         'm1-pclose',
-        'Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, ferme-la avec '
-          + 'la croix.',
+        'Ton affiche reste disponible sur la fiche du club. Ferme-la avec la croix pour continuer.',
       );
     },
   },

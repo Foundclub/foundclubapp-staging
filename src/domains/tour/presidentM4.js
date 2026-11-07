@@ -33,14 +33,17 @@ export const M4_STEPS = [
     // L'alerte « Félicitations » passe devant et n'a pas de rappel : cette bulle se lit après elle.
     bubblePlacement: 'top',
     id: 'm3-ok',
-    missionId: 'president_m4',
+    // GUIDE-D-CORR TG-20 (r78) : bulle de fin de M3 ; l'en-tête disait déjà « MISSION 4/4 ».
+    missionId: 'president_m3',
     navTarget: teamHubTarget,
     get nextLabel() { return t('understood', 'Compris'); },
     get text() {
+      // TG-20 : l'écran la range sous « Autres équipes du club ».
       return t(
         'm3-ok',
-        'Ton équipe t’attend dans « Mes équipes ». Pas besoin de toutes les créer : tes coachs '
-          + 'peuvent créer les leurs, si tu le leur permets.',
+        'Ton équipe est créée : tu la retrouves dans « Mes équipes », sous « Autres équipes du '
+          + 'club ». Pas besoin de toutes les créer : tes coachs peuvent créer les leurs, si tu le '
+          + 'leur permets.',
       );
     },
     veil: false,

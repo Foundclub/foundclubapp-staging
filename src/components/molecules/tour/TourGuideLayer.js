@@ -18,6 +18,7 @@ import Svg, {
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { getTourProfile } from '@/domains/tour/tourCatalog';
 import {
+  isTourTargetInSheet,
   measureTourTarget,
   measureTourTargetClipSide,
   subscribeToTourTargets,
@@ -50,6 +51,7 @@ import {
   toLayerFrame,
   wideBubbleFrame,
 } from '@/components/molecules/tour/tourGuideGeometry';
+import { TOUR_SHEET_TARGET } from '@/components/molecules/tour/tourSheetContext';
 
 import { useTour } from '@/context/useTour';
 import useKeyboardFrame from '@/hooks/useKeyboardFrame';
@@ -107,6 +109,9 @@ const IN_HEADER_IDS = [...HEADER_IDS, 'team.more'];
 const SLOT_ID = 'tour.bubbleSlot';
 // FIN-GUIDE, point 3 : la liste d'un tunnel, qui doit rester à portée du doigt (petit écran).
 const WIZARD_LIST_ID = 'teamWizard.viewport';
+// GUIDE-D-CORR TG-16 : bande du bord gauche laissée libre aux étapes de retour (`edgeSwipe`) : le
+// geste du retour de l'iPhone y part ; le reste de l'écran reste sous le voile.
+const EDGE_SWIPE_WIDTH = 20;
 
 /**
  * Police de la bulle à l'échelle du téléphone, plafonnée.
@@ -252,6 +257,7 @@ function TourGuideLayer() {
   const allTargetIds = isStepVisible
     ? [...new Set([
       SELECT_SHEET_ID,
+      TOUR_SHEET_TARGET,
       ...(currentStep.bubbleSlot ? [SLOT_ID, WIZARD_LIST_ID] : []),
       ...(currentStep.listScrolls ? [WIZARD_LIST_ID] : []),
       ...(currentStep.belowTargets || []),
@@ -426,15 +432,26 @@ function TourGuideLayer() {
   // ponytail: une cible à toucher garde son trou, donc un glissement parti d'elle fait défiler : le
   // voile tombe et la bulle donne le sens. Sortie : bloquer le défilement de chaque écran ancré.
   const reachable = currentStep?.lookOnly ? headerHoles : passThrough;
-  const touchable = listScrolls && rects[WIZARD_LIST_ID]
+  const withList = listScrolls && rects[WIZARD_LIST_ID]
     ? [...reachable, toCutout(rects[WIZARD_LIST_ID], width, height)]
     : reachable;
+  const touchable = currentStep?.edgeSwipe
+    ? [...withList, {
+      height, width: EDGE_SWIPE_WIDTH, x: 0, y: 0,
+    }]
+    : withList;
   const primary = cutouts[0] || null;
   // GUIDE-STORES, règle du voile (recette du 04/11) : sous le voile, l'écran ne défile que si le
   // doigt part de la cible. Une cible entière n'a besoin que d'un toucher, le voile reste. Une
   // cible coupée doit pouvoir être amenée d'où qu'on pose le doigt : pas de voile, et la bulle le
   // dit. Le voile revient quand elle est entière. Les tunnels gardent leur liste touchable.
-  const isTargetCut = !currentStep?.bubbleSlot && currentStep?.veil !== false && !sheetGuide
+  // GUIDE-D-CORR TG-16 (g13) : clavier ouvert, le champ en cours de saisie est tenu à l'écran par
+  // le système ; un bord rogné par le clavier ne fait plus tomber le voile (Enregistrer touchable).
+  // GUIDE-D-CORR TG-17 (r28-r29) : une étape sans voile qui le demande (`hintWhenCut`, planning
+  // d'exemple) dit aussi « Fais défiler » quand sa cible est coupée ; les autres restent courtes.
+  const isTargetCut = !currentStep?.bubbleSlot && !sheetGuide
+    && (currentStep?.veil !== false || Boolean(currentStep?.hintWhenCut))
+    && !keyboard
     && measuredTargets.some((id) => (
       clipSides[id]
       || visibleRects[id].height < rects[id].height - 1
@@ -444,8 +461,14 @@ function TourGuideLayer() {
   const isChoosingVariant = hasVariants && !isVariantWaitOver && !sheetGuide
     && ![...stepTargets, ...currentStep.variants.flatMap((/** @type {any} */ v) => v.targets || [])]
       .some((id) => rects[id]);
+  // GUIDE-D-CORR TG-01/TG-02 (tournée du 07/11, g05-g09, g24-g26) : une feuille du bas ouverte
+  // passe sous la couche (« Choisir depuis la galerie » sous le voile, ou sous la bulle). Le guide
+  // se retire le temps du choix, sauf si sa cible est dans la feuille (« Inviter », « Répéter »).
+  const isSheetOver = Boolean(rects[TOUR_SHEET_TARGET]) && !sheetGuide
+    && !variant.targets.some((id) => rects[id] && isTourTargetInSheet(id));
   // GUIDE-STORES : une liste de choix ouverte ; la bulle recouvrait sa recherche et sa croix.
-  const isHidden = (isStale && !isLost) || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID]);
+  const isHidden = (isStale && !isLost) || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID])
+    || isSheetOver;
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
   // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
   // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
