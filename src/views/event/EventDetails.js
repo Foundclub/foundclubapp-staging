@@ -105,6 +105,7 @@ import {
   CONVOCATION_ROLE_CALLED_UP,
   CONVOCATION_ROLE_STARTER,
   convocationsToutesEnListe,
+  estHorsDeSaConvocation,
   getConvocationPersonId,
   getPersonName,
   getViewerConvocationRole,
@@ -4295,6 +4296,23 @@ function EventDetails({ navigation, route }) {
     [convocationPayload, userData?.documentId, userData?.id],
   );
 
+  // CONVOC-HORS-LISTE (demande d'Adel du 07/11) — LE MEMBRE QUE SA CONVOCATION PUBLIEE
+  // LAISSE DEHORS LE LIT LA OU IL REPOND : il n'est pas convoque, sa reponse n'entre pas
+  // dans le compte des convoques (le serveur ne compte que le pack), mais il peut se
+  // marquer present. Memes gardes que la ligne du haut ; le coach ne le lit pas.
+  const notCalledUpNotice = useMemo(() => {
+    if (canEdit || !supportsEventComposition || !canViewPublishedComposition) return '';
+    const isLeftOut = estHorsDeSaConvocation(
+      convocationPayload,
+      resolveClientSourceTeamForUser(event, userData)?.documentId,
+      userData?.documentId || userData?.id,
+    );
+    return isLeftOut ? t('eventDetails.convocation.notCalledUpCanAnswer') : '';
+  }, [
+    canEdit, canViewPublishedComposition, convocationPayload, event,
+    supportsEventComposition, t, userData,
+  ]);
+
   const viewerConvocationLine = useMemo(() => {
     if (viewerConvocationRole === CONVOCATION_ROLE_STARTER) {
       return t(
@@ -7936,6 +7954,7 @@ function EventDetails({ navigation, route }) {
         hasAcceptedRequest={hasAcceptedRequest}
         hasPendingRequest={hasPendingRequest}
         isFinished={isMatchFinished}
+        notice={notCalledUpNotice}
         onDeclareLatePresence={offrePresentApresCoup ? handleDeclareLatePresence : undefined}
         onDecline={() => handleDeclineEvent(event)}
         onDeleteParticipation={handleDeleteParticipation}

@@ -64,6 +64,7 @@ import {
 import {
   buildPublishedBoardTarget,
   convocationsToutesEnListe,
+  estHorsDeSaConvocation,
   getViewerConvocationRole,
 } from '@/views/playerConvocation/playerConvocationUtils';
 
@@ -1098,6 +1099,14 @@ function EventDetails({ navigation, route }) {
     () => getViewerConvocationRole(convocationPayload, userData?.documentId || userData?.id),
     [convocationPayload, userData?.documentId, userData?.id],
   );
+  // CONVOC-HORS-LISTE (demande d'Adel du 07/11) — la regle du telephone
+  // (`EventDetails.js`, `notCalledUpNotice`) : le membre que SA convocation publiee laisse
+  // dehors lit, au-dessus de « Présent / Absent », qu'il peut quand meme se marquer present.
+  const notCalledUpNotice = !canEdit && estHorsDeSaConvocation(
+    convocationPayload,
+    resolveClientSourceTeamForUser(event, userData)?.documentId,
+    userData?.documentId || userData?.id,
+  ) ? t('eventDetails.convocation.notCalledUpCanAnswer') : '';
   const compositionEligiblePlayerCount = Array.isArray(staffCompositionPayload?.eligiblePlayers)
     ? staffCompositionPayload.eligiblePlayers.length
     : 0;
@@ -2550,6 +2559,14 @@ function EventDetails({ navigation, route }) {
                     // (« Réponse pour Lina » coupé, « Absent » caché).
                     <div style={{ flexBasis: '100%', minWidth: 0, width: '100%' }}>
                       <EventChildRegistration event={event} navigation={navigation} />
+                    </div>
+                  ) : null}
+                  {repondPresentAbsent && notCalledUpNotice ? (
+                    <div
+                      data-testid="event-answer-notice"
+                      style={{ color: mutedTextColor, flexBasis: '100%', fontSize: 14, lineHeight: 1.5 }}
+                    >
+                      {notCalledUpNotice}
                     </div>
                   ) : null}
                   {repondPresentAbsent ? (

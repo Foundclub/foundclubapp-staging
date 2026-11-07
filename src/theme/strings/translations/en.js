@@ -9942,6 +9942,7 @@ export default {
     convocation: {
       bench: 'On the bench',
       called: 'Called up',
+      notCalledUpCanAnswer: 'You’re not called up for this match and you’re not counted in the call-up. You can still mark yourself present: if players are missing, the coach can call on you.',
       notPublished: "The line-up hasn't been published yet.",
       staff: 'Staff',
       starters: 'On the pitch',
