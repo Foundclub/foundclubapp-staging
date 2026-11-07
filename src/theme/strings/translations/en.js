@@ -6,18 +6,6 @@
 export default {
   addClubManager: {
     alerts: {
-      alreadyExist: {
-        actions: {
-          addToClub: 'Add to section',
-          cancel: 'Cancel',
-        },
-        description: 'The holder of this phone number already uses the app under the name {{firstname}} {{lastname}}. Do you want to add them as club manager to this section?',
-        title: 'A user already exists with this phone number.',
-      },
-      alreadyInClub: {
-        description: 'A user named {{firstname}} {{lastname}} is already a member of another club.',
-        title: 'Unable to add this club manager to the section',
-      },
       success: {
         description: 'Club manager {{managerName}} has been added to this section.',
         title: 'Added successfully!',
@@ -33,26 +21,21 @@ export default {
       save: 'Send invitation',
     },
     alerts: {
-      alreadyExist: {
-        actions: {
-          addToClub: 'Add to club',
-          cancel: 'Cancel',
-        },
-        description: 'The holder of this phone number uses the app under the name {{firstname}} {{lastname}}. Do you want to add them to your club?',
-        title: 'A user already exists with this phone number.',
+      alreadyInThisClub: {
+        description: 'This number is already a member of this club.',
+        title: 'Already in this club',
       },
-      alreadyInClub: {
-        description: 'A user named {{firstname}} {{lastname}} is already a member of another club.',
-        title: "Can't add this coach to the team",
+      invitation: {
+        actions: {
+          send: 'Send invitation',
+        },
+        description: 'An invitation will be sent to this number.',
+        title: 'Invitation',
       },
       success: {
         description: 'Coach {{trainerName}} has been added to your club.',
         title: 'Added successfully!',
       },
-    },
-    errors: {
-      linkManager: 'Unable to add this club manager to the section right now.',
-      linkTrainer: 'Unable to add this coach to the club right now.',
     },
     fallbacks: {
       clubName: 'Club',

@@ -13,7 +13,6 @@ import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { reportTourField } from '@/domains/tour/tourTargetRegistry';
 import { Joi } from '@/theme/strings';
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -28,12 +27,7 @@ import ClubStateView from '@/views/club/components/ClubStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import {
-  createManager,
-  createTrainer,
-  linkManagerToClub,
-  linkTrainerToClub,
-} from '@/services/auth/authService';
+import { createManager, createTrainer } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
@@ -158,39 +152,11 @@ function AddCoach({ navigation, route }) {
   const phoneNumber = watch('phoneNumber');
   useEffect(() => { reportTourField('cf.phone', Boolean(phoneNumber)); }, [phoneNumber]);
 
-  const linkTrainerToClubMutation = useMutation({
-    mutationFn: /** @type {any} */ (isManagerMode ? linkManagerToClub : linkTrainerToClub),
-    onError: (/** @type {any} */ mutationError) => {
-      const subscriptionDecision = extractSubscriptionDecisionFromError(mutationError);
-      if (subscriptionDecision) {
-        setSubscriptionPaywallDecision(subscriptionDecision);
-        return;
-      }
-
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        isManagerMode
-          ? t(
-            'addCoach.errors.linkManager',
-            "Impossible d'ajouter ce dirigeant à la section pour le moment.",
-          )
-          : t(
-            'addCoach.errors.linkTrainer',
-            "Impossible d'ajouter cet entraîneur au club pour le moment.",
-          ),
-      );
-    },
-    onSuccess: () => {
-      emitGuidanceAction('staff.linked');
-      navigation.goBack();
-    },
-  });
-
   const { inviteTrainer } = useAuth();
 
   const createTrainerMutation = useMutation({
     mutationFn: isManagerMode ? createManager : createTrainer,
-    onError: (/** @type {import('axios').AxiosError} */error) => {
+    onError: (/** @type {import('axios').AxiosError} */error, variables) => {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
         setSubscriptionPaywallDecision(subscriptionDecision);
@@ -203,76 +169,40 @@ function AddCoach({ navigation, route }) {
       // puis l'alerte du filet global (2 alertes, rejeu 4).
       const details = /** @type {any} */ (error)?.details
         || /** @type {any} */ (error)?.response?.data?.error?.details;
-      if (details?.user) {
-        const { user } = details;
-        if (user?.club) {
-          Alert.alert(
-            isManagerMode
-              ? t('addClubManager.alerts.alreadyInClub.title', "Impossible d'ajouter ce dirigeant à la section")
-              : t('addCoach.alerts.alreadyInClub.title'),
-            isManagerMode
-              ? t(
-                'addClubManager.alerts.alreadyInClub.description',
-                "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
-                {
-                  firstname: user.firstname,
-                  lastname: user.lastname,
-                  ...SANS_ECHAPPEMENT,
-                },
-              )
-              : t(
-                'addCoach.alerts.alreadyInClub.description',
-                {
-                  firstname: user.firstname,
-                  lastname: user.lastname,
-                  ...SANS_ECHAPPEMENT,
-                },
-              ),
-
-          );
-        } else if (user) {
-          Alert.alert(
-            isManagerMode
-              ? t('addClubManager.alerts.alreadyExist.title', 'Un utilisateur existe déjà avec ce numéro de téléphone.')
-              : t('addCoach.alerts.alreadyExist.title'),
-            isManagerMode
-              ? t(
-                'addClubManager.alerts.alreadyExist.description',
-                "Le détenteur de ce numéro de téléphone utilise déjà l'application sous le nom de {{firstname}} {{lastname}}. Veux-tu l'ajouter comme dirigeant à cette section ?",
-                {
-                  firstname: user.firstname,
-                  lastname: user.lastname,
-                  ...SANS_ECHAPPEMENT,
-                },
-              )
-              : t('addCoach.alerts.alreadyExist.description', {
-                firstname: user.firstname,
-                lastname: user.lastname,
-                ...SANS_ECHAPPEMENT,
-              }),
-            [
-              {
-                style: 'cancel',
-                text: isManagerMode
-                  ? t('addClubManager.alerts.alreadyExist.actions.cancel', 'Annuler')
-                  : t('addCoach.alerts.alreadyExist.actions.cancel'),
+      // SECU-NOM-NUMERO (decision « 119- A ») : un numero deja inscrit ne dit plus
+      // QUI le detient, ni dans quel club. Le serveur ne dit que « deja dans CE club ».
+      if (details?.code === 'PHONE_NUMBER_TAKEN' && details.sameClub) {
+        Alert.alert(
+          t('addCoach.alerts.alreadyInThisClub.title'),
+          t('addCoach.alerts.alreadyInThisClub.description'),
+        );
+      } else if (details?.code === 'PHONE_NUMBER_TAKEN') {
+        Alert.alert(
+          t('addCoach.alerts.invitation.title'),
+          t('addCoach.alerts.invitation.description'),
+          [
+            { style: 'cancel', text: t('common.cancel', 'Annuler') },
+            {
+              onPress: () => {
+                // Le guide avance comme apres l'ancien rattachement direct.
+                emitGuidanceAction('staff.linked');
+                inviteTrainer({
+                  clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
+                  clubName: resolvedClubName,
+                  firstname: variables?.firstname || (isManagerMode
+                    ? t('addCoach.roles.manager')
+                    : t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof')),
+                  isManager: isManagerMode,
+                  phoneNumber: variables?.phoneNumber,
+                });
+                navigation.goBack();
               },
-              {
-                onPress: () => {
-                  linkTrainerToClubMutation.mutate(/** @type {any} */ ({
-                    clubId: routeClubId || clubData?.documentId,
-                    ...(isManagerMode ? { managerId: user.documentId } : { trainerId: user.documentId }),
-                  }));
-                },
-                text: isManagerMode
-                  ? t('addClubManager.alerts.alreadyExist.actions.addToClub', 'Ajouter à la section')
-                  : t('addCoach.alerts.alreadyExist.actions.addToClub'),
-              },
-            ],
-          );
-        }
+              text: t('addCoach.alerts.invitation.actions.send'),
+            },
+          ],
+        );
       } else {
-        // Une seule alerte, traduite (code PHONE_NUMBER_TAKEN…), jamais le message brut.
+        // Une seule alerte, traduite (code EMAIL_TAKEN…), jamais le message brut.
         displayErrorAlert(error);
       }
     },

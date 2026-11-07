@@ -369,21 +369,7 @@ const textesDesAlertes = () => /** @type {any} */ (Alert.alert).mock.calls
 describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français', () => {
   beforeEach(() => { mockMutationOptions.length = 0; });
 
-  it('numéro d’un compte existant : une alerte qui propose de l’ajouter', async () => {
-    /** @type {any} */ (createTrainer).mockRejectedValue(refusUnicite({
-      user: { documentId: 'u-9', firstname: 'Audit', lastname: 'Rejeu' },
-    }));
-    const arbre = await monterEcran();
-    await saisirTelephone('+33639980001');
-    await appuyerSur(arbre, LIBELLE_CTA);
-
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    expect(textesDesAlertes().join(' ')).not.toContain('Failed to');
-    // L'alerte de l'écran garde son geste « Ajouter au club ».
-    expect(/** @type {any} */ (Alert.alert).mock.calls[0][2]).toHaveLength(2);
-  });
-
-  it('numéro pris sans fiche jointe : « … déjà utilisé. », seul', async () => {
+  it('numéro d’un compte existant : une alerte qui propose l’invitation', async () => {
     /** @type {any} */ (createTrainer)
       .mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
     const arbre = await monterEcran();
@@ -391,8 +377,21 @@ describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français'
     await appuyerSur(arbre, LIBELLE_CTA);
 
     expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(textesDesAlertes().join(' ')).not.toContain('Failed to');
+    // SECU-NOM-NUMERO : le geste devient « Envoyer l'invitation » (plus de rattachement direct).
+    expect(/** @type {any} */ (Alert.alert).mock.calls[0][2]).toHaveLength(2);
+  });
+
+  it('autre refus d’unicité : l’alerte traduite, seule', async () => {
+    /** @type {any} */ (createTrainer)
+      .mockRejectedValue(refusUnicite({ code: 'EMAIL_TAKEN' }));
+    const arbre = await monterEcran();
+    await saisirTelephone('+33639980001');
+    await appuyerSur(arbre, LIBELLE_CTA);
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
     expect(textesDesAlertes().join(' ')).not.toContain('Failed to create trainer');
-    expect(textesDesAlertes().join(' ')).toContain('Ce numéro de téléphone est déjà utilisé.');
+    expect(textesDesAlertes().join(' ')).toContain('Cette adresse email est déjà utilisée.');
   });
 
   it('le filet global se tait sur la création : l’écran parle seul', async () => {
@@ -414,5 +413,65 @@ describe('PETITSBUGS-3 — « Ajout réussi ! » sans le clavier numérique', ()
     expect(fermer).toHaveBeenCalled();
     expect(dernieresProps(mockInvitedModalProps).isVisible).toBe(true);
     fermer.mockRestore();
+  });
+});
+
+// ==========================================================================
+// SECU-NOM-NUMERO (decision « 119- A », 06/11/2026) — un numero deja inscrit ne
+// dit plus QUI le detient, ni s il est dans un autre club. Numeros fictifs.
+// ==========================================================================
+
+describe.each([
+  ['coach', RouteNames.AddCoach, createTrainer],
+  ['dirigeant', RouteNames.AddClubManager, createManager],
+])('SECU-NOM-NUMERO — %s : aucun nom avant que la personne accepte', (_role, routeName, creer) => {
+  it('numéro déjà inscrit : message neutre, sans nom ni club', async () => {
+    // Même si un ancien serveur joint encore la fiche, l'écran ne la lit plus.
+    /** @type {any} */ (creer).mockRejectedValue(refusUnicite({
+      code: 'PHONE_NUMBER_TAKEN',
+      user: {
+        club: { name: 'Club Ailleurs' },
+        documentId: 'u-9',
+        firstname: 'Audit',
+        lastname: 'Rejeu',
+      },
+    }));
+    const arbre = await monterEcran({ name: routeName });
+    await saisirTelephone('+33600000098');
+    await appuyerSur(arbre, LIBELLE_CTA);
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    const texte = textesDesAlertes().join(' ');
+    expect(texte).toContain('Une invitation sera envoyée à ce numéro.');
+    expect(texte).not.toMatch(/Audit|Rejeu|autre club|Club Ailleurs/);
+  });
+
+  it("« Envoyer l'invitation » ouvre le SMS vers le numéro tapé, sans rattacher", async () => {
+    /** @type {any} */ (creer).mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
+    const arbre = await monterEcran({ name: routeName });
+    await saisirTelephone('+33600000098');
+    await appuyerSur(arbre, LIBELLE_CTA);
+
+    const boutons = /** @type {any} */ (Alert.alert).mock.calls[0][2];
+    expect(boutons[1].text).toBe("Envoyer l'invitation");
+    await act(async () => boutons[1].onPress());
+    expect(mockInviteTrainer).toHaveBeenCalledWith(expect.objectContaining({
+      clubId: 'club-1',
+      phoneNumber: '+33600000098',
+    }));
+    expect(linkTrainerToClub).not.toHaveBeenCalled();
+    expect(mockNavigation.goBack).toHaveBeenCalled();
+  });
+
+  it('déjà dans CE club : dit sans nom', async () => {
+    /** @type {any} */ (creer)
+      .mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN', sameClub: true }));
+    const arbre = await monterEcran({ name: routeName });
+    await saisirTelephone('+33600000098');
+    await appuyerSur(arbre, LIBELLE_CTA);
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(textesDesAlertes().join(' ')).toContain('Ce numéro est déjà membre de ce club.');
+    expect(/** @type {any} */ (Alert.alert).mock.calls[0][2]).toBeUndefined();
   });
 });
