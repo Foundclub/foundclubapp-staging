@@ -25,9 +25,9 @@ import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGr
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';

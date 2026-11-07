@@ -1,11 +1,13 @@
-// RETOURS-TESTEUR-3 D3 (07/11/2026) — « Infos rapides » vides sur la fiche d'un événement tout juste
-// créé, constaté sur le site (CR-TRAIN5, point 5 : TYPE Non défini, ÉQUIPE Non définie, CAPACITÉ 0,
+// RETOURS-TESTEUR-3 D3 (07/11/2026) — « Infos rapides » vides sur la fiche d'un événement
+// tout juste créé, constaté sur le site (CR-TRAIN5, point 5 : TYPE Non défini, ÉQUIPE Non
+// définie, CAPACITÉ 0,
 // l'en-tête disant pourtant « Entraînement · CR-T5 U13 »).
 // La fiche est d'abord remplie avec la réponse de la création (EventWizardRecap.js:171,
 // `setQueryData(['event', id], …)`), qui ne porte ni type ni équipe ; elle doit relire le serveur à
 // l'arrivée (EventDetails.web.js:232, `refetchOnMount: 'always'` quand `fromEventCreation`).
-// Ce témoin rejoue, sans serveur, les deux maillons côté client : le paramètre qui déclenche la
-// relecture traverse-t-il l'adresse du site, et la relecture remplace-t-elle la réponse de création ?
+// Ce témoin rejoue, sans serveur, les deux maillons côté client : le paramètre qui déclenche
+// la relecture traverse-t-il l'adresse du site, et la relecture remplace-t-elle la réponse de
+// création ?
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
@@ -35,7 +37,8 @@ const FICHE_RELUE = Object.freeze({
 });
 
 describe('D3 — la fiche d un événement tout juste créé, sur le site', () => {
-  it('maillon 1 : « fromEventCreation » traverse l adresse et revient VRAI (entraînement : pas d affiche, une seule route)', () => {
+  // Entraînement : pas d'affiche, donc une seule route dans la pile.
+  it('maillon 1 : « fromEventCreation » traverse l adresse et revient VRAI', () => {
     /** @type {string[]} */
     const chemins = [];
     const navigation = createWebNavigationAdapter({
@@ -48,7 +51,7 @@ describe('D3 — la fiche d un événement tout juste créé, sur le site', () =
       setSearchParams: () => {},
     });
 
-    // Les paramètres exacts de EventWizardRecap.js (club sans offre : `subscriptionFollowUp` rempli).
+    // Les paramètres exacts de EventWizardRecap.js (club sans offre : `subscriptionFollowUp`).
     navigation.reset({
       index: 0,
       routes: [{
@@ -71,18 +74,22 @@ describe('D3 — la fiche d un événement tout juste créé, sur le site', () =
     expect(readWebQueryParams(adresse.searchParams).fromEventCreation).toBe(true);
   });
 
-  it('maillon 2 : la relecture à l arrivée remplace la réponse de création (type et équipe lus)', async () => {
+  it('maillon 2 : la relecture à l arrivée remplace la réponse de création', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     client.setQueryData(['event', 'ev-neuf'], REPONSE_DE_CREATION);
     mockGetEventById.mockResolvedValue(FICHE_RELUE);
     /** @type {any[]} */
     const vus = [];
-    const Fiche = () => {
+    /**
+     * La fiche réduite à sa lecture de l'événement.
+     * @returns {null} Rien à afficher.
+     */
+    function Fiche() {
       // Les options exactes de EventDetails.web.js quand `fromEventCreation` est vrai.
       const { data } = useGetEvent('ev-neuf', { refetchOnMount: 'always', staleTime: 0 });
       vus.push(data);
       return null;
-    };
+    }
 
     /** @type {any} */
     let arbre;

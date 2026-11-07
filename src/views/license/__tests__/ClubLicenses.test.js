@@ -70,10 +70,12 @@ jest.mock('@/domains/auth/useAuth', () => ({
 // `authUseCases` tire le magasin de session et la navigation : on le double
 // entierement plutot que de faire dependre ce filet de la couche de stockage.
 jest.mock('@/domains/auth/authUseCases', () => ({
-  getUserRoleKey: (/** @type {string} */ nomDeRole) => (
-    String(nomDeRole || '').toLowerCase().includes('dirigeant') ? 'president'
-      : String(nomDeRole || '').toLowerCase().includes('super') ? 'superAdmin' : 'new'
-  ),
+  getUserRoleKey: (/** @type {string} */ nomDeRole) => {
+    const nom = String(nomDeRole || '').toLowerCase();
+    if (nom.includes('dirigeant')) return 'president';
+    if (nom.includes('super')) return 'superAdmin';
+    return 'new';
+  },
 }));
 
 // Le VRAI theme, sans le contexte React qui le porte : un Proxy rendrait les
@@ -538,6 +540,7 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
     // remplissait les 6 etapes pour se voir refuser a l'enregistrement. Le droit se
     // lit dans `entitlementsSummary` (bootstrap), par `getSubscriptionAccessLevelForClub`.
     /**
+     * Monte le hub, appuie sur la tuile « + Nouvelle campagne ».
      * @param {any} auth - Ce que `useAuth` rend en plus.
      * @param {string} [role] - Le role du compte.
      * @returns {string} Le texte de l'ecran apres l'appui sur la tuile.
@@ -556,7 +559,9 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
 
     it('D2-A : club sans offre (FREE) ⇒ l ecran de l offre, pas les 6 etapes', () => {
       const texte = appuyerSurNouvelleCampagne({
-        getSubscriptionAccessLevelForClub: (/** @type {string} */ id) => (id === 'club-hub' ? 'FREE' : 'CLUB'),
+        getSubscriptionAccessLevelForClub: (/** @type {string} */ id) => (
+          id === 'club-hub' ? 'FREE' : 'CLUB'
+        ),
         isBootstrapResolved: true,
       });
 
@@ -564,7 +569,7 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
       expect(versLAssistant()).toHaveLength(0);
     });
 
-    it.each(['CLUB', 'CLUB_UNVERIFIED', 'TEAM'])('D2-A : offre %s ⇒ les 6 etapes, sans ecran d offre', (niveau) => {
+    it.each(['CLUB', 'CLUB_UNVERIFIED', 'TEAM'])('D2-A : offre %s ⇒ les 6 etapes', (niveau) => {
       // TEAM : le serveur accepte une campagne d'UNE equipe avec l'offre Equipe
       // (subscription-permission.ts resolveRequiredPlans) ; le filet reste a l'enregistrement.
       const texte = appuyerSurNouvelleCampagne({
@@ -576,7 +581,8 @@ describe('ClubLicenses — le hub des cotisations (filet E6, avant la refonte D1
       expect(versLAssistant()).toEqual([['ClubLicenseCampaignSettings', { clubId: 'club-hub' }]]);
     });
 
-    it('D2-A : droits pas encore lus (bootstrap en cours) ⇒ les 6 etapes ; le serveur reste juge', () => {
+    // Le serveur reste juge : le refus a l'enregistrement est le filet.
+    it('D2-A : droits pas encore lus (bootstrap en cours) ⇒ les 6 etapes', () => {
       const texte = appuyerSurNouvelleCampagne({
         getSubscriptionAccessLevelForClub: () => 'FREE',
         isBootstrapResolved: false,
