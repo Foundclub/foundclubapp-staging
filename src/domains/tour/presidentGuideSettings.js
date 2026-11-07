@@ -5,7 +5,7 @@
  */
 export const PRESIDENT_GUIDE_SETTINGS = Object.freeze({
   // Faux : le dirigeant garde le tour v2. Vrai quand l'essentiel (M1 à M4) est fini.
-  enabled: false,
+  enabled: true,
   // Décision 1, mur d'argent, A : sans offre Club, M2 est montré, pas joué. Faux pour B. ②③④ se
   // jouent pour tous : la première installation et le premier partenaire sont offerts (« 77- C »).
   visitWithoutClubPlan: true,
