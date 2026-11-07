@@ -96,7 +96,7 @@ function LeaguePlatformGate({ children }) {
       <AdminStateView
         description={t(
           'leaguePlatformGate.loading.description',
-          "Nous vérifions l'état de Found Club League.",
+          "Nous vérifions l'état de FoundClub League.",
         )}
         isLoading
         title={t('leaguePlatformGate.loading.title', 'Préparation de la plateforme')}

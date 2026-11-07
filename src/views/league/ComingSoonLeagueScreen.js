@@ -178,10 +178,10 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
             </View>
 
             <Text style={[Fonts.label, { color: Colors.primary500, letterSpacing: 1.2 }]}>
-              FOUND CLUB LEAGUE
+              FOUNDCLUB LEAGUE
             </Text>
             <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
-              {t('comingSoonLeagueScreen.title', 'Found Club League arrive bientôt.')}
+              {t('comingSoonLeagueScreen.title', 'FoundClub League arrive bientôt.')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 26, textAlign: 'center' }]}>
               {t(

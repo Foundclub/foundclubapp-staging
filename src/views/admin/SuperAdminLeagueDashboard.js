@@ -96,7 +96,7 @@ function SuperAdminLeagueDashboard() {
       <AdminStateView
         description={t(
           'superAdminLeagueDashboard.states.loadingDescription',
-          'Nous consolidons les métriques globales de Found Club League.',
+          'Nous consolidons les métriques globales de FoundClub League.',
         )}
         isLoading
         title={t('superAdminLeagueDashboard.states.loadingTitle', 'Chargement du dashboard League')}

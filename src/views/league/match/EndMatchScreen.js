@@ -300,7 +300,7 @@ function EndMatchScreen() {
     const runtime = getLeagueRuntimeFromError(errorLike) || leaguePlatformRuntime;
     const scope = restrictionCode ? getLeagueRestrictionScope(errorLike) : 'matchmaking';
     const title = scope === 'platform'
-      ? t('endMatchScreen.closed.platform', 'Found Club League fermée')
+      ? t('endMatchScreen.closed.platform', 'FoundClub League fermée')
       : t('endMatchScreen.closed.matchmaking', 'Recherche de match fermée');
 
     Alert.alert(title, getLeagueClosedMessage(runtime, scope));

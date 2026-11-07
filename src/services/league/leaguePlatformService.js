@@ -5,7 +5,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import client from '@/services/client';
 
 const platformClosedLines = () => [
-  i18next.t('leaguePlatformService.platformClosed.title', 'Found Club League arrive bientôt.'),
+  i18next.t('leaguePlatformService.platformClosed.title', 'FoundClub League arrive bientôt.'),
   i18next.t(
     'leaguePlatformService.platformClosed.hint',
     'Prépare ta squad, la compétition démarre bientôt.',
@@ -78,7 +78,7 @@ export const getLeagueClosedMessageLines = (runtime, scope = 'platform') => {
       )
       : i18next.t(
         'leaguePlatformService.platformClosed.title',
-        'Found Club League arrive bientôt.',
+        'FoundClub League arrive bientôt.',
       );
     const thirdLine = scope === 'matchmaking'
       ? i18next.t(
