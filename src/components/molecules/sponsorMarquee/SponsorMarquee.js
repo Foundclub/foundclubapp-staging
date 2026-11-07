@@ -84,6 +84,10 @@ function SponsorMarquee({
 
   if (!items.length) return null;
 
+  // RETOURS-TESTEUR-2 (06/11/2026) — la boucle repete chaque partenaire (4 elements au moins, en
+  // 2 copies) : a l oeil c est le ruban ; un lecteur d ecran, lui, n en lit que la 1re occurrence.
+  const nombreDePartenaires = (sponsors || []).filter(Boolean).length;
+
   const resolvedFadeColor = fadeColor || Colors.primary900;
   const separatorColor = withAlpha(Colors.neutral00, 0.12);
 
@@ -99,8 +103,12 @@ function SponsorMarquee({
                 : undefined}
               style={styles.copyRow}
             >
-              {items.map(({ key, sponsor }) => (
+              {items.map(({ key, sponsor }, position) => (
                 <View
+                  accessibilityElementsHidden={copyIndex > 0 || position >= nombreDePartenaires}
+                  importantForAccessibility={copyIndex > 0 || position >= nombreDePartenaires
+                    ? 'no-hide-descendants'
+                    : 'auto'}
                   key={`${copyIndex}-${key}`}
                   style={styles.item}
                 >

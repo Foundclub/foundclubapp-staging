@@ -244,6 +244,10 @@ afterEach(() => {
   requetes.clear();
 });
 
+// ponytail: le 1er test monte l'écran à froid (13 à 22 s mesurés sous charge le 06/11) ; 30 s pour ce
+// seul fichier, au lieu de 5 s qui donnaient 8 faux rouges en cascade. Sortie : alléger le montage.
+jest.setTimeout(30000);
+
 describe('VACANCES-REPETE — répéter sur un créneau « sauf vacances » de la Ville', () => {
   test('une série de 5 mois : le coach voit la case (le planning refuse plus de 31 jours)', async () => {
     mockVille = gymnase();

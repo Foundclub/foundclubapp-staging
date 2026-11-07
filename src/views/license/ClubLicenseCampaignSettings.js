@@ -19,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey, USER_ROLES } from '@/domains/auth/authUseCases';
 import { emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
-import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -80,6 +79,7 @@ import {
   normalizePaymentModes,
   paymentModeLabels,
 } from './licenseDesignSystem';
+import { decisionDuRefusDeCampagne } from './refusDeCampagne';
 
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');
@@ -2754,7 +2754,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     saveMutation.mutate({ status: requestedStatus }, {
       onError: (error) => {
         finirEnvoi();
-        const subscriptionDecision = extractSubscriptionDecisionFromError(error);
+        // RETOURS-TESTEUR-2 (06/11) : un 403 sans decision ouvre aussi l'offre.
+        const subscriptionDecision = decisionDuRefusDeCampagne(error);
         if (subscriptionDecision) {
           setSubscriptionPaywallDecision(subscriptionDecision);
           return;

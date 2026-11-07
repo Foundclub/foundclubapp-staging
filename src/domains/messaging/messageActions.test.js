@@ -93,10 +93,11 @@ describe('WHATSAPP2 — quelles actions pour quel message', () => {
   });
 
   // MESSAGERIE-1C : une 6e action, « Modifier la composition » (pack §3.2, §3.12).
-  it('MESSAGE_ACTIONS decrit les six actions, sans doublon de clef', () => {
+  // RETOURS-TESTEUR-2 (M0035) : une 7e, « Enregistrer » sous une photo.
+  it('MESSAGE_ACTIONS decrit les sept actions, sans doublon de clef', () => {
     const toutes = MESSAGE_ACTIONS.map((action) => action.key);
-    expect(toutes).toHaveLength(6);
-    expect(new Set(toutes).size).toBe(6);
+    expect(toutes).toHaveLength(7);
+    expect(new Set(toutes).size).toBe(7);
   });
 
   it('MESSAGERIE-1C : « Modifier la composition » seulement pour qui peut convoquer', () => {
@@ -127,6 +128,7 @@ describe('MSG1A — le menu de l appui long', () => {
       editComposition: 'penSquare',
       reply: 'reply',
       report: 'flag',
+      save: 'arrowDownToBracket',
     });
   });
 
@@ -139,5 +141,22 @@ describe('MSG1A — le menu de l appui long', () => {
     expect(cles({ canCopy: true, canReply: false, isMine: false })).toEqual(['copy', 'report']);
     expect(cles({ canCopy: true, canReply: true, isMine: false }))
       .toEqual(['reply', 'copy', 'report']);
+  });
+});
+
+// RETOURS-TESTEUR-2 (06/11/2026, M0035) — « il faut rajouter l'option enregistrer quand on reste
+// appuyé sur la photo » : « Enregistrer » sous une photo, juste après « Copier ».
+describe('M0035 — Enregistrer une photo depuis l appui long', () => {
+  it('une photo de quelqu un d autre : Repondre, Enregistrer, Signaler', () => {
+    expect(cles({ canSave: true, isMine: false })).toEqual(['reply', 'save', 'report']);
+  });
+
+  it('une photo legendee a moi : Enregistrer juste apres Copier', () => {
+    expect(cles({ canCopy: true, canSave: true, isMine: true }))
+      .toEqual(['reply', 'copy', 'save', 'delete']);
+  });
+
+  it('un message sans photo : pas d Enregistrer', () => {
+    expect(cles({ canCopy: true, isMine: false })).not.toContain('save');
   });
 });

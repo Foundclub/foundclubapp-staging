@@ -51,13 +51,19 @@ describe('COLL-R-APP-CREATION — le bandeau « Demande envoyée à la Ville »'
     expect(payload.title).toBe('Demande envoyée à la Ville');
   });
 
-  test('le bandeau émis garde son geste (l hôte des bandeaux le lit sur la charge)', () => {
+  // RETOURS-TESTEUR-2 (06/11/2026, M0232 « B ») : plus de bandeau, une fenêtre à fermer soi-même ;
+  // le geste « Voir mes demandes » y est un bouton.
+  test('la fenêtre émise garde son geste « Voir mes demandes »', () => {
+    // eslint-disable-next-line global-require -- l Alert reelle, espionnee
+    const alerte = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
     const recus = [];
     const desabonner = subscribeToCelebrations((charge) => { recus.push(charge); });
     celebrate('event_city_request_sent', CONTEXTE);
     desabonner();
-    expect(recus).toHaveLength(1);
-    expect(typeof recus[0].onAction).toBe('function');
+    expect(recus).toHaveLength(0);
+    const boutons = alerte.mock.calls[0][2];
+    expect(typeof boutons[1].onPress).toBe('function');
+    alerte.mockRestore();
   });
 
   test('« Événement créé » ne change pas : aucun geste', () => {

@@ -517,6 +517,8 @@ function EventEditForm({ navigation, route }) {
     border: `1px solid ${borderColor}`,
     borderRadius: 16,
     color: textColor,
+    // M0177 (06/11) : la liste ouverte par le navigateur suit le fond sombre (texte blanc sur blanc).
+    colorScheme: 'dark',
     fontFamily: 'Montserrat-Regular, sans-serif',
     fontSize: 14,
     outline: 'none',

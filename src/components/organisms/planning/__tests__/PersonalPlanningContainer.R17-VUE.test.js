@@ -143,10 +143,17 @@ afterEach(() => {
 });
 
 describe('R17-VUE — « Mon planning » a l arrivee', () => {
-  test('1 CARACTERISATION — 3 jours pleins : la vue « 3 jours » reste', async () => {
-    await monter([creneau('2026-10-22')], [new Date(2026, 9, 22, 12)]);
+  test('1 CARACTERISATION — aujourd hui plein : la vue « 3 jours » reste', async () => {
+    await monter([creneau('2026-10-21')], [new Date(2026, 9, 21, 12)]);
     expect(selecteur().value).toBe('3days');
     expect(mockGrilles[mockGrilles.length - 1].mode).toBe('3days');
+  });
+
+  // RETOURS-TESTEUR-2 (M0204 / M0983).
+  test('1 bis — aujourd hui vide, demain plein : la SEMAINE', async () => {
+    await monter([creneau('2026-10-22')], [new Date(2026, 9, 22, 12)]);
+    expect(selecteur().value).toBe('week');
+    expect(mockGrilles[mockGrilles.length - 1].mode).toBe('week');
   });
 
   test('2 ROUGE-AVANT — 3 jours vides, un evenement samedi : la SEMAINE', async () => {

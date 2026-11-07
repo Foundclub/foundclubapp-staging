@@ -1,6 +1,7 @@
 import {
   JOURS_DE_LA_SUITE,
   plageDeLaSuite,
+  vueDeBaseVide,
   vueInitiale,
 } from '../vueInitiale';
 
@@ -32,10 +33,16 @@ describe('R17-VUE — vueInitiale : le planning s ouvre la ou il y a quelque cho
       .toBe('week');
   });
 
-  test('3 — « 3 jours » (onglet perso) compte comme « jour »', () => {
-    // Le 23 est dans les 3 jours (21, 22, 23) : la vue de base reste.
-    expect(vueInitiale({ aujourdhui: AUJOURDHUI, dates: [jour(9, 23)], vueDeBase: '3days' }).vue)
+  test('3 — « 3 jours » (onglet perso) : on regarde AUJOURD HUI seul (M0204 / M0983)', () => {
+    // RETOURS-TESTEUR-2 (06/11/2026) — « quand il y a un jour vide rien ne se passe » : avant, les
+    // 3 jours comptaient comme « le jour », et un evenement demain gardait la vue de base.
+    // Aujourd hui plein : la vue de base reste.
+    expect(vueInitiale({ aujourdhui: AUJOURDHUI, dates: [jour(9, 21)], vueDeBase: '3days' }).vue)
       .toBe('3days');
+    // Aujourd hui vide, le 23 (dans les 3 jours) plein : la semaine.
+    expect(vueInitiale({ aujourdhui: AUJOURDHUI, dates: [jour(9, 23)], vueDeBase: '3days' }).vue)
+      .toBe('week');
+    expect(vueDeBaseVide('3days', AUJOURDHUI, [jour(9, 22)])).toBe(true);
     // Le 25 est hors des 3 jours mais dans la semaine : la semaine.
     expect(vueInitiale({ aujourdhui: AUJOURDHUI, dates: [jour(9, 25)], vueDeBase: '3days' }).vue)
       .toBe('week');

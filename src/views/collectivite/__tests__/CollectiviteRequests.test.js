@@ -930,3 +930,22 @@ describe('R17-QUAND-1 bis — la carte d’une série dit son rythme', () => {
     expect(lus).toEqual(expect.arrayContaining([phrase, 'Chaque semaine']));
   });
 });
+
+// RETOURS-TESTEUR-2 (06/11/2026, M0133 côté Ville) — « il faut mettre les heures des demandes » :
+// la carte d'une demande en attente dit quand elle est arrivée, au format des autres demandes.
+describe('M0133 — « Reçue le … à … » sur la carte de la Ville', () => {
+  const RECUE = '2030-10-04T16:06:00.000Z';
+  const ATTENDU = `Reçue le ${format(new Date(RECUE), 'd MMM', { locale: fr })} à ${heure(RECUE)}`;
+  const normaliser = (/** @type {string} */ texte) => texte.replace(/\.|\u202f/g, '').replace(/\s+/g, ' ');
+
+  it('téléphone : la date et l heure d arrivée sont sur la carte', async () => {
+    mockEnAttente = [{ ...EN_ATTENTE, createdAt: RECUE }];
+    const lus = textes(await monter()).map(normaliser);
+    expect(lus).toContain(normaliser(ATTENDU));
+  });
+
+  it('sans date lisible (serveur plus ancien) : rien', async () => {
+    const lus = textes(await monter());
+    expect(lus.some((texte) => texte.startsWith('Reçue le'))).toBe(false);
+  });
+});

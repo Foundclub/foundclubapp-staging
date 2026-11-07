@@ -1370,9 +1370,14 @@ function ClubDetails({ navigation, route }) {
   // club (menu du club à l'ordinateur, « Mes équipes » dans la barre du bas). Le club d'un autre
   // garde l'onglet d'où l'on vient, aucun sans origine connue (FIN-PLACE, Adel « 1- C »). Le
   // téléphone ne lit pas ce magasin.
+  // RETOURS-TESTEUR-2 (06/11/2026, M0805) — le hub du dirigeant (même règle que `isClubHub`,
+  // plus bas) s'intitule « Gestion du club » : son en-tête dit déjà le nom.
+  const surLeHubDuClub = canEdit && !route?.params?.section && selectedTab !== 'planning';
   useDeclarerPageDuSite({
     onglet: isMember ? 'main-team' : lireOngletDOrigine(),
-    titre: club?.name || null,
+    titre: surLeHubDuClub
+      ? t('clubDetails.compactHeader.kicker', 'Gestion du club')
+      : club?.name || null,
   });
 
   // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
@@ -3883,10 +3888,12 @@ function ClubDetails({ navigation, route }) {
                             : isMember),
                         );
                         const handleOpenFacilityEdit = () => {
+                          // RETOURS-TESTEUR-2 : l'identifiant, seul à tenir dans l'adresse du site.
                           navigation.navigate(RouteNames.FacilityForm, {
                             clubId,
                             cmId: resolvedFacilityCmId,
                             facility,
+                            facilityId: facility?.documentId,
                           });
                         };
                         const handleOpenPlanning = () => {
@@ -4981,11 +4988,9 @@ function ClubDetails({ navigation, route }) {
             disabled={clubArrivalInterestIsBusy}
             onPress={handlePressClubArrivalInterest}
             style={[
+              // M0982 (06/11) : le bouton sous le texte ; à côté, il coupait le titre.
               ApplicationStyle.borderRadius24,
               ApplicationStyle.backgroundColor.primary700,
-              Alignments.row,
-              Alignments.alignCenter,
-              Alignments.justifySpaceBetween,
               Spaces.padding[16],
               Spaces.gap[12],
               {
@@ -4996,7 +5001,7 @@ function ClubDetails({ navigation, route }) {
               modeDemandeEnfant ? { display: 'none' } : null,
             ]}
           >
-            <View style={{ flex: 1 }}>
+            <View>
               <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
                 {t('clubDetails.clubInterest.wholeClubOption', 'Le club en général')}
               </Text>
@@ -5038,18 +5043,17 @@ function ClubDetails({ navigation, route }) {
                   key={`interest-${teamDocumentId || teamItem?.name}`}
                   onPress={() => handleSelectClubInterestTeam(teamItem)}
                   style={[
+                    // M0982 (06/11) : le bouton passe sous le nom de l'équipe (« Senio… » sur iPhone).
                     ApplicationStyle.borderRadius24,
                     ApplicationStyle.backgroundColor.primary700,
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Alignments.justifySpaceBetween,
                     Spaces.padding[16],
+                    Spaces.gap[12],
                     {
                       opacity: isDisabled ? 0.65 : 1,
                     },
                   ]}
                 >
-                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { flex: 1 }]}>
+                  <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
                     <ClubLogoMark
                       club={teamItem?.club || club}
                       name={teamItem?.club?.name || club?.name || teamItem?.name}

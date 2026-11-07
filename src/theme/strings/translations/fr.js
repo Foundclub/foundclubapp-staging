@@ -12,6 +12,9 @@ export default {
   },
   addCoach: {
     actions: {
+      // RETOURS-TESTEUR-2 (06/11, M0077) — sur ordinateur, à la place du SMS.
+      copyInvite: 'Copier le lien d’invitation',
+      emailInvite: 'Envoyer par e-mail',
       invite: 'Inviter',
       save: 'Envoyer l\'invitation',
     },
@@ -28,6 +31,7 @@ export default {
         description: 'Une invitation sera envoyée à ce numéro.',
         title: 'Invitation',
       },
+      inviteCopied: 'Invitation copiée : colle-la dans un e-mail, WhatsApp ou un SMS.',
       success: {
         description: "L'entraîneur·e {{trainerName}} a bien été ajouté·e à ton club.",
         title: 'Ajout réussi !',
@@ -6734,6 +6738,8 @@ export default {
       combienDeFois: 'Combien de fois',
       commeDansTonPlanning: 'Comme dans ton planning.',
       completALEnvoi: 'c’était complet à l’envoi',
+      // RETOURS-TESTEUR-2 (06/11, M0232) — fermer la fenêtre « Demande envoyée ».
+      compris: 'J’ai compris',
       confirme: 'Ton entraînement est confirmé : la Ville a déjà attribué ce créneau à ton club.',
       dejaLa: '{{nom}}{{tonClub}}, de {{debut}} à {{fin}}',
       dejaLaListe: 'Déjà là : {{noms}}.',
@@ -6755,6 +6761,8 @@ export default {
       envoiEnCoursTitre: 'Envoi en cours',
       envoyee: 'Demande envoyée à la {{ville}}',
       envoyeeDirigeant: 'Demande envoyée à ton dirigeant',
+      // RETOURS-TESTEUR (06/11, M0133) — quand la demande est partie.
+      envoyeeLe: 'Envoyée le {{date}} à {{time}}',
       envoyer: 'Envoyer la demande',
       envoyerQuandMeme: 'Envoyer quand même',
       equipe: 'Équipe',
@@ -28177,7 +28185,7 @@ export default {
       },
       free: {
         bullet1: '1 équipe, 1 installation, 1 partenaire offerts',
-        bullet2: '2 événements et 1 annonce offerts',
+        bullet2: '2 événements, 1 match et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",
         kickerAfterGift: 'Après les 7 jours',

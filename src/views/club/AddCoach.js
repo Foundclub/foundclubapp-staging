@@ -152,7 +152,7 @@ function AddCoach({ navigation, route }) {
   const phoneNumber = watch('phoneNumber');
   useEffect(() => { reportTourField('cf.phone', Boolean(phoneNumber)); }, [phoneNumber]);
 
-  const { inviteTrainer } = useAuth();
+  const { invitationDuStaff, inviteTrainer } = useAuth();
 
   const createTrainerMutation = useMutation({
     mutationFn: isManagerMode ? createManager : createTrainer,
@@ -480,6 +480,15 @@ function AddCoach({ navigation, route }) {
       <TrainerInvitedModal
         isManager={isManagerMode}
         isVisible={isSuccessModalVisible}
+        // RETOURS-TESTEUR-2 (M0077) : sur ordinateur, ce texte se copie ou part par e-mail.
+        messageDInvitation={createdTrainer ? invitationDuStaff?.({
+          clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
+          clubName: resolvedClubName,
+          firstname: createdTrainer.firstname || (isManagerMode
+            ? t('addCoach.roles.manager')
+            : t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof')),
+          isManager: isManagerMode,
+        })?.message : ''}
         onClose={() => {
           emitGuidanceInteraction('staff.invite.later');
           setIsSuccessModalVisible(false);

@@ -32,7 +32,7 @@
  * convocation publiee, pour qui peut convoquer dans cette equipe (`canEditComposition`, calcule
  * par la vue : entraineur de l'equipe ou super-admin).
  * @type {{alerte?: boolean, condition: (etat: {canCopy: boolean, canEdit: boolean,
- *   canEditComposition: boolean, canReply: boolean, isMine: boolean}) => boolean,
+ *   canEditComposition: boolean, canReply: boolean, canSave: boolean, isMine: boolean}) => boolean,
  *   destructive?: boolean, fallback: string, icone: string, key: string,
  *   labelKey: string}[]}
  */
@@ -51,6 +51,15 @@ export const MESSAGE_ACTIONS = [
     icone: 'fileCopy',
     key: 'copy',
     labelKey: 'conversation.actions.copy',
+  },
+  {
+    // RETOURS-TESTEUR-2 (06/11/2026, M0035) — une photo s'enregistre aussi depuis l'appui long,
+    // pas seulement depuis l'image en grand (meme geste : `enregistrerLImage`).
+    condition: ({ canSave }) => Boolean(canSave),
+    fallback: 'Enregistrer',
+    icone: 'arrowDownToBracket',
+    key: 'save',
+    labelKey: 'conversation.imagePreview.save',
   },
   {
     // `canEdit` porte DEJA les deux conditions de la vue : le message est a moi,
@@ -92,7 +101,7 @@ export const MESSAGE_ACTIONS = [
 /**
  * Les actions a afficher pour un message donne.
  * @param {{canCopy?: boolean, canEdit?: boolean, canEditComposition?: boolean,
- *   canReply?: boolean, isMine?: boolean}} [etat]
+ *   canReply?: boolean, canSave?: boolean, isMine?: boolean}} [etat]
  *   Ce que la vue sait du message. `canReply` absent vaut vrai (la regle d'avant MSG1A).
  * @returns {typeof MESSAGE_ACTIONS} Les actions retenues, dans l ordre
  *   d affichage.
@@ -103,6 +112,7 @@ export const getMessageActions = (etat) => {
     canEdit: Boolean(etat?.canEdit),
     canEditComposition: Boolean(etat?.canEditComposition),
     canReply: etat?.canReply !== false,
+    canSave: Boolean(etat?.canSave),
     isMine: Boolean(etat?.isMine),
   };
 

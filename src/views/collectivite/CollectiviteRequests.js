@@ -28,6 +28,7 @@ import {
 } from '@/domains/collectivite/collectiviteDemandes';
 import { findManagedCollectivite } from '@/domains/collectivite/collectiviteDisplay';
 import { unSeulPointFinal } from '@/domains/seasonSlot/seasonSlotDisplay';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -516,6 +517,24 @@ function CollectiviteRequests() {
     );
   };
 
+  // RETOURS-TESTEUR-2 (06/11/2026, M0133) — quand la demande est arrivée : « Reçue le 4 nov. à
+  // 17:06 », le format des demandes de l'accueil (`RequestFeedItem`) ; sans date lisible, rien.
+  const recueLe = (/** @type {any} */ demande) => {
+    const arrivee = demande?.createdAt ? new Date(demande.createdAt) : null;
+    if (!arrivee || Number.isNaN(arrivee.getTime())) return null;
+    return (
+      <Text style={[Fonts.p3, Fonts.neutral300]} testID="demande-recue-le">
+        {t('requestsHub.receivedAt', 'Reçue le {{date}} à {{time}}', {
+          date: arrivee.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+          time: arrivee.toLocaleTimeString(localeDesFormats(), {
+            hour: '2-digit', minute: '2-digit',
+          }),
+          ...SANS_ECHAPPEMENT,
+        })}
+      </Text>
+    );
+  };
+
   // Les deux gestes : Refuser / Accepter (« Accepter la série » pour une série).
   const gestes = (/** @type {any} */ demande) => (
     <View style={[Alignments.row, { gap: 12 }]}>
@@ -557,6 +576,7 @@ function CollectiviteRequests() {
       </Text>
       {surPlace(demande)}
       {motifEtDemandeur(demande)}
+      {recueLe(demande)}
       {gestes(demande)}
     </View>
   );
@@ -600,6 +620,7 @@ function CollectiviteRequests() {
             </View>
           ) : null}
         </View>
+        {recueLe(demande)}
         <View style={{ backgroundColor: `${Colors.neutral00}1A`, height: 1 }} />
         <View
           style={[Alignments.row, { gap: 12, justifyContent: 'flex-end' }]}

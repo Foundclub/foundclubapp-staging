@@ -66,6 +66,16 @@ describe('COLL-C4A2 — les canaux de la Ville, en règles pures', () => {
     expect(signatureDuMessage(t, { sender: karim })).toBeNull();
   });
 
+  // RETOURS-TESTEUR (06/11, M0259, M0298) — un dirigeant sans prénom ni nom s'affichait « · AS
+  // Montrivage », lu « . » par le testeur, et la colonne Messages gardait le point seul.
+  it('sans prénom ni nom : le nom du club ou de la Ville, sans point seul', () => {
+    const anonyme = { firstname: '', lastname: null };
+    expect(signatureDuMessage(t, { sender: anonyme, senderSignature: { nom: 'AS Montrivage', voix: 'club' } }))
+      .toBe('AS Montrivage');
+    expect(signatureDuMessage(t, { sender: anonyme, senderSignature: { nom: 'Ville de Montrivage', voix: 'ville' } }))
+      .toBe('Ville de Montrivage');
+  });
+
   it('le champ d’écriture et la voix demandée au serveur', () => {
     expect(placeholderDuFil(t, { chat: CANAL, espaceVille: true })).toBe('Écrire aux dirigeants…');
     expect(placeholderDuFil(t, { chat: CANAL, espaceVille: false }))

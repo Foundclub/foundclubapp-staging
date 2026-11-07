@@ -408,7 +408,10 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
         Alignments.relative,
         Spaces.gap[8],
         Spaces.paddingHorizontal[24],
-        Spaces.paddingVertical[32],
+        // RETOURS-TESTEUR-2 (06/11/2026, M0980) — le tournoi, dont la fiche est la plus longue,
+        // resserre sa carte d en-tete (le testeur : « réduire le padding du titre en haut »).
+        // ponytail: carte fixe ; une carte qui se replie au defilement est un chantier a part.
+        isTournamentEvent ? Spaces.paddingVertical[16] : Spaces.paddingVertical[32],
         // Lisere gauche : la couleur du lieu reste lisible meme quand le fond
         // photo la mange. 4 est une LARGEUR DE BORD, pas un espacement : elle
         // ne passe pas par la rampe Spaces (cf. { height: 45, width: 1 } plus bas).

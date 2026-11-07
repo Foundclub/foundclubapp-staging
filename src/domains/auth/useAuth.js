@@ -573,16 +573,18 @@ const useAuth = () => {
   ), [userData]);
 
   /**
-   * Invite a trainer
+   * RETOURS-TESTEUR-2 (06/11/2026, M0077) — le texte de l'invitation d'un entraineur ou d'un
+   * dirigeant, lien compris : le SMS ci-dessous, et sur ordinateur la copie ou l'e-mail
+   * (`TrainerInvitedModal`).
    * @param {object} param
    * @param {string | undefined} param.clubId
    * @param {string | undefined} param.firstname
    * @param {string | undefined} param.clubName
-   * @param {string | undefined} param.phoneNumber
-   * @param {boolean} [param.isManager] - INVITESMS : un dirigeant (son SMS dit « dirigeant·e »).
+   * @param {boolean} [param.isManager]
+   * @returns {{ message: string, url: string }} Le message et le lien d'installation.
    */
-  const inviteTrainer = ({
-    clubId, clubName, firstname, isManager = false, phoneNumber,
+  const invitationDuStaff = ({
+    clubId, clubName, firstname, isManager = false,
   }) => {
     const shareMessage = t(isManager
       ? 'clubDetails.alerts.inviteManager.message'
@@ -601,6 +603,24 @@ const useAuth = () => {
       intro: shareMessage,
       linkLabel: t('teamDetails.alerts.invitePlayers.downloadApp', 'Telecharge l\'application ici'),
       url: installUrl,
+    });
+    return { message: encodedMessage, url: installUrl };
+  };
+
+  /**
+   * Invite a trainer
+   * @param {object} param
+   * @param {string | undefined} param.clubId
+   * @param {string | undefined} param.firstname
+   * @param {string | undefined} param.clubName
+   * @param {string | undefined} param.phoneNumber
+   * @param {boolean} [param.isManager] - INVITESMS : un dirigeant (son SMS dit « dirigeant·e »).
+   */
+  const inviteTrainer = ({
+    clubId, clubName, firstname, isManager = false, phoneNumber,
+  }) => {
+    const { message: encodedMessage, url: installUrl } = invitationDuStaff({
+      clubId, clubName, firstname, isManager,
     });
     const smsUrl = `sms:${phoneNumber}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(encodedMessage)}`;
 
@@ -1033,6 +1053,7 @@ const useAuth = () => {
     getSubscriptionAccessLevelForClub,
     governedPublishingBlockReason,
     hasClubAccess,
+    invitationDuStaff,
     inviteTeamPlayers,
     inviteTrainer,
     isAddingAccount,

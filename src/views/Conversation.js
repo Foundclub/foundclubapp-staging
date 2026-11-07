@@ -244,6 +244,10 @@ import {
 } from '@/platform/media/videoLimits';
 import shareApi from '@/platform/share';
 
+// RETOURS-TESTEUR-2 (M0035) — jumeaux `.native.js` / `.web.js` (meme note que `ApercuDImage.js`).
+// @ts-ignore -- cf. ci-dessus
+import { ECHECS_D_ENREGISTREMENT, enregistrerLImage } from '@/platform/media/enregistrerLImage';
+
 const conversationLogger = createLogger('conversation');
 
 /**
@@ -5420,6 +5424,12 @@ function Conversation({ navigation, route }) {
   const canEditSelectedMessage = useMemo(() => (
     isSelectedMessageOwn && isMessageEditable(selectedMessage)
   ), [isMessageEditable, isSelectedMessageOwn, selectedMessage]);
+  // RETOURS-TESTEUR-2 (06/11/2026, M0035) — la photo du message choisi, a enregistrer.
+  const selectedMessageImageUri = useMemo(() => (
+    selectedMessage && isImageAttachmentMessage(selectedMessage)
+      ? getPrimaryImageUriFromMessage(selectedMessage)
+      : ''
+  ), [getPrimaryImageUriFromMessage, isImageAttachmentMessage, selectedMessage]);
 
   const messageIndexByDocumentId = useMemo(() => {
     /** @type {Map<string, number>} */
@@ -5640,6 +5650,30 @@ function Conversation({ navigation, route }) {
     setIsMessageActionsVisible(false);
   }, [canCopySelectedMessage, selectedMessageTextValue, showErrorBanner, showSuccessBanner, t]);
 
+  // RETOURS-TESTEUR-2 (06/11/2026, M0035) — « Enregistrer » depuis l'appui long : le meme
+  // geste que l'image en grand (`ApercuDImage`), avec un bandeau au lieu de son avis.
+  const handleSaveSelectedMessage = useCallback(async () => {
+    setIsMessageActionsVisible(false);
+    if (!selectedMessageImageUri) return;
+    try {
+      await enregistrerLImage(selectedMessageImageUri);
+      showSuccessBanner(
+        t('conversation.imagePreview.saved', 'Image enregistrée dans ta galerie'),
+        t('conversation.imagePreview.save', 'Enregistrer'),
+      );
+    } catch (erreur) {
+      showErrorBanner(/** @type {any} */ (erreur)?.reason === ECHECS_D_ENREGISTREMENT.PERMISSION
+        ? t(
+          'conversation.imagePreview.permissionBody',
+          'Autorise FoundClub à ajouter des photos, dans les réglages du téléphone.',
+        )
+        : t(
+          'conversation.imagePreview.saveFailed',
+          'L’image n’a pas pu être enregistrée. Réessaie.',
+        ));
+    }
+  }, [selectedMessageImageUri, showErrorBanner, showSuccessBanner, t]);
+
   // 📍 MSG1A (§3.18) — « Copier l'adresse » : meme presse-papiers que « Copier » un message.
   const handleCopierAdresse = useCallback((/** @type {string} */ texte) => {
     const clipboard = getClipboardModule();
@@ -5774,6 +5808,7 @@ function Conversation({ navigation, route }) {
   const handleMessageAction = useCallback((clef) => {
     if (clef === 'reply') handleReplySelectedMessage();
     else if (clef === 'copy') handleCopySelectedMessage();
+    else if (clef === 'save') handleSaveSelectedMessage();
     else if (clef === 'edit') handleOpenEditForSelectedMessage();
     else if (clef === 'delete') handleDeleteSelectedMessage();
     else if (clef === 'report') handleOpenReportForSelectedMessage();
@@ -5787,6 +5822,7 @@ function Conversation({ navigation, route }) {
     handleOpenEditForSelectedMessage,
     handleOpenReportForSelectedMessage,
     handleReplySelectedMessage,
+    handleSaveSelectedMessage,
     compositionChoisie,
     ouvrirModificationConvocation,
   ]);
@@ -8021,6 +8057,7 @@ function Conversation({ navigation, route }) {
           // MSG1A (§3.2) — canal en lecture seule : pas de « Repondre » (il ouvrait une
           // reponse sans champ de saisie).
           canReply={canWrite}
+          canSave={Boolean(selectedMessageImageUri)}
           isMine={isSelectedMessageOwn}
           myEmoji={myEmojiOnSelectedMessage}
           onAction={handleMessageAction}

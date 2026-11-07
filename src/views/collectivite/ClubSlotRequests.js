@@ -20,6 +20,7 @@ import {
 } from '@/domains/collectivite/collectiviteDemandes';
 import { capitalize } from '@/domains/seasonSlot/seasonSlotDisplay';
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -131,6 +132,18 @@ function ClubSlotRequests() {
     return `${jour.charAt(0).toUpperCase()}${jour.slice(1)}, ${moment.debut} – ${moment.fin}`;
   };
 
+  // RETOURS-TESTEUR (06/11, M0133) — « Envoyée le 4 nov. à 17:06 », le format de « Reçue le » des
+  // demandes ; sans date lisible (serveur plus ancien), rien.
+  const envoyeeLe = (/** @type {any} */ demande) => {
+    const envoi = demande?.createdAt ? new Date(demande.createdAt) : null;
+    if (!envoi || Number.isNaN(envoi.getTime())) return '';
+    return t('collectiviteDemandes.club.envoyeeLe', 'Envoyée le {{date}} à {{time}}', {
+      date: envoi.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' }),
+      time: envoi.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' }),
+      ...SANS_ECHAPPEMENT,
+    });
+  };
+
   const etaitComplet = (/** @type {any} */ demande) => (
     Number(demande?.overlapCount) >= Math.max(1, Number(demande?.maxSlots || 1))
   );
@@ -182,6 +195,9 @@ function ClubSlotRequests() {
         <Text style={[Fonts.p2, Fonts.neutral100]}>
           {[momentDe(demande), ...suite].filter(Boolean).join(' · ')}
         </Text>
+        {envoyeeLe(demande) ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>{envoyeeLe(demande)}</Text>
+        ) : null}
         {demande?.decisionReason ? (
           <Text
             // eslint-disable-next-line max-len
@@ -235,7 +251,7 @@ function ClubSlotRequests() {
           >
             {cellule(demande?.team?.name || '—', 1)}
             {cellule(demande?.facility?.name || '—', 2)}
-            {cellule(momentDe(demande), 3)}
+            {cellule([momentDe(demande), envoyeeLe(demande)].filter(Boolean).join('\n'), 3)}
             {cellule(texte, 1, couleur)}
             {cellule(demande?.decisionReason ? `« ${demande.decisionReason} »` : '—', 3)}
           </View>

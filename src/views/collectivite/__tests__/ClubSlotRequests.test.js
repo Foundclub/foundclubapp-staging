@@ -4,6 +4,8 @@ import { fr } from 'date-fns/locale';
 import { Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+
 import ClubSlotRequests from '../ClubSlotRequests';
 
 // 🏛️ COLL-C3B (02/10) — « TES DEMANDES À LA VILLE » (planches P8v2-demande, tel état 5, ordi C).
@@ -402,5 +404,38 @@ describe('R17-QUAND-1 bis — la ligne d’une série dit son rythme', () => {
     const lus = textes(await monter((l) => l.some((t) => t.startsWith('3 dates'))));
     // eslint-disable-next-line max-len
     expect(lus).toContain(`3 dates, ${heure(DATES.requestedStart)} – ${heure(DATES.requestedEnd)}, jusqu’au 24 octobre · c’était complet à l’envoi`);
+  });
+});
+
+// RETOURS-TESTEUR (06/11, M0133) — « Il faut mettre les heures des demandes » : quand elle
+// est partie.
+describe('M0133 — la carte dit quand la demande est partie', () => {
+  const ENVOI = '2030-09-28T15:06:00.000Z';
+  const envoi = new Date(ENVOI);
+  const jour = envoi.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' });
+  const heureDEnvoi = envoi.toLocaleTimeString(localeDesFormats(), {
+    hour: '2-digit', minute: '2-digit',
+  });
+  const ENVOYEE = `Envoyée le ${jour} à ${heureDEnvoi}`;
+
+  it('téléphone : « Envoyée le … à … » sur la carte', async () => {
+    mockLignes = [ligne({ createdAt: ENVOI, documentId: 'rq-envoi' })];
+    const lus = textes(await monter((l) => l.includes('En attente')));
+    expect(lus).toContain(ENVOYEE);
+  });
+
+  it('ordinateur : la date d envoi sous le moment', async () => {
+    mockDimensions = {
+      fontScale: 1, height: 900, scale: 1, width: 1440,
+    };
+    mockLignes = [ligne({ createdAt: ENVOI, documentId: 'rq-envoi' })];
+    const lus = textes(await monter((l) => l.includes('En attente')));
+    expect(lus.some((texte) => texte.includes(ENVOYEE))).toBe(true);
+  });
+
+  it('sans date (serveur plus ancien) : aucune ligne', async () => {
+    mockLignes = [EN_ATTENTE];
+    const lus = textes(await monter((l) => l.includes('En attente')));
+    expect(lus.some((texte) => texte.startsWith('Envoyée le'))).toBe(false);
   });
 });

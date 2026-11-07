@@ -17,6 +17,8 @@ export default {
   },
   addCoach: {
     actions: {
+      copyInvite: 'Copy the invitation link',
+      emailInvite: 'Send by email',
       invite: 'Invite',
       save: 'Send invitation',
     },
@@ -32,6 +34,7 @@ export default {
         description: 'An invitation will be sent to this number.',
         title: 'Invitation',
       },
+      inviteCopied: 'Invitation copied: paste it into an email, WhatsApp or a text message.',
       success: {
         description: 'Coach {{trainerName}} has been added to your club.',
         title: 'Added successfully!',
@@ -6144,6 +6147,7 @@ export default {
       combienDeFois: 'How often',
       commeDansTonPlanning: 'As in your planning.',
       completALEnvoi: 'it was full when sent',
+      compris: 'Got it',
       confirme: 'Your training is confirmed: the town already gave this slot to your club.',
       dejaLa: '{{nom}}{{tonClub}}, from {{debut}} to {{fin}}',
       dejaLaListe: 'Already there: {{noms}}.',
@@ -6162,6 +6166,8 @@ export default {
       envoiEnCoursTitre: 'Sending',
       envoyee: 'Request sent to {{ville}}',
       envoyeeDirigeant: 'Request sent to your club manager',
+      // RETOURS-TESTEUR (06/11, M0133) — when the request was sent.
+      envoyeeLe: 'Sent on {{date}} at {{time}}',
       envoyer: 'Send the request',
       envoyerQuandMeme: 'Send anyway',
       equipe: 'Team',
@@ -11049,7 +11055,7 @@ export default {
         conditions: 'I accept the conditions for taking part in the event',
         responsibility: 'I declare that I have read the "Statement of liability and acceptance of risk"',
       },
-      description: "I, the undersigned, an adult participant or, where applicable, the legal representative of a minor participant, acknowledge and accept the following:\n\nFoundClub's role: \n    - FoundClub is a platform that connects people and does not organise the event. FoundClub provides no insurance related to participation.\n\nTravel to and from the event:\n    - Unless transport is expressly organised by the organiser, travel to and from the event is my responsibility (or that of the legal representative for a minor), including insurance and choice of transport.\n\nInsurance:\n    - I confirm that I have (or, for a minor, that the child has) appropriate insurance cover (e.g. a current federation licence and/or civil liability insurance). I understand that FoundClub does not insure against personal injury or property damage.\n\nMedical fitness:\nI confirm that I am fit to take part on the day of the event (or that the child is fit, in line with federation requirements: certificate/questionnaire where applicable), and I undertake not to participate / not to authorise participation if there is any doubt about my state of health.\n\nLimits of liability (French law):\nTo the extent permitted by law, I undertake not to hold FoundClub liable for my participation; this clause does not apply in the case of gross or wilful misconduct, or a serious breach of safety obligations attributable to FoundClub or the organiser.\n\nRules & safety:\nI undertake (or I commit the minor) to comply with the rules, safety instructions and guidance from the staff in charge; the organiser may refuse or stop participation in the event of non-compliance.\n\nMedical emergency:\nI authorise the organiser to call emergency services in the event of an emergency; for a minor, I authorise the organiser to accompany the child if necessary, and I undertake to remain reachable.",
+      description: "I, the undersigned, an adult participant or, where applicable, the legal representative of a minor participant, acknowledge and accept the following:\n\nFound Club's role: \n    - Found Club is a platform that connects people and does not organise the event. Found Club provides no insurance related to participation.\n\nTravel to and from the event:\n    - Unless transport is expressly organised by the organiser, travel to and from the event is my responsibility (or that of the legal representative for a minor), including insurance and choice of transport.\n\nInsurance:\n    - I confirm that I have (or, for a minor, that the child has) appropriate insurance cover (e.g. a current federation licence and/or civil liability insurance). I understand that Found Club does not insure against personal injury or property damage.\n\nMedical fitness:\nI confirm that I am fit to take part on the day of the event (or that the child is fit, in line with federation requirements: certificate/questionnaire where applicable), and I undertake not to participate / not to authorise participation if there is any doubt about my state of health.\n\nLimits of liability (French law):\nTo the extent permitted by law, I undertake not to hold Found Club liable for my participation; this clause does not apply in the case of gross or wilful misconduct, or a serious breach of safety obligations attributable to Found Club or the organiser.\n\nRules & safety:\nI undertake (or I commit the minor) to comply with the rules, safety instructions and guidance from the staff in charge; the organiser may refuse or stop participation in the event of non-compliance.\n\nMedical emergency:\nI authorise the organiser to call emergency services in the event of an emergency; for a minor, I authorise the organiser to accompany the child if necessary, and I undertake to remain reachable.",
       title: 'STATEMENT OF LIABILITY AND ACCEPTANCE OF RISK',
       validation: 'By checking the boxes and confirming my registration, I confirm that I have read, understood and accepted this statement, and I agree to take part in the event under these conditions.',
     },
@@ -26476,7 +26482,7 @@ export default {
       },
       free: {
         bullet1: '1 free team, facility and partner',
-        bullet2: '2 free events and 1 free ad',
+        bullet2: '2 free events, 1 free match and 1 free ad',
         bullet3: 'Unlimited chat, forever',
         kicker: 'Today',
         kickerAfterGift: 'After the 7 days',
