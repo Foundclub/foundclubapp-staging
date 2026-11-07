@@ -12333,7 +12333,6 @@ export default {
       ouvrirFiche: 'Open the report {{title}}',
       photoAlt: 'Photo attached by the author',
       photoVue: 'Photo seen only by the city and the author.',
-      plusDActions: 'More actions: resolved, no action',
       prendre: 'Take charge',
       previentAuteur: 'The author is notified. The report moves to the history.',
       proposerResolu: 'The linked closure is over: is this report resolved?',

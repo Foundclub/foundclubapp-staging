@@ -136,16 +136,17 @@ describe('R17SS1 — la fiche d un signalement', () => {
     expect(tout).toContain('Sécurité, danger · un joueur · AS Montrivage');
     expect(tout).toContain('Photo vue par la Ville et l’auteur seulement.');
     expect(tout).toContain('Nouveau');
-    ['signalement-photo', 'signalement-prendre', 'signalement-fermer', 'signalement-plus'].forEach((id) => {
+    ['signalement-photo', 'signalement-prendre', 'signalement-fermer'].forEach((id) => {
       expect(parId(arbre, id).length).toBeGreaterThan(0);
     });
-    await presser(arbre, 'signalement-plus');
     ['signalement-resolu', 'signalement-sans-suite'].forEach((id) => {
       expect(parId(arbre, id).length).toBeGreaterThan(0);
     });
   });
 
-  it('P10-securite-tel 2 : au téléphone, les gestes sont dans le PIED FIXE ; « Résolu… » et « Sans suite… » derrière « + »', async () => {
+  // M0120 (Adel « 153- A », 07/11) : écart à la planche tel 2 accepté. « Résolu… » et « Sans
+  // suite… » ne sont plus cachés derrière « + » : toujours visibles, en Secondary, sur leur ligne.
+  it('M0120 : au téléphone, PIED FIXE ; « Résolu… » et « Sans suite… » toujours visibles, Secondary, sur leur ligne, sans « + »', async () => {
     const arbre = monter();
     // Le pied est HORS du défilement : il reste en bas pendant qu on lit le signalement.
     const [defilement] = parId(arbre, 'signalement-fiche');
@@ -155,18 +156,16 @@ describe('R17SS1 — la fiche d un signalement', () => {
     expect(parId(arbre, 'signalement-gestes')).toHaveLength(0);
     expect(pied.findAll((/** @type {any} */ n) => n.props.title === 'Prendre en charge').length).toBeGreaterThan(0);
     expect(pied.findAll((/** @type {any} */ n) => n.props.title === 'Fermer l’installation…').length).toBeGreaterThan(0);
-    // « + » : replié, rien d autre ; déplié, « Résolu… » et « Sans suite… ».
-    const [plus] = parId(arbre, 'signalement-plus');
-    expect(plus.props.accessibilityLabel).toBe('Plus d’actions : résolu, sans suite');
-    expect(plus.props.accessibilityState).toEqual({ expanded: false });
-    expect(parId(arbre, 'signalement-resolu')).toHaveLength(0);
-    expect(parId(arbre, 'signalement-sans-suite')).toHaveLength(0);
-    await presser(arbre, 'signalement-plus');
-    expect(parId(arbre, 'signalement-plus')[0].props.accessibilityState).toEqual({ expanded: true });
-    expect(parId(arbre, 'signalement-plus-menu').length).toBeGreaterThan(0);
-    // Un geste choisi referme le menu et ouvre la feuille du mot.
+    expect(parId(arbre, 'signalement-plus')).toHaveLength(0);
+    // Leur ligne, dans le pied, sans rien appuyer : ces deux boutons-là et aucun autre.
+    const [ligne] = pied.findAll((/** @type {any} */ n) => n.props.testID === 'signalement-pied-clore');
+    expect(ligne).toBeDefined();
+    const boutons = ligne.findAll((/** @type {any} */ n) => typeof n.props.title === 'string' && typeof n.type !== 'string');
+    expect(boutons.map((/** @type {any} */ n) => [n.props.title, n.props.variant])).toEqual([
+      ['Résolu…', 'Secondary'],
+      ['Sans suite…', 'Secondary'],
+    ]);
     await presser(arbre, 'signalement-resolu');
-    expect(parId(arbre, 'signalement-plus-menu')).toHaveLength(0);
     expect(parId(arbre, 'feuille-resolu').length).toBeGreaterThan(0);
   });
 
@@ -206,7 +205,6 @@ describe('R17SS1 — la fiche d un signalement', () => {
 
   it('Q3 A : « Sans suite » exige un mot ; « Résolu » part avec le sien', async () => {
     const arbre = monter();
-    await presser(arbre, 'signalement-plus');
     await presser(arbre, 'signalement-sans-suite');
     const [valider] = parId(arbre, 'feuille-sans-suite');
     expect(valider.props.disabled).toBe(true);
@@ -218,7 +216,6 @@ describe('R17SS1 — la fiche d un signalement', () => {
 
     mockStatut.mutateAsync.mockClear();
     const autre = monter();
-    await presser(autre, 'signalement-plus');
     await presser(autre, 'signalement-resolu');
     expect(parId(autre, 'feuille-resolu')[0].props.disabled).toBe(false);
     await presser(autre, 'feuille-resolu');
@@ -228,7 +225,6 @@ describe('R17SS1 — la fiche d un signalement', () => {
   it('C05 (Q2-20) : le refus du serveur se lit DANS la feuille ouverte, pas derrière', async () => {
     mockStatut.mutateAsync = jest.fn(() => Promise.reject(Object.assign(new Error('Ce signalement est déjà clos.'), { status: 409 })));
     const arbre = monter();
-    await presser(arbre, 'signalement-plus');
     await presser(arbre, 'signalement-resolu');
     await presser(arbre, 'feuille-resolu');
     const [feuille] = arbre.root.findAll((/** @type {any} */ n) => n.props.testID === 'feuille' && typeof n.type === 'string');
