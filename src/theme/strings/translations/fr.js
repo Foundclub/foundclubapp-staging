@@ -25630,6 +25630,8 @@ export default {
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
       'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
+      'm1-partners-have': '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en '
+        + 'ajoute un autre plus tard. On passe à tes installations.',
       'm1-partners-home': '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos '
         + 'partenaires ».',
       'm1-partners-taken': 'Ton partenaire offert est déjà là : le suivant demande l’offre Club. '

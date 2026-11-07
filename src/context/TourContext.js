@@ -376,6 +376,12 @@ export function TourProvider({ children }) {
     const entryRoute = match.advance && match.advance.type !== 'route'
       ? null
       : lastRouteRef.current;
+    // GUIDE-D-CORR TG-05 (tournée du 07/11, g38-g43) : un geste qui écrit (club enregistré,
+    // partenaire créé) ferme le retour arrière ; deux retours rapides ramenaient à 1/5, tout à
+    // refaire. Un aiguillage (`goto` sans `commits`) n'écrit rien : le retour reste possible.
+    if (match.advance?.type === 'action' && (!match.advance.goto || match.advance.commits)) {
+      historyRef.current = [];
+    }
     if (!match.completes) {
       enterGuideStep(current, match.index, 0, stepRoute, entryRoute);
       return;

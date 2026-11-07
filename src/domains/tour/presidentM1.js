@@ -142,10 +142,25 @@ const PART_INFOS = [
 ];
 
 const PARTNER_TAKEN = { goto: 'm1-partners-taken', key: 'sponsor.free.taken', type: 'action' };
+// GUIDE-D-CORR TG-06 (tournée du 07/11, r12-r14) : un partenaire déjà là, comme l'installation
+// (`facility.existing`) ; on ne demande pas « ton premier partenaire ».
+const PARTNER_EXISTING = { goto: 'm1-partners-have', key: 'sponsor.existing', type: 'action' };
+/**
+ * TG-06 : la partie 2/5 est faite (partenaire créé pendant le guide, ou déjà là) ; rejouée après un
+ * retour en arrière, elle ne se redemande pas.
+ * @param {any} ctx - Contexte du guide.
+ * @returns {boolean} La partie reste à faire.
+ */
+const isPartnerToDo = (ctx) => !ctx?.created?.['sponsor.created']
+  && !ctx?.created?.['sponsor.existing'];
 
 const PART_PARTNERS = [
   {
-    advanceOn: [{ key: 'club.section.partners', type: 'interaction' }, PARTNER_TAKEN],
+    advanceOn: [
+      { key: 'club.section.partners', type: 'interaction' },
+      PARTNER_TAKEN,
+      PARTNER_EXISTING,
+    ],
     fallback: fromHome(() => t(
       'm1-partners-home',
       '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos partenaires ».',
@@ -158,9 +173,10 @@ const PART_PARTNERS = [
     subMission: 'partners',
     targets: ['club.m.partners'],
     get text() { return t('m1-partners', '2/5 · Tes partenaires. Ouvre « Nos partenaires ».'); },
+    when: isPartnerToDo,
   },
   {
-    advanceOn: [{ key: RouteNames.AddSponsor, type: 'route' }, PARTNER_TAKEN],
+    advanceOn: [{ key: RouteNames.AddSponsor, type: 'route' }, PARTNER_TAKEN, PARTNER_EXISTING],
     id: 'm1-padd',
     missionId: MISSION_ID,
     passable: PRESIDENT_GUIDE_SETTINGS.partnerPassable,
@@ -168,6 +184,7 @@ const PART_PARTNERS = [
     subMission: 'partners',
     targets: ['club.partners.add'],
     get text() { return t('m1-padd', 'Ajoute ton premier partenaire avec « + ».'); },
+    when: isPartnerToDo,
   },
   {
     id: 'm1-partners-taken',
@@ -183,10 +200,33 @@ const PART_PARTNERS = [
         'Ton partenaire offert est déjà là : le suivant demande l’offre Club. Passe cette partie.',
       );
     },
-    when: isTaken('sponsor.free.taken'),
+    when: (/** @type {any} */ ctx) => isTaken('sponsor.free.taken')(ctx)
+      && !ctx?.created?.['sponsor.created'],
   },
   {
-    advanceOn: { key: 'sponsor.created', type: 'action' },
+    id: 'm1-partners-have',
+    lookOnly: true,
+    missionId: MISSION_ID,
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'm1-partners',
+    subMission: 'partners',
+    targets: ['club.partners.add'],
+    get text() {
+      return t(
+        'm1-partners-have',
+        '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en ajoute un autre plus '
+          + 'tard. On passe à tes installations.',
+      );
+    },
+    // Seulement par l'aiguillage `sponsor.existing`.
+    when: (/** @type {any} */ ctx) => Boolean(ctx?.created?.['sponsor.existing'])
+      && !ctx?.created?.['sponsor.created'],
+  },
+  {
+    // TG-06 : « Reviens sur la fiche » ne suit que la création ; rejouée, la partie est sautée.
+    advanceOn: {
+      commits: true, goto: 'm1-pback', key: 'sponsor.created', type: 'action',
+    },
     id: 'm1-pform',
     missionId: MISSION_ID,
     passable: PRESIDENT_GUIDE_SETTINGS.partnerPassable,
@@ -208,6 +248,7 @@ const PART_PARTNERS = [
       );
     },
     veil: false,
+    when: isPartnerToDo,
   },
   {
     advanceOn: { key: 'club.section.closed', type: 'interaction' },
@@ -219,6 +260,8 @@ const PART_PARTNERS = [
     get text() { return t('m1-pback', 'Reviens sur la fiche du club.'); },
     // Laisse le geste du bord, seul retour d'un iPhone sans flèche à portée.
     veil: false,
+    // Seulement par l'aiguillage de `m1-pform` (TG-06) : jamais au fil d'une partie rejouée.
+    when: () => false,
   },
 ];
 

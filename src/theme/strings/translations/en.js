@@ -24562,6 +24562,8 @@ export default {
       'm1-padd': 'Add your first partner with “+”.',
       'm1-parrows': 'The arrows change the period. Try the right one.',
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
+      'm1-partners-have': '2/5 · You already have your partner: it is in this list. “+” adds '
+        + 'another one later. On to your facilities.',
       'm1-partners-home': '2/5 · Your partners. Open “Manage my club”, then “Our '
         + 'partners”.',
       'm1-partners-taken': 'Your free partner is already here: the next one needs the Club plan. '
