@@ -2626,7 +2626,8 @@ export default {
         message: "Hi {{coachName}}!\nYou've been designated as a manager at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your club.",
       },
       inviteTrainer: {
-        message: "Hi {{coachName}}!\nYou've been designated as coach / instructor at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your teams and events.",
+        message: 'Hi {{coachName}}, the club {{clubName}} invites you as coach / instructor on '
+          + 'FoundClub. Download the app to activate your account.',
         title: 'Welcome to FoundClub!',
       },
       joinClub: {
@@ -20370,7 +20371,8 @@ export default {
     savedDownloads: 'Saved to your downloads.',
     savedGallery: 'Saved to your photo gallery.',
     saveError: 'Saving failed. Your phone may be low on storage.',
-    saveHint: 'It goes to your photo gallery, just as you see it. You then choose which app opens it.',
+    saveHint: 'It goes to your photo gallery, just as you see it. You can then send it from your '
+      + 'gallery.',
     savePermissionError: "FoundClub isn't allowed to save to your phone. Allow it in settings, then try again.",
     sendInChat: 'Send in a conversation',
     sendInChatHint: 'Directly into a FoundClub chat.',
@@ -24061,7 +24063,7 @@ export default {
       },
       trainers: {
         createCta: '+  Create a coach',
-        createHint: 'Invitation sent by email',
+        createHint: 'You then invite them by text message',
         selfHint: "You're already selected — you can add others later.",
         selfTag: 'You',
         subtitle: 'Select at least one coach to lead this team.',
@@ -24464,11 +24466,13 @@ export default {
       a5v: 'This ad needs approval: choose how, then Next.',
       a6: 'Optional: the suggested ideas can help. You can skip this.',
       a7: 'Read your ad, then tap the button: simulation, nothing will be published.',
-      'b1-camp': 'Tap “Paid” when a member pays in cash, or “Remind” to send them a reminder.',
+      'b1-camp': 'Example, nothing is created: tap “Paid” when a member pays in cash, or “Remind” '
+        + 'to send them a reminder.',
       'b1-card': 'Your club’s dues are managed here. Open them.',
       'b1-new': 'Launch a campaign. It’s a simulation: nothing will be sent.',
       'b1-new-setup': 'Tap “Continue”. It’s a simulation: nothing will be sent.',
-      'b1-open': 'Your campaign is open: the members concerned are added automatically.',
+      'b1-open': 'Simulation: when it opens, the members concerned are added to the campaign. '
+        + 'Here is an example: nothing is created.',
       'b1-sum': 'At a glance: what’s collected, what’s left, what’s late.',
       'b1-sum-new': 'Your club has no campaign yet: it all starts here. This summary fills up '
         + 'with the first one.',
@@ -24516,7 +24520,7 @@ export default {
         club: 'Club details saved',
         coach: 'Coach added to the club',
         cta: 'Go to home',
-        example: 'The guide’s examples are deleted: nothing was sent.',
+        example: 'The guide’s examples have been removed.',
         facility: 'Facility created',
         footer: 'Find this guide again in My account › Club manager guide.',
         group: 'Group created',
@@ -24576,11 +24580,13 @@ export default {
         + 'Skip this part.',
       'm1-pb1': 'Go back to your facilities.',
       'm1-pback': 'Go back to the club page.',
-      'm1-pcap': 'Capacity: how many teams can play at the same time, the busiest moment and the '
-        + 'places still free.',
+      'm1-pcap': 'Capacity: how many teams can play at the same time, and the busiest moment. '
+        + 'Here the example events fill it up: that is on purpose, they go away at the end of the '
+        + 'guide.',
       'm1-pchips': 'Choose the facility shown. “All facilities” brings your whole club together: '
         + 'tap it.',
-      'm1-pclose': 'You stay on your poster to share it elsewhere. When you’re done, close it with the cross.',
+      'm1-pclose': 'Your poster stays available on the club page. Close it with the cross to '
+        + 'continue.',
       'm1-pdemo': 'Your schedule is still empty: we’ve added a few sample events to show you. '
         + 'They disappear at the end of the guide.',
       'm1-pempty': 'A period with no events looks like this. Your coaches’ slots will appear here '
@@ -24622,8 +24628,8 @@ export default {
       'm2-visit-add': 'This “+” adds a coach to your club. It requires the Club plan: we’ll show '
         + 'it to you at the end of the guide. Let’s continue.',
       'm3-create': 'Tap “Create a team”.',
-      'm3-ok': 'Your team is waiting in “My teams”. No need to create them all: your coaches can '
-        + 'create theirs, if you let them.',
+      'm3-ok': 'Your team is created: you will find it in “My teams”, under “Other club teams”. '
+        + 'No need to create them all: your coaches can create their own, if you allow it.',
       'm3-sheet': 'Your club already has teams. Here, create a new one.',
       'm3-teams': 'Now create a team: open “Our teams”.',
       'm3-teams-back': 'Return to your club page: tap the arrow.',

@@ -447,6 +447,8 @@ const PART_PLANNING = [
   },
   planningStep({
     bubblePlacement: 'top',
+    // GUIDE-D-CORR TG-17 : la grille d'exemples est sous le bas de l'écran à l'arrivée.
+    hintWhenCut: true,
     id: 'm1-pdemo',
     get nextLabel() { return t('next', 'Suivant'); },
     targets: ['planning.grid'],
@@ -464,10 +466,13 @@ const PART_PLANNING = [
     get nextLabel() { return t('next', 'Suivant'); },
     targets: ['planning.capacity'],
     get text() {
+      // GUIDE-D-CORR TG-17 (r30) : sur une installation neuve, les exemples l'ont déjà remplie
+      // (« capacité atteinte », en orange) ; la bulle ne promet plus de « places libres ».
       return t(
         'm1-pcap',
-        'La capacité : combien d’équipes peuvent jouer en même temps, le moment le plus chargé '
-          + 'et les places encore libres.',
+        'La capacité : combien d’équipes peuvent jouer en même temps, et le moment le plus chargé. '
+          + 'Ici, les événements d’exemple la remplissent : c’est voulu, ils partent à la fin du '
+          + 'guide.',
       );
     },
   }),
@@ -658,10 +663,11 @@ const PART_POSTER = [
     resumeFrom: 'm1-poster',
     targets: ['poster.close'],
     get text() {
+      // GUIDE-D-CORR TG-18 (r50) : « Partager » est sous le voile à cette étape ; la bulle ne
+      // propose plus de partager ici.
       return t(
         'm1-pclose',
-        'Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, ferme-la avec '
-          + 'la croix.',
+        'Ton affiche reste disponible sur la fiche du club. Ferme-la avec la croix pour continuer.',
       );
     },
   },

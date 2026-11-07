@@ -34,7 +34,8 @@ const canStart = (userData) => Boolean(userData?.club?.documentId);
 const FULL_SCREEN_TEXTS = {
   'close.bonus': 'BONUS',
   'close.cta': "Aller à l'accueil",
-  'close.example': 'Les exemples du guide sont effacés : rien n’a été envoyé.',
+  // GUIDE-D-CORR TG-23 (r87) : le SMS d'invitation de M2, lui, est réellement parti.
+  'close.example': 'Les exemples du guide sont effacés.',
   'close.footer': 'Retrouve ce guide dans Mon compte › Guide dirigeant·e.',
   'close.offer': 'Voir l’offre Club',
   'close.real': 'RÉEL',

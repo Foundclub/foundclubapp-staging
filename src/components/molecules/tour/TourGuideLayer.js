@@ -447,7 +447,10 @@ function TourGuideLayer() {
   // dit. Le voile revient quand elle est entière. Les tunnels gardent leur liste touchable.
   // GUIDE-D-CORR TG-16 (g13) : clavier ouvert, le champ en cours de saisie est tenu à l'écran par
   // le système ; un bord rogné par le clavier ne fait plus tomber le voile (Enregistrer touchable).
-  const isTargetCut = !currentStep?.bubbleSlot && currentStep?.veil !== false && !sheetGuide
+  // GUIDE-D-CORR TG-17 (r28-r29) : une étape sans voile qui le demande (`hintWhenCut`, planning
+  // d'exemple) dit aussi « Fais défiler » quand sa cible est coupée ; les autres restent courtes.
+  const isTargetCut = !currentStep?.bubbleSlot && !sheetGuide
+    && (currentStep?.veil !== false || Boolean(currentStep?.hintWhenCut))
     && !keyboard
     && measuredTargets.some((id) => (
       clipSides[id]

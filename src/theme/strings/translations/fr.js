@@ -2867,10 +2867,8 @@ export default {
           + ' et commencer à gérer ton club.',
       },
       inviteTrainer: {
-        message: 'Bonjour {{coachName}} !'
-          + '\nTu as été désigné·e comme coach / prof dans le club {{clubName}}.'
-          + "\nTélécharge l'application FoundClub pour finaliser la création de ton compte"
-          + ' et commencer à gérer tes équipes et tes événements.',
+        message: 'Bonjour {{coachName}}, le club {{clubName}} t’invite comme coach / prof sur '
+          + 'FoundClub. Télécharge l’app pour activer ton compte.',
         title: 'Bienvenue sur FoundClub !',
       },
       joinClub: {
@@ -21155,8 +21153,8 @@ export default {
     savedGallery: 'C’est enregistré dans ta galerie photo.',
     saveError: 'L’enregistrement a échoué. '
       + 'Il reste peut-être trop peu de place sur ton téléphone.',
-    saveHint: 'Elle part dans ta galerie photo, telle que tu la vois. '
-      + 'Tu choisis ensuite l’application qui l’ouvre.',
+    saveHint: 'Elle part dans ta galerie photo, telle que tu la vois. Tu peux ensuite l’envoyer '
+      + 'depuis ta galerie.',
     savePermissionError: 'FoundClub n’a pas le droit d’enregistrer dans ton téléphone. '
       + 'Autorise-le dans les réglages, puis réessaie.',
     sendInChat: 'Envoyer dans une conversation',
@@ -25110,7 +25108,7 @@ export default {
       },
       trainers: {
         createCta: '+  Créer un·e entraîneur·e',
-        createHint: 'Invitation envoyée par e-mail',
+        createHint: 'Tu l’invites ensuite par SMS',
         selfHint: "Tu es déjà sélectionné·e — tu pourras en ajouter d'autres plus tard.",
         selfTag: 'Toi',
         subtitle: 'Sélectionne au moins un·e entraîneur·e pour encadrer cette équipe.',
@@ -25525,12 +25523,13 @@ export default {
       a5v: 'Cette annonce a une validation : choisis comment, puis Suivant.',
       a6: 'Facultatif : les idées à inclure t’aident. Tu peux passer.',
       a7: 'Relis ton annonce, puis touche le bouton : simulation, rien ne sera publié.',
-      'b1-camp': 'Touche « A payé » quand un membre règle en espèces, ou « Relancer » pour lui '
-        + 'envoyer un rappel.',
+      'b1-camp': 'Exemple, rien n’est créé : touche « A payé » quand un membre règle en espèces, '
+        + 'ou « Relancer » pour lui envoyer un rappel.',
       'b1-card': 'Les cotisations du club se gèrent ici. Ouvre-les.',
       'b1-new': 'Lance une campagne. C’est une simulation : rien ne sera envoyé.',
       'b1-new-setup': 'Touche « Continuer ». C’est une simulation : rien ne sera envoyé.',
-      'b1-open': 'Ta campagne est ouverte : les membres concernés sont ajoutés automatiquement.',
+      'b1-open': 'Simulation : à l’ouverture, les membres concernés sont ajoutés à la campagne. '
+        + 'Voici un exemple : rien n’est créé.',
       'b1-sum': 'En un coup d’œil : ce qui est encaissé, ce qui reste, les retards.',
       'b1-sum-new': 'Ton club n’a pas encore de campagne : tout part d’ici. Ce résumé se remplira '
         + 'avec la première.',
@@ -25580,7 +25579,7 @@ export default {
         club: 'Infos du club enregistrées',
         coach: 'Coach ajouté au club',
         cta: "Aller à l'accueil",
-        example: 'Les exemples du guide sont effacés : rien n’a été envoyé.',
+        example: 'Les exemples du guide sont effacés.',
         facility: 'Installation créée',
         footer: 'Retrouve ce guide dans Mon compte › Guide dirigeant·e.',
         group: 'Groupe créé',
@@ -25643,11 +25642,13 @@ export default {
         + 'Passe cette partie.',
       'm1-pb1': 'Reviens à tes installations.',
       'm1-pback': 'Reviens sur la fiche du club.',
-      'm1-pcap': 'La capacité : combien d’équipes peuvent jouer en même temps, le moment le plus '
-        + 'chargé et les places encore libres.',
+      'm1-pcap': 'La capacité : combien d’équipes peuvent jouer en même temps, et le moment le '
+        + 'plus chargé. Ici, les événements d’exemple la remplissent : c’est voulu, ils partent à '
+        + 'la fin du guide.',
       'm1-pchips': 'Choisis l’installation affichée. « Toutes installations » regroupe tout ton '
         + 'club : touche-le.',
-      'm1-pclose': 'Tu restes sur ton affiche pour la partager ailleurs. Quand tu as fini, ferme-la avec la croix.',
+      'm1-pclose': 'Ton affiche reste disponible sur la fiche du club. Ferme-la avec la croix '
+        + 'pour continuer.',
       'm1-pdemo': 'Ton planning est encore vide : on y a mis quelques événements d’exemple pour '
         + 'te montrer. Ils disparaissent à la fin du guide.',
       'm1-pempty': 'Une période sans événement s’affiche comme ça. Les créneaux de tes coachs '
@@ -25691,8 +25692,9 @@ export default {
       'm2-visit-add': 'Ce « + » ajoute un coach à ton club. Il demande l’offre Club : on te la '
         + 'présente à la fin du guide. On continue.',
       'm3-create': 'Touche « Créer une équipe ».',
-      'm3-ok': 'Ton équipe t’attend dans « Mes équipes ». Pas besoin de toutes les créer : tes '
-        + 'coachs peuvent créer les leurs, si tu le leur permets.',
+      'm3-ok': 'Ton équipe est créée : tu la retrouves dans « Mes équipes », sous « Autres '
+        + 'équipes du club ». Pas besoin de toutes les créer : tes coachs peuvent créer les '
+        + 'leurs, si tu le leur permets.',
       'm3-sheet': 'Ton club a déjà des équipes. Ici, crée-en une nouvelle.',
       'm3-teams': 'Crée maintenant une équipe : ouvre « Nos équipes ».',
       'm3-teams-back': 'Reviens sur la fiche de ton club : touche la flèche.',

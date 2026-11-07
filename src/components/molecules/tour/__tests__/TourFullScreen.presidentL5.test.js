@@ -224,9 +224,9 @@ describe('clôture', () => {
   });
 
   it('l exemple de M4 : la clôture dit qu il n a rien laissé', () => {
-    expect(textsOf('closing')).toContain('rien n’a été envoyé');
+    expect(textsOf('closing')).toContain('Les exemples du guide sont effacés');
     mockTour = tourAt({ missionStatus: {} });
-    expect(textsOf('closing')).not.toContain('rien n’a été envoyé');
+    expect(textsOf('closing')).not.toContain('Les exemples du guide sont effacés');
   });
 
   it('titre partiel si une mission manque', () => {

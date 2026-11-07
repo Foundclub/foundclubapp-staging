@@ -220,3 +220,14 @@ describe('TG-16 : le voile reste en plein guide', () => {
     },
   );
 });
+
+describe('TG-17 : la bulle du planning d’exemple dit de faire défiler', () => {
+  it('m1-pdemo : grille d’exemples sous le bas de l’écran ⇒ « Fais défiler vers le bas »', async () => {
+    mockTour = activeTour(step('m1-pdemo'));
+    registerTourTarget('planning.grid', (done) => done({
+      height: 400, width: 360, x: 0, y: 520,
+    }));
+    const tree = await renderLayer();
+    expect(texts(tree).join(' ')).toMatch(/Fais défiler vers le bas/);
+  });
+});
