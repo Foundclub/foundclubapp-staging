@@ -8,8 +8,23 @@ import {
 
 const mockShare = jest.fn();
 const mockPlatform = { OS: 'android' };
+// GUIDE-E-CORR (TG-14) : sur Android et pour le SMS, le guide demande au RETOUR dans l'app.
+const mockAppState = { currentState: 'active', listeners: [] };
+const backInApp = () => {
+  ['background', 'active'].forEach((state) => {
+    mockAppState.currentState = state;
+    [...mockAppState.listeners].forEach((listener) => listener(state));
+  });
+};
 
 jest.mock('react-native', () => ({
+  AppState: {
+    addEventListener: (type, listener) => {
+      mockAppState.listeners.push(listener);
+      return { remove: () => { mockAppState.listeners = []; } };
+    },
+    get currentState() { return mockAppState.currentState; },
+  },
   Linking: { openURL: jest.fn() },
   Platform: mockPlatform,
   Share: { dismissedAction: 'dismissedAction', sharedAction: 'sharedAction' },
@@ -44,6 +59,7 @@ describe('n° 22 — feuille de partage et guide', () => {
     mockPlatform.OS = 'android';
     mockShare.mockResolvedValue({ action: 'sharedAction' });
     await share();
+    backInApp();
     expect(signals).not.toContain('action:team.invite.shared');
     expect(signals).toContain('interaction:team.invite.returned');
   });

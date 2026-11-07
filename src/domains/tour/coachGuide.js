@@ -550,26 +550,32 @@ const STEPS = [
   },
   {
     // Feuille de partage du système : bulle compacte en haut, sans voile.
-    // FIN-GUIDE, point 4 (Adel, 02/11 : « on revient sur l'app, rien ne se passe ») : l'iPhone peut
-    // rendre « annulé » pour un lien pourtant parti, ou ne rien rendre. Tout ce qui n'est pas un
-    // envoi certain demande (`m2-sent`), et le bouton de la bulle laisse toujours une issue.
+    // GUIDE-E-CORR (TG-14, tournée du 07/11) : « C'est envoyé » s'affichait ici, feuille encore
+    // ouverte, et validait M2 sans envoi. Ce que chaque plateforme dit (teamInviteShare) :
+    // - iPhone : « partagé » = envoi certain ; feuille fermée sans choisir d'app = « annulé » ;
+    //   app choisie puis abandonnée = AUCUNE réponse (RCTActionSheetManager ne rappelle pas) ;
+    // - Android : jamais rien (le module rend « partagé » dès l'ouverture du sélecteur) ;
+    // - site : navigator.share rend un envoi, ou une erreur à l'abandon ; la copie, rien de sûr.
+    // Envoi certain : M2 validée. Annulé : `m2-cancel`, sans bouton qui valide. Inconnu : on
+    // demande (`m2-sent`). Le bouton « Continuer » est l'issue d'une feuille qui ne répond jamais :
+    // il mène à la question, il ne valide rien.
     advanceOn: [
-      { key: 'team.invite.shared', type: 'action' },
+      {
+        completes: true, goto: 'm3-dock', key: 'team.invite.shared', type: 'action',
+      },
       {
         completes: true, goto: 'm3-dock', key: 'team.invite.sent', type: 'action',
       },
-      { goto: 'm2-sent', key: 'team.invite.dismissed', type: 'interaction' },
-      // Android ne dit pas si le lien est parti (teamInviteShare) : on demande.
+      { goto: 'm2-cancel', key: 'team.invite.dismissed', type: 'interaction' },
       { goto: 'm2-sent', key: 'team.invite.returned', type: 'interaction' },
       { goto: 'm2-card', key: RouteNames.MyTeamList, type: 'route' },
     ],
     // La fiche garde son titre et ses onglets lisibles (capture 4 d'Adel).
     belowTargets: ['team.tabs'],
     bubblePlacement: 'top',
-    completesMission: true,
     id: 'm2-pick',
     missionId: 'coach_m2',
-    get nextLabel() { return t('m2-sent-next', 'C’est envoyé'); },
+    get nextLabel() { return t('m2-pick-next', 'Continuer'); },
     resumeFrom: 'm2-card',
     get text() {
       return t(
@@ -579,8 +585,8 @@ const STEPS = [
     },
   },
   {
-    // GUIDE-FINITIONS-3 n° 22 : sur Android, fermer la feuille sans envoyer
-    // validait M2. Le coach confirme ; sinon il rouvre le menu (retour à m2-share).
+    // GUIDE-FINITIONS-3 n° 22, GUIDE-E-CORR (TG-14) : le résultat est inconnu (Android, SMS,
+    // feuille muette). Le coach répond ; sinon il rouvre le menu (retour à m2-share).
     advanceOn: [
       { goto: 'm2-share', key: 'team.actions.open', type: 'interaction' },
       {
@@ -597,17 +603,45 @@ const STEPS = [
     completesMission: true,
     id: 'm2-sent',
     missionId: 'coach_m2',
-    get nextLabel() { return t('m2-sent-next', 'C’est envoyé'); },
+    get nextLabel() { return t('m2-sent-next', 'Oui, c’est envoyé'); },
     resumeFrom: 'm2-card',
     targets: ['team.more'],
     get text() {
       return t(
         'm2-sent',
-        'Le lien est parti ? Touche « C’est envoyé ». Sinon, rouvre ce menu pour le partager.',
+        'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le '
+          + 'partager.',
       );
     },
     veil: false,
-    // Seulement par le `goto` de m2-pick.
+  },
+  {
+    // GUIDE-E-CORR (TG-14) : la plateforme dit « annulé ». Rien ne valide M2 ici : le menu
+    // rouvre le partage. `when` : seulement par le `goto` de m2-pick.
+    advanceOn: [
+      { goto: 'm2-share', key: 'team.actions.open', type: 'interaction' },
+      {
+        completes: true, goto: 'm3-dock', key: 'team.invite.shared', type: 'action',
+      },
+      {
+        completes: true, goto: 'm3-dock', key: 'team.invite.sent', type: 'action',
+      },
+      { goto: 'm2-sent', key: 'team.invite.returned', type: 'interaction' },
+      { goto: 'm2-card', key: RouteNames.MyTeamList, type: 'route' },
+    ],
+    belowTargets: ['team.tabs'],
+    bubblePlacement: 'top',
+    id: 'm2-cancel',
+    missionId: 'coach_m2',
+    resumeFrom: 'm2-card',
+    targets: ['team.more'],
+    get text() {
+      return t(
+        'm2-cancel',
+        'Partage fermé : rien n’est parti. Rouvre ce menu pour envoyer le lien.',
+      );
+    },
+    veil: false,
     when: () => false,
   },
 
@@ -806,78 +840,16 @@ const STEPS = [
     },
   },
   {
-    // `SearchRecruitment` est une redirection vers le hub : c'est la route du
-    // hub qui arrive au guide (TUTOE-CALIBRAGE, émulateur).
-    advanceOn: [
-      { key: RouteNames.SearchRecruitment, type: 'route' },
-      { key: RouteNames.SearchHub, type: 'route' },
-    ],
+    // GUIDE-E-CORR (TG-15, tournée du 07/11) : la mission « Proposer un match amical » commençait
+    // par « Les profils… » sur la carte Profils, puis trois onglets en icônes seules. Elle part
+    // maintenant de la carte « Matchs amicaux », qui ouvre l'onglet où l'on crée l'annonce.
+    advanceOn: { goto: 'm4-frc', key: RouteNames.SearchHub, type: 'route' },
     id: 'm4-card',
     missionId: 'coach_m4',
     resumeFrom: 'm4-back',
-    targets: ['home.card.search-profiles'],
+    targets: ['home.card.search-amicaux'],
     get text() {
-      return t(
-        'm4-card',
-        'Il te manque un·e joueur·se ? Les profils ouverts au recrutement sont ici.',
-      );
-    },
-  },
-  {
-    bubblePlacement: 'top',
-    id: 'm4-read',
-    missionId: 'coach_m4',
-    get nextLabel() { return t('understood', 'Compris'); },
-    resumeFrom: 'm4-back',
-    targets: ['search.filters', 'search.result.0'],
-    get text() {
-      return t(
-        'm4-read',
-        'Fais défiler pour voir les profils. Pour trouver le bon, utilise les filtres, puis ouvre '
-          + 'une carte.',
-      );
-    },
-    veil: false,
-  },
-  {
-    advanceOn: { key: 'search.tab.events', type: 'interaction' },
-    bubblePlacement: 'top',
-    id: 'm4-tab-ev',
-    missionId: 'coach_m4',
-    resumeFrom: 'm4-back',
-    // GUIDE-STORES : m4-read demande de défiler, et les onglets défilent avec la liste.
-    scrollListToTop: true,
-    targets: ['search.tab.events'],
-    get text() {
-      return t(
-        'm4-tab-ev',
-        'Ouvre l’onglet Événement (le calendrier) : tu y trouves les tournois et détections près '
-          + 'de chez toi.',
-      );
-    },
-  },
-  {
-    advanceOn: { key: 'search.tab.clubs', type: 'interaction' },
-    bubblePlacement: 'top',
-    id: 'm4-tab-club',
-    missionId: 'coach_m4',
-    resumeFrom: 'm4-back',
-    targets: ['search.tab.clubs'],
-    get text() { return t('m4-tab-club', 'Les événements. Ouvre maintenant « Club ».'); },
-    // T3-GUIDE-SITE : sur le site, « Club » mène à l'annuaire public, sans « Matchs amicaux ».
-    when: () => Platform.OS !== 'web',
-  },
-  {
-    advanceOn: { key: 'search.tab.amicaux', type: 'interaction' },
-    bubblePlacement: 'top',
-    id: 'm4-tab-fr',
-    missionId: 'coach_m4',
-    resumeFrom: 'm4-back',
-    targets: ['search.tab.amicaux'],
-    get text() {
-      return Platform.OS === 'web'
-        ? t('m4-tab-fr-site', 'Les événements. Dernier onglet : « Matchs amicaux ».')
-        : t('m4-tab-fr', 'Les clubs. Dernier onglet : « Matchs amicaux ».');
+      return t('m4-card', 'Propose un match amical : ouvre « Matchs amicaux ».');
     },
   },
   {

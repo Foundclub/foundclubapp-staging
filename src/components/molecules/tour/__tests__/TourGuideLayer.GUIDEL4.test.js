@@ -168,7 +168,8 @@ const visitRoute = async (name) => {
   await flush();
 };
 
-const CARD = 'home.card.search-profiles';
+// GUIDE-E-CORR (TG-15) : la mission 4 part de la carte « Matchs amicaux ».
+const CARD = 'home.card.search-amicaux';
 
 describe('L4 — bulle périmée', () => {
   it('sa cible partie avec son écran : la bulle disparaît, et revient avec l’écran', async () => {

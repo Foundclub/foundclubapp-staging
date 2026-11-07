@@ -42,10 +42,6 @@ describe('les gestes demandés restent possibles', () => {
     expect(step('m3-team').targets).not.toContain('eventWizard.team.0');
   });
 
-  it('m4-tab-ev ramène la liste en haut : l onglet visé y est', () => {
-    expect(step('m4-tab-ev').scrollListToTop).toBe(true);
-  });
-
   it('b1-vide : la liste montrée par « ici » n est pas sous le voile', () => {
     expect(step('b1-vide').veil).toBe(false);
   });

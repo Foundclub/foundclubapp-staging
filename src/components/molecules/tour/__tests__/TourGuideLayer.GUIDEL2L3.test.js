@@ -150,7 +150,27 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-const step = (id) => COACH_GUIDE.steps.find((candidate) => candidate.id === id);
+// GUIDE-E-CORR (TG-15) : la mission 4 ne passe plus par les profils ni par les onglets de
+// Rechercher. Leur forme reste le gabarit de ces témoins de la couche (géométrie des bulles).
+const ANCIENNES_ETAPES_M4 = {
+  'm4-read': {
+    bubblePlacement: 'top', id: 'm4-read', missionId: 'coach_m4', nextLabel: 'Compris',
+    targets: ['search.filters', 'search.result.0'], text: 'Fais défiler pour voir les profils.',
+    veil: false,
+  },
+  'm4-tab-club': {
+    advanceOn: { key: 'search.tab.clubs', type: 'interaction' }, bubblePlacement: 'top',
+    id: 'm4-tab-club', missionId: 'coach_m4', resumeFrom: 'm4-back',
+    targets: ['search.tab.clubs'], text: 'Les événements. Ouvre maintenant « Club ».',
+  },
+  'm4-tab-ev': {
+    advanceOn: { key: 'search.tab.events', type: 'interaction' }, bubblePlacement: 'top',
+    id: 'm4-tab-ev', missionId: 'coach_m4', resumeFrom: 'm4-back', scrollListToTop: true,
+    targets: ['search.tab.events'], text: 'Ouvre l’onglet Événement (le calendrier).',
+  },
+};
+const step = (id) => COACH_GUIDE.steps.find((candidate) => candidate.id === id)
+  || ANCIENNES_ETAPES_M4[id];
 const bubbleOf = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.bubble'
   && typeof node.type === 'string')[0];
 const textsOf = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.bubble')[0]
@@ -297,7 +317,6 @@ describe('L3 — textes réécrits (audit, captures 07, 13, 27, 29, 30, 89)', ()
   });
 
   it('les 5 bulles de la mission 4 ne contredisent plus l’écran', () => {
-    expect(step('m4-tab-ev').text).toContain('calendrier');
     expect(step('m4-am1').text).not.toContain('Suivant');
     expect(step('m4-am4').text).toContain('terrain');
     expect(step('m4-am5').text).not.toContain('Rien de coché');

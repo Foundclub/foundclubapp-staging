@@ -62,7 +62,27 @@ jest.mock('@/theme/themeContext', () => ({
   }),
 }));
 
-const step = (id) => COACH_GUIDE.steps.find((candidate) => candidate.id === id);
+// GUIDE-E-CORR (TG-15) : la mission 4 ne passe plus par les profils ni par les onglets de
+// Rechercher. Leur forme reste le gabarit de ces témoins de la couche (géométrie des bulles).
+const ANCIENNES_ETAPES_M4 = {
+  'm4-read': {
+    bubblePlacement: 'top', id: 'm4-read', missionId: 'coach_m4', nextLabel: 'Compris',
+    targets: ['search.filters', 'search.result.0'], text: 'Fais défiler pour voir les profils.',
+    veil: false,
+  },
+  'm4-tab-club': {
+    advanceOn: { key: 'search.tab.clubs', type: 'interaction' }, bubblePlacement: 'top',
+    id: 'm4-tab-club', missionId: 'coach_m4', resumeFrom: 'm4-back',
+    targets: ['search.tab.clubs'], text: 'Les événements. Ouvre maintenant « Club ».',
+  },
+  'm4-tab-ev': {
+    advanceOn: { key: 'search.tab.events', type: 'interaction' }, bubblePlacement: 'top',
+    id: 'm4-tab-ev', missionId: 'coach_m4', resumeFrom: 'm4-back', scrollListToTop: true,
+    targets: ['search.tab.events'], text: 'Ouvre l’onglet Événement (le calendrier).',
+  },
+};
+const step = (id) => COACH_GUIDE.steps.find((candidate) => candidate.id === id)
+  || ANCIENNES_ETAPES_M4[id];
 const activeTour = (currentStep) => ({
   completeCurrentStep: jest.fn(),
   created: {},

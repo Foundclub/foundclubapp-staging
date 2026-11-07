@@ -209,10 +209,11 @@ describe('guide Entraîneur — missions verrouillées et jauge', () => {
     route(RouteNames.TeamDetails);
     interaction('team.actions.open');
     interaction('teamActions.shareLink');
-    // Feuille de partage fermée sans envoi : le guide demande (FIN-GUIDE, point 4) ; rouvrir le
-    // menu revient à l'étape « lien ».
+    // Feuille de partage fermée sans envoi : la bulle le dit, sans bouton qui valide (GUIDE-E-CORR,
+    // TG-14) ; rouvrir le menu revient à l'étape « lien ».
     interaction('team.invite.dismissed');
-    expect(tour.currentStep.id).toBe('m2-sent');
+    expect(tour.currentStep.id).toBe('m2-cancel');
+    expect(tour.missionStatus.coach_m2).not.toBe('done');
     interaction('team.actions.open');
     expect(tour.currentStep.id).toBe('m2-share');
     interaction('teamActions.shareLink');
@@ -238,11 +239,9 @@ describe('guide Entraîneur — missions verrouillées et jauge', () => {
     expect(tour.gauge).toBe(75);
 
     route(RouteNames.SearchHome);
-    route(RouteNames.SearchRecruitment);
-    act(() => { tour.completeCurrentStep(); });
-    interaction('search.tab.events');
-    interaction('search.tab.clubs');
-    interaction('search.tab.amicaux');
+    // GUIDE-E-CORR (TG-15) : la carte « Matchs amicaux » ouvre le hub sur son onglet.
+    route(RouteNames.SearchHub);
+    expect(tour.currentStep.id).toBe('m4-frc');
     [
       RouteNames.FriendlyMatchWizardTeam,
       RouteNames.FriendlyMatchWizardHosting,
@@ -373,16 +372,15 @@ describe('guide Entraîneur — reprise', () => {
   });
 });
 
-// TUTOE-CALIBRAGE (27/10) — émulateur : la carte « Rechercher » ouvre
-// `SearchRecruitment`, une REDIRECTION vers le hub de recherche ; seule la route
-// du hub arrive au guide, qui restait bloqué sur « m4-card ».
-describe('guide Entraîneur — M4 par la redirection de recherche', () => {
-  it('arriver sur le hub de recherche fait passer à la lecture des profils', () => {
+// TUTOE-CALIBRAGE (27/10) — émulateur : seule la route du hub arrive au guide. GUIDE-E-CORR
+// (TG-15) : la carte « Matchs amicaux » y mène, et la bulle suivante est « crée ton annonce ».
+describe('guide Entraîneur — M4 par le hub de recherche', () => {
+  it('arriver sur le hub de recherche fait passer à « crée ton annonce »', () => {
     const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
     const { matchSignal } = jest.requireActual('@/domains/tour/tourGuideEngine');
     const index = COACH_GUIDE.steps.findIndex((step) => step.id === 'm4-card');
     const match = matchSignal(COACH_GUIDE, index, { key: RouteNames.SearchHub, kind: 'route' }, {});
-    expect(COACH_GUIDE.steps[match?.index]?.id).toBe('m4-read');
+    expect(COACH_GUIDE.steps[match?.index]?.id).toBe('m4-frc');
   });
 });
 
