@@ -24271,9 +24271,9 @@ export default {
         + 'waiting too: once accepted, your mission 1 is complete. Meanwhile, feel free to explore '
         + 'the app.',
       'm1-wait-team-pill': 'Waiting for your team · Resume',
+      'm2-cancel': 'Sharing closed: nothing was sent. Reopen this menu to send the link.',
       'm2-card': 'Bring your players in: open your team.',
       'm2-more': "The team's actions are in this menu.",
-      'm2-cancel': 'Sharing closed: nothing was sent. Reopen this menu to send the link.',
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",
       'm2-pick-next': 'Continue',
       'm2-sent': 'Did you send it? If so, tap “Yes, it’s sent”. Otherwise, reopen this menu to share it.',

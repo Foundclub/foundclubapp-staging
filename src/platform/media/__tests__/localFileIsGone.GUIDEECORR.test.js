@@ -12,7 +12,7 @@ jest.mock('react-native-image-picker', () => ({
   launchImageLibrary: jest.fn(),
 }));
 
-const exists = /** @type {jest.Mock} */ (ReactNativeBlobUtil.fs.exists);
+const { fs: { exists } } = /** @type {any} */ (ReactNativeBlobUtil);
 const CACHE = 'file:///data/user/0/com.foundclub/cache/rn_image_picker_lib_temp_1.png';
 
 beforeEach(() => exists.mockReset());

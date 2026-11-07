@@ -1,5 +1,6 @@
 import { COACH_GUIDE } from '@/domains/tour/coachGuide';
 import { indexOfStep, matchSignal, nextAvailableIndex } from '@/domains/tour/tourGuideEngine';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 // GUIDE-E-CORR (tournée du 07/11, TG-14 et TG-15) : le guide Entraîneur validait la mission 2

@@ -25329,9 +25329,9 @@ export default {
         + 't’attend : dès qu’elle est acceptée, ta mission 1 est validée. En attendant, explore '
         + 'l’app librement.',
       'm1-wait-team-pill': 'En attente de ton équipe · Reprendre',
+      'm2-cancel': 'Partage fermé : rien n’est parti. Rouvre ce menu pour envoyer le lien.',
       'm2-card': 'Fais entrer tes joueur·se·s : ouvre ton équipe.',
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
-      'm2-cancel': 'Partage fermé : rien n’est parti. Rouvre ce menu pour envoyer le lien.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
       'm2-pick-next': 'Continuer',
       'm2-sent': 'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le partager.',
