@@ -104,18 +104,6 @@ const renderLayer = async () => {
 };
 const blockers = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.blocker'
   && typeof node.type === 'string');
-// Le milieu de la carte est-il sous un bloqueur du voile ?
-const isCardCovered = (tree) => {
-  const x = CARD.x + (CARD.width / 2);
-  const y = CARD.y + (CARD.height / 2);
-  return blockers(tree).some((node) => {
-    const style = Object.assign({}, ...[node.props.style].flat(5).filter(Boolean));
-    return x >= style.left && x < style.left + style.width
-      && y >= style.top && y < style.top + style.height;
-  });
-};
-const holes = (tree) => tree.root.findAll((node) => typeof node.type === 'string'
-  && String(node.props.testID || '').startsWith('tour.hole.'));
 
 const texts = (tree) => tree.root.findAll((node) => typeof node.type === 'string'
   && typeof node.props.children === 'string').map((node) => node.props.children);
@@ -143,7 +131,7 @@ afterEach(() => {
 });
 
 describe('TG-07 : la bulle dit l’écran où l’on est', () => {
-  it('retour de la messagerie sur la fiche : « ouvre Nos équipes », pas « sur Staff »', async () => {
+  it('retour de messagerie sur la fiche : « Nos équipes », pas « sur Staff »', async () => {
     mockTour = activeTour(step('m2-back'));
     registerTourTarget('header.back', (done) => done({
       height: 44, width: 44, x: 8, y: 30,
@@ -155,7 +143,7 @@ describe('TG-07 : la bulle dit l’écran où l’on est', () => {
     expect(shown).toMatch(/Nos équipes/);
   });
 
-  it('témoin : vraiment sur Staff (la fiche n’est pas à l’écran), la bulle montre le retour', async () => {
+  it('témoin : vraiment sur Staff, la bulle montre le retour', async () => {
     mockTour = activeTour(step('m2-back'));
     registerTourTarget('header.back', (done) => done({
       height: 44, width: 44, x: 8, y: 30,
@@ -194,7 +182,7 @@ describe('TG-10 : la bulle ne couvre pas ce dont elle parle', () => {
 });
 
 describe('TG-16 : le voile reste en plein guide', () => {
-  it('clavier ouvert sur le téléphone du club : le reste de l’écran reste sous le voile', async () => {
+  it('clavier ouvert sur le téléphone du club : le reste reste sous le voile', async () => {
     mockKeyboard = { height: 260, screenY: 380 };
     mockTour = activeTour(step('m1-phone'));
     // Le champ, remonté au-dessus du clavier, dépasse un peu de sa zone visible.
@@ -222,7 +210,7 @@ describe('TG-16 : le voile reste en plein guide', () => {
 });
 
 describe('TG-17 : la bulle du planning d’exemple dit de faire défiler', () => {
-  it('m1-pdemo : grille d’exemples sous le bas de l’écran ⇒ « Fais défiler vers le bas »', async () => {
+  it('m1-pdemo : grille sous le bas de l’écran ⇒ « Fais défiler vers le bas »', async () => {
     mockTour = activeTour(step('m1-pdemo'));
     registerTourTarget('planning.grid', (done) => done({
       height: 400, width: 360, x: 0, y: 520,

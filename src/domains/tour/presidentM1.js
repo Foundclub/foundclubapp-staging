@@ -341,7 +341,7 @@ const PART_FACILITIES = [
     () => t('m1-ffaddr-guard', 'Choisis d’abord l’adresse de l’installation.'),
   ),
   // GUIDE-D-CORR TG-10 (tournée du 07/11, r25) : une bulle pour trois réglages se posait sur la
-  // capacité et les couleurs, sans voile. Une bulle par réglage, à côté du sien ; on peut y toucher.
+  // capacité et les couleurs, sans voile. Une bulle par réglage, à côté du sien (touchable).
   {
     id: 'm1-ff2',
     missionId: MISSION_ID,
@@ -533,13 +533,13 @@ const PART_PLANNING = [
   }),
   {
     advanceOn: { key: RouteNames.FacilityList, type: 'route' },
+    edgeSwipe: true,
     id: 'm1-pb1',
     missionId: MISSION_ID,
     resumeFrom: 'm1-fplan',
     subMission: 'facilities',
     targets: ['header.back'],
     get text() { return t('m1-pb1', 'Reviens à tes installations.'); },
-    edgeSwipe: true,
   },
   {
     advanceOn: { key: RouteNames.Club, type: 'route' },

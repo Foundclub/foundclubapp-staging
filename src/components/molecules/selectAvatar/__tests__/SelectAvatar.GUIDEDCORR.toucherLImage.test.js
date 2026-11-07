@@ -84,7 +84,6 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-
 const monter = (props = {}) => {
   let arbre;
   act(() => {

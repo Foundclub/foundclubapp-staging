@@ -25,7 +25,8 @@ const TABLE = /** @type {Record<string, [string, string]>} */ ({
   'adWizardAudienceType.players.title': ['Je recrute des pratiquants / joueurs', "I'm recruiting players / participants"],
   'adWizardAudienceType.subtitle': ['Choisis si tu publies une annonce pour recruter des pratiquants / joueurs ou un coach / prof.', 'Choose whether you are posting an ad to recruit players / participants or a coach / instructor.'],
   'adWizardRecap.adType.coach': ['Annonce coach / prof', 'Coach / instructor ad'],
-  'clubDetails.alerts.inviteTrainer.message': ["Bonjour {{coachName}} !\nTu as été désigné·e comme coach / prof dans le club {{clubName}}.\nTélécharge l'application FoundClub pour finaliser la création de ton compte et commencer à gérer tes équipes et tes événements.", "Hi {{coachName}}!\nYou've been designated as coach / instructor at {{clubName}}.\nDownload the FoundClub app to finish creating your account and start managing your teams and events."],
+  // GUIDE-D-CORR TG-23 : SMS d'invitation raccourci (il faisait 6 SMS), le club nommé en tête.
+  'clubDetails.alerts.inviteTrainer.message': ['Bonjour {{coachName}}, le club {{clubName}} t’invite comme coach / prof sur FoundClub. Télécharge l’app pour activer ton compte.', 'Hi {{coachName}}, the club {{clubName}} invites you as coach / instructor on FoundClub. Download the app to activate your account.'],
   'clubDetails.hub.coach': ['coach / prof', 'coach / instructor'],
   'clubDetails.hub.coachs': ['coachs / profs', 'coaches / instructors'],
   'clubDetails.titles.coachs': ['Nos coachs / profs', 'Our coaches / instructors'],

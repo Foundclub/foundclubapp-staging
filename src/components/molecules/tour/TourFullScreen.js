@@ -449,7 +449,10 @@ function TourFullScreen({ kind }) {
         </View>
         {(guide?.closingTodoLines?.(t, skippedSubMissions, created) || [])
           .map((/** @type {any} */ line) => (
-            <Text key={line} style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+            <Text
+              key={line}
+              style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}
+            >
               {line}
             </Text>
           ))}

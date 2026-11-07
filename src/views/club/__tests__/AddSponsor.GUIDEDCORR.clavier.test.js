@@ -171,8 +171,6 @@ jest.mock(
   },
 );
 
-const LOGO = { height: 100, uri: 'file://logo.png', width: 200 };
-
 // Un club tel qu'il revient VRAIMENT de l'API : peuple de relations que la
 // mise a jour ne sait pas renvoyer telles quelles.
 const CLUB_PEUPLE = {
@@ -184,69 +182,6 @@ const CLUB_PEUPLE = {
   sponsor: [{ title: 'Elseve' }],
   user: { id: 42 },
 };
-
-/**
- * Aplati les enfants React en une chaine, pour lire le texte rendu.
- * @param {any} enfants
- * @returns {string}
- */
-const aplatirTexte = (enfants) => {
-  if (Array.isArray(enfants)) return enfants.map(aplatirTexte).join('');
-  if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
-  if (typeof enfants === 'object') return aplatirTexte(enfants?.props?.children);
-  return String(enfants);
-};
-
-/**
- * Aplati un style RN (tableau imbrique, valeurs fausses) en un seul objet.
- * @param {any} style
- * @returns {any}
- */
-const aplatirStyle = (style) => {
-  if (Array.isArray(style)) return Object.assign({}, ...style.map(aplatirStyle));
-  if (!style || typeof style !== 'object') return {};
-  return style;
-};
-
-/**
- * Texte visible sous un noeud de l'arbre rendu.
- * @param {any} noeud
- * @returns {string}
- */
-const texteDe = (noeud) => noeud
-  .findAllByType(Text)
-  .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children))
-  .join(' ');
-
-/**
- * Appuie sur l'element pressable qui porte ce libelle.
- * @param {any} arbre
- * @param {string} libelle
- * @returns {Promise<void>}
- */
-const appuyerSur = async (arbre, libelle) => {
-  const candidats = arbre.root
-    .findAll((/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function')
-    .filter((/** @type {any} */ noeud) => texteDe(noeud).includes(libelle));
-
-  if (candidats.length === 0) {
-    throw new Error(`Aucun element pressable ne porte le libelle « ${libelle} »`);
-  }
-
-  const cible = candidats.find((/** @type {any} */ noeud) => texteDe(noeud).trim() === libelle)
-    || candidats[candidats.length - 1];
-
-  await act(async () => {
-    cible.props.onPress();
-  });
-};
-
-/**
- * Dernieres props recues par une doublure.
- * @param {any[]} journal
- * @returns {any}
- */
-const dernieresProps = (journal) => journal[journal.length - 1];
 
 /**
  * Monte l'ecran.
@@ -262,31 +197,6 @@ const monterEcran = async (options = {}) => {
     arbre = renderer.create(<AddSponsor navigation={mockNavigation} route={route} />);
   });
   return arbre;
-};
-
-/**
- * Choisit un logo.
- * @param {any} [logo]
- * @returns {Promise<void>}
- */
-const choisirLogo = async (logo = LOGO) => {
-  const zone = dernieresProps(mockAvatarProps);
-  await act(async () => {
-    zone.onAvatarSelected(logo);
-  });
-};
-
-/**
- * Saisit le nom du partenaire (premier champ texte de l'ecran).
- * @param {string} valeur
- * @returns {Promise<void>}
- */
-const saisirNom = async (valeur) => {
-  const champ = mockInputProps.find((/** @type {any} */ props) => props.name !== 'link')
-    || mockInputProps[0];
-  await act(async () => {
-    champ.onChangeText(valeur);
-  });
 };
 
 beforeEach(() => {
@@ -318,7 +228,6 @@ beforeEach(() => {
 afterEach(() => {
   /** @type {any} */ (Alert.alert).mockRestore?.();
 });
-
 
 const libelles = () => mockButtonProps.map((props) => props.title);
 // Le bouton « Annuler » est-il dans une boîte masquée (`display: 'none'`) ?

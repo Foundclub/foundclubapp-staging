@@ -1,6 +1,5 @@
-import fr from '@/theme/strings/translations/fr';
-
 import { PRESIDENT_GUIDE } from '@/domains/tour/presidentGuide';
+import fr from '@/theme/strings/translations/fr';
 
 // GUIDE-D-CORR (tournée du 07/11) : une bulle ne nomme que ce qui est à l'écran, et ne dit que ce
 // qui est vrai. TG-09 (« Placer sur la carte » absent), TG-11 (« Suivant » au lieu de
@@ -44,13 +43,13 @@ describe('les textes disent ce qui se passe vraiment', () => {
     expect(texte('b1-camp')).toMatch(/^Exemple/);
   });
 
-  it('TG-20 fin de M3 : le nom de la rubrique affichée, l’en-tête de M3, l’invitation par SMS', () => {
+  it('TG-20 fin de M3 : rubrique affichée, en-tête de M3, invitation par SMS', () => {
     expect(texte('m3-ok')).toContain(`« ${fr.teamListContent.sections.otherInClub} »`);
     expect(step('m3-ok').missionId).toBe('president_m3');
     expect(fr.teamWizard.steps.trainers.createHint).toContain('SMS');
   });
 
-  it('TG-23 : le bilan ne dit plus « rien n’a été envoyé » ; le SMS nomme le club et reste court', () => {
+  it('TG-23 : bilan sans « rien n’a été envoyé » ; SMS court qui nomme le club', () => {
     expect(fr.tourCatalog.president.close.example).not.toContain('envoyé');
     const sms = fr.clubDetails.alerts.inviteTrainer.message;
     expect(sms).toContain('{{clubName}}');

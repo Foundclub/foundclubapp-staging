@@ -7,8 +7,8 @@ import {
   resetTourTargetsForTests,
 } from '@/domains/tour/tourTargetRegistry';
 
-import TourTarget from '@/components/molecules/tour/TourTarget';
 import { TOUR_SHEET_TARGET } from '@/components/molecules/tour/tourSheetContext';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 import BottomModal from '../BottomModal';
 
@@ -98,7 +98,6 @@ jest.mock('@/theme/themeContext', () => {
     }),
   };
 });
-
 
 const sheet = (isVisible) => (
   <BottomModal close={() => {}} isVisible={isVisible} snapPoints={['34%']}>

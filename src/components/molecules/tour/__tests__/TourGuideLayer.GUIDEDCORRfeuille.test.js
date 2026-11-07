@@ -102,18 +102,6 @@ const renderLayer = async () => {
   await flush();
   return tree;
 };
-const blockers = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.blocker'
-  && typeof node.type === 'string');
-// Le milieu de la carte est-il sous un bloqueur du voile ?
-const isCardCovered = (tree) => {
-  const x = CARD.x + (CARD.width / 2);
-  const y = CARD.y + (CARD.height / 2);
-  return blockers(tree).some((node) => {
-    const style = Object.assign({}, ...[node.props.style].flat(5).filter(Boolean));
-    return x >= style.left && x < style.left + style.width
-      && y >= style.top && y < style.top + style.height;
-  });
-};
 const holes = (tree) => tree.root.findAll((node) => typeof node.type === 'string'
   && String(node.props.testID || '').startsWith('tour.hole.'));
 
@@ -144,7 +132,7 @@ describe('TG-01 / TG-02 : une feuille ouverte passe devant le guide', () => {
     expect(isHidden(tree)).toBe(true);
   });
 
-  it('TG-02 m1-pform : feuille photo du partenaire ouverte, la bulle ne la couvre plus', async () => {
+  it('TG-02 m1-pform : feuille photo du partenaire, la bulle ne la couvre plus', async () => {
     mockTour = activeTour(step('m1-pform'));
     registerTourTarget('sponsor.fields', (done) => done(CARD));
     openSheet();

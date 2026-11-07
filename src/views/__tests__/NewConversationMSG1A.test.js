@@ -454,9 +454,11 @@ describe('Guide Dirigeant·e, B3 : ce que l écran dit au guide', () => {
 
   // GUIDE-D-CORR TG-11 (tournée du 07/11, b14-b16) : le dirigeant et son seul coach ; la liste
   // du serveur contient le dirigeant lui-même, l'écran le retire, mais le compte le gardait : 2.
-  test('soi-même et un seul autre membre : pas assez pour un groupe, le guide le sait', async () => {
+  test('soi-même et un seul autre membre : pas assez pour un groupe', async () => {
     mockMembresDuServeur = [
-      { documentId: 'moi', firstname: 'Adel', lastname: 'F', role: { name: 'Dirigeant' } },
+      {
+        documentId: 'moi', firstname: 'Adel', lastname: 'F', role: { name: 'Dirigeant' },
+      },
       MEMBRES[0],
     ];
     mockTour = { currentStep: { checksMembers: true } };

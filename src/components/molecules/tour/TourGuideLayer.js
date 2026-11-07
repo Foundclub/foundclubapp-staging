@@ -33,7 +33,6 @@ import loadTourTeamChoice from '@/components/molecules/tour/loadTourTeamChoice';
 import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import { TOUR_BUBBLE_SLOT_HEIGHT } from '@/components/molecules/tour/TourBubbleSlot';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
-import { TOUR_SHEET_TARGET } from '@/components/molecules/tour/tourSheetContext';
 import {
   bubbleRoom,
   clipAboveDock,
@@ -52,6 +51,7 @@ import {
   toLayerFrame,
   wideBubbleFrame,
 } from '@/components/molecules/tour/tourGuideGeometry';
+import { TOUR_SHEET_TARGET } from '@/components/molecules/tour/tourSheetContext';
 
 import { useTour } from '@/context/useTour';
 import useKeyboardFrame from '@/hooks/useKeyboardFrame';
