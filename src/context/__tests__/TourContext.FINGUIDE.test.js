@@ -331,18 +331,23 @@ describe('point 4 — le retour du partage', () => {
     expect(stepId()).toBe('m2-card');
   });
 
-  it('partage annulé ou sans résultat : le guide demande, il ne recule pas', () => {
+  // GUIDE-E-CORR (TG-14, tournée du 07/11) : annulé, rien ne valide M2 ; le menu rouvre le partage.
+  it('partage annulé : la bulle le dit, sans bouton qui valide', () => {
     toPick();
     interaction('team.invite.dismissed');
-    expect(stepId()).toBe('m2-sent');
-    expect(tour.currentStep.nextLabel).toBeTruthy();
-    pressNext();
-    expect(tour.missionStatus.coach_m2).toBe('done');
+    expect(stepId()).toBe('m2-cancel');
+    expect(tour.currentStep.nextLabel).toBeFalsy();
+    expect(tour.missionStatus.coach_m2).not.toBe('done');
+    interaction('team.actions.open');
+    expect(stepId()).toBe('m2-share');
   });
 
-  it('feuille qui ne répond jamais : la bulle garde un bouton, jamais d’étape sans issue', () => {
+  it('feuille qui ne répond jamais : « Continuer » mène à la question, qui seule valide', () => {
     toPick();
-    expect(tour.currentStep.nextLabel).toBeTruthy();
+    expect(tour.currentStep.nextLabel).toBe('Continuer');
+    pressNext();
+    expect(stepId()).toBe('m2-sent');
+    expect(tour.missionStatus.coach_m2).not.toBe('done');
     pressNext();
     expect(tour.missionStatus.coach_m2).toBe('done');
     flush();
@@ -395,9 +400,11 @@ describe('G93 — sortie par la flèche, puis « Reprendre »', () => {
     route(RouteNames.SearchHome);
     if (stepId() === 'm4-back') route(RouteNames.SearchHome);
     expect(stepId()).toBe('m4-card');
+    // GUIDE-E-CORR (TG-15) : la carte « Matchs amicaux » mène à « crée ton annonce ».
     route(RouteNames.SearchHub);
-    pressNext();
-    expect(stepId()).toBe('m4-tab-ev');
+    expect(stepId()).toBe('m4-frc');
+    route(RouteNames.FriendlyMatchWizardTeam);
+    expect(stepId()).toBe('m4-am1');
   };
 
   it('repart du point de reprise de la mission, sans perdre la jauge', () => {
@@ -416,7 +423,7 @@ describe('G93 — sortie par la flèche, puis « Reprendre »', () => {
     act(() => { tour.pauseTour(); });
     act(() => { tour.returnToGuide(); });
     expect(tour.tourStatus).toBe('paused');
-    expect(stepId()).toBe('m4-tab-ev');
+    expect(stepId()).toBe('m4-am1');
   });
 });
 
