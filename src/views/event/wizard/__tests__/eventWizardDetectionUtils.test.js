@@ -101,7 +101,8 @@ describe('D08 — reconnaissance du type d evenement', () => {
 describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () => {
   test('un evenement standard compte 8 etapes', () => {
     expect(getEventWizardStepCount({ type: typeEntrainement })).toBe(8);
-    expect(getEventWizardStepCount({ type: typeAutre })).toBe(8);
+    // EVT-AUTRE-NOM (07/11) : « Autre » gagne l'etape de son nom, 8 → 9.
+    expect(getEventWizardStepCount({ type: typeAutre })).toBe(9);
   });
 
   // 🎯 LA LIGNE QUE Y02 FAIT BOUGER, et la SEULE : 8 → 9, pour le match seul.
@@ -186,7 +187,8 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
     ['entrainement prive', etatEntrainementFerme, 7],
     ['stage', { type: typeStage }, 8],
     ['tournoi', { type: typeTournoi }, 10],
-    ['autre', { type: typeAutre }, 8],
+    // EVT-AUTRE-NOM (07/11) : 8 → 9, l'etape du nom.
+    ['autre', { type: typeAutre }, 9],
     ['detection recurrente', etatDetectionRecurrente, 8],
     ['detection sans postes', etatDetectionSansPostes, 8],
   ])('%s compte %i etapes, et la fusion D58 n y touche pas', (_nom, etat, attendu) => {
@@ -201,12 +203,11 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
     expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(8);
   });
 
-  test('hors match et tournoi, aucun parcours ne depasse 8 etapes', () => {
+  test('hors match, tournoi et « Autre », aucun parcours ne depasse 8 etapes', () => {
     const parcoursA8Maximum = [
       { type: typeEntrainement },
       etatEntrainementFerme,
       { type: typeStage },
-      { type: typeAutre },
       etatDetectionAvecCreneaux,
       etatDetectionRecurrente,
       etatDetectionSansPostes,
@@ -220,6 +221,8 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
     // (Y02). S10-B lui a repris l'etape « Invitations » : 10 → 9.
     expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
     expect(getEventWizardStepCount({ type: typeMatch })).toBe(9);
+    // EVT-AUTRE-NOM (07/11) : « Autre » pour son nom.
+    expect(getEventWizardStepCount({ type: typeAutre })).toBe(9);
   });
 });
 

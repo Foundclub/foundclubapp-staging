@@ -28,6 +28,8 @@ export const needsTrainingExternalPlaces = (state) => (
 // ⚠️ `includes('match')` attrape aussi « Match amical », et c'est voulu : lui
 // aussi a un adversaire.
 export const isMatchEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('match');
+// EVT-AUTRE-NOM : egalite stricte, comme le serveur (`isOtherTypeName`).
+export const isOtherEventType = (typeName = '') => normalizeTypeLabel(typeName) === 'autre';
 
 /**
  * FINITIONS7 (tournee 8, 01/10) — L EXEMPLE DE DESCRIPTION, PROPRE AU TYPE D EVENEMENT.
@@ -264,7 +266,15 @@ export const getDefaultSessionStatusForEventType = (typeName = '') => {
  * @returns {string[]} Les ecrans traverses, dans l'ordre.
  */
 export const getEventWizardStepRoutes = (state = {}) => {
-  const routes = [RouteNames.EventWizardType, RouteNames.EventWizardTeam];
+  /** @type {string[]} */
+  const routes = [RouteNames.EventWizardType];
+
+  // EVT-AUTRE-NOM (07/11, demande d'Adel) — « Autre » demande son nom juste apres la tuile.
+  if (isOtherEventType(state?.type?.name)) {
+    routes.push(RouteNames.EventWizardName);
+  }
+
+  routes.push(RouteNames.EventWizardTeam);
 
   // 🗓️ DATESDABORD (25/10, décision d'Adel « 6- B ») — LE LIEU D'ABORD : l'installation choisie,
   // l'étape « Date & horaire » dit à chaque horaire si le créneau est libre ou déjà pris pour
@@ -402,6 +412,10 @@ export const getEventWizardStageProgramStepIndex = (/** @type {any} */ state = {
  */
 export const getEventWizardAccessStepIndex = (state = {}) => (
   getEventWizardStepIndex(RouteNames.EventWizardAccess, state)
+);
+
+export const getEventWizardNameStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardName, state)
 );
 
 export const getEventWizardDescriptionStepIndex = (/** @type {any} */ state = {}) => (

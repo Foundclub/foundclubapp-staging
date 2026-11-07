@@ -121,7 +121,12 @@ jest.mock('@/domains/auth/useAuth', () => {
 jest.mock('@/domains/event/useEvent', () => ({
   __esModule: true,
   default: () => ({
-    createReccurrentEventPayload: () => [{ name: 'Un evenement' }],
+    // EVT-AUTRE-NOM : le nom d'un « Autre » est recopie tel que le Recap le remet au
+    // fabricant de requetes (qui recopie tout, `createEventPayload`).
+    createReccurrentEventPayload: (/** @type {any} */ donnees) => [{
+      name: 'Un evenement',
+      ...(donnees && 'customName' in donnees ? { customName: donnees.customName } : {}),
+    }],
     createStageEventPayload: () => ({ name: 'Un stage' }),
   }),
 }));
@@ -135,8 +140,11 @@ jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: () =
 // repli `EventWizardRecap:920`. Faux par defaut : les temoins ecrits avant ce lot
 // mesurent exactement ce qu'ils mesuraient.
 let mockCreationSansIdentifiant = false;
+/** EVT-AUTRE-NOM — ce qui part au serveur, releve a chaque creation. */
+const mockEnvois = [];
 jest.mock('@/services/event/eventService', () => ({
-  createEventsWithConcurrency: async () => {
+  createEventsWithConcurrency: async (/** @type {any[]} */ payloads) => {
+    mockEnvois.push(...(payloads || []));
     await new Promise((resoudre) => {
       setTimeout(resoudre, 30);
     });
@@ -267,6 +275,27 @@ const chronometrerLaCreation = async (surcharges = {}) => {
   act(() => arbre.unmount());
   return { msJusquALEcranSuivant, navigations, reset };
 };
+
+// EVT-AUTRE-NOM (07/11) — le nom d'un « Autre » part au serveur, nettoye ; les
+// autres types n'envoient pas le champ (rien ne change pour eux).
+describe('EVT-AUTRE-NOM — le nom d un « Autre » part a la creation', () => {
+  test('un « Autre » nomme envoie customName, blancs retires', async () => {
+    mockEnvois.length = 0;
+    await chronometrerLaCreation({
+      customName: '  Repas   du club ',
+      type: { documentId: 'type-autre', name: 'Autre' },
+    });
+    expect(mockEnvois.length).toBeGreaterThan(0);
+    expect(mockEnvois[0].customName).toBe('Repas du club');
+  });
+
+  test('un autre type n envoie pas le champ', async () => {
+    mockEnvois.length = 0;
+    await chronometrerLaCreation({ customName: 'Glisse' });
+    expect(mockEnvois.length).toBeGreaterThan(0);
+    expect(mockEnvois[0]).not.toHaveProperty('customName');
+  });
+});
 
 describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
   test('l ecran suivant s affiche, et l evenement cree est celui qu il montre', async () => {

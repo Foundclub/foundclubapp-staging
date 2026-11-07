@@ -16,7 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useAuth from '@/domains/auth/useAuth';
-import { estDuClubOrganisateur } from '@/domains/event/eventDisplayName';
+import { estDuClubOrganisateur, resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
@@ -603,7 +603,9 @@ function EventCardNew({
     .filter((team) => !estDuClubOrganisateur(team, item))
     .map((team) => team?.name)
     .filter(Boolean);
-  const primaryTitle = isTeamFocusedCard
+  // EVT-AUTRE-NOM — un « Autre » nomme porte son nom, sur toutes les cartes.
+  const nomDonne = resolveEventCustomName(item) || resolveEventCustomName(item?.raw);
+  const primaryTitle = nomDonne || (isTeamFocusedCard
     ? resolveTeamFocusedPrimaryTitle({
       clubName,
       eventTitle,
@@ -612,7 +614,7 @@ function EventCardNew({
       matchContext: item?.matchContext,
       teamName,
     })
-    : defaultPrimaryTitle;
+    : defaultPrimaryTitle);
   const secondaryTitle = isTeamFocusedCard
     ? (guestOpponentLabel ? [myGuestTeam?.name, myGuestTeam?.club?.name] : [teamName, clubName])
       .filter((value, index, values) => value && values.indexOf(value) === index)

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -360,7 +361,9 @@ function EventAttendanceCall() {
       (/** @type {any} */ item) => Number(item?.attendance?.declaredLateMinutes || 0) > 0,
     );
 
-    const typeLibelle = String(event?.type?.name || '').toUpperCase();
+    // EVT-AUTRE-NOM : un « Autre » nomme rappelle son nom plutot que « AUTRE ».
+    const typeLibelle = String(resolveEventCustomName(event) || event?.type?.name || '')
+      .toUpperCase();
     const dateCourte = formatShortDateInZone(payloadData?.eventStartAt || event?.date, timezone);
     const heureFin = formatTimeInZone(resolveEventEndMs({ event, payloadData }), timezone);
     const creneau = [dateCourte, [heureDebut, heureFin].filter(Boolean).join(' – ')]

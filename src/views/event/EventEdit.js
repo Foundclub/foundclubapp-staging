@@ -18,6 +18,12 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  buildEventCustomNamePayload,
+  EVENT_CUSTOM_NAME_MAX_LENGTH,
+  isEventCustomNameRejected,
+  isOtherTypeName,
+} from '@/domains/event/eventDisplayName';
 import { isEndTimeNotAfterStart } from '@/domains/event/eventUseCases';
 import { seriesUpdateMessage } from '@/domains/event/seriesUpdateOutcome';
 import useEvent from '@/domains/event/useEvent';
@@ -72,6 +78,7 @@ const AUCUNE_EQUIPE = [];
 const defaultValues = {
   arrivalTrackingEnabled: true,
   capacity: null,
+  customName: '',
   date: '',
   description: '',
   endTime: '',
@@ -114,6 +121,7 @@ const defaultValues = {
 // message ne puisse rendre une clef technique.
 const LIBELLES_DES_CHAMPS = /** @type {Record<string, [string, string?]>} */ ({
   capacity: ['eventEdit.fields.capacity.label'],
+  customName: ['eventWizard.steps.name.recapLabel', 'Nom'],
   date: ['eventEdit.fields.date.label'],
   description: ['eventEdit.fields.description.label'],
   endTime: ['eventEdit.fields.endTime.label'],
@@ -267,6 +275,7 @@ const eventSchema = Joi.object({
   // POINTAGE (29/09) — les deux options de presence de l evenement.
   arrivalTrackingEnabled: Joi.boolean().optional(),
   capacity: Joi.number().allow(null, '').optional(),
+  customName: Joi.string().allow('', null).optional(),
   date: Joi.string()
     .pattern(/^(\d{2}\/\d{2}\/\d{4})?$/)
     .allow('')
@@ -551,6 +560,7 @@ function EventEditForm({ navigation, route }) {
       ...defaultValues,
       arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
       capacity: event?.capacity,
+      customName: event?.customName || '',
       date: initialDateValue,
       description: event?.description || '',
       endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
@@ -607,6 +617,8 @@ function EventEditForm({ navigation, route }) {
   const isOpenTrainingType = isTrainingType && selectedSessionStatus !== 'closed';
   // FINITIONS7 — l exemple de description suit le type (il disait « détection » pour tous).
   const descriptionExample = getEventDescriptionExample(selectedTypeData?.name, t);
+  // EVT-AUTRE-NOM — le nom d'un « Autre » se modifie ici aussi.
+  const isOtherType = isOtherTypeName(selectedTypeData?.name);
 
   // R8 (D1) — UN REGLAGE QUI NE COMMANDE PERSONNE NE SE PROPOSE PAS.
   //
@@ -855,6 +867,7 @@ function EventEditForm({ navigation, route }) {
         ...defaultValues,
         arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
         capacity: event?.capacity,
+        customName: event?.customName || '',
         date: event?.date ? formatDateDeLaFiche(event?.date) : '',
         description: event?.description || '',
         endTime: event?.endTime ? event.endTime.substring(0, 5) : '',
@@ -965,9 +978,20 @@ function EventEditForm({ navigation, route }) {
         return;
       }
 
+      // EVT-AUTRE-NOM — un nom saisi hors bornes ne part pas (le serveur le refuserait aussi).
+      if (isOtherType && isEventCustomNameRejected(data.customName)) {
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          t('eventWizard.steps.name.lengthError', 'Le nom doit faire de 3 à 60 caractères.'),
+        );
+        return;
+      }
+
       console.log('Form submitted with data:', data);
+      const { customName: nomSaisi, ...donneesSansNom } = data;
       const payloadData = {
-        ...data,
+        ...donneesSansNom,
+        ...buildEventCustomNamePayload(selectedTypeData?.name || event?.type?.name, nomSaisi),
         totalPlayers: isTrainingType && data.sessionStatus !== 'closed' ? null : data.totalPlayers,
         typeName: selectedTypeData?.name || event?.type?.name || '',
       };
@@ -1280,6 +1304,33 @@ function EventEditForm({ navigation, route }) {
                 </Text>
               </View>
             )}
+
+            {isOtherType ? (
+              <Controller
+                control={control}
+                name="customName"
+                render={({
+                  field: {
+                    name, onBlur, onChange, ref, value,
+                  },
+                }) => (
+                  <Input
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={t('eventWizard.steps.name.recapLabel', 'Nom')}
+                    maxLength={EVENT_CUSTOM_NAME_MAX_LENGTH}
+                    onBlur={onBlur}
+                    onChangeText={onChange}
+                    placeholder={t(
+                      'eventWizard.steps.name.placeholder',
+                      'Ex. Repas de fin de saison',
+                    )}
+                    ref={ref}
+                    testID="event-edit-custom-name"
+                    value={value || ''}
+                  />
+                )}
+              />
+            ) : null}
 
             <Controller
               control={control}

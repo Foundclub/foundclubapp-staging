@@ -20,6 +20,7 @@ import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
 import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
+import EventWizardName from '@/views/event/wizard/EventWizardName';
 import EventWizardOpponent from '@/views/event/wizard/EventWizardOpponent';
 import EventWizardParticipants from '@/views/event/wizard/EventWizardParticipants';
 import EventWizardRecap from '@/views/event/wizard/EventWizardRecap';
@@ -239,6 +240,13 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardType}
           name={RouteNames.EventWizardType}
+          options={{ headerShown: false }}
+        />
+        {/* EVT-AUTRE-NOM : le nom d'un « Autre ». Toujours enregistre ; la chaine
+            ne le traverse que pour ce type. */}
+        <Stack.Screen
+          component={EventWizardName}
+          name={RouteNames.EventWizardName}
           options={{ headerShown: false }}
         />
         <Stack.Screen

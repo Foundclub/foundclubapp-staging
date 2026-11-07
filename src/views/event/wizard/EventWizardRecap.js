@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { isEventCustomNameValid, normalizeEventCustomName } from '@/domains/event/eventDisplayName';
 import {
   isTrainingEventType,
   resolveTrainingOpenConfig,
@@ -59,6 +60,7 @@ import {
   getEventWizardStepCount,
   hasCompletePerDayLocations,
   isMatchEventType,
+  isOtherEventType,
   isStageEventType,
   isTournamentEventType,
   needsTrainingExternalPlaces,
@@ -272,6 +274,10 @@ const buildWizardFormData = (wizardState) => {
     opponentName: isMatchEventType(wizardState?.type?.name)
       ? (String(wizardState.opponentName || '').trim() || null)
       : null,
+    // EVT-AUTRE-NOM : le nom d'un « Autre » part au serveur ; les autres types n'envoient rien.
+    ...(isOtherEventType(wizardState?.type?.name)
+      ? { customName: normalizeEventCustomName(wizardState.customName) || null }
+      : {}),
     participantIdentityVisibility: wizardState.participantIdentityVisibility || 'VISIBLE',
     pricePerPerson: wizardState.pricePerPerson ?? null,
     recurrenceDays: Array.isArray(wizardState.recurrenceDays) ? wizardState.recurrenceDays : [],
@@ -413,6 +419,8 @@ function EventWizardRecap({ navigation }) {
     .includes('reservation');
   const isTraining = isTrainingEventType(state.type?.name);
   const isMatch = isMatchEventType(state.type?.name);
+  const isOther = isOtherEventType(state.type?.name);
+  const hasCustomName = isEventCustomNameValid(state.customName);
   const isStage = isStageEventType(state.type?.name);
   const isTournament = isTournamentEventType(state.type?.name);
   const isMultiDayProgram = isStage || (isTournament && state.isMultiDayTournament === true);
@@ -653,6 +661,12 @@ function EventWizardRecap({ navigation }) {
       label: t('eventWizard.recap.sections.type'),
       value: typeValue,
     },
+    // EVT-AUTRE-NOM : un « Autre » sans nom n'est pas pret a etre cree.
+    ...(isOther ? [{
+      complete: hasCustomName,
+      label: t('eventWizard.steps.name.recapLabel', 'Nom'),
+      value: hasCustomName ? normalizeEventCustomName(state.customName) : recapNotSet,
+    }] : []),
     {
       complete: hasTeam,
       label: t('eventWizard.recap.sections.team'),
@@ -1315,6 +1329,21 @@ function EventWizardRecap({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.type')}</Text>
                 <Text style={[Fonts.p2, hasType ? Fonts.neutral00 : Fonts.gold500]}>{typeValue}</Text>
               </View>
+              {isOther ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => openStepFromRecap(RouteNames.EventWizardName)}
+                  style={[Spaces.gap[4]]}
+                  testID="event-wizard-recap-name"
+                >
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventWizard.steps.name.recapLabel', 'Nom')}
+                  </Text>
+                  <Text style={[Fonts.p2, hasCustomName ? Fonts.neutral00 : Fonts.gold500]}>
+                    {hasCustomName ? normalizeEventCustomName(state.customName) : recapNotSet}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               <View style={[Spaces.gap[4]]}>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.team')}</Text>
                 <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>{teamValue}</Text>

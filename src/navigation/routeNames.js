@@ -281,6 +281,8 @@ export const RouteNames = /** @type {const} */ ({
   EventWizardDescription: 'EventWizardDescription',
   EventWizardLocation: 'EventWizardLocation',
   EventWizardLogistics: 'EventWizardLogistics',
+  // EVT-AUTRE-NOM : « Quel est le nom de votre evenement ? », seulement apres la tuile « Autre ».
+  EventWizardName: 'EventWizardName',
   // Y02 : l'etape « Contre qui ? », posee UNIQUEMENT sur le parcours d'un match.
   EventWizardOpponent: 'EventWizardOpponent',
   EventWizardParticipants: 'EventWizardParticipants',
