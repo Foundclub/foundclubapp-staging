@@ -10545,6 +10545,7 @@ export default {
     convocation: {
       bench: 'Sur le banc',
       called: 'Convoqués',
+      notCalledUpCanAnswer: 'Tu n’es pas convoqué pour ce match et tu n’es pas compté dans la convocation. Tu peux quand même te marquer présent : s’il manque des joueurs, le coach pourra faire appel à toi.',
       notPublished: 'La composition n’est pas encore publiée.',
       staff: 'Staff',
       starters: 'Sur le terrain',

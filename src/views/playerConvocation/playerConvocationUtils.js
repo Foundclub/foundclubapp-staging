@@ -482,6 +482,32 @@ export const findPublishedBranchForTeam = (convocation, teamId = '') => {
 };
 
 /**
+ * CONVOC-HORS-LISTE (demande d'Adel du 07/11) — la convocation publiee de SON equipe
+ * laisse-t-elle le lecteur dehors (ni terrain, ni banc) ?
+ *
+ * ⚠️ Correspondance STRICTE sur l'equipe, sans le repli « une seule branche » de
+ * `findPublishedBranchForTeam` : sur un match entre deux clubs, le pack de l'adversaire
+ * ne dit rien de la convocation du lecteur.
+ * @param {any} convocation Charge de `GET /events/:id/convocation`.
+ * @param {string} [teamId] `documentId` de l'equipe du lecteur.
+ * @param {string} [userId] `documentId` du lecteur.
+ * @returns {boolean} `false` des qu'on ne sait pas (rien de publie, equipe ou lecteur inconnu).
+ */
+export const estHorsDeSaConvocation = (convocation, teamId = '', userId = '') => {
+  const wanted = toId(teamId);
+  const viewerId = toId(userId);
+  if (!wanted || !viewerId) return false;
+  const branches = ensureList(convocation?.branches);
+  const branch = (branches.length
+    ? branches
+    : [{ published: convocation?.published, team: convocation?.team }])
+    .find((/** @type {any} */ candidate) => toId(candidate?.team?.documentId) === wanted);
+  const published = branch?.published;
+  if (!published || typeof published !== 'object') return false;
+  return !isViewerInPack(published, viewerId);
+};
+
+/**
  * COMPOMSG — CE QU'IL FAUT POUR OUVRIR LE PLEIN ECRAN EN LECTURE, depuis UN pack
  * publie. Une seule recette pour les trois portes : la carte du fil, le terrain
  * de « Tu es convoque », et la relecture du plateau lui-meme.
