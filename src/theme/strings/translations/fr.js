@@ -25556,6 +25556,9 @@ export default {
         + 'en faire une affiche à partager.',
       'b4-card': 'Ouvre « Recruter ». C’est une simulation : rien ne sera publié.',
       'b4-dock': 'Bonus suivant : recruter. Retourne à l’accueil.',
+      'b4-noteam': 'Recruter : une annonce part d’une équipe que tu encadres. Ton équipe est '
+        + 'confiée à ton coach : c’est lui qui recrute pour elle, depuis son compte.',
+      'b4-noteam-next': 'Bonus suivant',
       'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
       'b5-cl': 'Club : les autres clubs, pour un partenariat ou un amical.',
       'b5-ev': 'Événement : tournois, stages et détections autour de toi.',

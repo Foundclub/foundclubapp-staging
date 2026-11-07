@@ -607,7 +607,8 @@ export function TourProvider({ children }) {
     if (!step) return;
 
     if (isGuideProfile(profile)) {
-      if (options.skipped) {
+      // GUIDE-D-CORR TG-04 : une étape qui annonce qu'un bonus ne peut pas se jouer le passe.
+      if (options.skipped || step.skipsMission) {
         skipMission();
         return;
       }

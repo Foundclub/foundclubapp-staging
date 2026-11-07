@@ -207,3 +207,28 @@ describe('TG-06 : une partie déjà faite ne se rejoue pas', () => {
       .toEqual(['À faire : ton partenaire']);
   });
 });
+
+describe('TG-04 : bonus « Recruter » sans équipe à soi', () => {
+  it('équipe confiée au coach : la bulle le dit, « Bonus suivant » passe au bonus 5', () => {
+    mount();
+    route(RouteNames.SearchHome);
+    act(() => { tour.startTour('president', { fromMission: 'president_b4' }); });
+    expectStep('b4-noteam');
+    next();
+    expect(tour.currentStep?.missionId).toBe('president_b5');
+    expect(tour.missionStatus.president_b4).toBe('skipped');
+  });
+
+  it('témoin : une équipe qu’il encadre ⇒ le tunnel de l’annonce se joue', () => {
+    mockAuth.userData.trainedTeams = [{
+      club: { documentId: 'club-7' },
+      documentId: 'team-1',
+      name: 'U13',
+      trainers: [{ documentId: USER_ID }],
+    }];
+    mount();
+    route(RouteNames.SearchHome);
+    act(() => { tour.startTour('president', { fromMission: 'president_b4' }); });
+    expectStep('b4-dock');
+  });
+});

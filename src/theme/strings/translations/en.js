@@ -24493,6 +24493,9 @@ export default {
         + 'poster to share.',
       'b4-card': 'Open “Recruit”. It’s a simulation: nothing will be published.',
       'b4-dock': 'Next bonus: recruiting. Go back to the home screen.',
+      'b4-noteam': 'Recruit: an ad starts from a team you manage. Your team is in your coach’s '
+        + 'hands: they recruit for it from their own account.',
+      'b4-noteam-next': 'Next bonus',
       'b5-back': 'One last look: go back to the home screen.',
       'b5-cl': 'Clubs: other clubs, for a partnership or a friendly.',
       'b5-ev': 'Events: tournaments, camps and trials near you.',
