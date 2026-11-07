@@ -333,7 +333,8 @@ describe('CONVOC-HORS-LISTE — site : le message vit au-dessus de « Présent /
     const page = texteDeLaPage();
 
     expect(page).toContain(AVIS);
-    expect(page.indexOf(AVIS)).toBeLessThan(page.indexOf('Présent Absent'));
+    // CONVOC-HORS-LISTE-2 : son « Présent » se lit desormais « Présent si besoin ».
+    expect(page.indexOf(AVIS)).toBeLessThan(page.indexOf('Présent si besoin Absent'));
   });
 
   test('🔒 convoque : aucun message', () => {
@@ -361,5 +362,34 @@ describe('CONVOC-HORS-LISTE — site : le message vit au-dessus de « Présent /
     const page = texteDeLaPage();
 
     expect(page).not.toContain('Tu n’es pas convoqué pour ce match');
+  });
+});
+
+// CONVOC-HORS-LISTE-2 (decision d Adel du 07/11, « 158 ») — sur la fiche du site aussi, le
+// non-convoque repond « Présent si besoin » ; le convoque garde « Présent ».
+describe('CONVOC-HORS-LISTE-2 — site : « Présent si besoin » pour le non-convoque', () => {
+  test('non convoque : le bouton dit « Présent si besoin »', () => {
+    mountScreen({
+      auth: joueur(HORS_LISTE), convocation: CONVOCATION, event: match(),
+    });
+
+    expect(texteDeLaPage()).toContain('Présent si besoin Absent');
+  });
+
+  test('🔒 convoque : « Présent », jamais « si besoin »', () => {
+    mountScreen({
+      auth: joueur(TITULAIRE), convocation: CONVOCATION, event: match(),
+    });
+
+    expect(texteDeLaPage()).toContain('Présent Absent');
+    expect(texteDeLaPage()).not.toContain('si besoin');
+  });
+
+  test('🔒 convocation non publiee : « Présent »', () => {
+    mountScreen({
+      auth: joueur(HORS_LISTE), convocation: null, event: match(),
+    });
+
+    expect(texteDeLaPage()).not.toContain('si besoin');
   });
 });

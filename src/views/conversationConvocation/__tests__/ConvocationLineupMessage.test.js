@@ -67,6 +67,8 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
 }));
 
 jest.mock('@/services/event/eventQueries', () => ({
+  // CONVOC-HORS-LISTE-2 : le bloc lit aussi l'evenement (« Présents si besoin ») ; personne ici.
+  useGetEvent: () => ({ data: undefined }),
   useGetEventConvocation: (
     /** @type {string} */ _eventId,
     /** @type {any} */ _teamId,

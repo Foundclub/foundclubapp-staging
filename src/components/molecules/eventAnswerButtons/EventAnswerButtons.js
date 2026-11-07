@@ -37,6 +37,8 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} [props.onDeclareLatePresence] - POINTAGE : la porte « je passe
  *   en present » du « pas renseigne », apres coup. La fiche ne la donne que
  *   quand `canDeclareLatePresence` l ouvre (`domains/event/presenceRule.js`).
+ * @param {boolean} [props.isStandby] - CONVOC-HORS-LISTE-2 (Adel, 07/11, « 158 ») : ce membre n est
+ *   pas convoque ; « Présent » se lit « Présent si besoin », et sa reponse present aussi.
  * @param {string} [props.notice] - CONVOC-HORS-LISTE : la phrase que la fiche du match confie
  *   au membre que la convocation publiee laisse dehors. Lue au-dessus de SA reponse, la ou il
  *   repond (pas encore repondu, present, absent) ; jamais apres coup ni sans boutons.
@@ -53,6 +55,7 @@ function EventAnswerButtons({
   hasAcceptedRequest,
   hasPendingRequest,
   isFinished = false,
+  isStandby = false,
   notice = '',
   onAbout,
   onCancel,
@@ -243,7 +246,11 @@ function EventAnswerButtons({
       return avecAvis(
         <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
           <Tag
-            text={hasPendingRequest ? t('eventList.info.pendingRequest') : t('eventList.info.alreadyJoined')}
+            text={(() => {
+              if (hasPendingRequest) return t('eventList.info.pendingRequest');
+              if (isStandby) return t('playerConvocation.answer.standby');
+              return t('eventList.info.alreadyJoined');
+            })()}
             textStyle={Fonts.p1Bold}
           />
           {/* R4 (DECISION D ADEL DU 2026-08-24) — UN SEUL BOUTON, ET IL MARQUE ABSENT.
@@ -347,7 +354,9 @@ function EventAnswerButtons({
                 isLoading={submittingAnswer === 'present'}
                 onPress={onParticipate}
                 style={Alignments.fullWidth}
-                title={t('eventList.actions.present')}
+                title={isStandby
+                  ? t('playerConvocation.actions.standby')
+                  : t('eventList.actions.present')}
                 variant="Primary"
               />
             </View>

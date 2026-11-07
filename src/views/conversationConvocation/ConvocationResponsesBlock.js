@@ -7,9 +7,13 @@ import useTheme from '@/theme/themeContext';
 
 import { findPublishedBranchForTeam } from '@/views/playerConvocation/playerConvocationUtils';
 
-import { useGetEventConvocation } from '@/services/event/eventQueries';
+import { useGetEvent, useGetEventConvocation } from '@/services/event/eventQueries';
 
-import { buildAnswerGroups, canManageTeamConvocation } from './convocationWizardUtils';
+import {
+  buildAnswerGroups,
+  buildStandbyPresentNames,
+  canManageTeamConvocation,
+} from './convocationWizardUtils';
 
 /**
  * MESSAGERIE-1C — LE BLOC « REPONSES » SOUS LA CARTE D'UNE CONVOCATION (pack §3.7, §3.12).
@@ -24,6 +28,11 @@ import { buildAnswerGroups, canManageTeamConvocation } from './convocationWizard
  * `GET /events/:id/convocation`, la lecture que la barre Present / Absent de la carte fait deja
  * (meme cle de cache). Le bloc ne se pose que sur la DERNIERE version : une carte depassee ne
  * montre pas des reponses qui ne la concernent plus.
+ *
+ * 🙋 CONVOC-HORS-LISTE-2 (Adel, 07/11, « 158 ») — « Présents si besoin · N », a part : les
+ * joueurs de l'equipe hors convocation qui ont repondu present. Ils ne comptent pas dans les
+ * convoques. La convocation ne les porte pas (le serveur n'y range que les convoques) : ils se
+ * lisent dans l'evenement (`GET /events/:id`, la requete de la fiche), pour le coach seul.
  * @param {object} props
  * @param {any} props.composition La charge `lineup_share` de la carte.
  * @param {boolean} [props.isLatest] Cette carte est la plus recente de sa composition dans le fil.
@@ -45,6 +54,7 @@ function ConvocationResponsesBlock({ composition, isLatest = true }) {
     enabled: canSee,
     refetchOnMount: true,
   });
+  const { data: event } = useGetEvent(eventId, { enabled: canSee, refetchOnMount: true });
   if (!canSee) return null;
 
   const branch = findPublishedBranchForTeam(data, teamId);
@@ -57,6 +67,7 @@ function ConvocationResponsesBlock({ composition, isLatest = true }) {
   }
 
   const groups = buildAnswerGroups({ published, responses: branch?.responses });
+  const standbyNames = buildStandbyPresentNames({ event, published, teamId });
   const rows = [
     {
       color: Colors.success500,
@@ -75,6 +86,12 @@ function ConvocationResponsesBlock({ composition, isLatest = true }) {
       key: 'pending',
       label: t('conversationConvocation.responses.pending', { count: groups.pending.length }),
       names: groups.pending,
+    },
+    {
+      color: withAlpha(Colors.neutral00, 0.85),
+      key: 'standby',
+      label: t('conversationConvocation.responses.standby', { count: standbyNames.length }),
+      names: standbyNames,
     },
   ].filter((row) => row.names.length > 0);
   if (rows.length === 0) return null;

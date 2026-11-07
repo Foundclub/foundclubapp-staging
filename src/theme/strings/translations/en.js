@@ -9191,6 +9191,7 @@ export default {
       absent: 'Absent · {{count}}',
       pending: 'No answer · {{count}}',
       present: 'Present · {{count}}',
+      standby: 'Present if needed · {{count}}',
       title: 'ANSWERS',
     },
     send: 'Send the call-up',
@@ -17646,6 +17647,8 @@ export default {
     actions: {
       absent: 'Absent',
       present: 'Present',
+      // CONVOC-HORS-LISTE-2 (Adel, 07/11, « 158 »): the member the published call-up leaves out.
+      standby: 'Present if needed',
     },
     alerts: {
       error: {
@@ -17656,6 +17659,7 @@ export default {
     answer: {
       absent: 'You answered Absent',
       present: 'You answered Present',
+      standby: 'You answered Present if needed',
     },
     cancelled: {
       text: 'The organiser cancelled this match: there is nothing left to answer.',
@@ -17682,6 +17686,7 @@ export default {
       expand: 'Enlarge',
       openFullScreen: 'See the line-up full screen',
     },
+    notCalledUp: 'You’re not called up for this match and you’re not counted in the call-up.',
     note: {
       title: 'Info',
     },
@@ -17702,6 +17707,7 @@ export default {
     staff: {
       title: 'Staff',
     },
+    standbyHelp: 'If a player is missing, the coach can call on you.',
     title: "You've been called up",
     version: 'Version {{version}}',
   },

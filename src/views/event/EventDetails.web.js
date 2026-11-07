@@ -2571,7 +2571,10 @@ function EventDetails({ navigation, route }) {
                   ) : null}
                   {repondPresentAbsent ? (
                     [
-                      ['present', t('playerConvocation.actions.present', 'Présent'), participationState?.isParticipating],
+                      // CONVOC-HORS-LISTE-2 — le non-convoque repond « Présent si besoin ».
+                      ['present', notCalledUpNotice
+                        ? t('playerConvocation.actions.standby', 'Présent si besoin')
+                        : t('playerConvocation.actions.present', 'Présent'), participationState?.isParticipating],
                       ['absent', t('playerConvocation.actions.absent', 'Absent'), participationState?.isMissing],
                     ].map(([reponse, libelle, choisie]) => (
                       <button
