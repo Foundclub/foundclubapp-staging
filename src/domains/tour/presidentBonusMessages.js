@@ -173,11 +173,12 @@ export const B3_STEPS = [
   },
   {
     bubblePlacement: 'top',
-    completesMission: true,
     id: 'b3-few',
     missionId: 'president_b3',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: 'b3-new',
+    // GUIDE-D-CORR-2 : aucun groupe créé, le bonus est PASSÉ au bilan, pas fait (comme b2-none).
+    skipsMission: true,
     get text() {
       return t(
         'b3-few',

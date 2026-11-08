@@ -658,6 +658,9 @@ const PART_POSTER = [
   {
     advanceOn: { key: RouteNames.Club, type: 'route' },
     completesMission: true,
+    // GUIDE-D-CORR-2 TG-18 (r50) : la croix « pause » de la bulle tombait collée sous la croix de
+    // l'affiche, qu'on demande justement de toucher ; pas de croix de pause à cette étape.
+    hidePause: true,
     id: 'm1-pclose',
     missionId: MISSION_ID,
     resumeFrom: 'm1-poster',

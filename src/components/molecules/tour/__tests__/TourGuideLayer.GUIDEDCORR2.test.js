@@ -248,3 +248,26 @@ describe('2. la bulle ne couvre jamais une cible ni le bouton à toucher', () =>
     }, Promise.resolve());
   });
 });
+
+describe('TG-18 : la croix de pause ne se colle pas à la croix de l’affiche', () => {
+  const pauses = (tree) => tree.root.findAll((node) => node.props.testID === 'tour.pause'
+    && typeof node.type !== 'string');
+
+  it('m1-pclose : pas de croix de pause dans la bulle', async () => {
+    mockTour = activeTour(step('m1-pclose'));
+    registerTourTarget('poster.close', (done) => done({
+      height: 44, width: 44, x: 300, y: 40,
+    }));
+    const tree = await renderLayer();
+    expect(pauses(tree)).toHaveLength(0);
+  });
+
+  it('témoin : les autres étapes gardent leur croix de pause', async () => {
+    mockTour = activeTour(step('m1-pmodel'));
+    registerTourTarget('poster.model', (done) => done({
+      height: 60, width: 330, x: 15, y: 200,
+    }));
+    const tree = await renderLayer();
+    expect(pauses(tree).length).toBeGreaterThan(0);
+  });
+});

@@ -1006,6 +1006,7 @@ function TourGuideLayer() {
                 </Text>
               </View>
             </View>
+            {currentStep.hidePause ? null : (
             <TouchableOpacity
               accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
               accessibilityRole="button"
@@ -1021,6 +1022,7 @@ function TourGuideLayer() {
             >
               <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
             </TouchableOpacity>
+            )}
           </View>
           )}
           {/* Consigne et bouton côte à côte : la bulle reste basse (m3-place devait

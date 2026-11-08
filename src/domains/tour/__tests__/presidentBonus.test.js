@@ -103,7 +103,8 @@ describe('B3 : créer un groupe', () => {
     expect(step('b3-sel').checksMembers).toBe(true);
     expect(idAt(send('b3-sel', { key: 'conversation.members.few', kind: 'interaction' }).index))
       .toBe('b3-few');
-    expect(step('b3-few').completesMission).toBe(true);
+    // GUIDE-D-CORR-2 : rien n'est créé, le bonus est PASSÉ (plus compté comme fait).
+    expect(step('b3-few').skipsMission).toBe(true);
     expect(step('b3-few').nextLabel).toBeTruthy();
     expect(step('b3-few').advanceOn).toBeUndefined();
   });
