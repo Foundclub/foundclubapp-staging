@@ -370,3 +370,76 @@ export const bubbleRoom = ({
   }
   return Math.max(MIN_BUBBLE_ROOM, room);
 };
+
+// Hauteur sous laquelle un trou entre les cibles ne peut plus recevoir la bulle (en-tête + une
+// ligne serrés) : clavier ouvert, la bulle attend qu'il se ferme plutôt que de couvrir le champ.
+const MIN_GAP_ROOM = 56;
+
+/**
+ * GUIDE-D-CORR-2 (retour d'Adel du 08/11, « Ajouter un partenaire ») : une bulle ne recouvre
+ * jamais une cible de l'étape, ni le bouton qu'elle demande de toucher. Si la place donnée par
+ * `placeBubble` croise une cible, la bulle va dans le trou libre (entre l'en-tête, les cibles et le
+ * bas utile) : celui qui touche la cible principale s'il la tient, sinon un autre qui la tient,
+ * sinon le plus grand, où son contenu défile.
+ * @param {object} args - Mesures, dans le repère de la couche.
+ * @param {number} args.bottomLimit - Bas utile (barre d'onglets, clavier, bas sûr).
+ * @param {number} args.bubbleHeight - Hauteur voulue par la bulle.
+ * @param {number} args.maxHeight - Hauteur que la bulle prendra à sa place actuelle.
+ * @param {{ height: number; width: number; x: number; y: number }[]} args.obstacles - Découpes.
+ * @param {{ arrow: string; left: number; top: number; width: number }} args.position - Place.
+ * @param {{ height: number; y: number } | null} args.primary - Cible principale.
+ * @param {number} args.topLimit - Haut utile (sous l'en-tête ancré).
+ * @returns {{ maxHeight: number | null; position: any } | null} Place retenue (`maxHeight` null :
+ *   inchangée) ; null s'il n'y a nulle part où la poser sans couvrir une cible.
+ */
+export const avoidTargets = ({
+  bottomLimit, bubbleHeight, maxHeight, obstacles, position, primary, topLimit,
+}) => {
+  const crosses = (/** @type {number} */ top, /** @type {number} */ size) => obstacles
+    .some((rect) => top < rect.y + rect.height && top + size > rect.y);
+  if (!obstacles.length || !crosses(position.top, Math.min(bubbleHeight, maxHeight))) {
+    return { maxHeight: null, position };
+  }
+  const busy = obstacles
+    .map((rect) => [rect.y - HEADER_GAP, rect.y + rect.height + HEADER_GAP])
+    .sort((a, b) => a[0] - b[0]);
+  /** @type {{ end: number; start: number }[]} */
+  const gaps = [];
+  let cursor = topLimit;
+  busy.forEach(([start, end]) => {
+    if (start > cursor) gaps.push({ end: Math.min(start, bottomLimit), start: cursor });
+    cursor = Math.max(cursor, end);
+  });
+  if (bottomLimit > cursor) gaps.push({ end: bottomLimit, start: cursor });
+  const open = gaps.filter((gap) => gap.end - gap.start > 0);
+  if (!open.length) return null;
+  const size = (/** @type {{ end: number; start: number }} */ gap) => gap.end - gap.start;
+  const below = primary
+    ? open.find((gap) => Math.abs(gap.start - (primary.y + primary.height + HEADER_GAP)) < 2)
+    : null;
+  const above = primary
+    ? open.find((gap) => Math.abs(gap.end - (primary.y - HEADER_GAP)) < 2)
+    : null;
+  const fitting = open.filter((gap) => size(gap) >= bubbleHeight);
+  let gap = null;
+  if (below && size(below) >= bubbleHeight) gap = below;
+  else if (above && size(above) >= bubbleHeight) gap = above;
+  else if (fitting.length) {
+    const center = primary ? primary.y + (primary.height / 2) : topLimit;
+    gap = fitting.reduce((best, candidate) => (
+      Math.abs(candidate.start - center) < Math.abs(best.start - center) ? candidate : best
+    ));
+  } else {
+    gap = open.reduce((best, candidate) => (size(candidate) > size(best) ? candidate : best));
+    if (size(gap) < MIN_GAP_ROOM) return null;
+  }
+  const fits = size(gap) >= bubbleHeight;
+  const top = gap === above && fits ? gap.end - bubbleHeight : gap.start;
+  let arrow = 'none';
+  if (gap === below) arrow = 'up';
+  else if (gap === above && fits) arrow = 'down';
+  return {
+    maxHeight: Math.min(size(gap), gap.end - top),
+    position: { ...position, arrow: position.arrow === 'none' ? 'none' : arrow, top },
+  };
+};

@@ -43,6 +43,7 @@ import useTheme from '@/theme/themeContext';
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
 import Input from '@/components/molecules/input/Input';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import useTourScroller from '@/components/molecules/tour/useTourScroller';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
@@ -62,6 +63,8 @@ import {
  */
 export default function EventPublishedShowcase({ navigation, route }) {
   const { ApplicationStyle, Colors } = useTheme();
+  // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
+  const tourScroll = useTourScroller();
   const { t } = useTranslation();
   const params = route?.params || {};
   const {
@@ -343,6 +346,9 @@ export default function EventPublishedShowcase({ navigation, route }) {
           paddingTop: SCREEN_PADDING,
         }]}
         keyboardShouldPersistTaps="handled"
+        onScroll={tourScroll.onScroll}
+        ref={tourScroll.ref}
+        scrollEventThrottle={16}
       >
         <Text style={styles.title}>{titleText}</Text>
         <Text style={styles.subtitle}>{subtitleText}</Text>
