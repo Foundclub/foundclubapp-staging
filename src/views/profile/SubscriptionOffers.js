@@ -274,9 +274,11 @@ function SubscriptionOffers({ navigation, route }) {
   // Un mur payant qui exige Club doit ouvrir SUR la carte Club : atterrir sur
   // Équipe montre la mauvaise offre a quelqu'un a qui le serveur vient
   // precisement de dire qu'il lui faut Club. Portee absente ou inconnue : Équipe.
+  // GUIDE-D-CORR-2 (Adel, 08/11, essai sur iPhone) : un dirigeant ouvre d'abord l'offre CLUB ;
+  // le coach garde Équipe. Une portée demandée par un mur payant passe avant.
   const focusCardIndex = CARD_INDEX_BY_FOCUS_SCOPE[
     String(route?.params?.focusScope || '').trim().toUpperCase()
-  ] || DEFAULT_CARD_INDEX;
+  ] || (roleKey === 'president' ? CARD_INDEX_BY_FOCUS_SCOPE.CLUB : DEFAULT_CARD_INDEX);
 
   // L40 — l'origine est un COLIS : ce carrousel ne l'ouvre jamais, il la
   // transporte. La porte qui a envoye ici sait d'ou part la personne ; cet ecran

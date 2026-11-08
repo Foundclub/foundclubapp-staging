@@ -56,3 +56,10 @@ describe('les textes disent ce qui se passe vraiment', () => {
     expect(sms.length).toBeLessThan(140);
   });
 });
+
+describe('GUIDE-D-CORR-2 : b3-few ne compte pas le bonus comme fait', () => {
+  it('b3-few : PASSÉ au bilan, comme b2-none', () => {
+    expect(step('b3-few').skipsMission).toBe(true);
+    expect(step('b3-few').completesMission).toBeFalsy();
+  });
+});

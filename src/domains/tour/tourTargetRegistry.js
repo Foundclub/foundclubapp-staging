@@ -68,6 +68,40 @@ const activeEntry = (id) => {
  */
 export const notifyTourTargetLayout = () => notify();
 
+// GUIDE-D-CORR-2 (décision d'Adel, 08/11) : les zones qui défilent des écrans du guide
+// (`useTourScroller`). La couche y fait défiler l'écran jusqu'à la cible de l'étape.
+/**
+ * @typedef {{ isActive?: () => boolean; measure: TourMeasure;
+ *   scrollBy: (dy: number) => void }} TourScroller
+ */
+/** @type {TourScroller[]} */
+const scrollers = [];
+
+/**
+ * Dépose une zone qui défile (ScrollView, FlatList) d'un écran du guide.
+ * @param {TourScroller} scroller
+ * @returns {() => void} désinscription
+ */
+export const registerTourScroller = (scroller) => {
+  scrollers.push(scroller);
+  return () => {
+    const index = scrollers.indexOf(scroller);
+    if (index !== -1) scrollers.splice(index, 1);
+  };
+};
+
+/**
+ * La zone qui défile de l'écran affiché : la plus récente des actives (focus).
+ * @returns {TourScroller | null}
+ */
+export const getActiveTourScroller = () => {
+  for (let index = scrollers.length - 1; index >= 0; index -= 1) {
+    const scroller = scrollers[index];
+    if (!scroller.isActive || scroller.isActive()) return scroller;
+  }
+  return null;
+};
+
 /**
  * Mesure brute d'une ancre montée (null si absente ou vide).
  * @param {string | undefined} id
@@ -101,6 +135,14 @@ const intersect = (rect, clip) => {
     height, width, x, y,
   } : null;
 };
+
+/**
+ * Mesure d'une ancre sans la couper à sa zone visible : où elle est dans l'écran, même hors cadre
+ * (le défilement automatique la ramène).
+ * @param {string} id
+ * @returns {Promise<TourRect | null>}
+ */
+export const measureTourTargetRaw = (id) => measureRaw(id);
 
 /**
  * Mesure une ancre montée (null si absente ou vide), coupée à la zone visible
@@ -172,6 +214,7 @@ export const reportTourField = (id, isValid) => { fields.set(id, Boolean(isValid
 export const isTourFieldValid = (id) => fields.get(id) === true;
 
 export const resetTourTargetsForTests = () => {
+  scrollers.length = 0;
   fields.clear();
   targets.clear();
   listeners.clear();

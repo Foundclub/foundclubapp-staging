@@ -19,6 +19,7 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import ClubStateView from '@/views/club/components/ClubStateView';
 
@@ -64,6 +65,8 @@ const sanitizeRouteParam = (value) => {
  */
 function AddSponsor({ navigation, route }) {
   const keyboard = useKeyboardFrame();
+  // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
+  const tourScroll = useTourScroller();
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routeCmId = sanitizeRouteParam(route?.params?.cmId);
   const isMultisportFlow = !routeClubId && !!routeCmId;
@@ -282,6 +285,9 @@ function AddSponsor({ navigation, route }) {
             Spaces.gap[24],
             Spaces.paddingBottom[40],
           ]}
+          onScroll={tourScroll.onScroll}
+          ref={tourScroll.ref}
+          scrollEventThrottle={16}
           style={[Alignments.fill]}
         >
           <TourTarget id="sponsor.fields">

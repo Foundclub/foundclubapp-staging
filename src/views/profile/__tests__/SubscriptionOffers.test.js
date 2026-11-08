@@ -369,10 +369,12 @@ const contexteAuth = (surcharges = {}) => ({
       assigned: 0, available: 0, coveredTeamDocumentIds: [], total: 0,
     },
   },
+  // GUIDE-D-CORR-2 : un coach par défaut (il ouvre sur Équipe, comme avant) ; le dirigeant, qui
+  // ouvre désormais sur Club, a ses propres témoins (`DIRIGEANT`).
   userData: {
     club: { documentId: 'club-1' },
     documentId: 'user-1',
-    role: { name: 'Dirigeant', type: 'president' },
+    role: { name: 'Entraîneur', type: 'coach' },
   },
   ...surcharges,
 });
@@ -489,6 +491,15 @@ const casesACocher = (arbre) => arbre.root
  * @param {Record<string, any> | undefined} [parametres]
  * @returns {Promise<any>}
  */
+/** Un dirigeant (GUIDE-D-CORR-2 : son carrousel s'ouvre sur Club). */
+const DIRIGEANT = {
+  userData: {
+    club: { documentId: 'club-1' },
+    documentId: 'user-1',
+    role: { name: 'Dirigeant', type: 'president' },
+  },
+};
+
 const rendre = async (surcharges = {}, parametres = undefined) => {
   mockAuthValue = contexteAuth(surcharges);
   /** @type {any} */
@@ -518,13 +529,24 @@ beforeEach(() => {
 });
 
 describe('Carrousel d\'offres — le temoin anti-regression de L10-A', () => {
-  it('un dirigeant sans offre a un chemin pour PAYER, des l\'ouverture', async () => {
+  it('un dirigeant sans offre a un chemin pour PAYER, des l’ouverture', async () => {
+    const arbre = await rendre(DIRIGEANT);
+
+    // GUIDE-D-CORR-2 (Adel, 08/11) : le carrousel d'un dirigeant demarre sur Club (index 2) ; le
+    // CTA doit deja proposer un achat chiffre. S'il tombait sur un ecran sans offre, un dirigeant
+    // carte bleue en main n'aurait plus aucun moyen de payer — le trou le plus cher de la campagne.
+    expect(libelleDuCta(arbre)).toBe('Choisir Club 100 · 249,99 €/an');
+  });
+
+  it('GUIDE-D-CORR-2 — le coach, lui, ouvre toujours sur Équipe', async () => {
     const arbre = await rendre();
 
-    // Le carrousel demarre sur Équipe (index 1) : le CTA doit deja proposer un
-    // achat chiffre. S'il tombait sur un ecran sans offre, un dirigeant carte
-    // bleue en main n'aurait plus aucun moyen de payer — le trou le plus cher
-    // de la campagne.
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 59,99 €/an');
+  });
+
+  it('GUIDE-D-CORR-2 — un mur exigeant TEAM ouvre Équipe, même pour un dirigeant', async () => {
+    const arbre = await rendre(DIRIGEANT, { focusScope: 'TEAM' });
+
     expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 59,99 €/an');
   });
 

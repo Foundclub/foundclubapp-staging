@@ -55,6 +55,7 @@ import FacilityClosureBanner from '@/components/molecules/facilityClosure/Facili
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import PlanningDesInstallations from '@/components/organisms/planning/PlanningDesInstallations';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -212,6 +213,8 @@ const partieDe = (t, item) => (item?.parentFacility?.name
  */
 function FacilityList() {
   const { t } = useTranslation();
+  // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
+  const tourScroll = useTourScroller();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -1555,6 +1558,8 @@ function FacilityList() {
         />
       ) : null}
       numColumns={isDesktop ? COLONNES_ORDINATEUR : 1}
+      onScroll={tourScroll.onScroll}
+      ref={tourScroll.ref}
       refreshControl={(
         <RefreshControl
           colors={[Colors.primary500]}
@@ -1564,6 +1569,7 @@ function FacilityList() {
         />
       )}
       renderItem={renderCollectiviteItem}
+      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
     />
   ) : (
@@ -1577,6 +1583,8 @@ function FacilityList() {
       ListEmptyComponent={etatVide}
       ListFooterComponent={!enGroupes && facilities.length > 0 ? boutonAjouter : null}
       ListHeaderComponent={blocEnAttente}
+      onScroll={tourScroll.onScroll}
+      ref={tourScroll.ref}
       refreshControl={(
         <RefreshControl
           colors={[Colors.primary500]}
@@ -1588,6 +1596,7 @@ function FacilityList() {
       renderItem={enGroupes ? renderItemGroupes : renderItem}
       renderSectionFooter={enGroupes ? renderSectionFooterGroupes : undefined}
       renderSectionHeader={enGroupes ? renderSectionHeaderGroupes : renderSectionHeader}
+      scrollEventThrottle={16}
       sections={sections}
       showsVerticalScrollIndicator={false}
       stickySectionHeadersEnabled={false}

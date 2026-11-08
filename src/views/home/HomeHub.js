@@ -65,6 +65,7 @@ import SubscriptionPaywallSheet
 import TourOfferCard from '@/components/molecules/tour/TourOfferCard';
 import TourResumePill from '@/components/molecules/tour/TourResumePill';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
@@ -478,6 +479,8 @@ function HomeHubContent({ auth, navigation, route }) {
   const { height: viewportHeight } = useWindowDimensions();
   const isFocused = useIsFocused();
   const scrollRef = useRef(/** @type {import('react-native').ScrollView | null} */ (null));
+  // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
+  const tourScroll = useTourScroller(scrollRef);
   const tutorialTargetNodesRef = useRef(/** @type {Record<string, any>} */ ({}));
   const refreshCurrentStepRef = useRef(refreshCurrentStep);
   const pendingNavigationActionRef = useRef(/** @type {null | (() => void)} */ (null));
@@ -2726,8 +2729,10 @@ function HomeHubContent({ auth, navigation, route }) {
       <ScrollView
         bounces={false}
         contentContainerStyle={[Spaces.gap[24], { paddingBottom: scrollBottomPadding }]}
+        onScroll={tourScroll.onScroll}
         overScrollMode="never"
         ref={scrollRef}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         {/* COLL-C4A (02/10) — EN TÊTE de l'accueil de chaque rôle du club : la dernière

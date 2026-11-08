@@ -723,7 +723,9 @@ describe('ABOPARCLUB — les verrous violets suivent le club de l equipe', () =>
     const racine = monterLaFiche();
     ouvrirLeMenu(racine);
 
-    expect(estDansLaFeuille(racine, "Avec l'offre Club")).toBe(true);
+    // GUIDE-D-CORR-2 TG-21 : club couvert, le groupe reste mais ne vend plus l'offre.
+    expect(estDansLaFeuille(racine, 'Outils du club')).toBe(true);
+    expect(estDansLaFeuille(racine, "Avec l'offre Club")).toBe(false);
     expect(estDansLaFeuille(racine, LIBELLE_VOIR_L_OFFRE_CLUB)).toBe(false);
   });
 

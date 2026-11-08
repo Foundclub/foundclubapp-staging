@@ -22997,6 +22997,7 @@ export default {
   },
   subscriptionQuotaBanner: {
     covered: {
+      gift: '{{displayName}} a l’offre {{offerName}} en cadeau pour {{coveredThing}}.',
       message: "{{displayName}} paie l'offre {{offerName}} pour {{coveredThing}}.",
       offerClub: 'Club',
       offeredBy: 'Offert par {{who}} pour {{coveredThing}}.',
@@ -24567,8 +24568,10 @@ export default {
     upsell: {
       clubAction: "Voir l'offre",
       clubLabel: "Avec l'offre Club",
+      clubToolsLabel: 'Outils du club',
       teamAction: 'Débloquer',
       teamLabel: "Avec l'offre Équipe",
+      teamToolsLabel: 'Outils de l’équipe',
     },
   },
   /* eslint-enable perfectionist/sort-objects */

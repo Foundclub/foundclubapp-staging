@@ -21,6 +21,7 @@ import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -108,6 +109,8 @@ const clubSchema = Joi.object({
  */
 function ClubEdit({ navigation, route }) {
   const { clubId } = route?.params ?? {};
+  // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
+  const tourScroll = useTourScroller();
 
   // hooks
   const {
@@ -395,6 +398,9 @@ function ClubEdit({ navigation, route }) {
                 Spaces.gap[24],
                 Spaces.paddingBottom[40],
               ]}
+              onScroll={tourScroll.onScroll}
+              ref={tourScroll.ref}
+              scrollEventThrottle={16}
               style={[Alignments.fill]}
             >
               <View style={[Alignments.fill, Spaces.gap[24]]}>
