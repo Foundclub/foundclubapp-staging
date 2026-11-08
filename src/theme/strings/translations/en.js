@@ -111,6 +111,8 @@ export default {
       save: 'Add partner',
     },
     errors: {
+      logoGone: 'The chosen logo is no longer available on your phone. Choose the logo again, '
+        + 'then try again.',
       save: 'Unable to save this sponsor right now.',
     },
     fields: {
@@ -24271,11 +24273,13 @@ export default {
         + 'waiting too: once accepted, your mission 1 is complete. Meanwhile, feel free to explore '
         + 'the app.',
       'm1-wait-team-pill': 'Waiting for your team · Resume',
+      'm2-cancel': 'Sharing closed: nothing was sent. Reopen this menu to send the link.',
       'm2-card': 'Bring your players in: open your team.',
       'm2-more': "The team's actions are in this menu.",
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",
-      'm2-sent': 'Was the link sent? Tap “It’s sent”. Otherwise, reopen this menu to share it.',
-      'm2-sent-next': 'It’s sent',
+      'm2-pick-next': 'Continue',
+      'm2-sent': 'Did you send it? If so, tap “Yes, it’s sent”. Otherwise, reopen this menu to share it.',
+      'm2-sent-next': 'Yes, it’s sent',
       'm2-share': 'The easiest way: an invitation link.',
       'm3-access': 'For a training session, keep Private: your team and guests.',
       'm3-card': 'Tap "Add an event".',
@@ -24315,13 +24319,8 @@ export default {
         + 'this step".',
       'm4-am7': 'All good? Publish: teams in your area will be able to offer you a match.',
       'm4-back': 'Your session is live. Last mission: go back to the home screen.',
-      'm4-card': 'Missing a player? Profiles open to recruitment are here.',
+      'm4-card': 'Offer a friendly match: open “Friendly matches”.',
       'm4-frc': 'Your turn: create your friendly match ad.',
-      'm4-read': 'Scroll down to see the profiles. To find the right one, use the filters, then open a card.',
-      'm4-tab-club': 'Those were events. Now open "Club".',
-      'm4-tab-ev': 'Open the Event tab (the calendar): tournaments and trials near you are there.',
-      'm4-tab-fr': 'Those were clubs. Last tab: "Friendly matches".',
-      'm4-tab-fr-site': 'Those were events. Last tab: "Friendly matches".',
       missions: {
         b1: "See who's coming and nudge them",
         b2: 'Call up players for a match',

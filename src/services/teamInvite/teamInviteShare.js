@@ -8,7 +8,9 @@
  * fichier iPhone réclame déjà `/i/*` (mesuré 200) : l'app s'ouvre directement
  * quand elle est installée, et le code permet de dire QUI invite.
  */
-import { Linking, Platform, Share } from 'react-native';
+import {
+  AppState, Linking, Platform, Share,
+} from 'react-native';
 
 import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { buildInviteWebUrl } from '@/domains/invitations/inviteLink';
@@ -75,21 +77,56 @@ export const shareTournamentInviteLink = async (eventId) => {
   return SharePlatform.share({ message: url, url }).catch(() => undefined);
 };
 
+/** @type {{ remove: () => void } | null} */
+let pendingReturn = null;
+
 /**
- * Guide Entraîneur (TUTOE, M2) : ce que la feuille de partage a rendu. Android ne distingue pas
- * l'abandon (toujours « partagé ») : le guide demande au lieu de conclure (GUIDE-FINITIONS-3,
- * n° 22). Sur iPhone, `sharedAction` est un envoi certain ; le reste, le guide le demande aussi.
+ * GUIDE-E-CORR (TG-14, tournée du 07/11) : sur Android, `Share.share` rend la main dès
+ * l'ouverture du sélecteur (ShareModule.kt), et `openURL` dès l'ouverture de l'app SMS : la
+ * question « Tu l'as envoyé ? » s'affichait feuille encore ouverte. Le signal attend que l'app
+ * soit passée hors du premier plan, puis revenue. Un nouveau partage remplace l'attente en cours.
+ * ponytail: une app qui ne quitte jamais le premier plan n'envoie aucun signal ; la bulle du
+ * guide garde alors son bouton « Continuer », qui mène à la même question.
+ * @param {() => void} callback - Ce qui part au retour dans l'app.
+ * @returns {void}
+ */
+const whenBackInApp = (callback) => {
+  pendingReturn?.remove();
+  let hasLeft = AppState.currentState !== 'active';
+  const subscription = AppState.addEventListener('change', (state) => {
+    if (state !== 'active') {
+      hasLeft = true;
+      return;
+    }
+    if (!hasLeft) return;
+    subscription.remove();
+    if (pendingReturn === subscription) pendingReturn = null;
+    callback();
+  });
+  pendingReturn = subscription;
+};
+
+/**
+ * Guide Entraîneur (TUTOE, M2) : ce que la feuille de partage a rendu, plateforme par plateforme.
+ * - Android : rien de sûr (toujours « partagé », dès l'ouverture) : le guide demande, au retour.
+ * - iPhone : « partagé » = envoi certain ; « annulé » = feuille fermée sans choisir d'app. Une app
+ *   choisie puis abandonnée ne rend rien (RCTActionSheetManager) : pas de signal du tout.
+ * - Site : navigator.share rend un envoi ; l'abandon lève une erreur (rattrapée : `undefined`) ;
+ *   « copie » veut dire lien copié, pas envoyé.
+ * Ce qui n'est ni un envoi certain ni un « annulé » de la plateforme : le guide demande.
  * @param {{ action?: string } | undefined} result - Le retour de la feuille.
  * @param {string} teamId - L'équipe.
  * @returns {void}
  */
 const signalShareResult = (result, teamId) => {
   if (Platform.OS === 'android') {
-    emitGuidanceInteraction('team.invite.returned', { teamId });
-  } else if (result && result.action !== Share.dismissedAction) {
-    emitGuidanceAction('team.invite.shared', { teamId });
-  } else {
+    whenBackInApp(() => emitGuidanceInteraction('team.invite.returned', { teamId }));
+  } else if (result?.action === Share.dismissedAction) {
     emitGuidanceInteraction('team.invite.dismissed');
+  } else if (!result || result.action === 'copie') {
+    emitGuidanceInteraction('team.invite.returned', { teamId });
+  } else {
+    emitGuidanceAction('team.invite.shared', { teamId });
   }
 };
 
@@ -163,6 +200,11 @@ export const openInviteSms = async ({ message, phoneNumber, url }) => {
   } catch (_error) {
     await SharePlatform.share({ message, url }).catch(() => undefined);
   }
-  // FIN-GUIDE, point 4 : l'app ne sait pas si le SMS est parti ; le guide demande.
-  emitGuidanceInteraction('team.invite.returned');
+  // FIN-GUIDE, point 4 : l'app ne sait pas si le SMS est parti ; le guide demande, au retour
+  // de l'app SMS (GUIDE-E-CORR, TG-14).
+  if (Platform.OS === 'web') {
+    emitGuidanceInteraction('team.invite.returned');
+  } else {
+    whenBackInApp(() => emitGuidanceInteraction('team.invite.returned'));
+  }
 };

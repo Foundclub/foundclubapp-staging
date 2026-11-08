@@ -93,8 +93,15 @@ jest.mock('@/theme/strings', () => ({ Joi: jest.requireActual('joi') }));
 // Doublure fidele de react-query : la mutation appelle vraiment sa mutationFn
 // puis onSuccess / onError, sinon « ce qui part sur le reseau » ne partirait
 // jamais et le test ne mesurerait rien.
+/** @type {any[]} */
+const mockMutationOptions = [];
+// GUIDE-E-CORR (TG-03) : le fichier du logo peut avoir disparu du cache avant l'envoi.
+let mockLogoGone = false;
+jest.mock('@/platform/media', () => ({
+  localFileIsGone: () => Promise.resolve(mockLogoGone),
+}));
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: (/** @type {any} */ options) => ({
+  useMutation: (/** @type {any} */ options) => mockMutationOptions.push(options) && ({
     isPending: false,
     mutate: (/** @type {any} */ variables) => Promise.resolve()
       .then(() => options.mutationFn(variables))
@@ -297,6 +304,8 @@ const saisirNom = async (valeur) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockLogoGone = false;
+  mockMutationOptions.length = 0;
   mockButtonProps.length = 0;
   mockInputProps.length = 0;
   mockAvatarProps.length = 0;
@@ -452,6 +461,42 @@ describe('AddSponsor — ce qui part sur le reseau', () => {
 
     expect(Alert.alert).toHaveBeenCalled();
     expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+});
+
+// GUIDE-E-CORR (TG-03, tournée du 07/11) : logo choisi, ~1 min 30 de saisie, envoi refusé
+// (« ENOENT » : le fichier du cache a disparu) puis « Failed to update club: Network Error ».
+describe('AddSponsor — TG-03 : le logo disparu du cache', () => {
+  it('fichier du logo disparu : rien ne part, et le message dit de le rechoisir', async () => {
+    mockLogoGone = true;
+    const arbre = await monterEcran();
+    await saisirNom('Nike');
+    await choisirLogo();
+
+    await appuyerSur(arbre, 'Ajouter');
+
+    expect(updateClub).not.toHaveBeenCalled();
+    const [, message] = /** @type {any} */ (Alert.alert).mock.calls[0] || [];
+    expect(message).toMatch(/Choisis à nouveau le logo, puis réessaie\./);
+  });
+
+  it('logo rechoisi : il repart normalement', async () => {
+    mockLogoGone = true;
+    const arbre = await monterEcran();
+    await saisirNom('Nike');
+    await choisirLogo();
+    await appuyerSur(arbre, 'Ajouter');
+    mockLogoGone = false;
+    await choisirLogo();
+
+    await appuyerSur(arbre, 'Ajouter');
+
+    expect(updateClub).toHaveBeenCalledTimes(1);
+  });
+
+  it('un échec n affiche que le message de l écran, pas le technique en anglais', async () => {
+    await monterEcran();
+    expect(mockMutationOptions.at(-1).meta).toMatchObject({ preventToastError: true });
   });
 });
 

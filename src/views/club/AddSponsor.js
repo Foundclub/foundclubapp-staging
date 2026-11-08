@@ -26,6 +26,8 @@ import { useGetClub } from '@/services/club/clubQueries';
 import { updateClub } from '@/services/club/clubService';
 import { getMultisportClubById, updateMultisportClub } from '@/services/multisportClub/multisportClubService';
 
+import { localFileIsGone } from '@/platform/media';
+
 import { getFieldError } from '@/utils/form/formUtils';
 
 import useKeyboardFrame from '@/hooks/useKeyboardFrame';
@@ -120,6 +122,9 @@ function AddSponsor({ navigation, route }) {
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   const createSponsorMutation = useMutation({
+    // GUIDE-E-CORR (TG-03) : l'écran dit l'erreur en français ; le filet global ajoutait
+    // « Failed to update club: Network Error » par-dessus.
+    meta: { preventToastError: true },
     mutationFn: (data) => (routeClubId ? updateClub(data) : updateMultisportClub(routeCmId, data)),
     onError: (/** @type {any} */ error) => {
       // Dirigeant sans offre Club : la feuille d'achat, comme les installations (au lieu de cette
@@ -146,7 +151,21 @@ function AddSponsor({ navigation, route }) {
    * Handle form submit
    * @param {typeof defaultValues} data
    */
-  const handleFormSubmit = (data) => {
+  const handleFormSubmit = async (data) => {
+    // GUIDE-E-CORR (TG-03) : le logo choisi vit dans le cache, que le système peut vider avant
+    // l'envoi ; on le relit et, s'il a disparu, on demande de le rechoisir au lieu d'échouer.
+    if (logo && await localFileIsGone(logo.uri || logo.path)) {
+      setLogo(undefined);
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t(
+          'addSponsor.errors.logoGone',
+          'Le logo choisi n’est plus disponible sur ton téléphone. Choisis à nouveau le logo, '
+            + 'puis réessaie.',
+        ),
+      );
+      return;
+    }
     if (currentTarget && logo) {
       // Logic is same for both: sponsor is an array of objects
       const newClub = { ...currentTarget };
