@@ -1,3 +1,4 @@
+import { getManagedTeams } from '@/domains/team/teamMembership';
 import { extendStep, homeTarget, wizardStep } from '@/domains/tour/guideCommon';
 import t from '@/domains/tour/presidentText';
 
@@ -44,7 +45,40 @@ export const B4_MISSION = {
   get title() { return t('missionTitles.b4', 'Recruter'); },
 };
 
+/**
+ * GUIDE-D-CORR TG-04 (tournée du 07/11, b19-b21) : une annonce part d'une équipe que l'on encadre
+ * (`AdWizardTeam`, `getManagedTeams`). Le dirigeant qui a confié son équipe à son coach tombait à
+ * l'étape 2/7 sur « Tu dois être associé à une équipe », sans bouton. Sans équipe à lui, le bonus
+ * le dit avant et passe au suivant. Profil inconnu : le bonus se joue (rien n'est affirmé).
+ * ponytail: on ne propose pas les équipes du club (il faudrait les charger dans le tunnel) ;
+ * sortie : `AdWizardTeam` liste celles du club pour un dirigeant, et cette étape disparaît.
+ * @param {any} ctx - Contexte du guide.
+ * @returns {boolean} Vrai si le dirigeant n'encadre aucune équipe.
+ */
+const hasNoTeamToRecruitFor = (ctx) => Boolean(ctx?.userData)
+  && getManagedTeams(ctx.userData).length === 0;
+
 export const B4_STEPS = [
+  {
+    id: 'b4-noteam',
+    lookOnly: true,
+    missionId: 'president_b4',
+    navigateOnEnter: true,
+    navTarget: homeTarget,
+    get nextLabel() { return t('b4-noteam-next', 'Bonus suivant'); },
+    simulatesAd: true,
+    // « Bonus suivant » passe ce bonus (PASSÉ au bilan), il ne le compte pas comme fait.
+    skipsMission: true,
+    targets: ['home.card.manage-add-ad'],
+    get text() {
+      return t(
+        'b4-noteam',
+        'Recruter : une annonce part d’une équipe que tu encadres. Ton équipe est confiée à ton '
+          + 'coach : c’est lui qui recrute pour elle, depuis son compte.',
+      );
+    },
+    when: hasNoTeamToRecruitFor,
+  },
   {
     advanceOn: { key: RouteNames.SearchHome, type: 'route' },
     id: 'b4-dock',

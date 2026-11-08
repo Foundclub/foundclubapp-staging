@@ -49,11 +49,14 @@ function TeamWizardActivity({ navigation }) {
   const hasError = Boolean(activitiesError);
   const isClubMissing = !state.clubId;
 
+  // GUIDE-D-CORR TG-22 : le serveur range les sports du club sous `activites` (getClubById) ;
+  // lus sous `activities` seulement, ils n'arrivaient jamais en tête de liste.
+  const clubSports = clubQuery.data?.activites || clubQuery.data?.activities;
   const clubActivityIds = useMemo(() => new Set(
-    (clubQuery.data?.activities || [])
+    (clubSports || [])
       .map((/** @type {any} */ activity) => String(activity?.documentId || '').trim())
       .filter(Boolean),
-  ), [clubQuery.data?.activities]);
+  ), [clubSports]);
 
   const normalizedSearch = searchValue.trim().toLowerCase();
   const allActivities = useMemo(

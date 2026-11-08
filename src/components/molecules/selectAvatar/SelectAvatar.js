@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, PermissionsAndroid, Platform, TouchableOpacity, View,
+  Alert, Image, PermissionsAndroid, Platform, Pressable, TouchableOpacity, View,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
@@ -372,15 +372,21 @@ function SelectAvatar({
           type="file"
         />
       ) : null}
-      <View style={[
-        ApplicationStyle.backgroundColor.neutral00,
-        ApplicationStyle.borderRadius24,
-        Alignments.relative,
-        Alignments.alignCenter,
-        Alignments.justifyCenter,
-        { height: size, width: size },
-        containerStyle,
-      ]}
+      {/* GUIDE-D-CORR TG-01 : toute l'image ouvre le choix, pas seulement le petit « + » (le
+          guide dit « touche-le »). `accessible={false}` : « + » et la poubelle restent lus. */}
+      <Pressable
+        accessible={false}
+        onPress={() => setIsModalVisible(true)}
+        style={[
+          ApplicationStyle.backgroundColor.neutral00,
+          ApplicationStyle.borderRadius24,
+          Alignments.relative,
+          Alignments.alignCenter,
+          Alignments.justifyCenter,
+          { height: size, width: size },
+          containerStyle,
+        ]}
+        testID="selectAvatar.zone"
       >
         {currentAvatar?.url || currentAvatar?.path
           ? (
@@ -454,7 +460,7 @@ function SelectAvatar({
               ApplicationStyle.tintColor.primary900]}
           />
         </TouchableOpacity>
-      </View>
+      </Pressable>
 
       <BottomModal
         close={() => { setIsModalVisible(false); }}

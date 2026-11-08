@@ -10,6 +10,8 @@ import {
   registerTourTarget,
 } from '@/domains/tour/tourTargetRegistry';
 
+import TourSheetContext from '@/components/molecules/tour/tourSheetContext';
+
 // Les doublures jest de `@react-navigation/native` (430 fichiers) n'exposent
 // pas toujours `NavigationContext` : repli = « hors navigation » (l'ancre compte).
 const NavigationContext = /** @type {any} */ (ReactNavigation).NavigationContext
@@ -48,6 +50,7 @@ function TourTarget({
   children, clipChildren = false, focusFromParent = false, id, style,
 }) {
   const clipTo = useContext(TourClipContext);
+  const inSheet = useContext(TourSheetContext);
   const viewRef = useRef(/** @type {any} */ (null));
   const ownNavigation = /** @type {any} */ (useContext(NavigationContext));
   const navigation = focusFromParent ? ownNavigation?.getParent?.() : ownNavigation;
@@ -69,11 +72,12 @@ function TourTarget({
       }));
     }, {
       clipTo,
+      inSheet,
       // Le focus se lit à la mesure : un événement « focus » arrivé avant
       // l'abonnement laissait le cadre absent 30 à 45 s (CALIBRAGE-2).
       isActive: () => (navigation?.isFocused ? navigation.isFocused() : true),
     });
-  }, [clipTo, id, navigation]);
+  }, [clipTo, id, inSheet, navigation]);
 
   if (!isGuideSupported()) return /** @type {any} */ (children);
 
