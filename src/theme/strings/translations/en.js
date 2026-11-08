@@ -22128,6 +22128,7 @@ export default {
   },
   subscriptionQuotaBanner: {
     covered: {
+      gift: '{{displayName}} has the {{offerName}} plan as a gift for {{coveredThing}}.',
       message: '{{displayName}} pays for the {{offerName}} plan for {{coveredThing}}.',
       offerClub: 'Club',
       offeredBy: 'Offered by {{who}} for {{coveredThing}}.',
@@ -23378,8 +23379,10 @@ export default {
     upsell: {
       clubAction: 'See the plan',
       clubLabel: 'With the Club plan',
+      clubToolsLabel: 'Club tools',
       teamAction: 'Unlock',
       teamLabel: 'With the Team plan',
+      teamToolsLabel: 'Team tools',
     },
   },
   teamEdit: {

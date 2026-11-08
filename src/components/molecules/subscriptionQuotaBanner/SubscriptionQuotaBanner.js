@@ -171,7 +171,11 @@ function SubscriptionQuotaBanner({
     const offertPar = offreDeLaVille
       ? formatCollectiviteOfferedBy(offreDeLaVille.name)
       : String(coveringEntitlement?.offeredBy?.name || '').trim();
-    const phraseCouverture = offertPar
+    // GUIDE-D-CORR-2 TG-21 : l'essai offert (cadeau de bienvenue, plan `fc_trial_…`) n'est pas un
+    // paiement ; le bandeau le dit comme un cadeau.
+    const estUnCadeau = String(coveringEntitlement?.subscriptionPlanCode || '')
+      .toLowerCase().startsWith('fc_trial_');
+    let phraseCouverture = offertPar
       ? t('subscriptionQuotaBanner.covered.offeredBy', {
         coveredThing,
         defaultValue: 'Offert par {{who}} pour {{coveredThing}}.',
@@ -188,6 +192,15 @@ function SubscriptionQuotaBanner({
           ...SANS_ECHAPPEMENT,
         },
       );
+    if (!offertPar && estUnCadeau) {
+      phraseCouverture = t('subscriptionQuotaBanner.covered.gift', {
+        coveredThing,
+        defaultValue: '{{displayName}} a l’offre {{offerName}} en cadeau pour {{coveredThing}}.',
+        displayName,
+        offerName,
+        ...SANS_ECHAPPEMENT,
+      });
+    }
 
     return (
       <View

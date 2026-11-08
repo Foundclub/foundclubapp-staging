@@ -279,6 +279,22 @@ describe('SubscriptionQuotaBanner — « deja couvert » (D59 ⑤)', () => {
     expect(texte).toContain('Nadia B. paie l\'offre Club pour tout le club.');
   });
 
+  // GUIDE-D-CORR-2 TG-21 (tournée du 07/11, c14) : l'offre Club du dirigeant est un CADEAU de
+  // bienvenue (essai `fc_trial_…`) ; « Dirtg T. paie l'offre Club » disait un paiement.
+  test('un essai offert (cadeau) ne dit pas « paie » : il dit « en cadeau »', async () => {
+    const texte = await renderTextFor({
+      entitlementsSummary: [{
+        ...couvertPar({ firstname: 'Nadia', lastname: 'Benali', scopeType: 'CLUB' })[0],
+        subscriptionPlanCode: 'fc_trial_club_7d',
+      }],
+      subscriptionAccessLevel: 'CLUB_UNVERIFIED',
+      subscriptionSummary: { activePlanCodes: [] },
+    });
+
+    expect(texte).not.toContain('paie');
+    expect(texte).toContain("Nadia B. a l’offre Club en cadeau pour tout le club.");
+  });
+
   test('⛔ LE PAYEUR lui-meme ne voit PAS ce bandeau — il paie, justement', async () => {
     const texte = await renderTextFor({
       entitlementsSummary: [{
