@@ -292,7 +292,7 @@ describe('SubscriptionQuotaBanner — « deja couvert » (D59 ⑤)', () => {
     });
 
     expect(texte).not.toContain('paie');
-    expect(texte).toContain("Nadia B. a l’offre Club en cadeau pour tout le club.");
+    expect(texte).toContain('Nadia B. a l’offre Club en cadeau pour tout le club.');
   });
 
   test('⛔ LE PAYEUR lui-meme ne voit PAS ce bandeau — il paie, justement', async () => {

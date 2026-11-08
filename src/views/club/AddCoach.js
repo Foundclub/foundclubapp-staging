@@ -83,9 +83,9 @@ const sanitizeRouteParam = (value) => {
  * @returns {import('react').ReactElement} Add coach screen component
  */
 function AddCoach({ navigation, route }) {
+// local state
   // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
   const tourScroll = useTourScroller();
-// local state
   const [avatar, setAvatar] = useState(
     /** @type {Avatar | undefined} */
     (undefined),

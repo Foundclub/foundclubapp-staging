@@ -4916,8 +4916,8 @@ function TeamDetails({ navigation, route }) {
                     'teamDetails.upsell.teamAction',
                     'Débloquer',
                   ),
-                  // GUIDE-D-CORR-2 TG-21 : débloqué (offre ou cadeau du club), l'en-tête ne vend plus
-                  // l'offre : il nomme le groupe d'outils.
+                  // GUIDE-D-CORR-2 TG-21 : débloqué (offre ou cadeau du club), l'en-tête ne
+                  // vend plus l'offre : il nomme le groupe d'outils.
                   label: isTeamOfferUnlocked
                     ? t('teamDetails.upsell.teamToolsLabel', 'Outils de l’équipe')
                     : t('teamDetails.upsell.teamLabel', "Avec l'offre Équipe"),

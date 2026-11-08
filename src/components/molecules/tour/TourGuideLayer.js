@@ -655,7 +655,8 @@ function TourGuideLayer() {
       .then(([area, ...found]) => {
         if (cancelled) return;
         const origin = originRef.current;
-        const boxes = found.filter(Boolean).map((rect) => toLayerFrame(rect, origin));
+        const boxes = /** @type {{ height: number; y: number }[]} */ (found.filter(Boolean)
+          .map((rect) => toLayerFrame(/** @type {any} */ (rect), origin)));
         const view = area ? toLayerFrame(area, origin) : null;
         if (!boxes.length || !view) return;
         const top = Math.min(...boxes.map((box) => box.y));
@@ -1007,21 +1008,21 @@ function TourGuideLayer() {
               </View>
             </View>
             {currentStep.hidePause ? null : (
-            <TouchableOpacity
-              accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
-              accessibilityRole="button"
-              onPress={tour.pauseTour}
-              style={{
-                alignItems: 'center',
-                height: MIN_TOUCH,
-                justifyContent: 'center',
-                margin: -14,
-                width: MIN_TOUCH,
-              }}
-              testID={__DEV__ ? 'tour.pause' : undefined}
-            >
-              <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
-            </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
+                accessibilityRole="button"
+                onPress={tour.pauseTour}
+                style={{
+                  alignItems: 'center',
+                  height: MIN_TOUCH,
+                  justifyContent: 'center',
+                  margin: -14,
+                  width: MIN_TOUCH,
+                }}
+                testID={__DEV__ ? 'tour.pause' : undefined}
+              >
+                <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
+              </TouchableOpacity>
             )}
           </View>
           )}
