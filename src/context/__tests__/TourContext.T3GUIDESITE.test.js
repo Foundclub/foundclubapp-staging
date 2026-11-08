@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
+
 import { TourProvider, useTour } from '../TourContext';
 
 // T3-GUIDE-SITE (Adel « 3- A », 03/11) : le guide de l'entraîneur sur le site, derrière
@@ -85,6 +87,15 @@ describe('Interrupteur éteint : le site ne change pas', () => {
     act(() => { parti = tour.restartTour('coach'); });
     expect(parti).toBe(false);
   });
+
+  // Même allumé au téléphone : le site garde le guide éteint par GUIDE_SUR_LE_SITE.
+  it('ni le guide Dirigeant', () => {
+    mount();
+    let parti;
+    act(() => { parti = tour.startTour('president'); });
+    expect(parti).toBe(false);
+    expect(tour.isTourActive).toBe(false);
+  });
 });
 
 describe('Interrupteur allumé : le guide part sur le site', () => {
@@ -116,12 +127,16 @@ describe('Interrupteur allumé : le guide part sur le site', () => {
     });
   });
 
-  it('un ancien tour v2 (dirigeant) reste refusé : sa bannière n est pas sur le site', () => {
+  // Stores 2.6.96 : le dirigeant suit l'interrupteur de presidentGuideSettings. Allumé, c'est un
+  // guide à missions et il part comme celui de l'entraîneur ; éteint, c'est l'ancien tour v2, dont
+  // la bannière n'est pas sur le site : refusé. Le témoin lit l'interrupteur pour rester juste
+  // dans les deux positions.
+  it('le dirigeant : guide à missions s il est allumé, sinon ancien tour v2 refusé', () => {
     mount();
     let parti;
     act(() => { parti = tour.startTour('president'); });
-    expect(parti).toBe(false);
-    expect(tour.isTourActive).toBe(false);
+    expect(parti).toBe(PRESIDENT_GUIDE_SETTINGS.enabled);
+    expect(tour.isTourActive).toBe(PRESIDENT_GUIDE_SETTINGS.enabled);
   });
 });
 

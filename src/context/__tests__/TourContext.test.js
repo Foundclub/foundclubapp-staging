@@ -33,6 +33,15 @@ jest.mock('@/store/appContext', () => ({
   },
 }));
 
+// Décision du chef du 08/11 (STORES-2696) : ces cas jouent l'ANCIEN tour du dirigeant (v2),
+// l'interrupteur est forcé à faux ici. Le guide à missions allumé a son témoin :
+// TourContext.STORES2696.finGuideDirigeant.test.js.
+jest.mock('@/domains/tour/presidentGuideSettings', () => {
+  const actual = jest.requireActual('@/domains/tour/presidentGuideSettings');
+  const settings = { ...actual.PRESIDENT_GUIDE_SETTINGS, enabled: false };
+  return { __esModule: true, default: settings, PRESIDENT_GUIDE_SETTINGS: settings };
+});
+
 const USER_ID = 'user-test-1';
 const STORAGE_KEY = `tourProgress_${USER_ID}`;
 
@@ -176,7 +185,8 @@ describe('TourContext — la fin du tour raccompagne à l`accueil (D23 ⑥)', ()
   const allerJusquALaDerniereEtape = (profileKey) => {
     act(() => { tour.startTour(profileKey); });
     const derniereEtape = tour.totalSteps - 1;
-    while (tour.stepIndex < derniereEtape) sauterUneEtape();
+    // Borne : une boucle sans limite a bloqué la série complète (STORES-2696, 08/11).
+    for (let garde = 0; tour.stepIndex < derniereEtape && garde < 50; garde += 1) sauterUneEtape();
     expect(tour.stepIndex).toBe(derniereEtape);
   };
 
