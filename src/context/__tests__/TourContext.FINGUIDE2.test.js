@@ -8,6 +8,13 @@ import { TourProvider, useTour } from '../TourContext';
 // lancé, une fois sa fin d'inscription datée après la frontière ; les anciens comptes, datés au
 // plus tard par le rattrapage du 29/10, ne voient rien.
 
+// GUIDES-SITE (09/11) : le site a désormais ses guides, derrière `GUIDE_SUR_LE_SITE` (allumé). Ce
+// fichier décrit le site interrupteur ÉTEINT ; allumé, voir TourContext.T3GUIDESITE.
+jest.mock('@/config/fonctionsMasquees', () => ({
+  ...jest.requireActual('@/config/fonctionsMasquees'),
+  GUIDE_SUR_LE_SITE: false,
+}));
+
 jest.mock('@/navigation/navigationService', () => ({ navigate: jest.fn(() => true) }));
 
 let mockUserData;
@@ -93,7 +100,7 @@ describe('Qui se voit proposer le guide', () => {
     expect(tour.isGuideOfferable).toBe(false);
   });
 
-  it('jamais sur le site, qui n a pas de guide', () => {
+  it('jamais sur le site interrupteur éteint', () => {
     const plateforme = jest.replaceProperty(Platform, 'OS', 'web');
     mount();
     expect(tour.isGuideOfferable).toBe(false);

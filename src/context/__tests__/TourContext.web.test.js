@@ -17,6 +17,13 @@ jest.mock('react-native/Libraries/Utilities/Platform', () => {
   return { ...mockModule, default: mockModule };
 });
 
+// GUIDES-SITE (09/11) : le site a désormais ses guides, derrière `GUIDE_SUR_LE_SITE` (allumé). Ce
+// fichier décrit le site interrupteur ÉTEINT ; allumé, voir TourContext.T3GUIDESITE.
+jest.mock('@/config/fonctionsMasquees', () => ({
+  ...jest.requireActual('@/config/fonctionsMasquees'),
+  GUIDE_SUR_LE_SITE: false,
+}));
+
 const mockNavigate = jest.fn(() => true);
 jest.mock('@/navigation/navigationService', () => ({
   navigate: (...args) => mockNavigate(...args),

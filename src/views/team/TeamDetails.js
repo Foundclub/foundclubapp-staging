@@ -4916,7 +4916,11 @@ function TeamDetails({ navigation, route }) {
                     'teamDetails.upsell.teamAction',
                     'Débloquer',
                   ),
-                  label: t('teamDetails.upsell.teamLabel', "Avec l'offre Équipe"),
+                  // GUIDE-D-CORR-2 TG-21 : débloqué (offre ou cadeau du club), l'en-tête ne
+                  // vend plus l'offre : il nomme le groupe d'outils.
+                  label: isTeamOfferUnlocked
+                    ? t('teamDetails.upsell.teamToolsLabel', 'Outils de l’équipe')
+                    : t('teamDetails.upsell.teamLabel', "Avec l'offre Équipe"),
                   onActionPress: openTeamOfferUnlockSheet,
                 })}
                 <View style={teamActionsListStyle}>
@@ -4956,7 +4960,9 @@ function TeamDetails({ navigation, route }) {
                     'teamDetails.upsell.clubAction',
                     "Voir l'offre",
                   ),
-                  label: t('teamDetails.upsell.clubLabel', "Avec l'offre Club"),
+                  label: isClubOfferUnlocked
+                    ? t('teamDetails.upsell.clubToolsLabel', 'Outils du club')
+                    : t('teamDetails.upsell.clubLabel', "Avec l'offre Club"),
                   onActionPress: openClubOfferRecap,
                 })}
                 <View style={teamActionsListStyle}>

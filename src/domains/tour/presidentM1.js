@@ -1,6 +1,6 @@
 import { clubHubTarget, homeTarget } from '@/domains/tour/guideCommon';
 import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
-import t from '@/domains/tour/presidentText';
+import t, { tSite } from '@/domains/tour/presidentText';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -109,9 +109,10 @@ const PART_INFOS = [
     targets: ['club.edit'],
     get text() { return t('m1-edit', 'Pour les personnaliser, touche « Modifier ».'); },
   },
-  editStep('m1-logo', 'clubEdit.logo', () => t(
+  editStep('m1-logo', 'clubEdit.logo', () => tSite(
     'm1-logo',
     'Ton logo : touche-le pour choisir une image de ton téléphone.',
+    'Ton logo : clique dessus pour choisir une image de ton appareil.',
   )),
   editStep('m1-name', 'clubEdit.name', () => t(
     'm1-name',
@@ -658,6 +659,9 @@ const PART_POSTER = [
   {
     advanceOn: { key: RouteNames.Club, type: 'route' },
     completesMission: true,
+    // GUIDE-D-CORR-2 TG-18 (r50) : la croix « pause » de la bulle tombait collée sous la croix de
+    // l'affiche, qu'on demande justement de toucher ; pas de croix de pause à cette étape.
+    hidePause: true,
     id: 'm1-pclose',
     missionId: MISSION_ID,
     resumeFrom: 'm1-poster',

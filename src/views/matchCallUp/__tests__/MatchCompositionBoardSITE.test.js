@@ -248,11 +248,22 @@ afterEach(async () => {
  * @param {any} arbre
  * @returns {{ enveloppe: any, surface: any }}
  */
+// GUIDES-SITE (09/11) : le guide allumé sur le site, une ancre (`tour.target.*`, elle aussi « non
+// repliable », avec son propre onLayout) peut entourer le terrain ; elle n'est ni la surface ni
+// l'enveloppe.
+const estUneAncreDuGuide = (/** @type {any} */ n) => String(n.props?.testID || '')
+  .startsWith('tour.target.');
 const terrain = (arbre) => {
   const surface = arbre.root.findAll(
-    (/** @type {any} */ n) => n.type === View && n.props.collapsable === false,
+    (/** @type {any} */ n) => n.type === View && n.props.collapsable === false
+      && !estUneAncreDuGuide(n),
   )[0];
-  return { enveloppe: surface.parent, surface };
+  let enveloppe = surface.parent;
+  while (enveloppe && (typeof enveloppe.props?.onLayout !== 'function'
+    || estUneAncreDuGuide(enveloppe))) {
+    enveloppe = enveloppe.parent;
+  }
+  return { enveloppe, surface };
 };
 
 const aplatir = (/** @type {any} */ style) => [style].flat(Infinity)

@@ -1,7 +1,11 @@
 import { Platform, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { measureTourTarget, resetTourTargetsForTests } from '@/domains/tour/tourTargetRegistry';
+import {
+  measureTourTarget,
+  resetTourTargetsForTests,
+  revealTourTarget,
+} from '@/domains/tour/tourTargetRegistry';
 
 import TourTarget from '../TourTarget';
 
@@ -47,5 +51,18 @@ describe('TourTarget sur le site', () => {
     await expect(measureTourTarget('essai.cible')).resolves.toMatchObject({
       height: 40, width: 30, x: 10, y: 20,
     });
+  });
+});
+
+describe('GUIDES-SITE : l ancre du site se ramène elle-même à l écran', () => {
+  it('allumé : le navigateur la fait défiler au milieu (scrollIntoView)', () => {
+    mockFlag = true;
+    mount();
+    const host = tree.root.findAll((node) => node.props.testID === 'tour.target.essai.cible'
+      && typeof node.type !== 'string')[0];
+    host.instance.scrollIntoView = jest.fn();
+    expect(revealTourTarget('essai.cible')).toBe(true);
+    expect(host.instance.scrollIntoView)
+      .toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
   });
 });

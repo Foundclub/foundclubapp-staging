@@ -2,7 +2,7 @@ import * as ReactNavigation from '@react-navigation/native';
 import {
   createContext, useContext, useEffect, useRef,
 } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import isGuideSupported from '@/domains/tour/guideSupport';
 import {
@@ -73,6 +73,11 @@ function TourTarget({
     }, {
       clipTo,
       inSheet,
+      // GUIDES-SITE : sur le site, le navigateur ramène l'ancre au milieu de l'écran, en faisant
+      // défiler la page et chaque conteneur qui l'entoure (défilement automatique du guide).
+      reveal: Platform.OS === 'web'
+        ? () => viewRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+        : undefined,
       // Le focus se lit à la mesure : un événement « focus » arrivé avant
       // l'abonnement laissait le cadre absent 30 à 45 s (CALIBRAGE-2).
       isActive: () => (navigation?.isFocused ? navigation.isFocused() : true),

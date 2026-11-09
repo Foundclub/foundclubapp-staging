@@ -23016,6 +23016,7 @@ export default {
   },
   subscriptionQuotaBanner: {
     covered: {
+      gift: '{{displayName}} a l’offre {{offerName}} en cadeau pour {{coveredThing}}.',
       message: "{{displayName}} paie l'offre {{offerName}} pour {{coveredThing}}.",
       offerClub: 'Club',
       offeredBy: 'Offert par {{who}} pour {{coveredThing}}.',
@@ -24586,8 +24587,10 @@ export default {
     upsell: {
       clubAction: "Voir l'offre",
       clubLabel: "Avec l'offre Club",
+      clubToolsLabel: 'Outils du club',
       teamAction: 'Débloquer',
       teamLabel: "Avec l'offre Équipe",
+      teamToolsLabel: 'Outils de l’équipe',
     },
   },
   /* eslint-enable perfectionist/sort-objects */
@@ -25559,6 +25562,7 @@ export default {
         + 'ici.',
       'b3-back': 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou glisse '
         + 'ton doigt depuis le bord gauche.',
+      'b3-back-site': 'Crée maintenant un groupe. Reviens aux messages : touche la flèche.',
       'b3-create': 'Crée le groupe : il est réel, tes membres le verront.',
       'b3-few': 'Un groupe demande au moins 2 autres membres, et ton club n’en a pas encore '
         + 'assez. Reviens ici quand ils auront rejoint le club. On continue.',
@@ -25647,6 +25651,7 @@ export default {
       'm1-info': '1/5 · La carte de ton club : logo, nom, adresse, téléphone, email. C’est ce que '
         + 'voient les joueur·se·s.',
       'm1-logo': 'Ton logo : touche-le pour choisir une image de ton téléphone.',
+      'm1-logo-site': 'Ton logo : clique dessus pour choisir une image de ton appareil.',
       'm1-name': 'Le nom du club, tel qu’il apparaît partout. Corrige-le si besoin.',
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
       'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
@@ -25694,16 +25699,21 @@ export default {
         + 'flèche, ou glisse ton doigt depuis le bord gauche.',
       'm2-back-hub': 'De retour sur la fiche de ton club. Crée maintenant une équipe : ouvre « '
         + 'Nos équipes ».',
+      'm2-back-site': 'Tu es sur Staff. Reviens sur la fiche de ton club : touche la flèche.',
       'm2-fields': 'Son numéro (requis) et son prénom. Un compte est créé à ce numéro, et le SMS, '
         + 'c’est toi qui l’envoies juste après.',
       'm2-fields-required': 'Donne d’abord son numéro.',
       'm2-invite': 'Ajouté·e au club ! Touche « Inviter » : ta messagerie s’ouvre avec le message '
         + 'prêt. Envoie-le, puis reviens ici.',
+      'm2-invite-site': 'Ajouté·e au club ! Touche « Inviter » : le message d’invitation est '
+        + 'copié (sur un téléphone, ton partage s’ouvre). Envoie-le à ton coach.',
       'm2-role': 'Le bon rôle est déjà choisi. Garde-le.',
       'm2-send': 'Touche « Envoyer l’invitation » : son compte est créé.',
       'm2-sms': 'Envoie le SMS depuis ta messagerie, puis reviens ici. C’est à toi de l’envoyer : '
         + 'l’app ne le fait pas.',
       'm2-sms-next': 'C’est envoyé',
+      'm2-sms-site': 'Colle le message dans un SMS ou un e-mail à ton coach. C’est à toi de '
+        + 'l’envoyer : le site ne le fait pas.',
       'm2-staff': 'Invite maintenant tes coachs. Ouvre « Staff ».',
       'm2-visit': 'Tes coachs s’ajoutent depuis « Staff ». Ouvre-le.',
       'm2-visit-add': 'Ce « + » ajoute un coach à ton club. Il demande l’offre Club : on te la '

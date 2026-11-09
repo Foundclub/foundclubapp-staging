@@ -67,6 +67,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import { lireOngletDOrigine, useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -5120,13 +5121,18 @@ function ClubDetails({ navigation, route }) {
 function DefilementDeLaFiche({
   annuaire, children, contentContainerStyle, refreshControl,
 }) {
+  // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
+  const tourScroll = useTourScroller();
   if (annuaire) {
     return <View style={[{ flex: 1, minWidth: 0 }, contentContainerStyle]}>{children}</View>;
   }
   return (
     <ScrollView
       contentContainerStyle={contentContainerStyle}
+      onScroll={tourScroll.onScroll}
+      ref={tourScroll.ref}
       refreshControl={refreshControl}
+      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
     >
       {children}

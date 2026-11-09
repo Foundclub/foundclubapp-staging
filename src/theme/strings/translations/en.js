@@ -22146,6 +22146,7 @@ export default {
   },
   subscriptionQuotaBanner: {
     covered: {
+      gift: '{{displayName}} has the {{offerName}} plan as a gift for {{coveredThing}}.',
       message: '{{displayName}} pays for the {{offerName}} plan for {{coveredThing}}.',
       offerClub: 'Club',
       offeredBy: 'Offered by {{who}} for {{coveredThing}}.',
@@ -23396,8 +23397,10 @@ export default {
     upsell: {
       clubAction: 'See the plan',
       clubLabel: 'With the Club plan',
+      clubToolsLabel: 'Club tools',
       teamAction: 'Unlock',
       teamLabel: 'With the Team plan',
+      teamToolsLabel: 'Team tools',
     },
   },
   teamEdit: {
@@ -24499,6 +24502,7 @@ export default {
         + 'coaches”, in “Staff” on the club page. It will show up here.',
       'b3-back': 'Now create a group. Go back to messages: tap the arrow, or swipe from the left '
         + 'edge.',
+      'b3-back-site': 'Now create a group. Go back to messages: tap the arrow.',
       'b3-create': 'Create the group: it’s real, your members will see it.',
       'b3-few': 'A group needs at least 2 other members, and your club doesn’t have enough yet. '
         + 'Come back when they’ve joined. Let’s continue.',
@@ -24583,6 +24587,7 @@ export default {
       'm1-fplan': '4/5 · Your facility is created. Open its schedule.',
       'm1-info': '1/5 · Your club card: logo, name, address, phone, email. This is what players see.',
       'm1-logo': 'Your logo: tap it to choose an image from your phone.',
+      'm1-logo-site': 'Your logo: click it to choose an image from your device.',
       'm1-name': 'The club name, as it appears everywhere. Correct it if needed.',
       'm1-padd': 'Add your first partner with “+”.',
       'm1-parrows': 'The arrows change the period. Try the right one.',
@@ -24628,16 +24633,21 @@ export default {
       'm2-back': 'Back in the app, on Staff. Return to your club page: tap the arrow, or swipe '
         + 'from the left edge.',
       'm2-back-hub': 'Back on your club page. Now create a team: open “Our teams”.',
+      'm2-back-site': 'You are on Staff. Go back to your club page: tap the arrow.',
       'm2-fields': 'Their number (required) and first name. An account is created for this '
         + 'number, and you send the text yourself right after.',
       'm2-fields-required': 'First give their number.',
       'm2-invite': 'Added to the club! Tap “Invite”: your messaging app opens with the message '
         + 'ready. Send it, then come back here.',
+      'm2-invite-site': 'Added to the club! Tap “Invite”: the invitation message is copied (on a '
+        + 'phone, your share sheet opens). Send it to your coach.',
       'm2-role': 'The right role is already selected. Keep it.',
       'm2-send': 'Tap “Send the invitation”: their account is created.',
       'm2-sms': 'Send the text from your messaging app, then come back here. It’s up to you to '
         + 'send it: the app doesn’t.',
       'm2-sms-next': 'It’s sent',
+      'm2-sms-site': 'Paste the message into a text or an email to your coach. You send it '
+        + 'yourself: the site does not.',
       'm2-staff': 'Now invite your coaches. Open “Staff”.',
       'm2-visit': 'Your coaches are added from “Staff”. Open it.',
       'm2-visit-add': 'This “+” adds a coach to your club. It requires the Club plan: we’ll show '

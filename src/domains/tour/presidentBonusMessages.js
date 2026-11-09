@@ -1,5 +1,5 @@
 import { homeTarget } from '@/domains/tour/guideCommon';
-import t from '@/domains/tour/presidentText';
+import t, { tSite } from '@/domains/tour/presidentText';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -111,8 +111,12 @@ export const B3_STEPS = [
     resumeFrom: 'b3-new',
     targets: ['header.back'],
     get text() {
-      return t('b3-back', 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou '
-        + 'glisse ton doigt depuis le bord gauche.');
+      return tSite(
+        'b3-back',
+        'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou glisse ton doigt '
+          + 'depuis le bord gauche.',
+        'Crée maintenant un groupe. Reviens aux messages : touche la flèche.',
+      );
     },
     // Le geste du bord, seul retour d'un iPhone, doit passer ; le reste sous le voile (TG-16).
     edgeSwipe: true,
@@ -173,11 +177,12 @@ export const B3_STEPS = [
   },
   {
     bubblePlacement: 'top',
-    completesMission: true,
     id: 'b3-few',
     missionId: 'president_b3',
     get nextLabel() { return t('understood', 'Compris'); },
     resumeFrom: 'b3-new',
+    // GUIDE-D-CORR-2 : aucun groupe créé, le bonus est PASSÉ au bilan, pas fait (comme b2-none).
+    skipsMission: true,
     get text() {
       return t(
         'b3-few',

@@ -13,12 +13,14 @@
 // jamais une protection — seulement une mise en avant retirée.
 
 /**
- * T3-GUIDE-SITE (Adel « 3- A », 03/11/2026) — le guide de l'entraîneur sur le SITE.
- * `false` : le site reste sans guide, ni carte, ni bulle, ni entrée dans Mon compte.
- * Rallumer : quand les 4 missions sont prouvées sur le site, à 390 et 1440, avec l'accord d'Adel.
+ * T3-GUIDE-SITE (Adel « 3- A », 03/11/2026) — les guides sur le SITE.
+ * GUIDES-SITE (décision d'Adel du 09/11, qui remplace « 136 A ») : ALLUMÉ, guide de l'entraîneur ET
+ * guide du dirigeant (`presidentGuideSettings`), pour qu'Adel les teste sur le site pendant que son
+ * associé teste le téléphone. `false` : le site reste sans guide, ni carte, ni bulle, ni entrée
+ * dans Mon compte. Le téléphone garde ses propres interrupteurs.
  * @type {boolean}
  */
-export const GUIDE_SUR_LE_SITE = false;
+export const GUIDE_SUR_LE_SITE = true;
 
 /**
  * A01 + A02 — FoundClub League sur l'accueil.

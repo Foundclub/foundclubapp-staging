@@ -18,9 +18,13 @@ import Svg, {
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { getTourProfile } from '@/domains/tour/tourCatalog';
 import {
+  canRevealTourTarget,
+  getActiveTourScroller,
   isTourTargetInSheet,
   measureTourTarget,
   measureTourTargetClipSide,
+  measureTourTargetRaw,
+  revealTourTarget,
   subscribeToTourTargets,
 } from '@/domains/tour/tourTargetRegistry';
 import { useAppContext } from '@/store/appContext';
@@ -34,6 +38,7 @@ import TourBlockedCard from '@/components/molecules/tour/TourBlockedCard';
 import { TOUR_BUBBLE_SLOT_HEIGHT } from '@/components/molecules/tour/TourBubbleSlot';
 import TourFullScreen from '@/components/molecules/tour/TourFullScreen';
 import {
+  avoidTargets,
   bubbleRoom,
   clipAboveDock,
   clipBelowHeader,
@@ -112,6 +117,26 @@ const WIZARD_LIST_ID = 'teamWizard.viewport';
 // GUIDE-D-CORR TG-16 : bande du bord gauche laissée libre aux étapes de retour (`edgeSwipe`) : le
 // geste du retour de l'iPhone y part ; le reste de l'écran reste sous le voile.
 const EDGE_SWIPE_WIDTH = 20;
+// GUIDE-D-CORR-2 (décision d'Adel, 08/11) : le guide fait défiler l'écran jusqu'à la cible. Trois
+// essais par étape (une liste qui charge peut bouger), le temps d'une animation chacun ; au-delà,
+// l'écran reste libre et la bulle dit de défiler (jamais d'écran bloqué).
+const AUTO_SCROLL_TRIES = 3;
+const AUTO_SCROLL_MS = 450;
+// Marge autour de la cible amenée à l'écran.
+const AUTO_SCROLL_MARGIN = 12;
+
+/**
+ * Mesure d'une zone par sa fonction `measure` (registre du guide).
+ * @param {{ measure: (done: (rect: any) => void) => void }} source - Zone qui défile.
+ * @returns {Promise<any>} Rectangle dans le repère de la fenêtre, ou null.
+ */
+const measureOf = (source) => new Promise((resolve) => {
+  try {
+    source.measure((rect) => resolve(rect || null));
+  } catch (error) {
+    resolve(null);
+  }
+});
 
 /**
  * Police de la bulle à l'échelle du téléphone, plafonnée.
@@ -249,6 +274,10 @@ function TourGuideLayer() {
   const [subIndex, setSubIndex] = useState(0);
   const [sheetIndex, setSheetIndex] = useState(0);
   const [isVariantWaitOver, setIsVariantWaitOver] = useState(false);
+  // GUIDE-D-CORR-2 : défilement automatique vers la cible (essais par étape, animation en cours).
+  const autoScrollRef = useRef({ key: '', tries: 0 });
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  const autoScrollTimerRef = useRef(/** @type {any} */ (null));
   const pulse = useRef(new Animated.Value(0)).current;
   const appear = useRef(new Animated.Value(0)).current;
 
@@ -468,11 +497,10 @@ function TourGuideLayer() {
     && !variant.targets.some((id) => rects[id] && isTourTargetInSheet(id));
   // GUIDE-STORES : une liste de choix ouverte ; la bulle recouvrait sa recherche et sa croix.
   const isHidden = (isStale && !isLost) || isChoosingVariant || Boolean(rects[SELECT_SHEET_ID])
-    || isSheetOver;
+    || isSheetOver || isAutoScrolling;
   // Reprise sur une cible mesurée mais hors écran (deux écrans plus bas, sous
-  // la barre d'onglets, capture 02) : la bulle dit dans quel sens défiler.
-  // ponytail: pas de défilement automatique, il faudrait la ScrollView de chaque
-  // écran ancré ; sortie : un `scrollTo` par écran si la recette le demande.
+  // la barre d'onglets, capture 02) : l'écran défile tout seul quand sa zone est branchée
+  // (GUIDE-D-CORR-2) ; sinon la bulle dit dans quel sens défiler.
   const offTarget = !primary && !sheetGuide
     ? variant.targets.map((id) => rects[id]).find(Boolean)
     : null;
@@ -484,6 +512,27 @@ function TourGuideLayer() {
   const isCutByHeader = (!primary || isTargetCut) && !sheetGuide
     && variant.targets.some((id) => rects[id] && scrollsUnderHeader(id)
       && isUnderHeader(rects[id], fixedHeaderBottom));
+  // GUIDE-D-CORR-2 : cible coupée ou hors écran (voile ou pas), l'écran défile tout seul jusqu'à
+  // elle si sa zone qui défile est branchée (`useTourScroller`), ou, sur le site, si l'ancre sait
+  // se ramener elle-même. GUIDES-SITE (balayage du 09/11) : les tunnels aussi (champ sous le bord).
+  const isAnyTargetCut = measuredTargets.some((id) => (
+    clipSides[id]
+    || visibleRects[id].height < rects[id].height - 1
+    || rects[id].y + rects[id].height > height - 2
+  ));
+  const needsScroll = isStepVisible && !sheetGuide && !keyboard && !isOffStepRoute
+    && (isAnyTargetCut || Boolean(!primary && (offTarget || clipSide)));
+  const scroller = needsScroll ? getActiveTourScroller() : null;
+  // GUIDES-SITE : sur le site, l'ancre se ramène elle-même (`scrollIntoView`), sans zone branchée.
+  const revealId = needsScroll
+    ? variant.targets.find((id) => canRevealTourTarget(id)) || null
+    : null;
+  const autoScrollKey = `${currentStep?.id}|${variant.targets.join(',')}`;
+  if (autoScrollRef.current.key !== autoScrollKey) {
+    autoScrollRef.current = { key: autoScrollKey, tries: 0 };
+  }
+  const canAutoScroll = Boolean(scroller || revealId)
+    && autoScrollRef.current.tries < AUTO_SCROLL_TRIES;
   let scrollHint = null;
   // Au-dessus du haut de l'écran (même une lamelle visible, GUIDE-REPRISE N5) : vers le haut.
   if (clipSide === 'above' || isCutByHeader || (!clipSide && offTarget && offTarget.y < 0)) {
@@ -492,6 +541,8 @@ function TourGuideLayer() {
     || (offTarget && offTarget.x < width - 2 && offTarget.x + offTarget.width > 2)) {
     scrollHint = t('tourGuide.scrollDown', 'Fais défiler vers le bas.');
   }
+  // Défilement automatique en cours ou à venir : la bulle ne demande rien au doigt.
+  if (canAutoScroll) scrollHint = null;
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
   const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute
     && !isTargetCut;
@@ -520,7 +571,7 @@ function TourGuideLayer() {
   const keyboardTop = keyboard ? keyboard.screenY - originRef.current.y : height;
   // Bas utile : la barre d'onglets flottante, sinon le bas sûr de l'écran.
   const bottomLimit = Math.min(height - insets.bottom, dock ? dock.y : height, keyboardTop);
-  const position = slot
+  const placed = slot
     ? {
       arrow: 'none',
       arrowX: 0,
@@ -540,14 +591,28 @@ function TourGuideLayer() {
     });
   // GUIDE-PETIT-ECRAN (décision A du chef, 29/10) : la bulle ne dépasse jamais
   // la place qu'on lui donne ; au-delà, son contenu défile dedans.
-  const maxHeight = bubbleRoom({
+  const placedRoom = bubbleRoom({
     bottomLimit,
     headerBottom,
     insetTop: insets.top,
-    position,
+    position: placed,
     primary: isCompact || isSlotCut ? null : primary,
     slot,
   });
+  // GUIDE-D-CORR-2 (« Ajouter un partenaire », 08/11) : la bulle ne croise jamais une cible ni le
+  // bouton à toucher : elle va dans le trou libre ; clavier ouvert et sans trou, elle attend.
+  const avoided = slot || isCompact ? { maxHeight: null, position: placed } : avoidTargets({
+    bottomLimit,
+    bubbleHeight: wantedHeight,
+    maxHeight: placedRoom,
+    obstacles: cutouts,
+    position: placed,
+    primary,
+    topLimit: Math.max(insets.top + 4, (headerBottom ?? 0) + 6),
+  });
+  const position = avoided ? avoided.position : placed;
+  const maxHeight = avoided?.maxHeight ?? placedRoom;
+  const hasBubbleRoom = Boolean(avoided) || !keyboard;
   // G93 (rejeu, captures m3 et m7) : bulle en haut, la tête de la cible est sous elle
   // (« Extérieur » après Annuler) : on la retrouve vers le haut, même si son bas dépasse aussi.
   const bubbleBottom = position.top + Math.min(wantedHeight, maxHeight);
@@ -583,6 +648,62 @@ function TourGuideLayer() {
     // eslint-disable-next-line no-console
     console.log(`[TUTOE-CALIB] ${JSON.stringify({ status: tourStatus, step: stepId })}`);
   }, [isGuide, stepId, tourStatus]);
+
+  // GUIDE-D-CORR-2 : amène la cible au milieu de la zone qui défile (ou en haut si elle est plus
+  // grande), puis la bulle se pose ; la couche se retire le temps de l'animation.
+  const autoScrollTargets = variant.targets.join('|');
+  const dockTop = dock ? dock.y : null;
+  useEffect(() => {
+    if (!canAutoScroll || isAutoScrolling) return undefined;
+    let cancelled = false;
+    autoScrollRef.current.tries += 1;
+    const pause = () => {
+      setIsAutoScrolling(true);
+      if (autoScrollTimerRef.current) clearTimeout(autoScrollTimerRef.current);
+      autoScrollTimerRef.current = setTimeout(() => {
+        autoScrollTimerRef.current = null;
+        setIsAutoScrolling(false);
+      }, AUTO_SCROLL_MS);
+    };
+    if (revealId && revealTourTarget(revealId)) {
+      pause();
+      return () => { cancelled = true; };
+    }
+    if (!scroller) return undefined;
+    const ids = autoScrollTargets.split('|').filter(Boolean);
+    Promise.all([measureOf(scroller), ...ids.map(measureTourTargetRaw)])
+      .then(([area, ...found]) => {
+        if (cancelled) return;
+        const origin = originRef.current;
+        const boxes = /** @type {{ height: number; y: number }[]} */ (found.filter(Boolean)
+          .map((rect) => toLayerFrame(/** @type {any} */ (rect), origin)));
+        const view = area ? toLayerFrame(area, origin) : null;
+        if (!boxes.length || !view) return;
+        const top = Math.min(...boxes.map((box) => box.y));
+        const size = Math.max(...boxes.map((box) => box.y + box.height)) - top;
+        const areaTop = Math.max(view.y, fixedHeaderBottom ?? 0, insets.top);
+        const areaBottom = Math.min(
+          view.y + view.height,
+          dockTop ?? height,
+          height - insets.bottom,
+        );
+        const room = areaBottom - areaTop;
+        const wantedTop = size <= room - (2 * AUTO_SCROLL_MARGIN)
+          ? areaTop + ((room - size) / 2)
+          : areaTop + AUTO_SCROLL_MARGIN;
+        const dy = top - wantedTop;
+        if (Math.abs(dy) < 4) return;
+        scroller.scrollBy(dy);
+        pause();
+      });
+    return () => { cancelled = true; };
+  }, [
+    autoScrollKey, autoScrollTargets, canAutoScroll, dockTop, fixedHeaderBottom, height,
+    insets.bottom, insets.top, isAutoScrolling, revealId, scroller,
+  ]);
+  useEffect(() => () => {
+    if (autoScrollTimerRef.current) clearTimeout(autoScrollTimerRef.current);
+  }, []);
 
   if (!isPrivateMode || !isGuide || !isTourActive) return null;
 
@@ -786,7 +907,7 @@ function TourGuideLayer() {
         </View>
       ))}
 
-      {isBubbleGiven ? (
+      {isBubbleGiven && hasBubbleRoom ? (
       <Animated.View
         accessibilityHint={essentialHint}
         accessibilityLiveRegion="polite"
@@ -901,21 +1022,23 @@ function TourGuideLayer() {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
-              accessibilityRole="button"
-              onPress={tour.pauseTour}
-              style={{
-                alignItems: 'center',
-                height: MIN_TOUCH,
-                justifyContent: 'center',
-                margin: -14,
-                width: MIN_TOUCH,
-              }}
-              testID={__DEV__ ? 'tour.pause' : undefined}
-            >
-              <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
-            </TouchableOpacity>
+            {currentStep.hidePause ? null : (
+              <TouchableOpacity
+                accessibilityLabel={t('tourGuide.pause', 'Mettre le guide en pause')}
+                accessibilityRole="button"
+                onPress={tour.pauseTour}
+                style={{
+                  alignItems: 'center',
+                  height: MIN_TOUCH,
+                  justifyContent: 'center',
+                  margin: -14,
+                  width: MIN_TOUCH,
+                }}
+                testID={__DEV__ ? 'tour.pause' : undefined}
+              >
+                <SvgIcon color={Colors.neutral600} height={11} name="close" width={11} />
+              </TouchableOpacity>
+            )}
           </View>
           )}
           {/* Consigne et bouton côte à côte : la bulle reste basse (m3-place devait

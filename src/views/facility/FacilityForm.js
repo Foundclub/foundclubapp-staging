@@ -35,6 +35,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourTarget from '@/components/molecules/tour/TourTarget';
+import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -345,6 +346,8 @@ function FacilityForm() {
   const isAddressStep = tourStatus === 'active'
     && Boolean(currentStep?.targets?.includes('facility.address'));
   const scrollRef = useRef(/** @type {any} */ (null));
+  // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
+  const tourScroll = useTourScroller(scrollRef);
   const fieldsYRef = useRef(0);
   const addressYRef = useRef(/** @type {number | null} */ (null));
   useEffect(() => {
@@ -1380,7 +1383,9 @@ function FacilityForm() {
             Spaces.paddingHorizontal[16],
             Spaces.paddingBottom[24],
           ]}
+          onScroll={tourScroll.onScroll}
           ref={scrollRef}
+          scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
         >
           {/* Pas de bouton retour ici : le navigateur en pose deja un juste
