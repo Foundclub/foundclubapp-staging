@@ -45,6 +45,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
 import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import FacilityReportEntry from '@/components/molecules/facilityReport/FacilityReportEntry';
+import OuvrirDansLeGps from '@/components/molecules/ouvrirDansLeGps/OuvrirDansLeGps';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
@@ -108,6 +109,7 @@ import getImageUrl from '@/utils/imageUrl';
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
 /* eslint-disable perfectionist/sort-imports */
+import { openExternalMap } from '@/platform/maps/externalMap';
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
 import {
@@ -131,7 +133,7 @@ import MatchScoreEncart from './components/MatchScoreEncart';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import VillePrevenueDialog from './components/VillePrevenueDialog';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
-import { formatEventPlaceShort, formatEventWhenLine } from './eventInfoLines';
+import { eventMapTarget, formatEventPlaceLine, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { findParentTeamId } from './matchEncartLines';
 import {
@@ -1044,7 +1046,8 @@ function EventDetails({ navigation, route }) {
   const eventInfoLine = [
     String(event?.team?.name || '').trim(),
     eventWhenLine ? `${eventWhenLine.charAt(0).toLowerCase()}${eventWhenLine.slice(1)}` : '',
-    formatEventPlaceShort(event),
+    // ACCUEIL-JOUEUR (09/11/2026, point 3) : l'adresse précise (rue, ville), plus la ville seule.
+    formatEventPlaceLine(event),
   ].filter(Boolean).join(' · ');
   // 🏷️ FINITIONS11 · point 1 — le titre d'un match nomme les deux camps, comme l'encart :
   // « AS Montrivage — Test-COMPO ». Sans adversaire connu, le nom d'avant reste (jamais
@@ -2448,6 +2451,14 @@ function EventDetails({ navigation, route }) {
                       >
                         <span data-testid="event-info-line">{eventInfoLine}</span>
                       </div>
+                    ) : null}
+                    {/* ACCUEIL-JOUEUR (09/11/2026, point 4) — la fiche du site n'ouvrait aucun
+                        GPS : la ligne d'action, la carte dans un nouvel onglet. */}
+                    {eventMapTarget(event) ? (
+                      <OuvrirDansLeGps
+                        onPress={() => openExternalMap(eventMapTarget(event))}
+                        testID="event-web-ouvrir-gps"
+                      />
                     ) : null}
                   </div>
 

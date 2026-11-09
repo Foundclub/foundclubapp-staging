@@ -74,6 +74,8 @@ const ACTION_VARIANTS = {
  * @param {() => void} [props.onOpen] - Variante « evenement » : ACCUEIL-JOUEUR, toucher
  *   l'echeance (hors des boutons) ouvre sa fiche.
  * @param {string} [props.openLabel] - Le libelle lu de cette zone (« Voir l’événement »).
+ * @param {string} [props.placeLine] - Variante « evenement » : ACCUEIL-JOUEUR, l'adresse precise
+ *   du lieu, sous le sous-titre.
  * @param {string} [props.subtitle] - Variante « evenement ».
  * @param {{ key: string, label: string, tone?: string, value: string }[]} [props.tiles]
  *   Variante « evenement » : tuiles chiffrees cote a cote (entraineur).
@@ -91,6 +93,7 @@ function HomeHeadBanner({
   notice,
   onOpen,
   openLabel,
+  placeLine,
   subtitle,
   tiles = EMPTY_LIST,
   title,
@@ -270,6 +273,18 @@ function HomeHeadBanner({
                     ]}
                   >
                     {subtitle}
+                  </Text>
+                ) : null}
+                {placeLine ? (
+                  // ACCUEIL-JOUEUR (09/11/2026, point 3) — OÙ, en adresse precise (rue, ville).
+                  <Text
+                    style={[
+                      Fonts.small,
+                      { color: Colors.neutral300, fontSize: 11.5, marginTop: 2 },
+                    ]}
+                    testID="home-head-banner-lieu"
+                  >
+                    {placeLine}
                   </Text>
                 ) : null}
                 {notice ? (

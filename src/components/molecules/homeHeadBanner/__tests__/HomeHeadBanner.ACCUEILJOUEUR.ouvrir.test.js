@@ -55,6 +55,7 @@ const monter = async () => {
         label="Ma semaine"
         onOpen={onOpen}
         openLabel="Voir l’événement"
+        placeLine="12 rue X, 69001 Lyon"
         subtitle="Match vs Équipe B"
         title="Lundi 9 · 19:00"
         titleSuffix="Je participe !"
@@ -114,5 +115,14 @@ describe('ACCUEIL-JOUEUR — toucher la carte « Ma semaine » ouvre l événeme
       );
     });
     expect(zoneOuvrir(arbre)).toHaveLength(0);
+  });
+});
+
+// ACCUEIL-JOUEUR (point 3) — l'adresse précise, sous le nom de l'événement, dans la zone qui ouvre
+// la fiche. Écrit ROUGE : `placeLine` n'existait pas.
+describe('ACCUEIL-JOUEUR — l adresse sur la carte « Ma semaine »', () => {
+  test('l adresse se lit sur la carte, dans la zone qui ouvre la fiche', async () => {
+    const { arbre } = await monter();
+    expect(textesDe(zoneOuvrir(arbre)[0])).toContain('12 rue X, 69001 Lyon');
   });
 });

@@ -97,10 +97,10 @@ const REPONDU_ABSENT = {
  */
 function SondeReponse({ vues }) {
   const {
-    answer, canAnswer, isAnswering, sentAnswer, submit,
+    answer, canAnswer, isAnswering, placeLine, sentAnswer, submit,
   } = useHomeEventAnswer(EVENEMENT_ID);
   vues.push({
-    answer, canAnswer, isAnswering, sentAnswer, submit,
+    answer, canAnswer, isAnswering, placeLine, sentAnswer, submit,
   });
   return null;
 }
@@ -460,5 +460,34 @@ describe('POINTAGE — le bandeau suit l option « Les participants repondent »
 
     expect(bloc).toContain('canAnswerMyEvent');
     expect(bloc).toContain('handleOpenEvent(evenement.id)');
+  });
+});
+
+// ACCUEIL-JOUEUR (09/11/2026, point 3, mots d'Adel relayés par le chef) — la carte « Ma semaine »
+// dit OÙ : l'adresse précise du lieu (rue, ville), lue dans l'événement que le bandeau relit déjà
+// (aucune lecture neuve), par la MÊME règle que la fiche (`formatEventPlaceLine`). Écrit ROUGE.
+describe('ACCUEIL-JOUEUR — la carte « Ma semaine » donne l adresse précise', () => {
+  it('le hook rend la ligne du lieu de l événement relu', async () => {
+    getEventById.mockResolvedValue({
+      ...SANS_REPONSE,
+      locationDetails: JSON.stringify({
+        address: { city: 'Lyon', label: '12 rue X, 69001 Lyon', postcode: '69001' },
+      }),
+    });
+    const { demonter, vues } = await monterLaSonde();
+    expect(vues[vues.length - 1].placeLine).toBe('12 rue X, 69001 Lyon');
+    await demonter();
+  });
+
+  it('sans lieu connu : rien (la carte reste comme avant)', async () => {
+    getEventById.mockResolvedValue(SANS_REPONSE);
+    const { demonter, vues } = await monterLaSonde();
+    expect(vues[vues.length - 1].placeLine).toBe('');
+    await demonter();
+  });
+
+  it('le CABLAGE : la carte du joueur reçoit la ligne du lieu', () => {
+    expect(SOURCE_HUB).toContain('placeLine: lieuDuProchain || undefined,');
+    expect(SOURCE_HUB).toContain('placeLine={headBanner.placeLine}');
   });
 });

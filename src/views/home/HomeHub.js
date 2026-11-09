@@ -1666,6 +1666,7 @@ function HomeHubContent({ auth, navigation, route }) {
     answer: myAnswer,
     canAnswer: canAnswerMyEvent,
     isAnswering,
+    placeLine: lieuDuProchain,
     sentAnswer,
     submit: submitMyAnswer,
   } = useHomeEventAnswer(
@@ -1895,6 +1896,8 @@ function HomeHubContent({ auth, navigation, route }) {
       // et Absent, ouvre la fiche de l'événement : la même que depuis le Planning.
       onOpen: () => handleOpenEvent(evenement.id),
       openLabel: t('homeHub.banner.player.open'),
+      // ACCUEIL-JOUEUR (point 3) — l'adresse précise du lieu, sous le nom de l'événement.
+      placeLine: lieuDuProchain || undefined,
       subtitle: evenement.label,
       title: formatBannerTitle(evenement.startsAt),
       // ⛔ AUCUN LIBELLE NEUF : ce sont les trois phrases que la fiche de
@@ -1916,6 +1919,7 @@ function HomeHubContent({ auth, navigation, route }) {
     isCoach,
     isPresident,
     isSuperAdmin,
+    lieuDuProchain,
     myAnswer,
     navigation,
     roleKey,
@@ -2809,6 +2813,7 @@ function HomeHubContent({ auth, navigation, route }) {
             lines={headBanner.lines}
             onOpen={headBanner.onOpen}
             openLabel={headBanner.openLabel}
+            placeLine={headBanner.placeLine}
             subtitle={headBanner.subtitle}
             tiles={headBanner.tiles}
             title={headBanner.title}

@@ -11,6 +11,8 @@ import {
 import { isRsvpEnabled } from '@/domains/event/presenceRule';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 
+import { formatEventPlaceLine } from '@/views/event/eventInfoLines';
+
 import { useGetEvent } from '@/services/event/eventQueries';
 import { respondToEventRsvp } from '@/services/event/eventService';
 
@@ -69,6 +71,7 @@ export const DUREE_CONFIRMATION_MS = 3000;
  *   answer: string | null,
  *   canAnswer: boolean,
  *   isAnswering: boolean,
+ *   placeLine: string,
  *   sentAnswer: 'present' | 'absent' | null,
  *   submit: (answer: 'present' | 'absent') => void,
  * }} L'etat confirme par le serveur, la reponse tout juste envoyee (A05), et le geste.
@@ -173,6 +176,9 @@ export const useHomeEventAnswer = (eventId, summary = {}) => {
     answer,
     canAnswer,
     isAnswering: mutation.isPending,
+    // ACCUEIL-JOUEUR (09/11/2026, point 3) — OÙ : l'adresse précise de l'événement relu (la
+    // règle de la fiche), vide sans lieu connu.
+    placeLine: formatEventPlaceLine(event),
     sentAnswer,
     submit,
   };
