@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import i18next from 'i18next';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -462,6 +462,20 @@ const normalizePricingRules = (campaign) => {
     .sort((left, right) => Number(right?.priority || 0) - Number(left?.priority || 0))
     .map((item) => createPricingRuleDraft(item));
 };
+/**
+ * Règle de tarif incomplète : sans montant (hors exemption) ou sans sa cible. Une seule
+ * définition pour l'étape, l'enregistrement et la feuille (GUIDE-D-CORR-3, M1081 b).
+ * @param {any} item - Brouillon de règle.
+ * @returns {boolean}
+ */
+const isPricingRuleIncomplete = (item) => (
+  (!item.isWaiver && !item.amount.trim())
+  || (item.ruleType === 'role' && !item.roleName)
+  || (item.ruleType === 'team' && !item.teamKey)
+  || (item.ruleType === 'category' && !item.categoryKey)
+  || (item.ruleType === 'section' && !item.sectionKey)
+  || (item.ruleType === 'level' && !item.levelKey)
+);
 const createTargetConfigDraft = (campaign) => {
   const config = campaign?.targetConfig || {};
   if (String(config.source || '').toLowerCase() === 'event_participants') {
@@ -2727,14 +2741,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       ));
       return;
     }
-    const invalidPricingRule = pricingRules.find((item) => (
-      (!item.isWaiver && !item.amount.trim())
-      || (item.ruleType === 'role' && !item.roleName)
-      || (item.ruleType === 'team' && !item.teamKey)
-      || (item.ruleType === 'category' && !item.categoryKey)
-      || (item.ruleType === 'section' && !item.sectionKey)
-      || (item.ruleType === 'level' && !item.levelKey)
-    ));
+    const invalidPricingRule = pricingRules.find(isPricingRuleIncomplete);
     if (invalidPricingRule) {
       Alert.alert(t(
         'clubLicenseCampaignSettings.errors.incompletePricingRule.title',
@@ -3123,14 +3130,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           };
         }
       }
-      const invalidPricingRule = pricingRules.find((item) => (
-        (!item.isWaiver && !item.amount.trim())
-        || (item.ruleType === 'role' && !item.roleName)
-        || (item.ruleType === 'team' && !item.teamKey)
-        || (item.ruleType === 'category' && !item.categoryKey)
-        || (item.ruleType === 'section' && !item.sectionKey)
-        || (item.ruleType === 'level' && !item.levelKey)
-      ));
+      const invalidPricingRule = pricingRules.find(isPricingRuleIncomplete);
       if (invalidPricingRule) {
         return {
           message: t(
@@ -3338,10 +3338,18 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     setOpenSheet('documentRequest');
   }, []);
   const closeSheet = useCallback(() => {
+    // GUIDE-D-CORR-3 (M1081 b, TestFlight 2.6.97) : « Ajouter une règle », rien rempli,
+    // « Terminer » laissait la règle vide dans la liste. Une règle NEUVE incomplète n'est pas
+    // gardée ; une règle déjà enregistrée reste, et l'étape demande de la compléter ou la retirer.
+    if (editedPricingRuleId) {
+      setPricingRules((currentItems) => currentItems.filter((item) => (
+        item.localId !== editedPricingRuleId || item.ruleId || !isPricingRuleIncomplete(item)
+      )));
+    }
     setOpenSheet(null);
     setEditedPricingRuleId(null);
     setEditedDocumentRequestId(null);
-  }, []);
+  }, [editedPricingRuleId]);
   // Le nombre d'echeances et la frequence REGENERENT l'echeancier : c'est tout
   // l'objet du lot. Sans ce rappel, changer « 3 » en « 4 » laisserait la 4e ligne
   // vide et la somme ne ferait plus le montant.
@@ -3470,6 +3478,16 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
     return unsubscribe;
   }, [navigation, wizardStepIndex]);
+
+  // GUIDE-D-CORR-3 (M1081 a) : deux flèches Retour, celle de l'en-tête du navigateur
+  // (« Paramètres cotisations ») et celle de la barre du tunnel (« Étape n/6 »). Le tunnel
+  // garde la sienne, qui recule d'une étape ; l'en-tête revient pour le chargement, l'erreur et
+  // la campagne d'exemple du guide, qui n'ont pas de barre.
+  const isWizardShown = !campaignIsLoading && !campaignHasError
+    && !(isCampaignSimulated && tourStep?.campaignExample);
+  useLayoutEffect(() => {
+    navigation.setOptions?.({ headerShown: !isWizardShown });
+  }, [isWizardShown, navigation]);
 
   if (campaignIsLoading) {
     return (

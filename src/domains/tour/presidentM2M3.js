@@ -141,7 +141,9 @@ const M2_STEPS = [
       message: () => t('m2-fields-required', 'Donne d’abord son numéro.'),
     },
     resumeFrom: 'm2-staff',
-    targets: ['cf-fields'],
+    // GUIDE-D-CORR-3 (M1078) : le cadre sur « numéro + prénom » se coupait dès qu'on descendait
+    // vers le nom, et le guide remontait l'écran jusqu'à lui. Il englobe la zone qui défile.
+    targets: ['cf-zone'],
     // Décision 5 : rien ne part tout seul ; l'écran le dit aussi (`addCoach.hints.invitation`).
     get text() {
       return t(

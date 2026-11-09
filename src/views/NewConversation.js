@@ -21,6 +21,7 @@ import { clefDuRole, libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import { estUneRouteAbsente } from '@/domains/messaging/routesDuServeur1B';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { exampleGroupMembers } from '@/domains/tour/tourExamples';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -315,10 +316,18 @@ function NewConversation({ navigation, route }) {
   );
   const isLoading = modeVille ? contactsDeLaVille.isLoading : chargementDesMembres;
   // Guide Dirigeant·e, B3 : un club neuf n'a pas de quoi faire un groupe ; le guide doit le savoir.
-  const { currentStep: tourStep } = useTour();
+  const { currentStep: tourStep, tourStatus } = useTour();
+  // GUIDE-D-CORR-3 (M1082, décision du chef) : le bonus 3 se joue en simulation, comme B1 et B4.
+  // Trois membres « Exemple » s'ajoutent à la liste le temps du bonus ; « Créer » ne crée rien.
+  const isGroupSimulated = tourStatus === 'active' && Boolean(tourStep?.simulatesGroup)
+    && !modeVille && !isAddMembersMode;
+  const membresAffiches = useMemo(
+    () => (isGroupSimulated ? [...exampleGroupMembers(), ...(users || [])] : users),
+    [isGroupSimulated, users],
+  );
   // GUIDE-D-CORR TG-11 : la liste du serveur peut contenir le compte connecté, que l'écran retire
   // (`processedSections`) ; on compte comme lui, sinon « soi + 1 coach » passait pour 2 membres.
-  const autresMembres = new Set((/** @type {any[]} */ (users) || [])
+  const autresMembres = new Set((/** @type {any[]} */ (membresAffiches) || [])
     .map((/** @type {User} */ membre) => getUserIdentifier(membre))
     .filter((id) => id && id !== getUserIdentifier(userData))).size;
   const membresManquants = Boolean(tourStep?.checksMembers && !isLoading
@@ -365,12 +374,12 @@ function NewConversation({ navigation, route }) {
   }
 
   const processedSections = useMemo(() => {
-    if (!users) return [];
+    if (!membresAffiches) return [];
 
     // 1. Filter out self and dedupe users by stable identifier
     const currentUserId = getUserIdentifier(userData);
     const seenUserIds = new Set();
-    let filtered = users.filter((/** @type {User} */ u) => {
+    let filtered = membresAffiches.filter((/** @type {User} */ u) => {
       const userId = getUserIdentifier(u);
       if (!userId || userId === currentUserId || seenUserIds.has(userId)) {
         return false;
@@ -427,7 +436,7 @@ function NewConversation({ navigation, route }) {
     ].filter((s) => s.data.length > 0);
 
     return sections;
-  }, [users, userData, selectedTeamId]);
+  }, [membresAffiches, userData, selectedTeamId]);
 
   const toggleSelection = (/** @type {User} */ user) => {
     const userId = getUserIdentifier(user);
@@ -509,6 +518,20 @@ function NewConversation({ navigation, route }) {
 
   const handleCreate = async () => {
     if (selectedUserIds.size === 0 || !userData?.documentId) return;
+    // GUIDE-D-CORR-3 (M1082) : en simulation, rien ne part. Le groupe « créé » valide le bonus et
+    // l'écran se referme : les membres d'exemple s'effacent avec lui.
+    if (isGroupSimulated) {
+      if (isGroupChatEnabled && selectedUserIds.size > 1) {
+        emitGuidanceAction('conversation.group.created');
+        navigation.goBack();
+      } else {
+        prevenir(t(
+          'newConversation.simulation.groupOnly',
+          'Simulation du guide : coche au moins 2 membres pour créer un groupe.',
+        ));
+      }
+      return;
+    }
     setIsCreating(true);
     try {
       const participants = Array.from(selectedUserIds);
@@ -588,7 +611,10 @@ function NewConversation({ navigation, route }) {
     const contact = /** @type {any} */ (item);
     const sousTitreDeLaLigne = modeVille
       ? [fonctionsAuSingulier[contact?.fonction], contact?.club?.name].filter(Boolean).join(' · ')
-      : item.role?.name || t('common.member');
+      : [
+        item.role?.name || t('common.member'),
+        contact?.isTourExample ? t('tourExamples.ad.example', 'Exemple') : null,
+      ].filter(Boolean).join(' · ');
     // 🧑 MSG1A (§3.15) — ligne de 64 : avatar 44, nom, role (ou « Deja dans le groupe », grise).
     return (
       <TouchableOpacity

@@ -9,6 +9,10 @@ import { RouteNames } from '@/navigation/routeNames';
  * - le dirigeant écrit dans ce canal : il n'y a pas de pied « lecture seule » ;
  * - le canal naît à 2 membres, un groupe demande 2 personnes : sans ça, une bulle et une sortie ;
  * - les autorisations sont un `Modal` : pas de cadre dessus, la bulle les raconte avant.
+ * GUIDE-D-CORR-3 (M1082, décision du chef) : B2 et B3 se jouent en SIMULATION, comme B1 et B4.
+ * Pas de canal : un canal « Exemple » (`simulatesCanal`, Messaging) ; la liste des membres reçoit
+ * trois membres « Exemple », et « Créer » ne crée rien (`simulatesGroup`, NewConversation). Les
+ * repli b2-none et b3-few restent pour un écran qui ne simulerait pas.
  */
 
 const messagingTarget = {
@@ -54,6 +58,7 @@ export const B2_STEPS = [
     id: 'b2-canal',
     missionId: 'president_b2',
     resumeFrom: 'b2-dock',
+    simulatesCanal: true,
     targets: ['msg-canal'],
     get text() { return t('b2-canal', 'Voici le canal de ton club. Ouvre-le.'); },
   },
@@ -142,14 +147,15 @@ export const B3_STEPS = [
     id: 'b3-sel',
     missionId: 'president_b3',
     resumeFrom: 'b3-new',
+    simulatesGroup: true,
     targets: ['conv-list', 'conv-next'],
     get text() {
-      // GUIDE-D-CORR TG-11 : le bouton s'appelle « Démarrer » pour un membre, « Suivant » pour
-      // plusieurs (NewConversation, MSG1A).
+      // GUIDE-D-CORR TG-11 : « Suivant » pour plusieurs (NewConversation, MSG1A). GUIDE-D-CORR-3 :
+      // en simulation, un seul membre coché est refusé ; la bulle ne propose plus « Démarrer ».
       return t(
         'b3-sel',
-        'Un membre coché : discussion à deux, « Démarrer ». Pour un groupe, coche-en au moins 2, '
-          + 'puis « Suivant ».',
+        'Coche au moins 2 membres, ceux marqués « Exemple » suffisent, puis « Suivant ». C’est une '
+          + 'simulation : rien n’est créé.',
       );
     },
     veil: false,
@@ -160,6 +166,7 @@ export const B3_STEPS = [
     missionId: 'president_b3',
     get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: 'b3-new',
+    simulatesGroup: true,
     targets: ['grp-name', 'grp-perms'],
     get text() {
       return t('b3-name', 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
@@ -172,8 +179,12 @@ export const B3_STEPS = [
     id: 'b3-create',
     missionId: 'president_b3',
     resumeFrom: 'b3-new',
+    simulatesGroup: true,
     targets: ['grp-create'],
-    get text() { return t('b3-create', 'Crée le groupe : il est réel, tes membres le verront.'); },
+    get text() {
+      return t('b3-create', 'Crée le groupe. C’est une simulation : rien n’est créé, tes membres ne '
+        + 'voient rien.');
+    },
   },
   {
     bubblePlacement: 'top',
