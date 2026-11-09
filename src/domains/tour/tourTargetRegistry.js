@@ -12,7 +12,7 @@
 // récente des ancres actives (son écran a le focus, lu au moment de mesurer).
 /**
  * @typedef {{ clipTo?: string; inSheet?: boolean; isActive?: () => boolean;
- *   measure: TourMeasure }} TourEntry
+ *   measure: TourMeasure; reveal?: () => void }} TourEntry
  */
 /** @type {Map<string, TourEntry[]>} */
 const targets = new Map();
@@ -36,7 +36,11 @@ const notify = () => {
 export const registerTourTarget = (id, measure, options = {}) => {
   /** @type {TourEntry} */
   const entry = {
-    clipTo: options.clipTo, inSheet: options.inSheet, isActive: options.isActive, measure,
+    clipTo: options.clipTo,
+    inSheet: options.inSheet,
+    isActive: options.isActive,
+    measure,
+    reveal: options.reveal,
   };
   targets.set(id, [...(targets.get(id) || []), entry]);
   notify();
@@ -172,6 +176,30 @@ export const measureTourTargetClipSide = async (id) => {
   if (rect.y < clip.y) return 'above';
   return rect.y + rect.height > clip.y + clip.height ? 'below' : null;
 };
+
+/**
+ * GUIDES-SITE (09/11) : sur le site, l'ancre sait se ramener elle-même à l'écran
+ * (`scrollIntoView` du navigateur, qui fait défiler la page et tous ses conteneurs).
+ * @param {string} id
+ * @returns {boolean} Vrai si l'ancre a été ramenée.
+ */
+export const revealTourTarget = (id) => {
+  const reveal = activeEntry(id)?.reveal;
+  if (!reveal) return false;
+  try {
+    reveal();
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * L'ancre sait-elle se ramener à l'écran (site) ?
+ * @param {string} id
+ * @returns {boolean}
+ */
+export const canRevealTourTarget = (id) => Boolean(activeEntry(id)?.reveal);
 
 /**
  * GUIDE-D-CORR TG-01/TG-02 : l'ancre vit-elle dans une feuille du bas ? Une feuille ouverte

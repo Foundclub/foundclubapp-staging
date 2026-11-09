@@ -57,10 +57,11 @@ function Welcome({ navigation }) {
   // Seuls coach et dirigeant demarrent le tour guide v2 (joueur = tour leger a venir).
   // FIN-GUIDE (decision du chef, 02/11) : un site sans guide (`startTour` y refuse) ne le promet
   // pas. T3-GUIDE-SITE : seul le guide de l'entraineur peut y jouer.
-  const shouldOfferGuidedTour = Platform.OS === 'web'
-    ? roleKey === 'coach' && isGuideSupported()
-    : roleKey === 'coach' || (roleKey === 'president'
-      && (/** @type {any} */ (getTourProfile('president'))?.canStart?.(userData) ?? true));
+  // GUIDES-SITE (Adel, 09/11) : interrupteur du site allumé, les deux guides y jouent, comme sur
+  // le téléphone.
+  const shouldOfferGuidedTour = (Platform.OS !== 'web' || isGuideSupported())
+    && (roleKey === 'coach' || (roleKey === 'president'
+      && (/** @type {any} */ (getTourProfile('president'))?.canStart?.(userData) ?? true)));
 
   /**
    * 👨‍👧 LES QUATRE PHRASES DE BIENVENUE, POUR LA BONNE PERSONNE.

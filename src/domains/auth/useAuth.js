@@ -622,6 +622,16 @@ const useAuth = () => {
     const { message: encodedMessage, url: installUrl } = invitationDuStaff({
       clubId, clubName, firstname, isManager,
     });
+    // GUIDES-SITE (09/11) : sur le site, un lien `sms:` ne fait rien sur un ordinateur. Le partage
+    // du navigateur prend le relais (feuille de partage sur un téléphone, sinon message copié).
+    if (Platform.OS === 'web') {
+      SharePlatform.share({
+        message: encodedMessage,
+        title: t('clubDetails.alerts.inviteTrainer.title'),
+        url: installUrl,
+      }).catch(() => undefined);
+      return;
+    }
     const smsUrl = `sms:${phoneNumber}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(encodedMessage)}`;
 
     Linking.openURL(smsUrl).catch(() => {

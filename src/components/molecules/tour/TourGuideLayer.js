@@ -18,11 +18,13 @@ import Svg, {
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 import { getTourProfile } from '@/domains/tour/tourCatalog';
 import {
+  canRevealTourTarget,
   getActiveTourScroller,
   isTourTargetInSheet,
   measureTourTarget,
   measureTourTargetClipSide,
   measureTourTargetRaw,
+  revealTourTarget,
   subscribeToTourTargets,
 } from '@/domains/tour/tourTargetRegistry';
 import { useAppContext } from '@/store/appContext';
@@ -521,11 +523,16 @@ function TourGuideLayer() {
     && !isOffStepRoute
     && (isAnyTargetCut || Boolean(!primary && (offTarget || clipSide)));
   const scroller = needsScroll ? getActiveTourScroller() : null;
+  // GUIDES-SITE : sur le site, l'ancre se ramène elle-même (`scrollIntoView`), sans zone branchée.
+  const revealId = needsScroll
+    ? variant.targets.find((id) => canRevealTourTarget(id)) || null
+    : null;
   const autoScrollKey = `${currentStep?.id}|${variant.targets.join(',')}`;
   if (autoScrollRef.current.key !== autoScrollKey) {
     autoScrollRef.current = { key: autoScrollKey, tries: 0 };
   }
-  const canAutoScroll = Boolean(scroller) && autoScrollRef.current.tries < AUTO_SCROLL_TRIES;
+  const canAutoScroll = Boolean(scroller || revealId)
+    && autoScrollRef.current.tries < AUTO_SCROLL_TRIES;
   let scrollHint = null;
   // Au-dessus du haut de l'écran (même une lamelle visible, GUIDE-REPRISE N5) : vers le haut.
   if (clipSide === 'above' || isCutByHeader || (!clipSide && offTarget && offTarget.y < 0)) {
@@ -647,9 +654,22 @@ function TourGuideLayer() {
   const autoScrollTargets = variant.targets.join('|');
   const dockTop = dock ? dock.y : null;
   useEffect(() => {
-    if (!canAutoScroll || isAutoScrolling || !scroller) return undefined;
+    if (!canAutoScroll || isAutoScrolling) return undefined;
     let cancelled = false;
     autoScrollRef.current.tries += 1;
+    const pause = () => {
+      setIsAutoScrolling(true);
+      if (autoScrollTimerRef.current) clearTimeout(autoScrollTimerRef.current);
+      autoScrollTimerRef.current = setTimeout(() => {
+        autoScrollTimerRef.current = null;
+        setIsAutoScrolling(false);
+      }, AUTO_SCROLL_MS);
+    };
+    if (revealId && revealTourTarget(revealId)) {
+      pause();
+      return () => { cancelled = true; };
+    }
+    if (!scroller) return undefined;
     const ids = autoScrollTargets.split('|').filter(Boolean);
     Promise.all([measureOf(scroller), ...ids.map(measureTourTargetRaw)])
       .then(([area, ...found]) => {
@@ -673,18 +693,13 @@ function TourGuideLayer() {
           : areaTop + AUTO_SCROLL_MARGIN;
         const dy = top - wantedTop;
         if (Math.abs(dy) < 4) return;
-        setIsAutoScrolling(true);
         scroller.scrollBy(dy);
-        if (autoScrollTimerRef.current) clearTimeout(autoScrollTimerRef.current);
-        autoScrollTimerRef.current = setTimeout(() => {
-          autoScrollTimerRef.current = null;
-          setIsAutoScrolling(false);
-        }, AUTO_SCROLL_MS);
+        pause();
       });
     return () => { cancelled = true; };
   }, [
     autoScrollKey, autoScrollTargets, canAutoScroll, dockTop, fixedHeaderBottom, height,
-    insets.bottom, insets.top, isAutoScrolling, scroller,
+    insets.bottom, insets.top, isAutoScrolling, revealId, scroller,
   ]);
   useEffect(() => () => {
     if (autoScrollTimerRef.current) clearTimeout(autoScrollTimerRef.current);

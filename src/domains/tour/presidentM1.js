@@ -1,6 +1,6 @@
 import { clubHubTarget, homeTarget } from '@/domains/tour/guideCommon';
 import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
-import t from '@/domains/tour/presidentText';
+import t, { tSite } from '@/domains/tour/presidentText';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -109,9 +109,10 @@ const PART_INFOS = [
     targets: ['club.edit'],
     get text() { return t('m1-edit', 'Pour les personnaliser, touche « Modifier ».'); },
   },
-  editStep('m1-logo', 'clubEdit.logo', () => t(
+  editStep('m1-logo', 'clubEdit.logo', () => tSite(
     'm1-logo',
     'Ton logo : touche-le pour choisir une image de ton téléphone.',
+    'Ton logo : clique dessus pour choisir une image de ton appareil.',
   )),
   editStep('m1-name', 'clubEdit.name', () => t(
     'm1-name',

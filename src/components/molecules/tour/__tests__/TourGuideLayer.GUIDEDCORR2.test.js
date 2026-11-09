@@ -271,3 +271,24 @@ describe('TG-18 : la croix de pause ne se colle pas à la croix de l’affiche',
     expect(pauses(tree).length).toBeGreaterThan(0);
   });
 });
+
+describe('GUIDES-SITE : sur le site, l’ancre se ramène elle-même à l’écran', () => {
+  it('cible sous la page : scrollIntoView, voile et bulle, sans « Fais défiler »', async () => {
+    let target = {
+      height: 120, width: 330, x: 15, y: 700,
+    };
+    const reveal = jest.fn(() => {
+      target = { ...target, y: 260 };
+    });
+    mockTour = activeTour(step('m1-deleg'));
+    registerTourTarget('clubEdit.delegation', (done) => done(target), { reveal });
+    const tree = await renderLayer();
+    await tick();
+    await tick();
+    // Une ou deux fois le temps que les mesures rattrapent, jamais plus de 3 (essais par étape).
+    expect(reveal.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(reveal.mock.calls.length).toBeLessThanOrEqual(3);
+    expect(texts(tree).join(' ')).not.toMatch(/Fais défiler/);
+    expect(holes(tree).length).toBe(1);
+  });
+});

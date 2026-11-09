@@ -21,6 +21,13 @@ const mockStartTour = jest.fn(() => true);
 const mockStorageSet = jest.fn();
 const mockMarkOnboardingComplete = jest.fn();
 const mockRole = { current: /** @type {string} */ ('coach') };
+// GUIDES-SITE (Adel, 09/11) : l'interrupteur des guides du site, allumé dans le code.
+const mockGuideSite = { current: true };
+jest.mock('@/config/fonctionsMasquees', () => Object.defineProperty(
+  { ...jest.requireActual('@/config/fonctionsMasquees') },
+  'GUIDE_SUR_LE_SITE',
+  { get: () => mockGuideSite.current },
+));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -239,14 +246,20 @@ describe('Welcome — c`est LUI qui lance le tour guide, sur action (D23 ⑤)', 
 // D59 ② — le chemin en 3 etapes (pack `pw-welcome2.jsx`, frame 12c).
 // FIN-GUIDE (02/11, decision du chef, question 2 du lot) : le site n'a pas de guide. Le bouton
 // « Demarrer le tour guide » y menait a l'accueil sans rien lancer, sous une promesse sans suite.
-describe('Welcome — sur le site, aucune promesse de guide', () => {
+describe('Welcome — sur le site interrupteur éteint, aucune promesse de guide', () => {
   const PONTS = [
     'Gratuit · 2 min — tu crées ta 1ʳᵉ équipe en chemin',
     'Gratuit · 2 min — tu configures ton club en chemin',
   ];
   let plateforme;
-  beforeEach(() => { plateforme = jest.replaceProperty(Platform, 'OS', 'web'); });
-  afterEach(() => plateforme.restore());
+  beforeEach(() => {
+    plateforme = jest.replaceProperty(Platform, 'OS', 'web');
+    mockGuideSite.current = false;
+  });
+  afterEach(() => {
+    plateforme.restore();
+    mockGuideSite.current = true;
+  });
 
   it.each(['coach', 'president'])('%s : « Continuer », sans le bouton du guide ni le pont', (role) => {
     mockRole.current = role;
@@ -272,6 +285,20 @@ describe('Welcome — sur le site, aucune promesse de guide', () => {
     const { tree } = rendre();
 
     expect(textes(tree)).toContain('Commence sans payer');
+  });
+});
+
+// GUIDES-SITE (Adel, 09/11) : interrupteur du site allumé, coach ET dirigeant y voient le guide.
+describe('Welcome — sur le site interrupteur allumé, les deux guides sont proposés', () => {
+  let plateforme;
+  beforeEach(() => { plateforme = jest.replaceProperty(Platform, 'OS', 'web'); });
+  afterEach(() => plateforme.restore());
+
+  it.each(['coach', 'president'])('%s : le bouton du guide est là', (role) => {
+    mockRole.current = role;
+    const { tree } = rendre();
+
+    expect(textes(tree)).toContain('Démarrer le tour guidé');
   });
 });
 

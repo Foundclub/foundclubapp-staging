@@ -1,6 +1,6 @@
 import { extendStep, teamWizardSteps } from '@/domains/tour/guideCommon';
 import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
-import t from '@/domains/tour/presidentText';
+import t, { tSite } from '@/domains/tour/presidentText';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -183,10 +183,12 @@ const M2_STEPS = [
     subMission: 'coach',
     targets: ['ok-sheet'],
     get text() {
-      return t(
+      return tSite(
         'm2-invite',
         'Ajouté·e au club ! Touche « Inviter » : ta messagerie s’ouvre avec le message prêt. '
           + 'Envoie-le, puis reviens ici.',
+        'Ajouté·e au club ! Touche « Inviter » : le message d’invitation est copié (sur un '
+          + 'téléphone, ton partage s’ouvre). Envoie-le à ton coach.',
       );
     },
     when: hasPlan,
@@ -203,10 +205,12 @@ const M2_STEPS = [
     get nextLabel() { return t('m2-sms-next', 'C’est envoyé'); },
     subMission: 'coach',
     get text() {
-      return t(
+      return tSite(
         'm2-sms',
         'Envoie le SMS depuis ta messagerie, puis reviens ici. C’est à toi de l’envoyer : l’app ne '
           + 'le fait pas.',
+        'Colle le message dans un SMS ou un e-mail à ton coach. C’est à toi de l’envoyer : le site '
+          + 'ne le fait pas.',
       );
     },
     veil: false,
@@ -280,10 +284,11 @@ const M3_STEPS = [
     resumeFrom: 'm3-teams',
     targets: ['header.back'],
     get text() {
-      return t(
+      return tSite(
         'm2-back',
         'De retour dans l’app, sur Staff. Reviens sur la fiche de ton club : touche la flèche, ou '
           + 'glisse ton doigt depuis le bord gauche.',
+        'Tu es sur Staff. Reviens sur la fiche de ton club : touche la flèche.',
       );
     },
     // Le geste du bord, seul retour d'un iPhone, doit passer ; le reste sous le voile (TG-16).
