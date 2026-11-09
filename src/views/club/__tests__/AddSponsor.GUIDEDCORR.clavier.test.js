@@ -13,9 +13,6 @@ import AddSponsor from '../AddSponsor';
 
 let mockKeyboard = null;
 jest.mock('@/hooks/useKeyboardFrame', () => ({ __esModule: true, default: () => mockKeyboard }));
-// Fusion GUIDE-D-CORR + GUIDE-E-CORR (TF 2.6.95) : AddSponsor relit le logo avant l'envoi (TG-03) ;
-// meme doublure que AddSponsor.test.js, le fichier est la.
-jest.mock('@/platform/media', () => ({ localFileIsGone: () => Promise.resolve(false) }));
 
 /** @type {any[]} */
 const mockButtonProps = [];
