@@ -467,3 +467,77 @@ describe('Guide Dirigeant·e, B3 : ce que l écran dit au guide', () => {
     expect(cles()).toContain('conversation.members.few');
   });
 });
+
+// GUIDE-D-CORR-3, M1082 (TestFlight 2.6.97, 09/11) : « ça me dit de revenir quand il y aura plus de
+// 2 membres. Il faut créer de faux joueurs pour la simulation. » Décidé par le chef : le bonus 3 se
+// joue en simulation, avec des membres d'exemple marqués « Exemple » ; rien n'est créé.
+describe('GUIDE-D-CORR-3 : B3 en simulation, membres d exemple', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+  const cles = () => signaux.map((/** @type {any} */ signal) => signal.key);
+  const ETAPE = {
+    currentStep: { checksMembers: true, simulatesGroup: true },
+    tourStatus: 'active',
+  };
+  const SEUL = [{
+    documentId: 'moi', firstname: 'Adel', lastname: 'F', role: { name: 'Dirigeant' },
+  }];
+
+  beforeEach(() => {
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+  });
+  afterEach(() => {
+    arreter();
+    mockTour = {};
+    mockMembresDuServeur = null;
+  });
+
+  test('un club seul : des membres « Exemple » à cocher, pas de « reviens plus tard »', async () => {
+    mockMembresDuServeur = SEUL;
+    mockTour = ETAPE;
+    const arbre = await monter();
+    expect(cles()).not.toContain('conversation.members.few');
+    const lignes = arbre.root.findAllByType(TouchableOpacity).filter((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'checkbox'
+      && String(n.props?.accessibilityLabel || '').includes('Exemple')
+    ));
+    expect(lignes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('deux membres d exemple, un nom, « Créer » : rien ne part, le guide l apprend', async () => {
+    mockMembresDuServeur = SEUL;
+    mockTour = ETAPE;
+    const arbre = await monter();
+    const exemples = () => arbre.root.findAllByType(TouchableOpacity).filter((
+      /** @type {any} */ n,
+    ) => (
+      n.props?.accessibilityRole === 'checkbox'
+      && String(n.props?.accessibilityLabel || '').includes('Exemple')
+    ));
+    await act(async () => { exemples()[0].props.onPress(); });
+    await act(async () => { exemples()[1].props.onPress(); });
+    await validerLeGroupe(arbre);
+    expect(mockStartGroupChat).not.toHaveBeenCalled();
+    expect(mockStartWhisperChat).not.toHaveBeenCalled();
+    expect(cles()).toContain('conversation.group.created');
+    expect(mockGoBack).toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  test('un seul membre coché en simulation : aucune discussion réelle ne part', async () => {
+    mockTour = ETAPE;
+    const arbre = await monter();
+    const lignes = arbre.root.findAllByType(TouchableOpacity).filter((/** @type {any} */ n) => (
+      n.props?.accessibilityRole === 'checkbox'
+    ));
+    await act(async () => { lignes[0].props.onPress(); });
+    await appuyer(arbre, 'Démarrer');
+    expect(mockStartWhisperChat).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+});

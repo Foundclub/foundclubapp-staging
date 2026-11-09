@@ -17229,6 +17229,9 @@ export default {
       others: 'Autres',
       players: 'Pratiquants / Joueurs',
     },
+    simulation: {
+      groupOnly: 'Simulation du guide : coche au moins 2 membres pour créer un groupe.',
+    },
     subtitle: {
       add: 'Choisis qui ajouter',
       rule: '1 personne = privé · 2 et plus = groupe',
@@ -25543,7 +25546,8 @@ export default {
         + 'ici.',
       'b3-back': 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou glisse '
         + 'ton doigt depuis le bord gauche.',
-      'b3-create': 'Crée le groupe : il est réel, tes membres le verront.',
+      'b3-create': 'Crée le groupe. C’est une simulation : rien n’est créé, tes membres ne voient '
+        + 'rien.',
       'b3-few': 'Un groupe demande au moins 2 autres membres, et ton club n’en a pas encore '
         + 'assez. Reviens ici quand ils auront rejoint le club. On continue.',
       'b3-name': 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
@@ -25827,6 +25831,13 @@ export default {
       tabOverview: 'Vue d’ensemble',
       tabPayments: 'Paiements',
       title: 'Cotisations',
+    },
+    canal: {
+      input: 'Écris une annonce… (exemple : rien n’est envoyé)',
+      message1: 'Entraînement décalé à 19 h ce mercredi.',
+      message2: 'Pensez à régler la cotisation avant la fin du mois.',
+      subtitle: 'Canal du club · Exemple',
+      title: 'Canal du club',
     },
     match: {
       label: 'Exemple · contre US Monpeyroux',

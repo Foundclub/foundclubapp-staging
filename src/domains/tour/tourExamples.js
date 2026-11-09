@@ -61,6 +61,28 @@ export const exampleResponders = () => getSimulationRoster('football').slice(0, 
 export const exampleCampaignMembers = () => getSimulationRoster('football').slice(0, 2);
 
 /**
+ * Guide Dirigeant·e, B3 (GUIDE-D-CORR-3, M1082) : trois membres fictifs à cocher pour le groupe
+ * d'exemple, marqués `isTourExample` ; ils ne vivent que dans l'écran, le temps du bonus.
+ * @returns {Array<{ documentId: string; firstname: string; isTourExample: true; lastname: string;
+ *   role: { name: string } }>} Membres.
+ */
+export const exampleGroupMembers = () => getSimulationRoster('football').slice(0, 3)
+  .map((/** @type {any} */ player) => ({
+    documentId: `tour-example-${player.documentId}`,
+    firstname: player.firstname,
+    isTourExample: true,
+    lastname: player.lastname,
+    role: { name: 'Joueur' },
+  }));
+
+/**
+ * L'identifiant vient-il d'un membre d'exemple du guide ?
+ * @param {string} id - Identifiant.
+ * @returns {boolean} Vrai pour un membre d'exemple.
+ */
+export const isExampleMemberId = (id) => String(id || '').startsWith('tour-example-');
+
+/**
  * Guide Dirigeant·e, M4 : la carte d'une demande pour rejoindre le club, fausse et dite fausse.
  * Sans `requestId` ni `requesterId` : rien ne peut partir, et « Voir le profil » ne s'affiche pas.
  * @param {{ coachFirstName?: string }} [context] - Prénom du coach ajouté à M2 (décision 10).

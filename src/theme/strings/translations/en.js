@@ -16453,6 +16453,9 @@ export default {
       others: 'Others',
       players: 'Players / Participants',
     },
+    simulation: {
+      groupOnly: 'Guide simulation: tick at least 2 members to create a group.',
+    },
     subtitle: {
       add: 'Choose who to add',
       rule: '1 person = private · 2 or more = group',
@@ -24486,7 +24489,8 @@ export default {
         + 'coaches”, in “Staff” on the club page. It will show up here.',
       'b3-back': 'Now create a group. Go back to messages: tap the arrow, or swipe from the left '
         + 'edge.',
-      'b3-create': 'Create the group: it’s real, your members will see it.',
+      'b3-create': 'Create the group. It’s a simulation: nothing is created, your members see '
+        + 'nothing.',
       'b3-few': 'A group needs at least 2 other members, and your club doesn’t have enough yet. '
         + 'Come back when they’ve joined. Let’s continue.',
       'b3-name': 'Give it a name. In “Group permissions”, turn off “Send messages” so only admins '
@@ -24759,6 +24763,13 @@ export default {
       tabOverview: 'Overview',
       tabPayments: 'Payments',
       title: 'Fees',
+    },
+    canal: {
+      input: 'Write an announcement… (example: nothing is sent)',
+      message1: 'Training moved to 7 pm this Wednesday.',
+      message2: 'Please pay your membership fee before the end of the month.',
+      subtitle: 'Club channel · Example',
+      title: 'Club channel',
     },
     match: {
       label: 'Example · vs US Monpeyroux',

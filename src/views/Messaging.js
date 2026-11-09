@@ -85,6 +85,8 @@ import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
 import { useTour } from '@/context/useTour';
 
 const CHAT_SCOPE_VALUES = new Set(['all', 'classic', 'league']);
+// GUIDE-D-CORR-3 (M1082) : la ligne du canal d'exemple du guide, jamais envoyée au serveur.
+const CANAL_D_EXEMPLE = { documentId: 'tour-example-canal', tourExample: true, type: 'club' };
 
 const normalizeChatScopeFilter = (value) => {
   const safeValue = String(value || '').trim().toLowerCase();
@@ -383,9 +385,15 @@ function Messaging({ navigation, route }) {
   const listeComplete = Boolean(!isLoading && chatsData?.pages && !hasNextPage);
   const canalAbsent = listeComplete
     && !allChats.some((/** @type {any} */ chat) => chat?.type === 'club');
+  // GUIDE-D-CORR-3 (M1082, décision du chef) : le bonus 2 se joue en simulation, comme B1 et B4 :
+  // pas de canal, un canal « Exemple » prend sa place le temps de l'étape (rien n'est créé).
+  const canalDExemple = canalAttendu && canalAbsent && Boolean(tourStep?.simulatesCanal)
+    && !enModeArchivees;
   useEffect(() => {
-    if (canalAttendu && canalAbsent) emitGuidanceInteraction('messaging.canal.absent');
-  }, [canalAbsent, canalAttendu]);
+    if (canalAttendu && canalAbsent && !canalDExemple) {
+      emitGuidanceInteraction('messaging.canal.absent');
+    }
+  }, [canalAbsent, canalAttendu, canalDExemple]);
 
   const filteredChats = useMemo(() => {
     const filsAffiches = filsDeLaMessagerie(enModeArchivees ? filsArchives : allChats, {
@@ -809,6 +817,29 @@ function Messaging({ navigation, route }) {
    * @param {{ item: Chat }} param - The chat item
    * @returns {import('react').ReactElement} The rendered chat item
    */
+  const filsAvecLExemple = canalDExemple ? [CANAL_D_EXEMPLE, ...filteredChats] : filteredChats;
+  // GUIDE-D-CORR-3 (M1082) : le canal d'exemple, qui ouvre `TourCanalExemple` (rien ne part).
+  const renderCanalDExemple = () => (
+    <TouchableOpacity
+      accessibilityRole="button"
+      onPress={() => navigation.navigate(RouteNames.Conversation, {
+        chatId: CANAL_D_EXEMPLE.documentId,
+        clubName: userData?.club?.name || '',
+        tourExample: 'canal',
+      })}
+      style={stylesDeLaListe.ligne}
+    >
+      <View style={stylesDeLaListe.corps}>
+        <Text numberOfLines={1} style={[stylesDeLaListe.titre, { color: Colors.neutral00 }]}>
+          {userData?.club?.name || t('tourExamples.canal.title', 'Canal du club')}
+        </Text>
+        <Text numberOfLines={1} style={[stylesDeLaListe.apercuTexte, { color: Colors.primary500 }]}>
+          {t('tourExamples.canal.subtitle', 'Canal du club · Exemple')}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   const renderChatRow = ({ item: chat }) => {
     const chatIsLeague = isLeagueChat(chat);
     // AC05 — le message le PLUS RÉCENT, choisi sur sa date : `messages[0]`
@@ -1119,7 +1150,7 @@ function Messaging({ navigation, route }) {
               <View style={[Alignments.fill, ApplicationStyle.borderRadius2]}>
                 <FlashList
                   contentContainerStyle={{ paddingBottom: chatListBottomInset }}
-                  data={error ? [] : filteredChats}
+                  data={error ? [] : filsAvecLExemple}
                   keyboardShouldPersistTaps="handled"
                   keyExtractor={(item) => item.documentId}
                   ListEmptyComponent={error ? renderErrorState : renderEmptyList}
@@ -1192,9 +1223,14 @@ function Messaging({ navigation, route }) {
                   onEndReachedThreshold={0.5}
                   onRefresh={handlePullRefresh}
                   refreshing={isPullRefreshing}
-                  renderItem={(/** @type {any} */ ligne) => (ligne.item?.type === 'club'
-                    ? <TourTarget id="msg-canal">{renderChatRow(ligne)}</TourTarget>
-                    : renderChatRow(ligne))}
+                  renderItem={(/** @type {any} */ ligne) => {
+                    if (ligne.item?.tourExample) {
+                      return <TourTarget id="msg-canal">{renderCanalDExemple()}</TourTarget>;
+                    }
+                    return ligne.item?.type === 'club'
+                      ? <TourTarget id="msg-canal">{renderChatRow(ligne)}</TourTarget>
+                      : renderChatRow(ligne);
+                  }}
                   showsVerticalScrollIndicator={false}
                 />
               </View>

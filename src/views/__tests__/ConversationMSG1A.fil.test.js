@@ -960,3 +960,31 @@ describe('RESA-L6B-2 — E-P12, le canal d’un complexe côté joueur', () => {
       .toBe(true);
   });
 });
+
+// GUIDE-D-CORR-3, M1082 (décision du chef) : le bonus 2 ouvre un canal d'exemple quand le club
+// n'en a pas. L'écran l'aiguille AVANT le fil : ni GiftedChat ni requête du fil.
+describe('GUIDE-D-CORR-3 : le canal d exemple du guide', () => {
+  it('route `tourExample: canal` : le canal d exemple, pas le fil', () => {
+    // eslint-disable-next-line global-require
+    const { createElement } = require('react');
+    // eslint-disable-next-line global-require
+    const Conversation = require('../Conversation').default;
+    const avant = mockGiftedRenders.length;
+    /** @type {any} */
+    let ecran = null;
+    act(() => {
+      ecran = renderer.create(createElement(Conversation, {
+        navigation: { goBack: jest.fn(), navigate: jest.fn(), setOptions: jest.fn() },
+        route: {
+          params: { chatId: 'tour-example-canal', clubName: 'AS Test', tourExample: 'canal' },
+        },
+      }));
+    });
+    const ids = ecran.root
+      .findAll((/** @type {any} */ n) => typeof n.props?.id === 'string' && n.props?.children)
+      .map((/** @type {any} */ n) => n.props.id);
+    expect(ids).toEqual(expect.arrayContaining(['ch-info', 'ch-input']));
+    expect(mockGiftedRenders.length).toBe(avant);
+    act(() => { ecran.unmount(); });
+  });
+});
