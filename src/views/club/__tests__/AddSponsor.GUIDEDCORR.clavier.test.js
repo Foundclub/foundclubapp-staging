@@ -103,6 +103,9 @@ jest.mock('@/services/club/clubQueries', () => ({
 }));
 
 jest.mock('@/services/club/clubService', () => ({ updateClub: jest.fn() }));
+// GUIDE-D-CORR-3 : la fusion de GUIDE-E-CORR (2174427e8) fait lire `@/platform/media` à
+// AddSponsor (logo parti, M0078) ; le module natif du sélecteur ne se charge pas sous jest.
+jest.mock('@/platform/media', () => ({ localFileIsGone: () => Promise.resolve(false) }));
 jest.mock('@/domains/subscription/subscriptionDecision', () => ({
   extractSubscriptionDecisionFromError: (error) => error?.decision || null,
 }));
