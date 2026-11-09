@@ -134,12 +134,13 @@ describe('Mission 4 sur le site', () => {
     expect(Object.getOwnPropertyDescriptor(etape, 'text').get).toEqual(expect.any(Function));
   });
 
-  it('saute l onglet « Club » : l annuaire public n a pas « Matchs amicaux »', () => {
+  // GUIDE-E-CORR (TG-15) : la mission part de la carte « Matchs amicaux » ; plus d'onglet « Club »
+  // (l'annuaire public du site, sans « Matchs amicaux ») sur le chemin.
+  it('ne passe plus par l onglet « Club »', () => {
     const { COACH_GUIDE } = jest.requireActual('@/domains/tour/coachGuide');
-    const etape = COACH_GUIDE.steps.find((step) => step.id === 'm4-tab-club');
-    expect(etape.when({})).toBe(false);
-    const dernier = COACH_GUIDE.steps.find((step) => step.id === 'm4-tab-fr');
-    expect(dernier.text).toContain('Matchs amicaux');
-    expect(dernier.text).not.toContain('Les clubs');
+    const cibles = COACH_GUIDE.steps.flatMap((step) => step.targets || []);
+    expect(cibles).not.toContain('search.tab.clubs');
+    expect(COACH_GUIDE.steps.find((step) => step.id === 'm4-card').targets)
+      .toEqual(['home.card.search-amicaux']);
   });
 });
