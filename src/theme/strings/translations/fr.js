@@ -25562,10 +25562,18 @@ export default {
       'b4-noteam-next': 'Bonus suivant',
       'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
       'b5-cl': 'Club : les autres clubs, pour un partenariat ou un amical.',
+      'b5-cl-page': 'Voici les clubs : ouvre une fiche pour les contacter. La flèche te ramène à '
+        + 'l’accueil.',
       'b5-ev': 'Événement : tournois, stages et détections autour de toi.',
+      'b5-ev-page': 'Voici les événements près de toi, jour par jour. La flèche te ramène à '
+        + 'l’accueil.',
       'b5-fr': 'Matchs amicaux : trouve un adversaire, ou publie ton annonce.',
+      'b5-fr-page': 'Voici les équipes qui cherchent un adversaire. Tu peux aussi publier ton '
+        + 'annonce.',
       'b5-pr': 'Profils : les joueur·se·s et coachs ouverts au recrutement.',
+      'b5-pr-page': 'Voici les profils ouverts au recrutement. La flèche te ramène à l’accueil.',
       'b5-re': 'Réservations : les créneaux de terrains à réserver près de toi.',
+      'b5-re-page': 'Voici les créneaux de terrains libres. La flèche te ramène à l’accueil.',
       bonusDetail: 'Cotisation, canal, groupe, recrutement, recherche',
       c1: 'Choisis le type : le nom se remplit tout seul. Puis la période, et Suivant.',
       c2: 'Le montant par membre. Un tarif différent ? Ajoute une règle dans cet écran. Puis '
