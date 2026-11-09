@@ -146,12 +146,12 @@ export const B3_STEPS = [
     simulatesGroup: true,
     targets: ['conv-list', 'conv-next'],
     get text() {
-      // GUIDE-D-CORR TG-11 : le bouton s'appelle « Démarrer » pour un membre, « Suivant » pour
-      // plusieurs (NewConversation, MSG1A).
+      // GUIDE-D-CORR TG-11 : « Suivant » pour plusieurs (NewConversation, MSG1A). GUIDE-D-CORR-3 :
+      // en simulation, un seul membre coché est refusé ; la bulle ne propose plus « Démarrer ».
       return t(
         'b3-sel',
-        'Un membre coché : discussion à deux, « Démarrer ». Pour un groupe, coche-en au moins 2, '
-          + 'puis « Suivant ».',
+        'Coche au moins 2 membres, ceux marqués « Exemple » suffisent, puis « Suivant ». C’est une '
+          + 'simulation : rien n’est créé.',
       );
     },
     veil: false,

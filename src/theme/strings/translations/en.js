@@ -24496,8 +24496,8 @@ export default {
       'b3-name': 'Give it a name. In “Group permissions”, turn off “Send messages” so only admins '
         + 'can write.',
       'b3-new': 'Tap this button for a new conversation.',
-      'b3-sel': 'One member ticked: a one-to-one chat, “Start”. For a group, tick at least 2, '
-        + 'then “Next”.',
+      'b3-sel': 'Tick at least 2 members, the “Example” ones are enough, then “Next”. It’s a '
+        + 'simulation: nothing is created.',
       'b3-whisper': 'That’s a one-to-one chat. For a group, tick at least 2 people from the same '
         + 'button. Let’s continue.',
       'b4-cand': 'Your example ad is online. Applications arrive here, and you can turn it into a '

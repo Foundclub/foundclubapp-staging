@@ -25553,8 +25553,8 @@ export default {
       'b3-name': 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
         + 'messages » pour que seuls les admins écrivent.',
       'b3-new': 'Touche ce bouton pour une nouvelle discussion.',
-      'b3-sel': 'Un membre coché : discussion à deux, « Démarrer ». Pour un groupe, coche-en au '
-        + 'moins 2, puis « Suivant ».',
+      'b3-sel': 'Coche au moins 2 membres, ceux marqués « Exemple » suffisent, puis « Suivant ». '
+        + 'C’est une simulation : rien n’est créé.',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
         + 'depuis le même bouton. On continue.',
       'b4-cand': 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et tu peux '
