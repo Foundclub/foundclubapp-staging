@@ -513,14 +513,14 @@ function TourGuideLayer() {
     && variant.targets.some((id) => rects[id] && scrollsUnderHeader(id)
       && isUnderHeader(rects[id], fixedHeaderBottom));
   // GUIDE-D-CORR-2 : cible coupée ou hors écran (voile ou pas), l'écran défile tout seul jusqu'à
-  // elle si sa zone qui défile est branchée (`useTourScroller`) ; les tunnels gardent leur place.
+  // elle si sa zone qui défile est branchée (`useTourScroller`), ou, sur le site, si l'ancre sait
+  // se ramener elle-même. GUIDES-SITE (balayage du 09/11) : les tunnels aussi (champ sous le bord).
   const isAnyTargetCut = measuredTargets.some((id) => (
     clipSides[id]
     || visibleRects[id].height < rects[id].height - 1
     || rects[id].y + rects[id].height > height - 2
   ));
-  const needsScroll = isStepVisible && !sheetGuide && !keyboard && !currentStep?.bubbleSlot
-    && !isOffStepRoute
+  const needsScroll = isStepVisible && !sheetGuide && !keyboard && !isOffStepRoute
     && (isAnyTargetCut || Boolean(!primary && (offTarget || clipSide)));
   const scroller = needsScroll ? getActiveTourScroller() : null;
   // GUIDES-SITE : sur le site, l'ancre se ramène elle-même (`scrollIntoView`), sans zone branchée.
