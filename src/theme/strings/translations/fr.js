@@ -13822,6 +13822,8 @@ export default {
         // deux boutons. Espace insécable avant le deux-points, comme ailleurs dans ce fichier.
         answerSent: 'Réponse envoyée :',
         label: 'Ma semaine',
+        // ACCUEIL-JOUEUR (09/11) — le libellé lu de la carte, qui ouvre la fiche de l'événement.
+        open: 'Voir l’événement',
         present: 'Présent',
       },
       superAdmin: {

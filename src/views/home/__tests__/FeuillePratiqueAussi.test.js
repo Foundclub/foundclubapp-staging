@@ -16,8 +16,12 @@ jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
 
-const mockAuth = { refetchUserData: jest.fn(), setDisplayMode: jest.fn() };
+const mockAuth = {
+  refetchUserData: jest.fn(), setDisplayMode: jest.fn(), userData: { documentId: 'parent-1' },
+};
 jest.mock('@/domains/auth/useAuth', () => ({ __esModule: true, default: () => mockAuth }));
+// ACCUEIL-JOUEUR (09/11) — l'origine « né Parent » se retient sur le téléphone.
+jest.mock('@/domains/auth/playerMode', () => ({ writeParentOrigin: jest.fn() }));
 
 jest.mock('@/services/auth/authQueries', () => ({
   useGetRoles: () => ({
@@ -272,5 +276,26 @@ describe('RESA-BASCULE — la variante du parent gérant (gereUnComplexe)', () =
     expect(updateMe.mock.calls[0][0]).toEqual({ role: 'r-joueur' });
     expect(ordre).toEqual(['mode:null', 'relu']);
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur) — la bascule parent de l'accueil ne
+// s'offre qu'à un compte NÉ Parent. Le serveur l'oublie quand le Parent devient Joueur : la
+// feuille le retient sur le téléphone. Pas le compte né « pour un complexe ». Écrit ROUGE.
+describe('ACCUEIL-JOUEUR — la feuille retient « né Parent »', () => {
+  const { writeParentOrigin } = jest.requireMock('@/domains/auth/playerMode');
+
+  test('« Oui » d un Parent : origine « parent » écrite pour son compte', async () => {
+    updateMe.mockResolvedValue({ data: {} });
+    const { arbre } = monter(['Anissa']);
+    await appuyer(arbre, 'Oui, je pratique aussi');
+    expect(writeParentOrigin.mock.calls).toEqual([['parent-1', 'parent']]);
+  });
+
+  test('un échec n écrit rien', async () => {
+    updateMe.mockRejectedValue(new Error('refus'));
+    const { arbre } = monter(['Anissa']);
+    await appuyer(arbre, 'Oui, je pratique aussi');
+    expect(writeParentOrigin).not.toHaveBeenCalled();
   });
 });

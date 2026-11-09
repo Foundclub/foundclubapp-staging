@@ -42,11 +42,13 @@ describe('PAR-L12 — l accueil suit aussi le mode parent', () => {
     expect(SOURCE).toContain('const roleKey = modeActif || getUserRoleKey(roleName);');
   });
 
-  it('le bandeau reçoit le mode actif, les prénoms, et le mode parent si enfants', () => {
+  // ACCUEIL-JOUEUR (09/11/2026) : la bascule parent ne s'offre qu'à un compte né Parent (ou en
+  // mode parent pour revenir), et seulement s'il a des enfants — `offersParentSwitch` de `useAuth`.
+  it('le bandeau reçoit le mode actif, les prénoms, le mode parent si né Parent', () => {
     const debut = SOURCE.indexOf('<PlayerModeBanner');
     const bandeau = SOURCE.slice(debut, SOURCE.indexOf('/>', debut));
     expect(bandeau)
-      .toContain('canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}');
+      .toContain('canUseParentMode={offersParentSwitch === true && mesEnfants.total > 0}');
     expect(bandeau).toContain('displayMode={modeActif}');
     expect(bandeau).toContain('onChange={setDisplayMode}');
     expect(bandeau).toContain('onPratiqueAussi={ouvrirLaFeuillePratique}');

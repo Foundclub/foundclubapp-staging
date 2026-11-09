@@ -449,7 +449,6 @@ function HomeHubContent({ auth, navigation, route }) {
   } = useStartupPhase();
   const {
     canPublishGovernedClubContent,
-    canUseParentMode,
     canUsePlayerMode,
     clubVerificationSummary,
     entitlementsSummary,
@@ -458,6 +457,7 @@ function HomeHubContent({ auth, navigation, route }) {
     isParentMode,
     isPlayerMode,
     nonPartnerCoachPublishingAccess,
+    offersParentSwitch,
     setDisplayMode,
     subscriptionAccessLevel,
     userData,
@@ -1891,6 +1891,10 @@ function HomeHubContent({ auth, navigation, route }) {
       } : undefined,
       label: t('homeHub.banner.player.label', 'Ma semaine'),
       notice: attente || undefined,
+      // ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur) — toucher la carte, hors de Présent
+      // et Absent, ouvre la fiche de l'événement : la même que depuis le Planning.
+      onOpen: () => handleOpenEvent(evenement.id),
+      openLabel: t('homeHub.banner.player.open'),
       subtitle: evenement.label,
       title: formatBannerTitle(evenement.startsAt),
       // ⛔ AUCUN LIBELLE NEUF : ce sont les trois phrases que la fiche de
@@ -2758,11 +2762,14 @@ function HomeHubContent({ auth, navigation, route }) {
             RESA-BASCULE (20/10/2026, planche RB-3) — pour un compte gérant à deux modes ou plus,
             la bascule est « Ton mode » : un changement de mode remonte la page (5c), et le
             compte Parent qui passe en Joueur par sa feuille lit « Ton compte est passé en
-            Joueur. » (2c). */}
+            Joueur. » (2c).
+            ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur) — la bascule parent ne s'offre
+            qu'à un compte né Parent (ou en mode parent, pour revenir) : `offersParentSwitch`.
+            Un compte né Joueur qui a des enfants passe par « Mon compte ». */}
         {COMPLEXES_GERANT ? (
           <BasculeComplexe
             accountRoleKey={getUserRoleKey(roleName)}
-            canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
+            canUseParentMode={offersParentSwitch === true && mesEnfants.total > 0}
             canUsePlayerMode={canUsePlayerMode === true}
             compteId={userData?.documentId || null}
             displayMode={modeActif}
@@ -2777,7 +2784,7 @@ function HomeHubContent({ auth, navigation, route }) {
         ) : (
           <PlayerModeBanner
             accountRoleKey={getUserRoleKey(roleName)}
-            canUseParentMode={canUseParentMode === true && mesEnfants.total > 0}
+            canUseParentMode={offersParentSwitch === true && mesEnfants.total > 0}
             canUsePlayerMode={canUsePlayerMode === true}
             displayMode={modeActif}
             onChange={setDisplayMode}
@@ -2800,6 +2807,8 @@ function HomeHubContent({ auth, navigation, route }) {
             confirmation={headBanner.confirmation}
             label={headBanner.label}
             lines={headBanner.lines}
+            onOpen={headBanner.onOpen}
+            openLabel={headBanner.openLabel}
             subtitle={headBanner.subtitle}
             tiles={headBanner.tiles}
             title={headBanner.title}

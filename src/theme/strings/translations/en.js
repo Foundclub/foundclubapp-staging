@@ -13009,6 +13009,8 @@ export default {
         absent: 'Absent',
         answerSent: 'Answer sent:',
         label: 'My week',
+        // ACCUEIL-JOUEUR (09/11) — the card's spoken label; it opens the event page.
+        open: 'View event',
         present: 'Present',
       },
       superAdmin: {
