@@ -449,3 +449,64 @@ describe('Guide Dirigeant·e, B2 : le canal du club', () => {
     expect(cles()).not.toContain('messaging.canal.absent');
   });
 });
+
+// GUIDE-D-CORR-3, M1082 (TestFlight 2.6.97, 09/11) : le bonus 2 se joue en simulation. Pas de
+// canal : un canal « Exemple » prend sa place dans la liste, le temps de l'étape ; rien n'est créé.
+describe('GUIDE-D-CORR-3 : B2, pas de canal ⇒ un canal d exemple', () => {
+  /** @type {any[]} */
+  let signaux;
+  /** @type {() => void} */
+  let arreter;
+  const ETAPE_SIMULEE = { currentStep: { checksCanal: true, simulatesCanal: true } };
+  const listeVide = etatListe({
+    data: { pages: [{ data: [], meta: { pagination: { page: 1, pageCount: 1, total: 0 } } }] },
+    hasNextPage: false,
+  });
+  const ancre = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
+    .findAll((/** @type {any} */ noeud) => noeud.props?.id === id && noeud.props?.children);
+  const texteDe = (/** @type {any} */ noeud) => noeud
+    .findAll((/** @type {any} */ n) => typeof n.props?.children === 'string')
+    .map((/** @type {any} */ n) => n.props.children)
+    .join(' ');
+
+  beforeEach(() => {
+    signaux = [];
+    arreter = subscribeToGuidanceSignals((/** @type {any} */ signal) => {
+      signaux.push(signal);
+    });
+  });
+  afterEach(() => {
+    arreter();
+    mockTour = {};
+  });
+
+  it('le canal d exemple est dans la liste, marqué « Exemple », le bonus continue', async () => {
+    mockTour = ETAPE_SIMULEE;
+    mockChatsQuery = listeVide;
+    const arbre = await monter();
+    expect(signaux.map((signal) => signal.key)).not.toContain('messaging.canal.absent');
+    const [ligne] = ancre(arbre, 'msg-canal');
+    expect(ligne).toBeDefined();
+    expect(texteDe(ligne)).toMatch(/Exemple/);
+  });
+
+  it('le toucher ouvre le canal d exemple, sans fil réel', async () => {
+    mockTour = ETAPE_SIMULEE;
+    mockChatsQuery = listeVide;
+    const arbre = await monter();
+    const [ligne] = ancre(arbre, 'msg-canal');
+    const [touche] = ligne
+      .findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function');
+    await act(async () => { touche.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Conversation',
+      expect.objectContaining({ tourExample: 'canal' }),
+    );
+  });
+
+  it('hors de l étape, aucun canal d exemple', async () => {
+    mockChatsQuery = listeVide;
+    const arbre = await monter();
+    expect(ancre(arbre, 'msg-canal')).toHaveLength(0);
+  });
+});

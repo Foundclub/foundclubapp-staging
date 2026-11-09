@@ -17229,6 +17229,9 @@ export default {
       others: 'Autres',
       players: 'Pratiquants / Joueurs',
     },
+    simulation: {
+      groupOnly: 'Simulation du guide : coche au moins 2 membres pour créer un groupe.',
+    },
     subtitle: {
       add: 'Choisis qui ajouter',
       rule: '1 personne = privé · 2 et plus = groupe',
@@ -25543,14 +25546,15 @@ export default {
         + 'ici.',
       'b3-back': 'Crée maintenant un groupe. Reviens aux messages : touche la flèche, ou glisse '
         + 'ton doigt depuis le bord gauche.',
-      'b3-create': 'Crée le groupe : il est réel, tes membres le verront.',
+      'b3-create': 'Crée le groupe. C’est une simulation : rien n’est créé, tes membres ne voient '
+        + 'rien.',
       'b3-few': 'Un groupe demande au moins 2 autres membres, et ton club n’en a pas encore '
         + 'assez. Reviens ici quand ils auront rejoint le club. On continue.',
       'b3-name': 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
         + 'messages » pour que seuls les admins écrivent.',
       'b3-new': 'Touche ce bouton pour une nouvelle discussion.',
-      'b3-sel': 'Un membre coché : discussion à deux, « Démarrer ». Pour un groupe, coche-en au '
-        + 'moins 2, puis « Suivant ».',
+      'b3-sel': 'Coche au moins 2 membres, ceux marqués « Exemple » suffisent, puis « Suivant ». '
+        + 'C’est une simulation : rien n’est créé.',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
         + 'depuis le même bouton. On continue.',
       'b4-cand': 'Ton annonce d’exemple est en ligne. Les candidatures arrivent ici, et tu peux '
@@ -25562,10 +25566,18 @@ export default {
       'b4-noteam-next': 'Bonus suivant',
       'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
       'b5-cl': 'Club : les autres clubs, pour un partenariat ou un amical.',
+      'b5-cl-page': 'Voici les clubs : ouvre une fiche pour les contacter. La flèche te ramène à '
+        + 'l’accueil.',
       'b5-ev': 'Événement : tournois, stages et détections autour de toi.',
+      'b5-ev-page': 'Voici les événements près de toi, jour par jour. La flèche te ramène à '
+        + 'l’accueil.',
       'b5-fr': 'Matchs amicaux : trouve un adversaire, ou publie ton annonce.',
+      'b5-fr-page': 'Voici les équipes qui cherchent un adversaire. Tu peux aussi publier ton '
+        + 'annonce.',
       'b5-pr': 'Profils : les joueur·se·s et coachs ouverts au recrutement.',
+      'b5-pr-page': 'Voici les profils ouverts au recrutement. La flèche te ramène à l’accueil.',
       'b5-re': 'Réservations : les créneaux de terrains à réserver près de toi.',
+      'b5-re-page': 'Voici les créneaux de terrains libres. La flèche te ramène à l’accueil.',
       bonusDetail: 'Cotisation, canal, groupe, recrutement, recherche',
       c1: 'Choisis le type : le nom se remplit tout seul. Puis la période, et Suivant.',
       c2: 'Le montant par membre. Un tarif différent ? Ajoute une règle dans cet écran. Puis '
@@ -25819,6 +25831,13 @@ export default {
       tabOverview: 'Vue d’ensemble',
       tabPayments: 'Paiements',
       title: 'Cotisations',
+    },
+    canal: {
+      input: 'Écris une annonce… (exemple : rien n’est envoyé)',
+      message1: 'Entraînement décalé à 19 h ce mercredi.',
+      message2: 'Pensez à régler la cotisation avant la fin du mois.',
+      subtitle: 'Canal du club · Exemple',
+      title: 'Canal du club',
     },
     match: {
       label: 'Exemple · contre US Monpeyroux',

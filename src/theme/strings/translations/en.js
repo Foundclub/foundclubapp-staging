@@ -16453,6 +16453,9 @@ export default {
       others: 'Others',
       players: 'Players / Participants',
     },
+    simulation: {
+      groupOnly: 'Guide simulation: tick at least 2 members to create a group.',
+    },
     subtitle: {
       add: 'Choose who to add',
       rule: '1 person = private · 2 or more = group',
@@ -24486,14 +24489,15 @@ export default {
         + 'coaches”, in “Staff” on the club page. It will show up here.',
       'b3-back': 'Now create a group. Go back to messages: tap the arrow, or swipe from the left '
         + 'edge.',
-      'b3-create': 'Create the group: it’s real, your members will see it.',
+      'b3-create': 'Create the group. It’s a simulation: nothing is created, your members see '
+        + 'nothing.',
       'b3-few': 'A group needs at least 2 other members, and your club doesn’t have enough yet. '
         + 'Come back when they’ve joined. Let’s continue.',
       'b3-name': 'Give it a name. In “Group permissions”, turn off “Send messages” so only admins '
         + 'can write.',
       'b3-new': 'Tap this button for a new conversation.',
-      'b3-sel': 'One member ticked: a one-to-one chat, “Start”. For a group, tick at least 2, '
-        + 'then “Next”.',
+      'b3-sel': 'Tick at least 2 members, the “Example” ones are enough, then “Next”. It’s a '
+        + 'simulation: nothing is created.',
       'b3-whisper': 'That’s a one-to-one chat. For a group, tick at least 2 people from the same '
         + 'button. Let’s continue.',
       'b4-cand': 'Your example ad is online. Applications arrive here, and you can turn it into a '
@@ -24505,10 +24509,15 @@ export default {
       'b4-noteam-next': 'Next bonus',
       'b5-back': 'One last look: go back to the home screen.',
       'b5-cl': 'Clubs: other clubs, for a partnership or a friendly.',
+      'b5-cl-page': 'Here are the clubs: open a page to contact them. The arrow takes you home.',
       'b5-ev': 'Events: tournaments, camps and trials near you.',
+      'b5-ev-page': 'Here are the events near you, day by day. The arrow takes you home.',
       'b5-fr': 'Friendly matches: find an opponent, or post your ad.',
+      'b5-fr-page': 'Here are the teams looking for an opponent. You can post your ad too.',
       'b5-pr': 'Profiles: players and coaches open to recruitment.',
+      'b5-pr-page': 'Here are the profiles open to recruitment. The arrow takes you home.',
       'b5-re': 'Bookings: pitch slots to book near you.',
+      'b5-re-page': 'Here are the free pitch slots. The arrow takes you home.',
       bonusDetail: 'Dues, channel, group, recruiting, search',
       c1: 'Choose the type: the name fills in by itself. Then the period, and Next.',
       c2: 'The amount per member. A different rate? Add a rule on this screen. Then Next.',
@@ -24754,6 +24763,13 @@ export default {
       tabOverview: 'Overview',
       tabPayments: 'Payments',
       title: 'Fees',
+    },
+    canal: {
+      input: 'Write an announcement… (example: nothing is sent)',
+      message1: 'Training moved to 7 pm this Wednesday.',
+      message2: 'Please pay your membership fee before the end of the month.',
+      subtitle: 'Club channel · Example',
+      title: 'Club channel',
     },
     match: {
       label: 'Example · vs US Monpeyroux',

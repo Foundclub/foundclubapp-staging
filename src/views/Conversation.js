@@ -88,6 +88,7 @@ import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
+import { isTourExample } from '@/domains/tour/tourExamples';
 import {
   hideBlockedMessages,
   peutBloquer,
@@ -134,6 +135,7 @@ import MessageReactionOverlay from '@/components/molecules/messageReactionOverla
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
+import TourCanalExemple from '@/components/molecules/tour/TourCanalExemple';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
 import VideoMessagePlayer from '@/components/molecules/videoMessage/VideoMessagePlayer';
@@ -8297,4 +8299,19 @@ function Conversation({ navigation, route }) {
   );
 }
 
-export default Conversation;
+/**
+ * GUIDE-D-CORR-3 (M1082, décision du chef) : le bonus 2 du guide Dirigeant·e ouvre un canal
+ * d'exemple quand le club n'en a pas encore (`Messaging`, `tourExample: 'canal'`). Aiguillé AVANT
+ * le fil, aucune de ses requêtes ne part.
+ * @param {any} props - Props de l'écran.
+ * @returns {import('react').ReactElement} Le fil, ou le canal d'exemple.
+ */
+function ConversationOuCanalDExemple(props) {
+  const { navigation, route } = props;
+  if (isTourExample(route?.params)) {
+    return <TourCanalExemple clubName={route.params.clubName} navigation={navigation} />;
+  }
+  return <Conversation {...props} />;
+}
+
+export default ConversationOuCanalDExemple;

@@ -14,9 +14,15 @@ describe('les bulles nomment ce qui est à l’écran', () => {
     expect(step('m1-addr').text).not.toContain('Placer sur la carte');
   });
 
-  it('TG-11 b3-sel : le bouton d’un membre est « Démarrer », celui d’un groupe « Suivant »', () => {
-    expect(texte('b3-sel')).toContain(`« ${fr.newConversation.cta.start} »`);
-    expect(texte('b3-sel')).toContain(`« ${fr.newConversation.cta.next} »`);
+  // GUIDE-D-CORR-3 (décision du chef, 09/11) : le bonus 3 est une simulation ; un seul membre coché
+  // y est refusé (alerte). La bulle ne parle plus de « Démarrer » : au moins 2, puis « Suivant ».
+  it('TG-11 b3-sel : au moins 2 membres, les « Exemple » suffisent, puis « Suivant »', () => {
+    [texte('b3-sel'), step('b3-sel').text].forEach((bulle) => {
+      expect(bulle).not.toContain(`« ${fr.newConversation.cta.start} »`);
+      expect(bulle).toContain(`« ${fr.newConversation.cta.next} »`);
+      expect(bulle).toMatch(/au moins 2 membres/);
+      expect(bulle).toContain('« Exemple »');
+    });
   });
 
   it('TG-13 b2-none : la règle dite est celle de l’app, et le bonus est PASSÉ, pas fait', () => {
