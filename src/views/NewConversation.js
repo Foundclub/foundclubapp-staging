@@ -522,7 +522,8 @@ function NewConversation({ navigation, route }) {
     // l'écran se referme : les membres d'exemple s'effacent avec lui.
     if (isGroupSimulated) {
       if (isGroupChatEnabled && selectedUserIds.size > 1) {
-        emitGuidanceAction('conversation.group.created');
+        // « simulé » : le bilan du guide ne l'annonce pas comme un groupe réel.
+        emitGuidanceAction('conversation.group.created', { simulated: true });
         navigation.goBack();
       } else {
         prevenir(t(

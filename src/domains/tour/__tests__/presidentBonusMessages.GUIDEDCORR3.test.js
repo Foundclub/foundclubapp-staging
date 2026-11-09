@@ -30,3 +30,23 @@ describe('B2 et B3 se jouent en simulation', () => {
     expect(done.completes).toBe(true);
   });
 });
+
+// Tournée émulateur du train 7 (09/11, 18:10) : le groupe simulé du bonus 3 sortait au bilan
+// « Groupe créé · RÉEL ». Le bilan ne nomme que ce qui existe pour de vrai.
+describe('Bilan : un groupe simulé n est pas un groupe réel', () => {
+  const texte = (key, fallback) => fallback;
+
+  it('le groupe simulé ne figure pas au bilan', () => {
+    const lignes = profile.closingLines(texte, {
+      created: { 'conversation.group.created': { at: null, simulated: true } },
+    });
+    expect(lignes).not.toContain('Groupe créé');
+  });
+
+  it('un vrai groupe y figure toujours', () => {
+    const lignes = profile.closingLines(texte, {
+      created: { 'conversation.group.created': { at: null } },
+    });
+    expect(lignes).toContain('Groupe créé');
+  });
+});

@@ -525,6 +525,10 @@ describe('GUIDE-D-CORR-3 : B3 en simulation, membres d exemple', () => {
     expect(mockStartGroupChat).not.toHaveBeenCalled();
     expect(mockStartWhisperChat).not.toHaveBeenCalled();
     expect(cles()).toContain('conversation.group.created');
+    // Tournée du train 7 : le signal dit « simulé », sinon le bilan l'annonce comme réel.
+    expect(signaux.find((/** @type {any} */ signal) => (
+      signal.key === 'conversation.group.created'
+    ))?.simulated).toBe(true);
     expect(mockGoBack).toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
   });
