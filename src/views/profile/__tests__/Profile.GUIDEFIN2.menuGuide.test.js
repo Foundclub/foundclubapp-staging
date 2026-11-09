@@ -1,6 +1,8 @@
 import { ScrollView, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
+
 import Profile from '../Profile';
 
 // GUIDE-RELANCE (L6, 28/10) — audit du guide Entraîneur, décisions d'Adel :
@@ -298,10 +300,15 @@ describe('L1 — Mon compte d’un dirigeant', () => {
   const aLaRangee = () => arbre.root.findAllByType(Text)
     .some((x) => aplatirTexte(x.props.children) === 'Guide entraîneur·e');
 
-  it('devenu dirigeant en créant son club (« Moi ») : il retrouve son guide', async () => {
+  // Décision du chef du 08/11 (STORES-2696) : guide Dirigeant allumé, le coach devenu dirigeant
+  // en créant son club voit « Guide dirigeant·e » : le guide de son rôle passe avant l'historique
+  // du guide entraîneur (Profile.js, `guideKey`). Éteint, il retrouve « Guide entraîneur·e ».
+  it('devenu dirigeant en créant son club (« Moi ») : il retrouve un guide', async () => {
     mockTour = tourDe({ hasGuideHistory: true });
     await monter({ name: 'President', type: 'president' });
-    expect(aLaRangee()).toBe(true);
+    const attendu = PRESIDENT_GUIDE_SETTINGS.enabled ? 'Guide dirigeant·e' : 'Guide entraîneur·e';
+    expect(arbre.root.findAllByType(Text)
+      .some((x) => aplatirTexte(x.props.children) === attendu)).toBe(true);
   });
 
   it('guide Dirigeant : pas de « Revoir », ce profil n’a pas de visite', async () => {

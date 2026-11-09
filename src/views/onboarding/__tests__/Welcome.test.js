@@ -117,6 +117,27 @@ jest.mock('@/views/onboarding/components/OnboardingStateView', () => {
   return { __esModule: true, default: ({ title }) => <RNText>{title}</RNText> };
 });
 
+// Décision du chef du 08/11 (STORES-2696) : ces cas jouent l'ANCIEN tour du dirigeant (v2),
+// l'interrupteur est forcé à faux ici. Le guide à missions allumé a son témoin :
+// le dernier bloc de ce fichier.
+jest.mock('@/domains/tour/presidentGuideSettings', () => {
+  const actual = jest.requireActual('@/domains/tour/presidentGuideSettings');
+  const settings = { ...actual.PRESIDENT_GUIDE_SETTINGS, enabled: false };
+  return { __esModule: true, default: settings, PRESIDENT_GUIDE_SETTINGS: settings };
+});
+
+let mockGuideDirigeant = false;
+jest.mock('@/domains/tour/tourCatalog', () => {
+  const actual = jest.requireActual('@/domains/tour/tourCatalog');
+  const { PRESIDENT_GUIDE } = jest.requireActual('@/domains/tour/presidentGuide');
+  return {
+    ...actual,
+    getTourProfile: (key) => (key === 'president' && mockGuideDirigeant
+      ? PRESIDENT_GUIDE
+      : actual.getTourProfile(key)),
+  };
+});
+
 const rendre = () => {
   const navigation = { navigate: jest.fn(), replace: jest.fn(), reset: jest.fn() };
   let arbre;
@@ -464,5 +485,21 @@ describe('Bienvenue pendant le cadeau de 7 jours', () => {
     const lus = textes(rendre().tree).join(' | ');
     expect(lus).toContain('Commence gratuitement');
     expect(lus).not.toContain('Offre Club offerte');
+  });
+});
+
+// Décision du chef du 08/11 (STORES-2696) : guide Dirigeant allumé, un dirigeant SANS club n'a pas
+// le bouton du guide (`canStart` lit `club.documentId`) : c'est voulu. Il continue vers l'accueil.
+describe('Welcome — guide Dirigeant allumé (STORES-2696)', () => {
+  beforeEach(() => { mockGuideDirigeant = true; });
+  afterEach(() => { mockGuideDirigeant = false; });
+
+  it('un dirigeant sans club n a ni le bouton du guide ni son pont : il continue', () => {
+    mockRole.current = 'president';
+    const { tree } = rendre();
+
+    expect(pressableParTexte(tree, 'Démarrer le tour guidé')).toBeUndefined();
+    expect(textes(tree)).not.toContain('Gratuit · 2 min — tu configures ton club en chemin');
+    expect(pressableParTexte(tree, 'Continuer')).toBeDefined();
   });
 });

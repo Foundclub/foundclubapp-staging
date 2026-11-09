@@ -6,6 +6,12 @@ import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  buildEventCustomNamePayload,
+  EVENT_CUSTOM_NAME_MAX_LENGTH,
+  isEventCustomNameRejected,
+  isOtherTypeName,
+} from '@/domains/event/eventDisplayName';
+import {
   createEventPayload,
   createEventUpdatePayload,
   getEventEditSupport,
@@ -125,6 +131,7 @@ function EventEditForm({ navigation, route }) {
     // POINTAGE (29/09) — les deux options de presence, cochees par defaut.
     arrivalTrackingEnabled: true,
     capacity: '',
+    customName: '',
     date: toDateInputValue(route?.params?.date),
     description: '',
     endTime: '',
@@ -197,6 +204,7 @@ function EventEditForm({ navigation, route }) {
       // Absent (evenement d avant le lot) = coche.
       arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
       capacity: event?.capacity != null ? String(event.capacity) : '',
+      customName: String(event?.customName || ''),
       date: toDateInputValue(event?.date),
       description: String(event?.description || ''),
       endTime: toTimeInputValue(event?.endTime),
@@ -436,6 +444,16 @@ function EventEditForm({ navigation, route }) {
       return;
     }
 
+    // EVT-AUTRE-NOM — un nom saisi hors bornes ne part pas (le serveur le refuserait aussi).
+    const nomRefuse = isEventCustomNameRejected(formState.customName);
+    if (isOtherTypeName(selectedTypeData?.name) && nomRefuse) {
+      setSubmitError(t(
+        'eventWizard.steps.name.lengthError',
+        'Le nom doit faire de 3 à 60 caractères.',
+      ));
+      return;
+    }
+
     if (eventId && !editSupport?.isSupported) {
       setSubmitError(editSupport?.reason || t('eventEdit.thisPageCanTEdit', "Cette fiche ne permet pas encore d'éditer ce type d'événement."));
       return;
@@ -459,6 +477,10 @@ function EventEditForm({ navigation, route }) {
     const baseFormPayload = {
       arrivalTrackingEnabled: formState.arrivalTrackingEnabled !== false,
       capacity: formState.capacity ? Number(formState.capacity) : null,
+      ...buildEventCustomNamePayload(
+        selectedTypeData?.name || event?.type?.name,
+        formState.customName,
+      ),
       date: toDisplayDateValue(formState.date),
       description: formState.description,
       endTime: formState.endTime,
@@ -967,6 +989,25 @@ function EventEditForm({ navigation, route }) {
                   </div>
                 </label>
               </div>
+
+              {isOtherTypeName(selectedTypeData?.name) ? (
+                <label style={{ display: 'grid', gap: 8 }}>
+                  <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                    {t('eventWizard.steps.name.recapLabel', 'Nom')}
+                  </span>
+                  <input
+                    data-testid="event-edit-custom-name"
+                    maxLength={EVENT_CUSTOM_NAME_MAX_LENGTH}
+                    onChange={(eventObject) => updateField('customName', eventObject.target.value)}
+                    placeholder={t(
+                      'eventWizard.steps.name.placeholder',
+                      'Ex. Repas de fin de saison',
+                    )}
+                    style={fieldStyle}
+                    value={formState.customName}
+                  />
+                </label>
+              ) : null}
 
               <label style={{ display: 'grid', gap: 8 }}>
                 <span style={{ color: mutedTextColor, fontSize: 13 }}>Description</span>

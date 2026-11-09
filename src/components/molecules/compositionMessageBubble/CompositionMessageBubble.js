@@ -6,6 +6,7 @@ import {
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { isMyTeam, isTeamTrainer } from '@/domains/team/teamMembership';
 import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -448,10 +449,17 @@ function CompositionMessageBubble({
   const { auth: lecteur } = getAuthRuntimeSnapshot();
   const viewerId = String(lecteur?.user?.documentId || lecteur?.user?.id || '').trim();
   const matchAVenir = Date.parse(String(dateDuMatch || '')) > Date.now();
+  // 🙋 CONVOC-HORS-LISTE-2 (Adel, 07/11, « 158 ») — le JOUEUR de l'equipe que la carte
+  // laisse dehors repond aussi (« Présent si besoin ») ; son entraineur, non. Le reste
+  // (convocation de SON equipe, version, reponses ouvertes) se lit au serveur, dans la barre.
+  const joueurDeLEquipe = Boolean(teamId)
+    && isMyTeam(teamId, lecteur?.user)
+    && !isTeamTrainer(teamId, lecteur?.user);
   const proposeLaReponse = type === 'lineup_share'
     && Boolean(eventId)
     && matchAVenir
-    && Boolean(getViewerConvocationRole({ published: packPublieDeLaCarte }, viewerId));
+    && (Boolean(getViewerConvocationRole({ published: packPublieDeLaCarte }, viewerId))
+      || joueurDeLEquipe);
   // 📋 CONVLISTE-FIN (planche B5) — en liste, le joueur convoque le lit sur la carte.
   const montreTuEsConvoque = enListe
     && Boolean(getViewerConvocationRole({ published: packPublieDeLaCarte }, viewerId));
@@ -751,6 +759,7 @@ function CompositionMessageBubble({
       {proposeLaReponse ? (
         <CompositionAnswerBar
           eventId={eventId}
+          isTeamPlayer={joueurDeLEquipe}
           publishedVersion={publishedVersion}
           teamId={teamId}
           viewerId={viewerId}

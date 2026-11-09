@@ -9,6 +9,8 @@ import {
 import { fr } from 'date-fns/locale';
 import i18next from 'i18next';
 
+import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
+
 import {
   getShortAddress,
   normalizeLocationInput,
@@ -208,6 +210,8 @@ export const normalizePlanningItem = (item) => {
         name: item.club.name || null,
       }
       : null,
+    // EVT-AUTRE-NOM : le nom d'un « Autre » voyage avec l'item normalise.
+    customName: item.customName || null,
     date: item.startAt || item.date || null,
     documentId: item.documentId || item.eventId || item.id || null,
     endAt: item.endAt || item.endDate || null,
@@ -363,7 +367,9 @@ export const resolvePlanningCardContent = (item, { profile = 'default' } = {}) =
   const secondaryDateTimeLabel = [dateLabel, timeLabel].filter(Boolean).join(' • ');
   const compactDateTimeLabel = timeLabel || dateLabel || '';
 
-  const defaultPrimaryLabel = typeLabel || title || i18next.t(
+  // EVT-AUTRE-NOM — un « Autre » nomme montre son nom a la place du type (et de l'equipe).
+  const nomDonne = resolveEventCustomName(item) || resolveEventCustomName(item?.raw);
+  const defaultPrimaryLabel = nomDonne || typeLabel || title || i18next.t(
     'planningSlots.eventFallback',
     'Événement',
   );
@@ -394,10 +400,12 @@ export const resolvePlanningCardContent = (item, { profile = 'default' } = {}) =
     const isMatchCard = Boolean(matchContext?.isMatch || item?.leagueMatch || item?.league_match);
     const primaryLabel = isMatchCard
       ? String(matchContext?.opponentName || focusedTeamName || title || 'Match').trim()
-      : focusedTeamName;
+      : (nomDonne || focusedTeamName);
     const quaternaryMetaLabel = [
       typeLabel && typeLabel !== primaryLabel ? typeLabel : null,
-      focusedTeamName && isMatchCard && focusedTeamName !== primaryLabel ? focusedTeamName : null,
+      focusedTeamName && (isMatchCard || nomDonne) && focusedTeamName !== primaryLabel
+        ? focusedTeamName
+        : null,
       !isMatchCard && title && title !== primaryLabel ? title : null,
     ].filter(Boolean).join(' · ');
 

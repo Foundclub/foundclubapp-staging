@@ -751,6 +751,46 @@ export const buildAnswerGroups = ({ published = null, responses = null } = {}) =
 };
 
 /**
+ * 🙋 CONVOC-HORS-LISTE-2 (Adel, 07/11, « 158 ») — LES « PRESENTS SI BESOIN » : les joueurs de
+ * l'equipe que la convocation publiee laisse dehors et qui ont repondu present.
+ *
+ * Lus dans l'evenement (`GET /events/:id`), la ou `applyRsvp` range les reponses : present =
+ * `participations`, absent = `missings`, qui l'emporte (meme regle que
+ * `buildConvocationResponses` au serveur). Seuls les JOUEURS de l'equipe `teamId` (pas son
+ * encadrement, pas l'adversaire) ; jamais un convoque, qui est deja dans « Présents ».
+ * @param {object} input
+ * @param {any} [input.event] L'evenement, tel que la fiche le lit.
+ * @param {any} [input.published] Le pack publie de cette equipe.
+ * @param {string} [input.teamId] L'equipe de la convocation.
+ * @returns {string[]} Les noms, dans l'ordre de l'effectif.
+ */
+export const buildStandbyPresentNames = ({ event = null, published = null, teamId = '' } = {}) => {
+  const wanted = toId(teamId);
+  if (!wanted || !published || !event) return [];
+  const team = [event?.team, ...asArray(event?.invitedTeams)]
+    .find((candidate) => toId(candidate?.documentId) === wanted);
+  /**
+   * Les cles d'une personne (`documentId`, `id`).
+   * @param {any} personne
+   * @returns {string[]}
+   */
+  const clesDe = (personne) => [personne?.documentId, personne?.id].map(toId).filter(Boolean);
+  const cles = (/** @type {any} */ liste) => new Set(asArray(liste).flatMap(clesDe));
+  const presents = cles(event?.participations);
+  const absents = cles(event?.missings);
+  const convoques = new Set(
+    buildConvocationRoster({ published }).map((row) => toId(row?.playerId)),
+  );
+  return asArray(team?.players)
+    .filter((joueur) => {
+      const sesCles = clesDe(joueur);
+      return sesCles.some((cle) => presents.has(cle))
+        && !sesCles.some((cle) => absents.has(cle) || convoques.has(cle));
+    })
+    .map((joueur) => getCompositionPlayerLabel(joueur));
+};
+
+/**
  * Les convoques (terrain et banc) d'une composition de message, ranges par identifiant.
  * @param {any} composition
  * @returns {string[]}

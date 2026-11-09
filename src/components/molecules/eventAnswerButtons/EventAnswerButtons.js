@@ -37,6 +37,11 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} [props.onDeclareLatePresence] - POINTAGE : la porte « je passe
  *   en present » du « pas renseigne », apres coup. La fiche ne la donne que
  *   quand `canDeclareLatePresence` l ouvre (`domains/event/presenceRule.js`).
+ * @param {boolean} [props.isStandby] - CONVOC-HORS-LISTE-2 (Adel, 07/11, « 158 ») : ce membre n est
+ *   pas convoque ; « Présent » se lit « Présent si besoin », et sa reponse present aussi.
+ * @param {string} [props.notice] - CONVOC-HORS-LISTE : la phrase que la fiche du match confie
+ *   au membre que la convocation publiee laisse dehors. Lue au-dessus de SA reponse, la ou il
+ *   repond (pas encore repondu, present, absent) ; jamais apres coup ni sans boutons.
  * @param {ReturnType<typeof resolveParticipationFlow>} [props.participationFlow]
  * @param {'present' | 'absent' | ''} [props.submittingAnswer] - T2 : la réponse
  *   en cours d envoi. Elle allume le bouton correspondant et prend les deux, le
@@ -50,6 +55,8 @@ function EventAnswerButtons({
   hasAcceptedRequest,
   hasPendingRequest,
   isFinished = false,
+  isStandby = false,
+  notice = '',
   onAbout,
   onCancel,
   onDeclareLatePresence,
@@ -160,6 +167,14 @@ function EventAnswerButtons({
   // « je passe en present » (POINTAGE, reponse B) reste, quand la fiche l ouvre.
   if (isFinished && !onDeclareLatePresence) return null;
 
+  // CONVOC-HORS-LISTE — la phrase du non-convoque se pose AU-DESSUS de sa reponse.
+  const avecAvis = (/** @type {import('react').ReactElement} */ node) => (notice ? (
+    <View style={[Alignments.fullWidth, Spaces.gap[8]]}>
+      <Text style={[Fonts.p4, Fonts.neutral300]} testID="event-answer-notice">{notice}</Text>
+      {node}
+    </View>
+  ) : node);
+
   // If user is a player — or a member of a convened team — show the answer buttons
   if (participationOffer === 'answer') {
     // 🚫 POINTAGE (decision d Adel du 29/09) — « LES PARTICIPANTS REPONDENT »
@@ -228,10 +243,14 @@ function EventAnswerButtons({
     }
 
     if (alreadyJoined || hasAcceptedRequest || hasPendingRequest) {
-      return (
+      return avecAvis(
         <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
           <Tag
-            text={hasPendingRequest ? t('eventList.info.pendingRequest') : t('eventList.info.alreadyJoined')}
+            text={(() => {
+              if (hasPendingRequest) return t('eventList.info.pendingRequest');
+              if (isStandby) return t('playerConvocation.answer.standby');
+              return t('eventList.info.alreadyJoined');
+            })()}
             textStyle={Fonts.p1Bold}
           />
           {/* R4 (DECISION D ADEL DU 2026-08-24) — UN SEUL BOUTON, ET IL MARQUE ABSENT.
@@ -260,12 +279,12 @@ function EventAnswerButtons({
               variant="SecondaryLight"
             />
           )}
-        </View>
+        </View>,
       );
     }
 
     if (alreadyMissing) {
-      return (
+      return avecAvis(
         <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
           <Tag
             text={t('eventList.info.alreadyMissing')}
@@ -279,7 +298,7 @@ function EventAnswerButtons({
               variant="SecondaryLight"
             />
           )}
-        </View>
+        </View>,
       );
     }
 
@@ -335,7 +354,9 @@ function EventAnswerButtons({
                 isLoading={submittingAnswer === 'present'}
                 onPress={onParticipate}
                 style={Alignments.fullWidth}
-                title={t('eventList.actions.present')}
+                title={isStandby
+                  ? t('playerConvocation.actions.standby')
+                  : t('eventList.actions.present')}
                 variant="Primary"
               />
             </View>
@@ -356,15 +377,17 @@ function EventAnswerButtons({
         // apparait alors dans l encadrement de la convocation publiee. Sans
         // cette phrase, rien ne le lui disait. Le coach-joueur n est pas
         // `isStaffOnly` : il se convoque comme un joueur, il ne la lit pas.
-        if (!isStaffOnly || !isMatchEventType(event?.type?.name)) return answerRow;
+        if (!isStaffOnly || !isMatchEventType(event?.type?.name)) {
+          return avecAvis(answerRow);
+        }
 
-        return (
+        return avecAvis(
           <View style={[Alignments.fullWidth, Spaces.gap[8]]}>
             {answerRow}
             <Text style={[Fonts.p4, Fonts.neutral300]}>
               {t('eventList.info.staffJoinsConvocation')}
             </Text>
-          </View>
+          </View>,
         );
       }
 

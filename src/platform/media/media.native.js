@@ -74,6 +74,25 @@ export const getLocalFileSize = async (uri) => {
   }
 };
 
+/**
+ * GUIDE-E-CORR (TG-03, tournée du 07/11) — l'image choisie est une copie que react-native-image-picker
+ * écrit dans le CACHE de l'app (`getCacheDir`, Utils.java), qu'Android peut vider quand le stockage
+ * manque (et iOS son dossier temporaire) : après ~1 min 30 de saisie, l'envoi échouait (ENOENT).
+ * L'écran relit le fichier avant d'envoyer et, s'il a disparu, demande de le rechoisir.
+ * @param {string} [uri] - Adresse locale (`file://…` ou chemin nu).
+ * @returns {Promise<boolean>} Vrai seulement si un fichier local est sûrement absent.
+ */
+export const localFileIsGone = async (uri) => {
+  const adresse = String(uri || '');
+  if (!/^(file:\/\/|\/)/.test(adresse)) return false;
+  try {
+    return !(await ReactNativeBlobUtil.fs.exists(adresse.replace(/^file:\/\//, '')));
+  } catch (_error) {
+    // Illisible : on ne bloque pas l'envoi sur une supposition.
+    return false;
+  }
+};
+
 export const recordVoiceNote = async () => {
   throw new Error(i18next.t(
     'media.errors.voiceNoteNotAdapted',
@@ -84,6 +103,7 @@ export const recordVoiceNote = async () => {
 export default {
   capturePhoto,
   getLocalFileSize,
+  localFileIsGone,
   pickDocument,
   pickImage,
   recordVoiceNote,

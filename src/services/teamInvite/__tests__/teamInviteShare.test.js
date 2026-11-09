@@ -16,6 +16,8 @@ const mockShare = jest.fn(() => Promise.resolve());
 const mockOpenUrl = jest.fn(() => Promise.resolve());
 
 jest.mock('react-native', () => ({
+  // GUIDE-E-CORR (TG-14) : le signal du guide attend le retour dans l'app.
+  AppState: { addEventListener: () => ({ remove: () => {} }), currentState: 'active' },
   Linking: { openURL: (...args) => mockOpenUrl(...args) },
   Platform: { OS: 'android' },
 }));

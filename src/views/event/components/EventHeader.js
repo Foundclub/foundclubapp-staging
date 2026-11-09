@@ -4,6 +4,7 @@ import {
   Image, ImageBackground, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -220,7 +221,8 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
   } else if (normalizedTypeName.includes('entrainement')) {
     headerPrimaryTitle = teamName || clubName;
   } else if (!keepsClubNameTitle) {
-    headerPrimaryTitle = eventOwnName || clubName;
+    // EVT-AUTRE-NOM : le nom donne a un « Autre » d'abord.
+    headerPrimaryTitle = toDisplayText(resolveEventCustomName(event)) || eventOwnName || clubName;
   }
 
   let headerSecondaryTitle = '';

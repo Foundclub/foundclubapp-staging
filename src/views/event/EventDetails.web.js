@@ -11,6 +11,7 @@ import { Image, useWindowDimensions } from 'react-native';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  resolveEventCustomName,
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
@@ -63,6 +64,7 @@ import {
 import {
   buildPublishedBoardTarget,
   convocationsToutesEnListe,
+  estHorsDeSaConvocation,
   getViewerConvocationRole,
 } from '@/views/playerConvocation/playerConvocationUtils';
 
@@ -1097,6 +1099,14 @@ function EventDetails({ navigation, route }) {
     () => getViewerConvocationRole(convocationPayload, userData?.documentId || userData?.id),
     [convocationPayload, userData?.documentId, userData?.id],
   );
+  // CONVOC-HORS-LISTE (demande d'Adel du 07/11) — la regle du telephone
+  // (`EventDetails.js`, `notCalledUpNotice`) : le membre que SA convocation publiee laisse
+  // dehors lit, au-dessus de « Présent / Absent », qu'il peut quand meme se marquer present.
+  const notCalledUpNotice = !canEdit && estHorsDeSaConvocation(
+    convocationPayload,
+    resolveClientSourceTeamForUser(event, userData)?.documentId,
+    userData?.documentId || userData?.id,
+  ) ? t('eventDetails.convocation.notCalledUpCanAnswer') : '';
   const compositionEligiblePlayerCount = Array.isArray(staffCompositionPayload?.eligiblePlayers)
     ? staffCompositionPayload.eligiblePlayers.length
     : 0;
@@ -2257,7 +2267,11 @@ function EventDetails({ navigation, route }) {
                       {t('eventDetails.breadcrumb.planning', 'Planning')}
                     </button>
                     <span aria-hidden="true">›</span>
-                    <span>{event?.type?.name || t('eventDetails.eventFallback', 'Événement')}</span>
+                    <span>
+                      {resolveEventCustomName(event)
+                        || event?.type?.name
+                        || t('eventDetails.eventFallback', 'Événement')}
+                    </span>
                   </nav>
                 ) : (
                   <button
@@ -2547,9 +2561,20 @@ function EventDetails({ navigation, route }) {
                       <EventChildRegistration event={event} navigation={navigation} />
                     </div>
                   ) : null}
+                  {repondPresentAbsent && notCalledUpNotice ? (
+                    <div
+                      data-testid="event-answer-notice"
+                      style={{ color: mutedTextColor, flexBasis: '100%', fontSize: 14, lineHeight: 1.5 }}
+                    >
+                      {notCalledUpNotice}
+                    </div>
+                  ) : null}
                   {repondPresentAbsent ? (
                     [
-                      ['present', t('playerConvocation.actions.present', 'Présent'), participationState?.isParticipating],
+                      // CONVOC-HORS-LISTE-2 — le non-convoque repond « Présent si besoin ».
+                      ['present', notCalledUpNotice
+                        ? t('playerConvocation.actions.standby', 'Présent si besoin')
+                        : t('playerConvocation.actions.present', 'Présent'), participationState?.isParticipating],
                       ['absent', t('playerConvocation.actions.absent', 'Absent'), participationState?.isMissing],
                     ].map(([reponse, libelle, choisie]) => (
                       <button

@@ -1,0 +1,644 @@
+import { Text } from 'react-native';
+import renderer, { act } from 'react-test-renderer';
+
+// ==========================================================================
+// CONVOC-HORS-LISTE (demande d'Adel du 07/11) — LE JOUEUR QUE LA CONVOCATION
+// PUBLIEE LAISSE DEHORS LE LIT LA OU IL REPOND.
+//
+// Banc recopie de `EventDetailsPorteConvocationAC08.test.js` (memes doublures) ;
+// seule la doublure de `EventAnswerButtons` change : elle rend son `notice`, pour
+// que le temoin lise ce que la fiche lui confie.
+//
+//   (b) constat : le non-convoque de l'equipe a bien la rangee de reponse ;
+//   1. non convoque, convocation publiee → le message est confie aux boutons ;
+//   2. convoque (titulaire, remplacant)  → aucun message ;
+//   3. convocation non publiee           → aucun message ;
+//   4. seule l'AUTRE equipe a publie     → aucun message (ce n'est pas la sienne) ;
+//   5. le coach                          → aucun message.
+// ==========================================================================
+
+const mockUseAuth = jest.fn();
+const mockNavigate = jest.fn();
+const mockEventQuery = { data: null };
+const mockConvocationQuery = { data: null };
+
+// 🧨 R9 — CE MOCK N EST PAS DECORATIF. `teamMembershipRequestService`
+// importe `@/services/client`, qui JETTE AU CHARGEMENT quand `.env` est absent
+// — et `.env` est gitignore, donc absent de toute copie de travail. Sans cette
+// doublure, la SUITE ENTIERE tombe a 0 test execute des que l ecran importe le
+// service (piege documente, deja paye plusieurs fois).
+// 👪 PAR-L11b (13/10) — le bloc « Inscrire mes enfants » charge ses propres services : double ici,
+// comme chaque service de l ecran (EventDetails.js:123-128).
+jest.mock('@/views/event/components/EventChildRegistration', () => ({
+  __esModule: true,
+  default: () => null,
+  EventChildRegistrationsForOrganizer: () => null,
+}));
+jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
+  inviteToTeam: () => Promise.resolve(null),
+  resolveTeamInvitationAvailability: () => ({
+    candidateId: '',
+    canInvite: false,
+    reason: 'missing-team',
+  }),
+}));
+
+jest.mock('react-i18next', () => ({
+  ...jest.requireActual('react-i18next'),
+  useTranslation: () => ({
+    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
+      typeof fallback === 'string' ? fallback : key
+    ),
+  }),
+}));
+
+jest.mock('@/theme/themeContext', () => {
+  const generateColors = jest.requireActual('@/theme/colors').default;
+  const generateFonts = jest.requireActual('@/theme/fonts').default;
+  const generateApplicationStyle = jest.requireActual('@/theme/applicationStyle').default;
+  const Alignments = jest.requireActual('@/theme/alignements').default;
+  const Spaces = jest.requireActual('@/theme/spaces').default;
+  const Colors = generateColors();
+  return {
+    __esModule: true,
+    default: () => ({
+      Alignments,
+      ApplicationStyle: generateApplicationStyle(Colors),
+      Colors,
+      Fonts: generateFonts(Colors),
+      Images: new Proxy({}, { get: () => 1 }),
+      scheme: 'dark',
+      Spaces,
+    }),
+  };
+});
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: () => {},
+}));
+
+jest.mock('@tanstack/react-query', () => ({
+  useMutation: (/** @type {any} */ options) => ({
+    isPending: false,
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    options,
+  }),
+  useQueryClient: () => ({
+    invalidateQueries: jest.fn(),
+    setQueryData: jest.fn(),
+  }),
+}));
+
+jest.mock('react-native-blob-util', () => ({
+  __esModule: true,
+  default: { config: jest.fn(), fs: { dirs: {} } },
+}));
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => mockUseAuth(),
+}));
+
+jest.mock('@/domains/messaging/useMessaging', () => ({
+  __esModule: true,
+  default: () => ({ sendMessage: jest.fn() }),
+}));
+
+const emptyQuery = () => ({
+  data: null,
+  isFetching: false,
+  isLoading: false,
+  refetch: jest.fn(),
+});
+
+jest.mock('@/services/event/eventQueries', () => ({
+  useGetEvent: () => ({
+    data: mockEventQuery.data,
+    dataUpdatedAt: 1,
+    error: null,
+    isFetching: false,
+    isLoading: false,
+    refetch: jest.fn(),
+  }),
+  useGetEventAttendance: () => emptyQuery(),
+  useGetEventConvocation: () => ({ ...emptyQuery(), data: mockConvocationQuery.data }),
+  useGetEventTeamComposition: () => emptyQuery(),
+}));
+
+jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
+  useGetEventParticipations: () => emptyQuery(),
+}));
+
+jest.mock('@/services/license/licenseQueries', () => ({
+  useLicenseCampaigns: () => ({ ...emptyQuery(), data: { data: [] } }),
+}));
+
+// 🏆 N7 item 5 (vague P, 23/08) — le fil du tournoi lit `useGetTournamentDashboard`,
+// qui tire `@/services/client`. Sans cette doublure MUETTE, la suite entiere
+// tombe a 0 test (piege connu : un import de service de plus). `data: undefined`
+// = le calcul de repli de la page, identique a ce que ces temoins decrivaient.
+jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
+  useGetTournamentDashboard: () => ({ data: undefined, isLoading: false }),
+}));
+
+jest.mock('@/services/matchStats/matchStatsQueries', () => ({
+  useGetEventMatchStats: () => emptyQuery(),
+  useGetEventMyMatchResponse: () => emptyQuery(),
+}));
+
+jest.mock('@/services/event/eventService', () => ({
+  approveFeatured: jest.fn(),
+  exportEventParticipants: jest.fn(),
+  rejectFeatured: jest.fn(),
+}));
+
+jest.mock('@/services/recruitment/recruitmentService', () => ({
+  applyToRecruitmentAd: jest.fn(),
+}));
+
+jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
+  createCustomTournamentTeam: jest.fn(),
+  registerClubTeamToTournament: jest.fn(),
+  requestJoinTournamentTeam: jest.fn(),
+  respondToTournamentTeam: jest.fn(),
+  reviewTournamentTeamRegistration: jest.fn(),
+}));
+
+jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
+
+jest.mock('@/platform/share', () => ({
+  __esModule: true,
+  default: { share: jest.fn() },
+}));
+
+jest.mock('@/utils/performance/eventDetailsPerformance', () => ({
+  markEventDetailsPerf: jest.fn(),
+}));
+
+jest.mock('../hooks/useEventMutations', () => {
+  const idleMutation = () => ({ isPending: false, mutate: jest.fn() });
+  return {
+    useEventMutations: () => ({
+      acceptParticipationMutation: idleMutation(),
+      bookFullMutation: idleMutation(),
+      cancelEventMutation: idleMutation(),
+      coachArrivalMutation: idleMutation(),
+      createEventParticipationMutation: idleMutation(),
+      declineParticipationMutation: idleMutation(),
+      deleteParticipationMutation: idleMutation(),
+      joinReservationMutation: idleMutation(),
+      missingEventMutation: idleMutation(),
+      openForPlayersMutation: idleMutation(),
+      remindEventMutation: idleMutation(),
+      reportEventMutation: idleMutation(),
+      requestFeaturedMutation: idleMutation(),
+      resetAttendanceMutation: idleMutation(),
+      respondToEventRsvpMutation: idleMutation(),
+      selfArrivalMutation: idleMutation(),
+      selfLateMutation: idleMutation(),
+      sosAlertMutation: idleMutation(),
+      updateEventMutation: idleMutation(),
+      updateEventNoNavMutation: idleMutation(),
+      updateLateMinutesMutation: idleMutation(),
+    }),
+  };
+});
+
+jest.mock('@/components/atoms/button/Button', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function ButtonDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.TouchableOpacity,
+      {
+        accessibilityLabel: props.accessibilityLabel,
+        accessibilityRole: 'button',
+        disabled: Boolean(props.disabled || props.isLoading),
+        onPress: props.onPress,
+      },
+      react.createElement(rn.Text, null, props.title || ''),
+    );
+  };
+});
+
+jest.mock('@/components/templates/ScreenContainer', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function ScreenContainerDouble(/** @type {any} */ props) {
+    return react.createElement(rn.View, null, props.children);
+  };
+});
+
+jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function WithDataWrapperDouble(/** @type {any} */ props) {
+    return react.createElement(rn.View, null, props.children);
+  };
+});
+
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function BottomModalDouble(/** @type {any} */ props) {
+    if (!props.isVisible && !props.visible) return null;
+    return react.createElement(rn.View, null, props.children);
+  };
+});
+
+/* eslint-disable global-require */
+jest.mock('@/components/molecules/eventAnswerButtons/EventAnswerButtons', () => {
+  const react = require('react');
+  const rn = require('react-native');
+  return function EventAnswerButtonsDouble(/** @type {any} */ { isStandby, notice }) {
+    // CONVOC-HORS-LISTE-2 : `isStandby` (« Présent si besoin ») se lit a part, pour ne pas
+    // changer ce que les temoins du lot precedent lisent de la rangee.
+    return react.createElement(
+      rn.View,
+      null,
+      react.createElement(
+        rn.Text,
+        null,
+        notice ? `DOUBLURE_EventAnswerButtons AVIS:${notice}` : 'DOUBLURE_EventAnswerButtons',
+      ),
+      isStandby ? react.createElement(rn.Text, null, 'DOUBLURE_SI_BESOIN') : null,
+    );
+  };
+});
+jest.mock(
+  '@/components/organisms/joinEventModal/JoinEventModal',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_JoinEventModal'),
+);
+jest.mock(
+  '@/components/organisms/refuseParticipationModal/RefuseParticipationModal',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_RefuseParticipationModal'),
+);
+jest.mock(
+  '@/components/organisms/reportEventModal/ReportEventModal',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_ReportEventModal'),
+);
+jest.mock(
+  '@/components/organisms/shareEventModal/ShareEventModal',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_ShareEventModal'),
+);
+jest.mock(
+  '../components/EventHeader',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventHeader'),
+);
+jest.mock(
+  '../components/EventParticipants',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventParticipants'),
+);
+jest.mock(
+  '../components/EventDetectionSlots',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventDetectionSlots'),
+);
+jest.mock(
+  '../components/EventTasksSection',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventTasksSection'),
+);
+jest.mock(
+  '../components/EventTeamAudiencesSection',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventTeamAudiencesSection'),
+);
+jest.mock(
+  '../components/EventReservationActions',
+  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventReservationActions'),
+);
+/* eslint-enable global-require */
+
+// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
+// `SegmentedControl` importe `react-native-gesture-handler`, dont
+// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
+// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
+// chargement (« Cannot use import statement outside a module ») et AUCUN test
+// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
+// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
+// La doublure rend un pressable par onglet, portant son libelle : le dessin est
+// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
+// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
+// eslint-disable-next-line import/first
+import EventDetails from '../EventDetails';
+
+// Le premier montage transpile tout le graphe d'imports de l'ecran.
+jest.setTimeout(30000);
+
+const CLUB_ID = 'club-1';
+const TEAM_ID = 'team-1';
+const JOUEUR = 'joueur-1';
+const REMPLACANT = 'joueur-2';
+const SPECTATEUR = 'joueur-9';
+
+// Le pack publie par le coach : un titulaire sur le terrain, un sur le banc.
+const PACK = {
+  publishedAt: '2026-08-20T09:00:00.000Z',
+  publishedBy: { firstname: 'Coach', lastname: 'Karim' },
+  reservePlayerIds: [REMPLACANT],
+  reserveSnapshotPlayers: [{ documentId: REMPLACANT, firstname: 'Leo', lastname: 'Diarra' }],
+  snapshotPlayers: [{
+    documentId: JOUEUR, firstname: 'Karim', lastname: 'Sylla', number: 1,
+  }],
+  sportContext: 'football',
+  teams: [{
+    id: 'team_1',
+    name: 'U15',
+    placements: [{
+      playerId: JOUEUR, positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+    }],
+  }],
+};
+
+// 🧨 La charge telle que `GET /events/:id/convocation` l'envoie VRAIMENT
+// (`getPlayerConvocationView`, forme `branches`) — aucun `published` a la racine.
+const CONVOCATION = {
+  branches: [{
+    published: PACK,
+    responses: { byPlayerId: {}, counts: { absent: 0, pending: 2, present: 0 } },
+    team: { documentId: TEAM_ID, name: 'U15' },
+    viewer: { inReserve: false, teamEntryIds: [] },
+  }],
+  event: { date: '2099-01-01T10:00:00.000Z', documentId: 'event-1', name: 'Match' },
+  eventKind: 'event',
+  schemaVersion: 3,
+};
+
+const buildMatch = (/** @type {any} */ overrides = {}) => ({
+  club: { documentId: CLUB_ID },
+  date: '2099-01-01T10:00:00.000Z',
+  documentId: 'event-1',
+  featuredRequests: [],
+  id: 1,
+  invitedTeams: [],
+  isActive: true,
+  name: 'Match contre Saint-Julien',
+  participations: [],
+  startTime: '10:00',
+  team: {
+    club: { documentId: CLUB_ID },
+    documentId: TEAM_ID,
+    name: 'U15',
+    // 🔑 C'est cette liste qui ouvre `canViewPublishedComposition` a un joueur
+    // (`isTeamMember`) : sans elle, la page ne demande meme pas la convocation.
+    players: [{ documentId: JOUEUR }, { documentId: REMPLACANT }],
+    trainers: [{ documentId: 'coach-1' }],
+  },
+  type: { name: 'Match' },
+  ...overrides,
+});
+
+const authPour = (/** @type {string} */ documentId, /** @type {boolean} */ peutGerer = false) => ({
+  canEditClub: () => peutGerer,
+  canEditEvent: () => peutGerer,
+  canManageEvent: () => peutGerer,
+  freeUsageSummary: null,
+  subscriptionAccessLevel: 'FREE',
+  userData: { documentId, role: { name: peutGerer ? 'Dirigeant' : 'Joueur' } },
+});
+
+/** @type {any} */
+let mounted = null;
+
+const monter = (/** @type {any} */ { auth, convocation = CONVOCATION, event } = {}) => {
+  mockEventQuery.data = event === undefined ? buildMatch() : event;
+  mockConvocationQuery.data = convocation;
+  mockUseAuth.mockReturnValue(auth || authPour(JOUEUR));
+
+  act(() => {
+    mounted = renderer.create(
+      <EventDetails
+        navigation={{
+          addListener: () => () => {},
+          goBack: jest.fn(),
+          navigate: mockNavigate,
+          setOptions: jest.fn(),
+        }}
+        route={{ params: { eventId: 'event-1' } }}
+      />,
+    );
+  });
+
+  return mounted.root;
+};
+
+const textOf = (/** @type {any} */ node) => {
+  const parts = [];
+  const walk = (/** @type {any} */ child) => {
+    if (child === null || child === undefined || child === false) return;
+    if (typeof child === 'string' || typeof child === 'number') {
+      parts.push(String(child));
+      return;
+    }
+    const children = child?.props?.children;
+    if (Array.isArray(children)) children.forEach(walk);
+    else walk(children);
+  };
+  walk(node);
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+const textesVisibles = (/** @type {any} */ root) => root
+  .findAllByType(Text)
+  .map((/** @type {any} */ node) => textOf(node))
+  .filter(Boolean);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockEventQuery.data = null;
+  mockConvocationQuery.data = null;
+});
+
+afterEach(() => {
+  if (mounted) {
+    act(() => {
+      mounted.unmount();
+    });
+    mounted = null;
+  }
+});
+
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
+const AVIS = 'eventDetails.convocation.notCalledUpCanAnswer';
+
+// L'equipe ou le lecteur joue, mais ou le coach ne l'a pas retenu.
+const matchSansLui = () => buildMatch({
+  team: {
+    club: { documentId: CLUB_ID },
+    documentId: TEAM_ID,
+    name: 'U15',
+    players: [{ documentId: JOUEUR }, { documentId: REMPLACANT }, { documentId: SPECTATEUR }],
+    trainers: [{ documentId: 'coach-1' }],
+  },
+});
+
+const rangeeDeReponse = (/** @type {any} */ root) => textesVisibles(root)
+  .filter((texte) => texte.startsWith('DOUBLURE_EventAnswerButtons'));
+
+describe('CONVOC-HORS-LISTE · constat (b) — il peut deja repondre depuis la fiche', () => {
+  test('le non-convoque a la rangee de reponse, et la fiche dit qu il n y est pas', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: matchSansLui() });
+
+    expect(rangeeDeReponse(root)).toHaveLength(1);
+    expect(textesVisibles(root).join(' | ')).toContain('Tu n’es pas dans la composition publiée.');
+  });
+});
+
+describe('CONVOC-HORS-LISTE · TEMOIN 1 — non convoque, convocation publiee : le message', () => {
+  test('la rangee de reponse porte le message « pas convoque, tu peux te marquer present »', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: matchSansLui() });
+
+    expect(rangeeDeReponse(root)).toEqual([`DOUBLURE_EventAnswerButtons AVIS:${AVIS}`]);
+  });
+});
+
+describe('CONVOC-HORS-LISTE · TEMOIN 2 — 🔒 le convoque ne le lit jamais', () => {
+  test('titulaire : la rangee sans message', () => {
+    const root = monter({ auth: authPour(JOUEUR), event: matchSansLui() });
+
+    expect(rangeeDeReponse(root)).toEqual(['DOUBLURE_EventAnswerButtons']);
+  });
+
+  test('remplacant : la rangee sans message', () => {
+    const root = monter({ auth: authPour(REMPLACANT), event: matchSansLui() });
+
+    expect(rangeeDeReponse(root)).toEqual(['DOUBLURE_EventAnswerButtons']);
+  });
+});
+
+describe('CONVOC-HORS-LISTE · TEMOIN 3 — 🔒 convocation non publiee : aucun message', () => {
+  test('sans pack publie, personne n est « hors convocation »', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), convocation: null, event: matchSansLui() });
+
+    expect(rangeeDeReponse(root)).toEqual(['DOUBLURE_EventAnswerButtons']);
+  });
+});
+
+describe('CONVOC-HORS-LISTE · TEMOIN 4 — 🔒 seule l autre equipe a publie : aucun message', () => {
+  test('le pack de l adversaire ne dit rien de la convocation du lecteur', () => {
+    const root = monter({
+      auth: authPour(SPECTATEUR),
+      convocation: {
+        ...CONVOCATION,
+        branches: [{
+          ...CONVOCATION.branches[0],
+          team: { documentId: 'team-adverse', name: 'Saint-Julien' },
+        }],
+      },
+      event: matchSansLui(),
+    });
+
+    expect(textesVisibles(root).join(' | ')).not.toContain(`AVIS:${AVIS}`);
+  });
+});
+
+describe('CONVOC-HORS-LISTE · TEMOIN 5 — 🔒 le coach ne le lit pas', () => {
+  test('nulle part sur la page', () => {
+    const root = monter({ auth: authPour('coach-1', true), event: matchSansLui() });
+
+    expect(textesVisibles(root).join(' | ')).not.toContain(`AVIS:${AVIS}`);
+  });
+});
+
+// ==========================================================================
+// CONVOC-HORS-LISTE-2 (decision d'Adel du 07/11, « 158 »)
+//   2. la fiche dit « Présent si besoin » a ce meme joueur (`isStandby`), comme la carte ;
+//   4. match entre deux clubs ou seul l'ADVERSAIRE a publie : « Tu n'es pas dans la
+//      composition publiée. » ne s'affiche plus — la ligne ne regarde que SON equipe.
+// ==========================================================================
+const SI_BESOIN = 'DOUBLURE_SI_BESOIN';
+const PAS_DEDANS = 'Tu n’es pas dans la composition publiée.';
+const SEUL_L_ADVERSAIRE = {
+  ...CONVOCATION,
+  branches: [{
+    ...CONVOCATION.branches[0],
+    team: { documentId: 'team-adverse', name: 'Saint-Julien' },
+  }],
+};
+const matchContreUnAutreClub = () => ({
+  ...matchSansLui(),
+  invitedTeams: [{
+    club: { documentId: 'club-adverse' },
+    documentId: 'team-adverse',
+    name: 'Saint-Julien',
+    players: [{ documentId: 'adverse-1' }],
+    trainers: [{ documentId: 'coach-adverse' }],
+  }],
+});
+
+describe('CONVOC-HORS-LISTE-2 · 2 — la fiche dit « Présent si besoin »', () => {
+  test('non convoque, convocation de son equipe publiee : « si besoin »', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: matchSansLui() });
+
+    expect(textesVisibles(root)).toContain(SI_BESOIN);
+  });
+
+  test('🔒 convoque : jamais', () => {
+    const root = monter({ auth: authPour(JOUEUR), event: matchSansLui() });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+
+  test('🔒 convocation non publiee : jamais', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), convocation: null, event: matchSansLui() });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+
+  test('🔒 seule l adversaire a publie : jamais', () => {
+    const root = monter({
+      auth: authPour(SPECTATEUR), convocation: SEUL_L_ADVERSAIRE, event: matchContreUnAutreClub(),
+    });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+
+  test('🔒 le coach : jamais', () => {
+    const root = monter({ auth: authPour('coach-1', true), event: matchSansLui() });
+
+    expect(textesVisibles(root)).not.toContain(SI_BESOIN);
+  });
+});
+
+describe('CONVOC-HORS-LISTE-2 · 4 — la ligne d etat ne regarde que l equipe du joueur', () => {
+  test('seul l adversaire a publie : « pas encore publiée »', () => {
+    const root = monter({
+      auth: authPour(SPECTATEUR), convocation: SEUL_L_ADVERSAIRE, event: matchContreUnAutreClub(),
+    });
+    const page = textesVisibles(root).join(' | ');
+
+    expect(page).not.toContain(PAS_DEDANS);
+    expect(page).toContain('La composition n’est pas encore publiée.');
+  });
+
+  test('🔒 sa propre equipe a publie sans lui : la ligne reste', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: matchContreUnAutreClub() });
+
+    expect(textesVisibles(root).join(' | ')).toContain(PAS_DEDANS);
+  });
+});

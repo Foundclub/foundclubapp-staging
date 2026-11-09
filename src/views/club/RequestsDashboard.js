@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
@@ -147,7 +148,7 @@ function RequestsDashboard({ navigation, route }) {
         <View style={[Alignments.row, Alignments.spaceBetween, Alignments.alignStart]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-              {item.type?.name || t(
+              {resolveEventCustomName(item) || item.type?.name || t(
                 'requestsDashboard.item.eventFallback',
                 'Événement',
               )}

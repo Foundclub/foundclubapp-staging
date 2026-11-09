@@ -27,6 +27,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   isMatchTypeName,
   OPPONENT_NAME_MAX_LENGTH,
+  resolveEventCustomName,
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
@@ -104,6 +105,7 @@ import {
   CONVOCATION_ROLE_CALLED_UP,
   CONVOCATION_ROLE_STARTER,
   convocationsToutesEnListe,
+  estHorsDeSaConvocation,
   getConvocationPersonId,
   getPersonName,
   getViewerConvocationRole,
@@ -3798,6 +3800,10 @@ function EventDetails({ navigation, route }) {
       return nomAvecAdversaire;
     }
 
+    // EVT-AUTRE-NOM : un « Autre » nomme porte son nom, avant la description.
+    const nomDonne = resolveEventCustomName(event);
+    if (nomDonne) return nomDonne;
+
     const preferredLabel = [eventDescriptionText, event?.name, event?.description]
       .find((value) => typeof value === 'string' && value.trim());
 
@@ -4290,6 +4296,23 @@ function EventDetails({ navigation, route }) {
     [convocationPayload, userData?.documentId, userData?.id],
   );
 
+  // CONVOC-HORS-LISTE (demande d'Adel du 07/11) — LE MEMBRE QUE SA CONVOCATION PUBLIEE
+  // LAISSE DEHORS LE LIT LA OU IL REPOND : il n'est pas convoque, sa reponse n'entre pas
+  // dans le compte des convoques (le serveur ne compte que le pack), mais il peut se
+  // marquer present. Memes gardes que la ligne du haut ; le coach ne le lit pas.
+  const viewerSourceTeamId = resolveClientSourceTeamForUser(event, userData)?.documentId;
+  const isLeftOutOfOwnConvocation = estHorsDeSaConvocation(
+    convocationPayload,
+    viewerSourceTeamId,
+    userData?.documentId || userData?.id,
+  );
+  const notCalledUpNotice = useMemo(() => {
+    if (canEdit || !supportsEventComposition || !canViewPublishedComposition) return '';
+    return isLeftOutOfOwnConvocation ? t('eventDetails.convocation.notCalledUpCanAnswer') : '';
+  }, [
+    canEdit, canViewPublishedComposition, isLeftOutOfOwnConvocation, supportsEventComposition, t,
+  ]);
+
   const viewerConvocationLine = useMemo(() => {
     if (viewerConvocationRole === CONVOCATION_ROLE_STARTER) {
       return t(
@@ -4307,8 +4330,14 @@ function EventDetails({ navigation, route }) {
         'Tu es convoqué · Remplaçant',
       );
     }
+    // CONVOC-HORS-LISTE-2 (point 4) — un match entre deux clubs ou seul l'ADVERSAIRE a publie :
+    // le membre d'une equipe lisait « pas dans la composition » alors que la sienne n'est pas
+    // publiee. La ligne ne regarde que SON equipe ; sans equipe connue, elle reste comme avant.
+    if (viewerSourceTeamId && !isLeftOutOfOwnConvocation) {
+      return t('eventDetails.convocation.notPublished', 'La composition n’est pas encore publiée.');
+    }
     return t('eventDetails.youReNotInThe', 'Tu n’es pas dans la composition publiée.');
-  }, [viewerConvocationRole, t]);
+  }, [isLeftOutOfOwnConvocation, viewerConvocationRole, viewerSourceTeamId, t]);
 
   // AD01 — LA MEME PHRASE, MAIS EN HAUT DE LA PAGE.
   //
@@ -7931,6 +7960,8 @@ function EventDetails({ navigation, route }) {
         hasAcceptedRequest={hasAcceptedRequest}
         hasPendingRequest={hasPendingRequest}
         isFinished={isMatchFinished}
+        isStandby={Boolean(notCalledUpNotice)}
+        notice={notCalledUpNotice}
         onDeclareLatePresence={offrePresentApresCoup ? handleDeclareLatePresence : undefined}
         onDecline={() => handleDeclineEvent(event)}
         onDeleteParticipation={handleDeleteParticipation}

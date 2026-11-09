@@ -91,6 +91,15 @@ jest.mock('@/services/client', () => ({
 
 // React jette a 50 mises a jour imbriquees ; on coupe avant pour rendre un
 // chiffre au lieu d'une pile de 40 000 lignes.
+// Décision du chef du 08/11 (STORES-2696) : ces cas jouent l'ANCIEN tour du dirigeant (v2),
+// l'interrupteur est forcé à faux ici. Le guide à missions allumé a son témoin :
+// TourContext.STORES2696.finGuideDirigeant.test.js.
+jest.mock('@/domains/tour/presidentGuideSettings', () => {
+  const actual = jest.requireActual('@/domains/tour/presidentGuideSettings');
+  const settings = { ...actual.PRESIDENT_GUIDE_SETTINGS, enabled: false };
+  return { __esModule: true, default: settings, PRESIDENT_GUIDE_SETTINGS: settings };
+});
+
 const PLAFOND_RENDUS = 80;
 
 // Mesures du 2026-09-05 sur `staging` (21275322).
