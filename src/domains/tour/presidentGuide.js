@@ -108,7 +108,7 @@ export const PRESIDENT_GUIDE = Object.freeze({
           || text('tourCatalog.president.close.yourTeam', 'Ton équipe'),
         ...SANS_ECHAPPEMENT,
       }),
-    created?.['conversation.group.created']
+    created?.['conversation.group.created'] && !created['conversation.group.created'].simulated
       && text('tourCatalog.president.close.group', 'Groupe créé'),
   ].filter(Boolean),
   /**
