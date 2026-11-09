@@ -34,6 +34,9 @@ import { useGetClub } from '@/services/club/clubQueries';
 import { displayErrorAlert } from '@/utils/errors/displayError';
 import { getFieldError } from '@/utils/form/formUtils';
 
+import { useTour } from '@/context/useTour';
+import useKeyboardFrame from '@/hooks/useKeyboardFrame';
+
 const defaultValues = {
   birthdate: '',
   firstname: '',
@@ -86,6 +89,15 @@ function AddCoach({ navigation, route }) {
 // local state
   // GUIDE-D-CORR-2 : le guide fait défiler cet écran jusqu'à sa cible (useTourScroller).
   const tourScroll = useTourScroller();
+  // GUIDE-D-CORR-3 (M1078) : clavier ouvert, « Envoyer » et « Annuler » mangeaient la place de la
+  // saisie ; ils s'effacent (comme AddSponsor, TG-08) et reviennent clavier fermé. Quand le guide
+  // montre « Envoyer », le clavier se ferme pour que le bouton soit là.
+  const keyboard = useKeyboardFrame();
+  const { currentStep: tourStep, tourStatus } = useTour();
+  const isTourOnSend = tourStatus === 'active' && Boolean(tourStep?.targets?.includes('cf-send'));
+  useEffect(() => {
+    if (isTourOnSend) Keyboard.dismiss();
+  }, [isTourOnSend]);
   const [avatar, setAvatar] = useState(
     /** @type {Avatar | undefined} */
     (undefined),
@@ -464,7 +476,7 @@ function AddCoach({ navigation, route }) {
           </ScrollView>
         </TourTarget>
 
-        <View style={[Spaces.gap[4]]}>
+        <View style={[Spaces.gap[4], keyboard && !isTourOnSend ? { display: 'none' } : null]}>
           <TourTarget id="cf-send">
             <Button
               disabled={!!Object.keys(formErrors).length}
