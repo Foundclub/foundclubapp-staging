@@ -32,7 +32,10 @@ describe('B5 : toucher la case visée fait avancer, ce n est pas une sortie', ()
     expect(idAt(match.index)).toBe(`${id}-page`);
     const page = step(`${id}-page`);
     expect(page.missionId).toBe('president_b5');
-    expect(page.navTarget.routeName).toBe(route);
+    // « Reprendre » rouvre la page dans la pile de l'onglet Accueil, là où la case l'ouvre.
+    expect(page.navTarget.routeName).toBe(RouteNames.HomeTab);
+    expect(page.navTarget.params.screen).toBe(RouteNames.Search);
+    expect(page.navTarget.params.params.screen).toBe(route);
     expect(typeof page.text).toBe('string');
     expect(page.text).not.toMatch(/undefined/);
   });

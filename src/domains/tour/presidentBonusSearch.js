@@ -35,12 +35,24 @@ const cardStep = (id, card, route, text, extras = {}) => Object.defineProperties
 }, Object.getOwnPropertyDescriptors(extras));
 
 /**
+ * La page d'une case, dans la pile de l'onglet Accueil (comme `homeTarget`) : « Reprendre » la
+ * rouvre là où la case l'avait ouverte, pas à la racine.
+ * @param {string} screen - Écran ouvert par la case.
+ * @param {any} [params] - Ses paramètres.
+ * @returns {any} Cible de navigation.
+ */
+const pageTarget = (screen, params) => ({
+  params: { params: { params, screen }, screen: RouteNames.Search },
+  routeName: RouteNames.HomeTab,
+});
+
+/**
  * Bulle de la page ouverte depuis une case, hors du parcours par « Suivant » (`when` faux) : on
  * n'y entre que par l'aiguillage de la case. Le retour à l'accueil (flèche ou onglet) mène à la
  * case suivante. Pas de bouton « Suivant » ici : il ramènerait à l'accueil par le guide, et
  * l'arrivée sur l'accueil serait lue comme un retour à la case d'avant (`stepBack`).
  * @param {string} id - Id de l'étape de la case.
- * @param {{ params?: any; routeName: string }} navTarget - La page, pour « Reprendre ».
+ * @param {any} navTarget - La page, pour « Reprendre » (`pageTarget`).
  * @param {() => string} text - Texte.
  * @param {any} [extras] - Propriétés en plus.
  * @returns {any} Étape.
@@ -78,7 +90,7 @@ export const B5_STEPS = [
     'b5-ev',
     'Événement : tournois, stages et détections autour de toi.',
   )),
-  pageStep('b5-ev', { routeName: RouteNames.SearchEvents }, () => t(
+  pageStep('b5-ev', pageTarget(RouteNames.SearchEvents), () => t(
     'b5-ev-page',
     'Voici les événements près de toi, jour par jour. La flèche te ramène à l’accueil.',
   )),
@@ -86,7 +98,7 @@ export const B5_STEPS = [
     'b5-cl',
     'Club : les autres clubs, pour un partenariat ou un amical.',
   )),
-  pageStep('b5-cl', { routeName: RouteNames.SearchClubs }, () => t(
+  pageStep('b5-cl', pageTarget(RouteNames.SearchClubs), () => t(
     'b5-cl-page',
     'Voici les clubs : ouvre une fiche pour les contacter. La flèche te ramène à l’accueil.',
   )),
@@ -94,7 +106,7 @@ export const B5_STEPS = [
     'b5-re',
     'Réservations : les créneaux de terrains à réserver près de toi.',
   ), { when: () => RESERVATIONS_SUR_ACCUEIL }),
-  pageStep('b5-re', { routeName: RouteNames.SearchReservations }, () => t(
+  pageStep('b5-re', pageTarget(RouteNames.SearchReservations), () => t(
     'b5-re-page',
     'Voici les créneaux de terrains libres. La flèche te ramène à l’accueil.',
   )),
@@ -102,10 +114,9 @@ export const B5_STEPS = [
     'b5-pr',
     'Profils : les joueur·se·s et coachs ouverts au recrutement.',
   )),
-  pageStep('b5-pr', {
-    params: { initialRecruitmentTab: 'profils' },
-    routeName: RouteNames.SearchRecruitment,
-  }, () => t(
+  pageStep('b5-pr', pageTarget(RouteNames.SearchRecruitment, {
+    initialRecruitmentTab: 'profils',
+  }), () => t(
     'b5-pr-page',
     'Voici les profils ouverts au recrutement. La flèche te ramène à l’accueil.',
   )),
@@ -116,7 +127,7 @@ export const B5_STEPS = [
     completesMission: true,
     get nextLabel() { return t('understood', 'Compris'); },
   }),
-  pageStep('b5-fr', { params: { activeType: 'amicaux' }, routeName: RouteNames.SearchHub }, () => t(
+  pageStep('b5-fr', pageTarget(RouteNames.SearchHub, { activeType: 'amicaux' }), () => t(
     'b5-fr-page',
     'Voici les équipes qui cherchent un adversaire. Tu peux aussi publier ton annonce.',
   ), {
