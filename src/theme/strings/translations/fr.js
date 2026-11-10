@@ -10629,6 +10629,16 @@ export default {
     enterYourIndividualFeedbackThen: 'Renseigne ton retour individuel, puis ajoute une note sur 10.',
     eventAttendance: 'Présence événement',
     eventCampaign: 'Campagne événement',
+    // CONVERSATION-EVENEMENT (10/11) — le chat de l evenement (libelle du bouton impose par Adel).
+    eventChat: {
+      error: 'Impossible d’ouvrir le chat pour le moment.',
+      members: '{{count}} membres',
+      open: 'Ouvrir le chat de l’événement',
+      opened: 'Chat de l’événement',
+      staffOnly: 'Le staff seulement pour l’instant : les convoqués entreront à la publication',
+      withConvoked: 'Avec le staff et les {{count}} convoqués',
+      withInvited: 'Avec le staff et les {{count}} invités, qu’ils aient répondu ou non',
+    },
     eventCreatedCheckTheLast: 'Événement créé. Vérifie les derniers détails avant de le partager.',
     eventFallback: 'Événement',
     eventGone: 'Cet événement n’est plus disponible ou a été supprimé.',
@@ -16460,6 +16470,7 @@ export default {
   },
   messagingUseCases: {
     conversationName: {
+      event: 'Chat de l’événement',
       friendlyMatch: 'Match amical',
       group: 'Groupe',
       leagueMatch: 'Match de Ligue',

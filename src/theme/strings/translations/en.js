@@ -10034,6 +10034,16 @@ export default {
     enterYourIndividualFeedbackThen: 'Enter your individual feedback, then add a rating out of 10.',
     eventAttendance: 'Event attendance',
     eventCampaign: 'Event campaign',
+    // CONVERSATION-EVENEMENT (10/11) — the event chat.
+    eventChat: {
+      error: 'Couldn’t open the chat right now.',
+      members: '{{count}} members',
+      open: 'Open event chat',
+      opened: 'Event chat',
+      staffOnly: 'Staff only for now: called-up players join when the call-up is published',
+      withConvoked: 'With the staff and the {{count}} called-up players',
+      withInvited: 'With the staff and the {{count}} invitees, whether they replied or not',
+    },
     eventCreatedCheckTheLast: 'Event created. Check the last details before sharing it.',
     eventFallback: 'Event',
     eventGone: 'This event is no longer available or has been deleted.',
@@ -15500,6 +15510,7 @@ export default {
   },
   messagingUseCases: {
     conversationName: {
+      event: 'Event chat',
       friendlyMatch: 'Friendly match',
       group: 'Group',
       leagueMatch: 'League match',

@@ -189,6 +189,7 @@ import {
   resolveAttendanceWindow,
   resolveCallMode,
 } from './attendance/attendanceCallModel';
+import EventChatRow from './components/EventChatRow';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
 } from './components/EventChildRegistration';
@@ -8391,6 +8392,10 @@ function EventDetails({ navigation, route }) {
               event={event}
               matchScoreSummary={matchEncartSummary}
             />
+            {/* CONVERSATION-EVENEMENT (10/11) — le chat de l'evenement, sous la carte,
+                au-dessus des onglets (maquette validee, ecrans A a G) ;
+                le serveur dit qui voit quoi. */}
+            <EventChatRow eventDocumentId={event?.documentId} navigation={navigation} />
             {tournoiClos ? (
               <View
                 accessibilityRole="summary"

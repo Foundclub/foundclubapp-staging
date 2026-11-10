@@ -119,6 +119,7 @@ import {
   resolveServerClockMs,
 } from './attendance/attendanceCallModel';
 import CancelSeriesSheet from './components/CancelSeriesSheet';
+import EventChatRow from './components/EventChatRow';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
 } from './components/EventChildRegistration';
@@ -2484,6 +2485,12 @@ function EventDetails({ navigation, route }) {
                       </span>
                     ) : null}
                   </div>
+
+                  {/* CONVERSATION-EVENEMENT (10/11) — le chat de l'evenement,
+                      comme au telephone. */}
+                  {isSignedIn ? (
+                    <EventChatRow eventDocumentId={event?.documentId} navigation={navigation} />
+                  ) : null}
 
                   {/* ST-VUES3-ORDI · point 6 — la description d'un entraînement a sa carte, à
                       gauche (écran 21) : elle ne s'écrit plus aussi dans l'en-tête. */}

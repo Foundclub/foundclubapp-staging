@@ -391,6 +391,28 @@ export const createTeamChat = async (team) => {
 };
 
 /**
+ * CONVERSATION-EVENEMENT (10/11) — ce que la fiche d'un evenement montre du chat de l'evenement :
+ * le bouton (staff de l'equipe), le raccourci (membre), et combien de personnes y sont. Aucun nom.
+ * @param {string} eventId - Le documentId de l'evenement.
+ * @returns {Promise<{ chat: { documentId: string, title: string } | null, estMembre: boolean,
+ *   estUnMatch: boolean, nombre: { membres: number, staff: number }, peutOuvrir: boolean }>}
+ */
+export const getEventChatState = async (eventId) => {
+  const response = await client.get(`/chats/event/${encodeURIComponent(eventId)}`);
+  return response.data?.data;
+};
+
+/**
+ * CONVERSATION-EVENEMENT — ouvre le chat de l'evenement, ou retrouve celui qui existe.
+ * @param {string} eventId - Le documentId de l'evenement.
+ * @returns {Promise<{ chat: { documentId: string, title: string }, cree: boolean }>}
+ */
+export const openEventChat = async (eventId) => {
+  const response = await client.post(`/chats/event/${encodeURIComponent(eventId)}`);
+  return response.data?.data;
+};
+
+/**
  * Create a new group chat
  * MSG1BA (§3.15) — `permissions` (contrat 1B §5.3) : les autorisations reglees a la creation,
  * partielles ; n'est envoye que s'il est fourni (un serveur d'avant 1B l'ignore).
