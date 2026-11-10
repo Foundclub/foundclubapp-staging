@@ -280,9 +280,24 @@ describe('N10 — le menu du guide se distingue des rangées', () => {
     await monter();
     await toucher('Guide entraîneur·e');
     expect(styleDe(rangeeDe('Guide entraîneur·e')).marginLeft || 0).toBe(0);
-    expect(styleDe(rangeeDe('Revoir le guide sans rien créer')).marginLeft)
+    expect(styleDe(rangeeDe('Revoir sans rien créer')).marginLeft)
       .toBeGreaterThanOrEqual(24);
     expect(styleDe(rangeeDe('Faire un bonus')).marginLeft).toBeGreaterThanOrEqual(24);
+  });
+
+  // GUIDE-E-CORR-2 (testeur, iPhone, 10/11 11:15) : « Revoir le guide sans rien c… ». Le retrait
+  // de 42 rétrécit la ligne, et son libellé restait tenu sur UNE ligne (l'anglais, plus long, aussi).
+  // Le libellé est aussi raccourci (fr et en) : en anglais, deux lignes ne suffisaient pas.
+  it('un choix du menu passe sur deux lignes plutôt que d’être coupé', async () => {
+    mockTour = tourDe({ hasGuideHistory: true });
+    await monter();
+    await toucher('Guide entraîneur·e');
+    const libelle = (texte) => rangeeDe(texte).findAllByType(Text)
+      .find((x) => aplatirTexte(x.props.children) === texte);
+    expect(libelle('Revoir sans rien créer').props.numberOfLines).toBe(2);
+    expect(libelle('Recommencer à zéro').props.numberOfLines).toBe(2);
+    // Témoin : une rangée sans retrait garde sa ligne unique.
+    expect(libelle('Guide entraîneur·e').props.numberOfLines).toBe(1);
   });
 
   it('« Faire un bonus » nomme ses bonus', async () => {
@@ -315,7 +330,7 @@ describe('L1 — Mon compte d’un dirigeant', () => {
     mockTour = tourDe({ hasGuideHistory: true, isGuide: true, profileKey: 'president' });
     await monter({ name: 'President', type: 'president' });
     await toucher('Guide dirigeant·e');
-    expect(rangeeDe('Revoir le guide sans rien créer')).toBeUndefined();
+    expect(rangeeDe('Revoir sans rien créer')).toBeUndefined();
   });
 
   it('guide Dirigeant : « Faire un bonus » dit ses bonus, pas ceux du coach', async () => {
