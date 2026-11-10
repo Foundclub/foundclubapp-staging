@@ -797,17 +797,31 @@ function UserDetails({ navigation, route }) {
     // ⚠️ SANS CETTE BRANCHE, LE REFUS EST MUET : `getErrorMessage` ne recopie le
     // message du serveur que sous `__DEV__`, et retombe sinon sur le statut 403,
     // c'est-à-dire « Accès refusé. » — le refus perdait sa raison en chemin.
+    // RATTRAPAGE (172 C) — le client rejette `response.data.error` ({ message, details }) : la
+    // phrase est alors `error.message`, a cote de `details`. Sans cette lecture, tout refus
+    // retombait sur le repli « un mineur… », meme pour un adulte sans date de naissance.
     const minorRefusalMessage = String(
       error?.response?.data?.error?.message
       || error?.details?.message
+      || (error?.details ? error?.message : '')
       || '',
     ).trim();
+    const refusalReason = String(
+      error?.details?.reason || error?.response?.data?.error?.details?.reason || '',
+    );
 
     let contactFailureBody;
     if (code === 'CHAT_BLOCKED_BETWEEN_USERS') {
       contactFailureBody = t(
         'userBlock.errors.blocked',
         'Tu as bloqué cette personne. Débloque-la pour lui réécrire.',
+      );
+    } else if (code === 'MINOR_DIRECT_CHAT_FORBIDDEN' && refusalReason === 'AGE_UNKNOWN') {
+      // 172 C — l'age inconnu n'est pas un mineur prouve : dire ce qui debloque.
+      contactFailureBody = t(
+        'APIerrors.MINOR_DIRECT_CHAT_AGE_UNKNOWN',
+        "L'âge de cette personne n'est pas connu : elle doit ajouter sa date de naissance "
+        + 'pour recevoir des messages privés.',
       );
     } else if (code === 'MINOR_DIRECT_CHAT_FORBIDDEN') {
       contactFailureBody = minorRefusalMessage || t(
