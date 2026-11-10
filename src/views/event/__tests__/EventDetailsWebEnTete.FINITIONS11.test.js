@@ -132,6 +132,11 @@ jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
 
 jest.mock('@/platform/share', () => ({ share: jest.fn() }));
+// ACCUEIL-JOUEUR (09/11) — la ligne « Ouvrir dans le GPS » de la fiche du site.
+const mockOpenExternalMap = jest.fn();
+jest.mock('@/platform/maps/externalMap', () => ({
+  openExternalMap: (/** @type {any} */ cible) => mockOpenExternalMap(cible),
+}));
 
 jest.mock('@/components/templates/ScreenContainer', () => {
   const react = jest.requireActual('react');
@@ -290,11 +295,28 @@ describe('FINITIONS11 · point 1 — l en-tête des pages d événement du site'
     expect(drapeau(root)).toHaveLength(1);
   });
 
-  test('5 · la ligne d infos de la planche vaut pour tous les types : « U15 · sam. 5 sept. · 19:00 – 20:00 · Lyon (69001) »', () => {
+  // ACCUEIL-JOUEUR (09/11/2026, point 3, mots d'Adel) : le lieu se lit en adresse PRÉCISE (rue,
+  // ville), plus « Lyon (69001) » seul — la planche P3-match-ordi est dépassée sur ce point.
+  test('5 · la ligne d infos vaut pour tous les types, le lieu en adresse précise', () => {
     const root = mountScreen({ event: buildEvent() });
     const ligne = root.findAllByProps({ 'data-testid': 'event-info-line' });
     expect(ligne).toHaveLength(1);
-    expect(textOf(ligne[0])).toBe('U15 · sam. 5 sept. · 19:00 – 20:00 · Lyon (69001)');
+    expect(textOf(ligne[0])).toBe('U15 · sam. 5 sept. · 19:00 – 20:00 · 12 rue de la Paix, 69001 Lyon');
+  });
+
+  // ACCUEIL-JOUEUR (09/11/2026, point 4) : la fiche du site n'ouvrait aucun GPS ; la ligne
+  // d'action visible ouvre la carte (nouvel onglet, `openExternalMap`).
+  test('5 bis · « Ouvrir dans le GPS » se voit et ouvre le lieu', () => {
+    const root = mountScreen({ event: buildEvent() });
+    const actions = root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+      && n.props.testID === 'event-web-ouvrir-gps');
+    expect(actions).toHaveLength(1);
+    expect(actions[0].props.accessibilityLabel ?? actions[0].props['aria-label'])
+      .toBe('Ouvrir dans le GPS');
+    act(() => actions[0].props.onClick());
+    expect(mockOpenExternalMap).toHaveBeenCalledWith(expect.objectContaining({
+      label: '12 rue de la Paix, 69001 Lyon',
+    }));
   });
 
   test('6 · « Signaler » demande la raison, puis l envoie par le service du téléphone', async () => {

@@ -21,6 +21,8 @@ import Profile from '../Profile';
 let mockUserData;
 /** PAR-L12 — le mode parent d'un compte sportif (choix d'affichage, `useAuth`). */
 let mockIsParentMode = false;
+/** ACCUEIL-JOUEUR — le mode d'affichage demandé depuis « Mon compte ». */
+const mockSetDisplayMode = jest.fn();
 
 // R17-SIGNALER-1 : « Mes signalements » lit ses signalements (doublure, pas de reseau).
 // RESA-OUVERTURE : COMPLEXES_GERANT allumé ; ce témoin ne parle pas du complexe.
@@ -68,6 +70,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
     isParentMode: mockIsParentMode,
     logoutMutation: { mutate: jest.fn() },
     refetchUserData: jest.fn(),
+    setDisplayMode: mockSetDisplayMode,
     subscriptionAccessLevel: 'free',
     switchAccount: jest.fn(),
     userData: mockUserData,
@@ -300,14 +303,18 @@ describe('PAR-L7 — « Mon compte » d un Parent commence par ses enfants', () 
     expect(arbre.root.findAllByProps({ testID: 'myChildren-nombre' })).toHaveLength(0);
   });
 
-  it('un JOUEUR garde son menu : son titre, son ordre, et rien n est lu pour lui', async () => {
+  it('un JOUEUR garde son menu : son titre, son ordre, pas de nombre d enfants', async () => {
     useMesEnfantsEnBref.regler({ lignes: [], reste: 0, total: 2 });
-    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+    const arbre = await monterLeMenu(ROLE_JOUEUR);
+    const libelles = arbre.root.findAllByType(Text)
+      .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children).trim());
 
     expect(libelles).toContain('Profil & activité');
     expect(libelles).not.toContain('Ma famille et mon profil');
     expect(libelles.indexOf('Mes enfants')).toBeGreaterThan(libelles.indexOf('Voir mon profil'));
-    expect(useMesEnfantsEnBref.appels.every((options) => options.actif === false)).toBe(true);
+    // ACCUEIL-JOUEUR (09/11) : ses enfants sont lus (le bouton « Basculer en mode parent » en
+    // dépend, la lecture que l'accueil fait déjà), mais « Mes enfants » ne les compte pas.
+    expect(arbre.root.findAllByProps({ testID: 'myChildren-nombre' })).toHaveLength(0);
   });
 });
 
@@ -365,5 +372,72 @@ describe('RW-PARENT — « Voir mon profil » nomme le compte', () => {
     await act(async () => { rangee.props.onPress(); });
 
     expect(navigate).toHaveBeenCalledWith('UserDetails', { userId: 'user-doc-1' });
+  });
+});
+
+// ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur relayé par Adel) — un compte né Joueur ne
+// voit plus la bascule parent en tête de l'accueil. S'il a au moins un enfant, il la trouve ici :
+// une rangée discrète « Basculer en mode parent », qui pose le mode et ramène à l'accueil.
+// Écrit ROUGE : la rangée n'existait pas.
+describe('ACCUEIL-JOUEUR — « Basculer en mode parent » dans « Mon compte »', () => {
+  const useMesEnfantsEnBref = jest
+    .requireMock('@/views/profile/parent/useMesEnfantsEnBref').default;
+  const LIBELLE = 'Basculer en mode parent';
+
+  afterEach(() => {
+    mockIsParentMode = false;
+    useMesEnfantsEnBref.regler();
+    useMesEnfantsEnBref.appels.length = 0;
+  });
+
+  it('joueur avec un enfant : la rangée pose le mode parent, puis l accueil', async () => {
+    useMesEnfantsEnBref.regler({ lignes: [], reste: 0, total: 1 });
+    mockUserData = {
+      club: null,
+      documentId: 'user-doc-1',
+      firstname: 'Nadia',
+      multisportClubs: [],
+      role: ROLE_JOUEUR,
+    };
+    const navigate = jest.fn();
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <Profile navigation={{ navigate, setParams: jest.fn() }} route={{ params: {} }} />,
+      );
+    });
+    const rangee = arbre.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.onPress === 'function'
+      && aplatirTexte(noeud.props?.children).includes(LIBELLE)
+    )).at(-1);
+    expect(rangee).toBeTruthy();
+    expect(useMesEnfantsEnBref.appels.at(-1)).toEqual({ actif: true });
+    await act(async () => { rangee.props.onPress(); });
+
+    expect(mockSetDisplayMode).toHaveBeenCalledWith('parent');
+    expect(navigate).toHaveBeenCalledWith(
+      'HomeTab',
+      expect.objectContaining({ params: expect.objectContaining({ screen: 'SearchHome' }) }),
+      { pop: true },
+    );
+  });
+
+  it('joueur pur (aucun enfant) : pas de rangée', async () => {
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+    expect(libelles).not.toContain(LIBELLE);
+  });
+
+  it('joueur déjà en mode parent : pas de rangée (le retour est sur l accueil)', async () => {
+    mockIsParentMode = true;
+    useMesEnfantsEnBref.regler({ lignes: [], reste: 0, total: 1 });
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+    expect(libelles).not.toContain(LIBELLE);
+  });
+
+  it('compte Parent : pas de rangée, il est déjà parent', async () => {
+    useMesEnfantsEnBref.regler({ lignes: [], reste: 0, total: 2 });
+    const libelles = await libellesDuMenu(ROLE_PARENT);
+    expect(libelles).not.toContain(LIBELLE);
   });
 });

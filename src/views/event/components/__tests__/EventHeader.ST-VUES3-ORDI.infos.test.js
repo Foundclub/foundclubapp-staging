@@ -91,22 +91,25 @@ const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
   .map((/** @type {any} */ n) => [].concat(n.props.children).join('').replace(/\u00a0/g, ' '));
 
 describe('ST-VUES3-ORDI · écran 1 — le bloc d infos d un match, comme la planche', () => {
-  test('🔴 trois lignes, dans l ordre de la planche : le jour, la ville, l équipe', () => {
+  // ACCUEIL-JOUEUR (09/11/2026, point 3, mots d'Adel) : le lieu en adresse PRÉCISE (rue, ville),
+  // plus « Lyon (69001) » seul — la planche est dépassée sur ce point.
+  test('🔴 trois lignes, dans l ordre de la planche : le jour, le lieu, l équipe', () => {
     const lus = textes(monter({ event: MATCH, matchScoreSummary: ENCART }));
 
     const jour = lus.indexOf('Sam. 5 sept. · 19:00 – 20:00');
-    const lieu = lus.indexOf('Lyon (69001)');
+    const lieu = lus.indexOf(ADRESSE_LONGUE);
     const equipe = lus.indexOf('U15 · AS Montrivage');
     expect([jour, lieu, equipe].every((index) => index >= 0)).toBe(true);
     expect(jour).toBeLessThan(lieu);
     expect(lieu).toBeLessThan(equipe);
   });
 
-  test('🔴 ni adresse longue, ni « Ouvrir dans le GPS », ni catégorie, ni section', () => {
+  // ACCUEIL-JOUEUR (09/11/2026, points 3 et 4) : l'adresse précise ET « Ouvrir dans le GPS »
+  // visible sont désormais voulus (`EventHeader.ACCUEILJOUEUR.adresseGps.test.js`). Reste de la
+  // planche : ni catégorie en capitales, ni section.
+  test('🔴 ni catégorie, ni section', () => {
     const lus = textes(monter({ event: MATCH, matchScoreSummary: ENCART }));
 
-    expect(lus).not.toContain(ADRESSE_LONGUE);
-    expect(lus).not.toContain('Ouvrir dans le GPS');
     expect(lus).not.toContain('U15 (moins de 15 ans)');
     expect(lus).not.toContain('Football');
   });

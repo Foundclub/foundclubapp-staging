@@ -60,6 +60,7 @@ import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
 import NombreAVenir from '@/views/reserverTerrain/components/NombreAVenir';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 import { navigateOrExplainOnWeb } from '@/navigation/webNavigationGuard';
 
@@ -152,6 +153,7 @@ function Profile({ navigation, route }) {
     isParentMode,
     logoutMutation,
     refetchUserData,
+    setDisplayMode,
     subscriptionAccessLevel,
     subscriptionSummary,
     switchAccount,
@@ -213,7 +215,13 @@ function Profile({ navigation, route }) {
   // Les autres rôles gardent leur menu tel quel : rien n'est lu pour eux.
   // PAR-L12 (D6 A) — un compte sportif en MODE PARENT lit aussi « Mon compte » comme un parent.
   const estParent = currentRoleKey === 'parent' || isParentMode === true;
-  const mesEnfants = useMesEnfantsEnBref({ actif: estParent });
+  // ACCUEIL-JOUEUR (09/11/2026) — un joueur aussi : « Basculer en mode parent » en dépend (la
+  // même lecture que son accueil, qui l'a déjà en cache).
+  const mesEnfants = useMesEnfantsEnBref({ actif: estParent || currentRoleKey === 'player' });
+  // ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur relayé par Adel) — la bascule parent ne
+  // s'offre plus en tête de l'accueil d'un compte né Joueur ; s'il a un enfant, elle est ici,
+  // discrète. Le retour en joueur est sur l'accueil (bandeau du mode parent).
+  const offreLeModeParent = currentRoleKey === 'player' && !isParentMode && mesEnfants.total > 0;
   const multisportClubs = useMemo(
     () => userData?.multisportClubs || [],
     [userData?.multisportClubs],
@@ -1036,13 +1044,22 @@ function Profile({ navigation, route }) {
       label: t('profile.actions.myChildren', 'Mes enfants'),
       onPress: () => navigation.navigate(RouteNames.MyChildren),
       // PAR-L7 (E02) — le parent lit combien il en a ; « 0 » ne s'écrit jamais.
-      ...(mesEnfants.total > 0 ? {
+      ...(estParent && mesEnfants.total > 0 ? {
         a11y: `${t('profile.actions.myChildren', 'Mes enfants')}, ${t('myChildren.list.count', {
           count: mesEnfants.total,
         })}`,
         nombre: mesEnfants.total,
       } : {}),
     },
+    ...(offreLeModeParent ? [{
+      icon: Images.users,
+      key: 'parentMode',
+      label: t('playerMode.parent.enter', 'Basculer en mode parent'),
+      onPress: () => {
+        setDisplayMode('parent');
+        allerDansLOnglet(navigation, RouteNames.SearchHome);
+      },
+    }] : []),
     // 🔗 PARENT-LIEN (30/09) — LA PORTE DE L ENFANT. Un parent DEMANDE le lien ; c est ici que
     // l enfant l accepte, la refuse, voit qui est relie et le retire. Visible de 13 a 17 ans
     // (age CONNU : sans date, la porte reste fermee), et de quiconque est deja relie — il doit

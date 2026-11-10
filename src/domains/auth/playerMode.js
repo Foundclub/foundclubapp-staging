@@ -72,14 +72,93 @@ export const readPlayerModeRequest = (documentId) => (
 );
 
 /**
- * PAR-L12 — Demander un mode d'affichage (ou revenir au rôle du compte), et prévenir les écrans.
+ * ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur relayé par Adel) — L'ORIGINE PARENT.
+ * La bascule parent de l'accueil ne s'offre qu'à un compte né Parent ; or un Parent qui
+ * « pratique aussi » devient Joueur sur le serveur (`FeuillePratiqueAussi`), qui n'en garde aucune
+ * trace. L'origine se garde donc ici, sur le téléphone, à côté du mode d'affichage.
+ * ponytail: stockage local, comme le mode lui-même. Limite : un téléphone neuf l'oublie ; le
+ * compte garde alors « Basculer en mode parent » dans « Mon compte » (rien n'est perdu). Sortie :
+ * un champ du profil côté serveur, si Adel le veut.
+ * 🧪 Témoin : `__tests__/playerMode.ACCUEILJOUEUR.origineParent.test.js`.
+ */
+const ORIGIN_PREFIX = 'user.parent_origin.';
+
+/** @typedef {'parent' | 'player'} ParentOrigin */
+
+/**
+ * La clé de l'origine d'un compte.
  * @param {unknown} documentId - Le compte.
- * @param {DisplayModeRequest} mode - « player », « parent », ou rien pour revenir.
+ * @returns {string} La clé, ou '' sans compte.
+ */
+const originKeyFor = (documentId) => {
+  const id = String(documentId || '').trim();
+  return id ? `${ORIGIN_PREFIX}${id}` : '';
+};
+
+/**
+ * L'origine écrite de ce compte, sinon celle qu'on en déduit : un ancien compte en mode parent
+ * en ce moment (le seul signe qui reste d'un Parent devenu Joueur) est né Parent.
+ * @param {unknown} documentId - Le compte.
+ * @returns {ParentOrigin} « parent » ou « player ».
+ */
+export const readParentOrigin = (documentId) => {
+  const key = originKeyFor(documentId);
+  try {
+    const ecrite = key ? storage.getString(key) : undefined;
+    if (ecrite === 'parent' || ecrite === 'player') return ecrite;
+  } catch {
+    // Stockage indisponible : la déduction ci-dessous.
+  }
+  return readDisplayModeRequest(documentId) === 'parent' ? 'parent' : 'player';
+};
+
+/**
+ * Écrire l'origine de ce compte, et prévenir les écrans.
+ * @param {unknown} documentId - Le compte.
+ * @param {ParentOrigin} origin - « parent » ou « player ».
  * @returns {void}
  */
-export const writeDisplayModeRequest = (documentId, mode) => {
+export const writeParentOrigin = (documentId, origin) => {
+  const key = originKeyFor(documentId);
+  if (!key) return;
+  try {
+    storage.set(key, origin);
+  } catch {
+    // Stockage indisponible : la déduction de `readParentOrigin` reste.
+  }
+  listeners.forEach((listener) => listener());
+};
+
+/**
+ * Figer l'origine d'un compte Joueur avant qu'un changement de mode n'efface le seul signe qui
+ * la dit. Les autres rôles n'en ont pas besoin : rien n'est écrit pour eux.
+ * @param {unknown} documentId - Le compte.
+ * @param {unknown} accountRoleKey - Le rôle du COMPTE.
+ * @returns {void}
+ */
+const figerOrigine = (documentId, accountRoleKey) => {
+  const key = originKeyFor(documentId);
+  if (!key || accountRoleKey !== 'player') return;
+  try {
+    if (!storage.getString(key)) storage.set(key, readParentOrigin(documentId));
+  } catch {
+    // Stockage indisponible : le mode ne s'écrira pas non plus.
+  }
+};
+
+/**
+ * PAR-L12 — Demander un mode d'affichage (ou revenir au rôle du compte), et prévenir les écrans.
+ * ACCUEIL-JOUEUR — `accountRoleKey` : pour un compte Joueur, l'origine se FIGE avant le premier
+ * changement de mode (après, le mode ne dit plus d'où il vient).
+ * @param {unknown} documentId - Le compte.
+ * @param {DisplayModeRequest} mode - « player », « parent », ou rien pour revenir.
+ * @param {unknown} [accountRoleKey] - Le rôle du COMPTE.
+ * @returns {void}
+ */
+export const writeDisplayModeRequest = (documentId, mode, accountRoleKey) => {
   const key = keyFor(documentId);
   if (!key) return;
+  figerOrigine(documentId, accountRoleKey);
   try {
     if (mode === 'player') {
       storage.set(key, ENABLED_VALUE);
@@ -171,6 +250,33 @@ export const PARENT_MODE_ACCOUNT_ROLES = Object.freeze(['player', 'coach', 'pres
  */
 export const canUseParentMode = (accountRoleKey) => PARENT_MODE_ACCOUNT_ROLES
   .includes(/** @type {any} */ (accountRoleKey));
+
+/**
+ * ACCUEIL-JOUEUR — L'origine de ce compte, et le re-rendu quand elle change.
+ * @param {unknown} documentId - Le compte.
+ * @returns {ParentOrigin} « parent » ou « player ».
+ */
+export const useParentOrigin = (documentId) => useSyncExternalStore(
+  subscribe,
+  () => readParentOrigin(documentId),
+  () => 'player',
+);
+
+/**
+ * ACCUEIL-JOUEUR — La bascule parent de l'accueil s'offre-t-elle ? À un compte Joueur, seulement
+ * s'il est né Parent, ou s'il est en mode parent en ce moment (son chemin de retour). Aux autres
+ * rôles : la règle d'avant (`canUseParentMode`).
+ * @param {{
+ *   accountRoleKey: unknown,
+ *   displayModeRequest: DisplayModeRequest,
+ *   origin: ParentOrigin | null,
+ * }} input - Le rôle du compte, le mode demandé, l'origine.
+ * @returns {boolean} Vrai si la bascule s'affiche.
+ */
+export const offersParentSwitch = ({ accountRoleKey, displayModeRequest, origin }) => {
+  if (accountRoleKey !== 'player') return canUseParentMode(accountRoleKey);
+  return origin === 'parent' || displayModeRequest === 'parent';
+};
 
 /**
  * Le rôle d'AFFICHAGE : `player` ou `parent` quand ce mode est demandé ET possible, sinon le

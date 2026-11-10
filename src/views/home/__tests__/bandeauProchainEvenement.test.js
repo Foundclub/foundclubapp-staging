@@ -101,7 +101,10 @@ describe('S06 — le bandeau de l accueil mene a l evenement, jamais au planning
     // decoche « Les participants repondent », le bandeau du JOUEUR n'a plus de
     // Present / Absent : son bouton ouvre l'evenement, PAR LE MEME CHEMIN
     // (`reponseDepuisAccueil.test.js`, temoins POINTAGE).
-    expect(compter(bandeau, 'handleOpenEvent(')).toBe(3);
+    // ➕ ACCUEIL-JOUEUR (09/11/2026) : 3 -> 4, et c'est voulu. La carte du joueur qui REPOND
+    // s'ouvre aussi au toucher (hors de Présent / Absent), PAR LE MEME CHEMIN
+    // (`HomeHeadBanner.ACCUEILJOUEUR.ouvrir.test.js`).
+    expect(compter(bandeau, 'handleOpenEvent(')).toBe(4);
   });
 
   it('temoin 5 ter — « ouvrir un evenement » emprunte le chemin que l app emploie deja', () => {

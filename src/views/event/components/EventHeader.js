@@ -10,6 +10,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import OuvrirDansLeGps from '@/components/molecules/ouvrirDansLeGps/OuvrirDansLeGps';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 import {
@@ -37,7 +38,7 @@ import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
 /* eslint-disable perfectionist/sort-imports */
 import { openExternalMap } from '@/platform/maps/externalMap';
 import {
-  formatEventPlaceShort,
+  formatEventPlaceLine,
   formatEventTeamLine,
   formatEventWhenLine,
   getStageLastDay,
@@ -280,7 +281,7 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
   // son lieu de compétition. Les autres types gardent leur bloc (leur propre pack).
   const matchWhenLine = matchScoreSummary ? formatEventWhenLine(event) : '';
   const matchPlaceLine = matchScoreSummary
-    ? ((isImportedExternalMatch && externalMatchLocation) || formatEventPlaceShort(event)
+    ? ((isImportedExternalMatch && externalMatchLocation) || formatEventPlaceLine(event)
       || getLocationText())
     : '';
   const matchTeamLine = matchScoreSummary ? formatEventTeamLine(event) : '';
@@ -614,6 +615,12 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
             >
               {renderMatchInfo(Images.pin, matchPlaceLine, 'event-header-info-lieu')}
             </TouchableOpacity>
+          ) : null}
+          {/* ACCUEIL-JOUEUR (09/11/2026, point 4) — l'adresse ouvrait le GPS sans le montrer :
+              la ligne d'action visible, même ouverture (remplace « ni Ouvrir dans le GPS écrit »
+              de la planche ST-VUES3-ORDI). */}
+          {matchPlaceLine ? (
+            <OuvrirDansLeGps onPress={handleOpenLocationInGps} testID="event-header-ouvrir-gps" />
           ) : null}
           {matchTeamLine
             ? renderMatchInfo(Images.users, matchTeamLine, 'event-header-info-equipe')

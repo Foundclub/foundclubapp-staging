@@ -44,8 +44,10 @@ import {
 import {
   canUseParentMode as canAccountUseParentMode,
   canUsePlayerMode as canAccountUsePlayerMode,
+  offersParentSwitch as offreLaBasculeParent,
   resolveDisplayRoleKey,
   useDisplayModeRequest,
+  useParentOrigin,
   writeDisplayModeRequest,
 } from '@/domains/auth/playerMode';
 import {
@@ -725,12 +727,20 @@ const useAuth = () => {
   const isParentMode = displayRoleKey === 'parent' && userRoleKey !== 'parent';
   const canUsePlayerMode = canAccountUsePlayerMode(userRoleKey, userData);
   const canUseParentMode = canAccountUseParentMode(userRoleKey);
+  // ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur) — la bascule parent de l'accueil ne
+  // s'offre qu'à un compte né Parent (ou en mode parent, pour revenir) ; un compte né Joueur
+  // passe par « Mon compte ». Témoin : `playerMode.ACCUEILJOUEUR.origineParent.test.js`.
+  const parentOrigin = useParentOrigin(userData?.documentId);
+  const offersParentSwitch = offreLaBasculeParent({
+    accountRoleKey: userRoleKey, displayModeRequest, origin: parentOrigin,
+  });
   const setDisplayMode = useCallback(
     (/** @type {'player' | 'parent' | null} */ mode) => writeDisplayModeRequest(
       userData?.documentId,
       mode,
+      userRoleKey,
     ),
-    [userData?.documentId],
+    [userData?.documentId, userRoleKey],
   );
   // L'appel d'avant L12 garde son sens : vrai = mode joueur, faux = retour au rôle du compte.
   const setPlayerMode = useCallback(
@@ -1081,6 +1091,7 @@ const useAuth = () => {
     loginMutation,
     logoutMutation,
     nonPartnerCoachPublishingAccess,
+    offersParentSwitch,
     onboardingViews,
     otpMutation,
     profileFields,

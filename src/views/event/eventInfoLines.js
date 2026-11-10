@@ -1,6 +1,6 @@
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 
-import { normalizeLocationInput } from '@/utils/location';
+import { getLocationCoordinates, normalizeLocationInput } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 /**
@@ -102,6 +102,51 @@ export const formatEventPlaceShort = (event) => {
     .find((value) => typeof value === 'string' && value.trim()) || '';
   const match = /(\d{5})\s+([^,\d][^,]*?)\s*(?:,\s*France)?\s*$/i.exec(String(text).trim());
   return match ? `${match[2].trim()} (${match[1]})` : '';
+};
+
+/**
+ * ACCUEIL-JOUEUR (09/11/2026, point 3, mots d'Adel : « on n'affiche que la ville ou le code
+ * postal, c'est pas bien ») — LE LIEU EN ADRESSE PRÉCISE (rue, ville), partout où la fiche le
+ * résume : téléphone, site, carte « Ma semaine » de l'accueil. Remplace, pour le lieu, la ligne
+ * courte de la planche ST-VUES3-ORDI (03/10). Sans adresse précise connue : la ligne courte
+ * (« Lyon (69001) »), sinon vide — l'écran garde alors son libellé d'avant.
+ * 🧪 Témoin : `__tests__/eventInfoLines.ACCUEILJOUEUR.adresse.test.js`.
+ * @param {any} event - L'événement.
+ * @returns {string} L'adresse précise, « Ville (code postal) », « Ville », ou vide.
+ */
+export const formatEventPlaceLine = (event) => {
+  const court = formatEventPlaceShort(event);
+  const parsed = event?.locationDetails ? safeJsonParse(event.locationDetails, null) : null;
+  const normalized = normalizeLocationInput(parsed?.address || parsed || event?.location)
+    || normalizeLocationInput(event?.location);
+  const texte = [normalized?.label, parsed?.address, parsed?.label, event?.location]
+    .find((value) => typeof value === 'string' && value.trim()) || '';
+  const precis = String(texte).trim().replace(/,?\s*France\s*$/i, '');
+  // Ce qui reste une fois la ville et le code postal retirés : rien, c'est la ville seule.
+  const reste = [
+    normalized?.city, normalized?.postcode, ...court.replace(/[()]/g, ' ').split(/\s+/),
+  ]
+    .filter((mot) => typeof mot === 'string' && mot.trim())
+    .reduce((acc, mot) => acc.split(String(mot).trim()).join(' '), precis);
+  return /[\p{L}\d]/u.test(reste) ? precis : court;
+};
+
+/**
+ * ACCUEIL-JOUEUR (point 4) — ce que le GPS ouvre : le lieu écrit et ses coordonnées connues (les
+ * mêmes sources que l'en-tête du téléphone, `EventHeader`). Pour `openExternalMap`.
+ * @param {any} event - L'événement.
+ * @returns {{ label: string, latitude?: number, longitude?: number } | null} - Rien sans lieu.
+ */
+export const eventMapTarget = (event) => {
+  const parsed = event?.locationDetails ? safeJsonParse(event.locationDetails, null) : null;
+  const label = formatEventPlaceLine(event);
+  const coordonnees = getLocationCoordinates(event?.location)
+    || getLocationCoordinates(parsed?.address)
+    || getLocationCoordinates(parsed);
+  if (!label && !coordonnees) return null;
+  return coordonnees
+    ? { label, latitude: coordonnees.lat, longitude: coordonnees.lng }
+    : { label };
 };
 
 /**

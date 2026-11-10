@@ -74,8 +74,9 @@ export default function useTonMode({
   // Quitter le complexe pour l'accueil de l'app dans ce mode ; le téléphone oublie le complexe.
   const choisirHorsDuComplexe = useCallback((/** @type {Position} */ position) => {
     ecrireModeComplexe(compteId, false);
-    writeDisplayModeRequest(compteId, position.mode);
-  }, [compteId]);
+    // ACCUEIL-JOUEUR (09/11) : le rôle fige l'origine parent d'un compte Joueur (`playerMode`).
+    writeDisplayModeRequest(compteId, position.mode, roleDuCompte);
+  }, [compteId, roleDuCompte]);
   // Vers le complexe : l'app s'y rouvrira au prochain lancement.
   const versLeComplexe = useCallback(() => {
     ecrireModeComplexe(compteId, true);

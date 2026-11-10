@@ -134,7 +134,12 @@ describe('PAR-L12 — le mode parent d un compte sportif', () => {
     expect(vu.isPlayerMode).toBe(false);
     expect(vu.accountRoleKey).toBe('player');
     expect(vu.userData.role.name).toBe('Joueur');
-    expect(storage.set.mock.calls).toEqual([['user.player_mode.joueur-1', 'parent']]);
+    // ACCUEIL-JOUEUR (09/11) : avant le premier changement de mode, l'origine du compte Joueur
+    // se fige sur le téléphone (né Joueur ici). Toujours rien au serveur.
+    expect(storage.set.mock.calls).toEqual([
+      ['user.parent_origin.joueur-1', 'player'],
+      ['user.player_mode.joueur-1', 'parent'],
+    ]);
     Object.values(authService).forEach((fonction) => expect(fonction).not.toHaveBeenCalled());
   });
 
@@ -180,5 +185,40 @@ describe('PAR-L12 — le mode parent d un compte sportif', () => {
   test('le mode parent s offre aux trois rôles sportifs', () => {
     expect(lire(JOUEUR_PARENT).canUseParentMode).toBe(true);
     expect(lire(DIRIGEANT_JOUEUR).canUseParentMode).toBe(true);
+  });
+});
+
+// ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur relayé par Adel) — la bascule parent de
+// l'accueil (`offersParentSwitch`) ne s'offre qu'à un compte né Parent, ou en mode parent pour
+// revenir. Écrit ROUGE : `offersParentSwitch` n'existait pas.
+describe('ACCUEIL-JOUEUR — qui voit la bascule parent sur l accueil', () => {
+  test('joueur pur, ou joueur avec enfant né Joueur : pas de bascule', () => {
+    expect(lire(JOUEUR_PARENT).offersParentSwitch).toBe(false);
+  });
+
+  test('né Joueur, passé en mode parent par « Mon compte » : le retour reste, puis se tait', () => {
+    expect(lire(JOUEUR_PARENT, (valeur) => valeur.setDisplayMode('parent')).offersParentSwitch)
+      .toBe(true);
+    expect(lire(JOUEUR_PARENT, (valeur) => valeur.setDisplayMode(null)).offersParentSwitch)
+      .toBe(false);
+  });
+
+  test('parent qui joue aussi (origine « parent ») : la bascule dans les deux sens', () => {
+    mockStockage.set('user.parent_origin.joueur-1', 'parent');
+    expect(lire(JOUEUR_PARENT).offersParentSwitch).toBe(true);
+    expect(lire(JOUEUR_PARENT, (valeur) => valeur.setDisplayMode(null)).offersParentSwitch)
+      .toBe(true);
+  });
+
+  test('ancien compte sans origine, en mode parent : né Parent, il garde sa bascule', () => {
+    mockStockage.set('user.player_mode.joueur-1', 'parent');
+    const revenu = lire(JOUEUR_PARENT, (valeur) => valeur.setDisplayMode(null));
+    expect(mockStockage.get('user.parent_origin.joueur-1')).toBe('parent');
+    expect(revenu.offersParentSwitch).toBe(true);
+  });
+
+  test('compte Parent : pas par ce réglage ; dirigeant qui a des enfants : inchangé', () => {
+    expect(lire(PARENT).offersParentSwitch).toBe(false);
+    expect(lire(DIRIGEANT_JOUEUR).offersParentSwitch).toBe(true);
   });
 });

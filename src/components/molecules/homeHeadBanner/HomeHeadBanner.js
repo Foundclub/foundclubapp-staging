@@ -71,6 +71,11 @@ const ACTION_VARIANTS = {
  * @param {HomeHeadBannerLine[]} [props.lines] - Variante « liste ».
  * @param {string} [props.notice] - Variante « evenement » : MARQUE-MAIRIE, l echeance attend une
  *   decision (« En attente de la mairie »), sous le sous-titre.
+ * @param {() => void} [props.onOpen] - Variante « evenement » : ACCUEIL-JOUEUR, toucher
+ *   l'echeance (hors des boutons) ouvre sa fiche.
+ * @param {string} [props.openLabel] - Le libelle lu de cette zone (« Voir l’événement »).
+ * @param {string} [props.placeLine] - Variante « evenement » : ACCUEIL-JOUEUR, l'adresse precise
+ *   du lieu, sous le sous-titre.
  * @param {string} [props.subtitle] - Variante « evenement ».
  * @param {{ key: string, label: string, tone?: string, value: string }[]} [props.tiles]
  *   Variante « evenement » : tuiles chiffrees cote a cote (entraineur).
@@ -86,6 +91,9 @@ function HomeHeadBanner({
   label,
   lines = EMPTY_LIST,
   notice,
+  onOpen,
+  openLabel,
+  placeLine,
   subtitle,
   tiles = EMPTY_LIST,
   title,
@@ -235,46 +243,75 @@ function HomeHeadBanner({
 
         {variant === 'event' ? (
           <View style={[Spaces.gap[12], { paddingTop: 10 }]}>
-            <View>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 16, fontWeight: '900' }]}>
-                {title}
-                {titleSuffix ? (
-                  <Text style={{ color: resolvedTone, fontSize: 12, fontWeight: '800' }}>
-                    {`  ${titleSuffix}`}
+            {/* ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur) — toucher l'echeance ouvre sa
+                fiche. La zone ne CONTIENT pas les boutons : un toucher sur « Présent » ne l'ouvre
+                pas, et sur le site le clic d'un bouton n'y remonte pas. Sans `onOpen`, rien ne
+                change. */}
+            <Pressable
+              accessibilityLabel={onOpen ? openLabel : undefined}
+              accessibilityRole={onOpen ? 'button' : undefined}
+              // Sans `onOpen`, la zone se lit comme avant (texte par texte), et ne fait rien.
+              accessible={Boolean(onOpen)}
+              onPress={onOpen}
+              style={[Alignments.row, Alignments.alignCenter, { gap: 11 }]}
+              testID={onOpen ? 'home-head-banner-open' : undefined}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00, { fontSize: 16, fontWeight: '900' }]}>
+                  {title}
+                  {titleSuffix ? (
+                    <Text style={{ color: resolvedTone, fontSize: 12, fontWeight: '800' }}>
+                      {`  ${titleSuffix}`}
+                    </Text>
+                  ) : null}
+                </Text>
+                {subtitle ? (
+                  <Text
+                    style={[
+                      Fonts.small,
+                      { color: Colors.neutral300, fontSize: 11.5, marginTop: 4 },
+                    ]}
+                  >
+                    {subtitle}
                   </Text>
                 ) : null}
-              </Text>
-              {subtitle ? (
-                <Text
-                  style={[
-                    Fonts.small,
-                    { color: Colors.neutral300, fontSize: 11.5, marginTop: 4 },
-                  ]}
-                >
-                  {subtitle}
-                </Text>
+                {placeLine ? (
+                  // ACCUEIL-JOUEUR (09/11/2026, point 3) — OÙ, en adresse precise (rue, ville).
+                  <Text
+                    style={[
+                      Fonts.small,
+                      { color: Colors.neutral300, fontSize: 11.5, marginTop: 2 },
+                    ]}
+                    testID="home-head-banner-lieu"
+                  >
+                    {placeLine}
+                  </Text>
+                ) : null}
+                {notice ? (
+                  // MARQUE-MAIRIE (14/10) — l echeance attend une decision (« En attente de la
+                  // mairie »), au ton orange de la grille du planning. 📐 Piege Android 16 (gras
+                  // de plusieurs mots) : la ligne s ETIRE sur toute la colonne.
+                  <Text
+                    style={[
+                      Fonts.small,
+                      {
+                        alignSelf: 'stretch',
+                        color: Colors.warning400,
+                        fontSize: 11.5,
+                        fontWeight: '700',
+                        marginTop: 4,
+                      },
+                    ]}
+                    testID="bandeau-seance-en-attente"
+                  >
+                    {notice}
+                  </Text>
+                ) : null}
+              </View>
+              {onOpen ? (
+                <Text style={[Fonts.small, { color: Colors.neutral600, fontSize: 15 }]}>›</Text>
               ) : null}
-              {notice ? (
-                // MARQUE-MAIRIE (14/10) — l echeance attend une decision (« En attente de la
-                // mairie »), au ton orange de la grille du planning. 📐 Piege Android 16 (gras
-                // de plusieurs mots) : la ligne s ETIRE sur toute la colonne.
-                <Text
-                  style={[
-                    Fonts.small,
-                    {
-                      alignSelf: 'stretch',
-                      color: Colors.warning400,
-                      fontSize: 11.5,
-                      fontWeight: '700',
-                      marginTop: 4,
-                    },
-                  ]}
-                  testID="bandeau-seance-en-attente"
-                >
-                  {notice}
-                </Text>
-              ) : null}
-            </View>
+            </Pressable>
 
             {tiles.length ? (
               <View style={[Alignments.row, { gap: 8 }]}>

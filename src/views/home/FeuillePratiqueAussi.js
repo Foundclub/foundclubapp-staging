@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { getRoleDocumentIdByKey } from '@/domains/auth/authUseCases';
+import { writeParentOrigin } from '@/domains/auth/playerMode';
 import useAuth from '@/domains/auth/useAuth';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -52,7 +53,7 @@ function FeuillePratiqueAussi({
 }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
-  const { refetchUserData, setDisplayMode } = useAuth();
+  const { refetchUserData, setDisplayMode, userData } = useAuth();
   // Lue seulement feuille ouverte (`useGetRoles` déclare des options complètes, d'où le type).
   const { data: roles } = useGetRoles(/** @type {any} */ ({ enabled: isVisible }));
   const [erreur, setErreur] = useState(false);
@@ -65,6 +66,9 @@ function FeuillePratiqueAussi({
       // Il reste en mode parent : écrit AVANT de relire le profil, sinon l'accueil joueur
       // passerait un instant à l'écran.
       // RESA-BASCULE (T1 A) : le parent qui gère un complexe arrive sur l'accueil JOUEUR.
+      // ACCUEIL-JOUEUR (09/11) : ce compte est NÉ Parent ; devenu Joueur, il garde la bascule
+      // parent de l'accueil (le serveur ne le dit plus, le téléphone le retient).
+      if (!pourLeComplexe) writeParentOrigin(userData?.documentId, 'parent');
       if (gereUnComplexe) setDisplayMode(null);
       else if (!pourLeComplexe) setDisplayMode('parent');
       try {
