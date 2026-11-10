@@ -698,7 +698,8 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
     const dalle = Dimensions.get('screen').height;
 
     // Sans fournisseur de zone sûre (témoin) : marge du haut 0, marge du bas 0.
-    expect(feuille.props.maxContentHeightRatio).toBeCloseTo(Math.max(0.7, (fenetre - 20) / dalle), 5);
+    expect(feuille.props.maxContentHeightRatio)
+      .toBeCloseTo(Math.max(0.7, (fenetre - 20) / dalle), 5);
     expect(feuille.props.contentBottomPaddingOverride).toBeLessThanOrEqual(12);
   });
 });

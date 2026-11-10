@@ -2023,7 +2023,7 @@ function TeamDetails({ navigation, route }) {
   }, [hasTeamActionsPanel]);
 
   // GUIDE-E-CORR-2 (testeur, iPhone, 10/11) — « Actions d'équipe » : la feuille montait presque en
-  // haut (hauteur réglée sur le CONTENU, plafonnée à l'écran moins `topInset` = marge du haut + 20),
+  // haut (hauteur réglée sur le CONTENU, plafonnée à l'écran moins `topInset`, marge haut + 20),
   // mais la liste s'arrêtait à 70 % de l'écran (plafond par défaut de BottomModal) : un grand vide
   // dessous, la dernière carte coupée. Même remède que « Changer de compte » (Profile.js, SUPADM) :
   // la zone qui défile reçoit le plafond de la feuille, et le bas ne garde que la zone sûre.
