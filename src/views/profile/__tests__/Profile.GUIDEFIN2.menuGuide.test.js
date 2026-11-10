@@ -286,7 +286,8 @@ describe('N10 — le menu du guide se distingue des rangées', () => {
   });
 
   // GUIDE-E-CORR-2 (testeur, iPhone, 10/11 11:15) : « Revoir le guide sans rien c… ». Le retrait
-  // de 42 rétrécit la ligne, et son libellé restait tenu sur UNE ligne (l'anglais, plus long, aussi).
+  // de 42 rétrécit la ligne, et son libellé restait tenu sur UNE ligne (l'anglais, plus long,
+  // aussi).
   // Le libellé est aussi raccourci (fr et en) : en anglais, deux lignes ne suffisaient pas.
   it('un choix du menu passe sur deux lignes plutôt que d’être coupé', async () => {
     mockTour = tourDe({ hasGuideHistory: true });
