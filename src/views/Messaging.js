@@ -383,12 +383,25 @@ function Messaging({ navigation, route }) {
   const { currentStep: tourStep } = useTour();
   const canalAttendu = Boolean(tourStep?.checksCanal);
   const listeComplete = Boolean(!isLoading && chatsData?.pages && !hasNextPage);
-  const canalAbsent = listeComplete
-    && !allChats.some((/** @type {any} */ chat) => chat?.type === 'club');
+  const monClubId = String(userData?.club?.documentId || '');
+  /**
+   * GUIDES-SITE-CORR S17 : le canal du club ACTIF (un canal sans club lisible compte, comme avant).
+   * @param {any} chat - Fil de la liste.
+   * @returns {boolean} Vrai pour le canal à montrer au bonus 2.
+   */
+  const estLeCanalDuClubActif = (chat) => {
+    if (chat?.type !== 'club') return false;
+    const club = chat?.club;
+    const clubDuFil = String((typeof club === 'string' ? club : club?.documentId) || '');
+    return !clubDuFil || !monClubId || clubDuFil === monClubId;
+  };
+  const canalAbsent = listeComplete && !allChats.some(estLeCanalDuClubActif);
   // GUIDE-D-CORR-3 (M1082, décision du chef) : le bonus 2 se joue en simulation, comme B1 et B4 :
   // pas de canal, un canal « Exemple » prend sa place le temps de l'étape (rien n'est créé).
-  const canalDExemple = canalAttendu && canalAbsent && Boolean(tourStep?.simulatesCanal)
-    && !enModeArchivees;
+  // GUIDES-SITE-CORR S17 (tournée du site, 09/11) : sur le site, le vrai fil n'a pas les ancres
+  // du guide (`ch-info`, `ch-input`) ; le canal d'exemple se montre donc toujours.
+  const canalDExemple = canalAttendu && Boolean(tourStep?.simulatesCanal) && !enModeArchivees
+    && (canalAbsent || Platform.OS === 'web');
   useEffect(() => {
     if (canalAttendu && canalAbsent && !canalDExemple) {
       emitGuidanceInteraction('messaging.canal.absent');
@@ -818,6 +831,7 @@ function Messaging({ navigation, route }) {
    * @returns {import('react').ReactElement} The rendered chat item
    */
   const filsAvecLExemple = canalDExemple ? [CANAL_D_EXEMPLE, ...filteredChats] : filteredChats;
+
   // GUIDE-D-CORR-3 (M1082) : le canal d'exemple, qui ouvre `TourCanalExemple` (rien ne part).
   const renderCanalDExemple = () => (
     <TouchableOpacity
@@ -1227,7 +1241,9 @@ function Messaging({ navigation, route }) {
                     if (ligne.item?.tourExample) {
                       return <TourTarget id="msg-canal">{renderCanalDExemple()}</TourTarget>;
                     }
-                    return ligne.item?.type === 'club'
+                    // GUIDES-SITE-CORR S17 (390, rang 084) : le cadre entourait le canal d'un
+                    // AUTRE club (« AS Montrivage ») ; seul celui du club actif est le bon.
+                    return estLeCanalDuClubActif(ligne.item) && !canalDExemple
                       ? <TourTarget id="msg-canal">{renderChatRow(ligne)}</TourTarget>
                       : renderChatRow(ligne);
                   }}

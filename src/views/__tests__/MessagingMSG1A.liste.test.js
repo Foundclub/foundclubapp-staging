@@ -434,6 +434,26 @@ describe('Guide Dirigeant·e, B2 : le canal du club', () => {
     expect(ids).toContain('msg-canal');
   });
 
+  // GUIDES-SITE-CORR S17 (tournée du site, 09/11, D 390 rang 084) : le cadre entourait le canal
+  // d'un AUTRE club que le club actif (« AS Montrivage »), et le canal du club actif manquait.
+  it('le canal d un autre club n est pas celui du club actif : pas d ancre, canal absent', async () => {
+    /** @type {any} */ (mockAuth.userData).club = { documentId: 'club-1' };
+    try {
+      mockTour = ETAPE;
+      mockChatsQuery = pageDe([{ ...CANAL, club: { documentId: 'club-2' }, documentId: 'canal-2' }]);
+      const arbre = await monter();
+      const ids = arbre.root
+        .findAll((/** @type {any} */ noeud) => (
+          typeof noeud.props?.id === 'string' && noeud.props?.children
+        ))
+        .map((/** @type {any} */ noeud) => noeud.props.id);
+      expect(ids).not.toContain('msg-canal');
+      expect(cles()).toContain('messaging.canal.absent');
+    } finally {
+      delete (/** @type {any} */ (mockAuth.userData)).club;
+    }
+  });
+
   it('hors de l étape, ou pendant le chargement, ou s il reste des pages : silence', async () => {
     mockChatsQuery = pageDe([]);
     await monter();

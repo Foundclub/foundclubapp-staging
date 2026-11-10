@@ -132,6 +132,8 @@ import {
   getTeamIdOfChat,
 } from '@/views/conversationConvocation/convocationWizardUtils';
 import { RouteNames } from '@/navigation/routeNames'
+import { isTourExample } from '@/domains/tour/tourExamples';
+import TourCanalExemple from '@/components/molecules/tour/TourCanalExemple';
 import links from '@/platform/links'
 // MSG1W (1-A) — les liens des applis de cartes, ceux du telephone (FeuilleDAdresse de MSG1A).
 import { buildExternalMapLinks } from '@/platform/maps/externalMap';
@@ -6612,4 +6614,19 @@ export function MessagesDuSite({ navigation, route }) {
   );
 }
 
-export default Conversation
+/**
+ * GUIDES-SITE-CORR S17 (tournée du site, 09/11) : le bonus 2 du guide Dirigeant·e ouvre le canal
+ * d'exemple (`Messaging`, `tourExample: 'canal'`), comme au téléphone (`Conversation.js`). Le site
+ * ouvrait le vrai fil, sans ancre du guide, et ses requêtes partaient. Aiguillé AVANT le fil.
+ * @param {any} props - Props de l'écran.
+ * @returns {import('react').ReactElement} Le fil, ou le canal d'exemple.
+ */
+function ConversationOuCanalDExemple(props) {
+  const { navigation, route } = props;
+  if (isTourExample(route?.params)) {
+    return <TourCanalExemple clubName={route.params.clubName} navigation={navigation} />;
+  }
+  return <Conversation navigation={navigation} route={route} />;
+}
+
+export default ConversationOuCanalDExemple
