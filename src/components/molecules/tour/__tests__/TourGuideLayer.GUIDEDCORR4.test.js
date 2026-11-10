@@ -7,7 +7,8 @@ import TourGuideLayer from '../TourGuideLayer';
 
 // GUIDE-D-CORR-4 (retours du testeur sur la TestFlight 2.6.98, 10/11) :
 // M1098, mission 2 « Ajouter un coach », iPhone : « le pop up de la mission cache le bouton et il
-// est coupé ». La zone du formulaire (cible de m2-fields) remplit l'écran jusqu'aux boutons du bas ;
+// est coupé ». La zone du formulaire (cible de m2-fields) remplit l'écran jusqu'aux boutons du
+// bas ;
 // la bulle n'avait que le trou sous elle (111 pt), s'y posait sur « Envoyer l'invitation » et
 // « Annuler », et son texte y était coupé.
 // M1100, bonus 3 « Créer un groupe » : deux cadres à la fois (nom, autorisations).
@@ -216,7 +217,8 @@ describe('GUIDE-D-CORR-4 M1098 : la bulle de « Ajouter un coach » à 390 × 84
 describe('GUIDE-D-CORR-4 M1100 : création du groupe, un seul cadre à la fois', () => {
   const holes = (tree) => tree.root.findAll((node) => typeof node.type === 'string'
     && String(node.props.testID || '').startsWith('tour.hole.'));
-  // « Nouveau groupe » mesuré sur les captures (÷ 3) : le nom (toute la largeur), les autorisations.
+  // « Nouveau groupe » mesuré sur les captures (÷ 3) : le nom (toute la largeur), les
+  // autorisations.
   const NAME = {
     height: 66, width: 225, x: 105, y: 151,
   };

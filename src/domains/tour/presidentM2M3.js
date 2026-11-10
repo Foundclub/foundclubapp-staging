@@ -133,9 +133,10 @@ const M2_STEPS = [
   extendStep({
     advanceOn: FORM_EXITS,
     bubblePlacement: 'top',
-    // GUIDE-D-CORR-4 (M1098, TestFlight 2.6.98) : la zone remplit l'écran jusqu'aux boutons du bas ;
-    // la bulle n'avait que 111 pt sous elle, s'y posait sur « Envoyer l'invitation » et y était
-    // coupée. L'écran lui garde sa place au-dessus des boutons (TourBubbleSlot dans AddCoach).
+    // GUIDE-D-CORR-4 (M1098, TestFlight 2.6.98) : la zone remplit l'écran jusqu'aux boutons du
+    // bas ; la bulle n'avait que 111 pt sous elle, s'y posait sur « Envoyer l'invitation » et y
+    // était coupée. L'écran lui garde sa place au-dessus des boutons (TourBubbleSlot dans
+    // AddCoach).
     bubbleSlot: true,
     id: 'm2-fields',
     missionId: 'president_m2',

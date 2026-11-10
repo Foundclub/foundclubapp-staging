@@ -323,7 +323,8 @@ function NewConversation({ navigation, route }) {
     && !modeVille && !isAddMembersMode;
   // GUIDE-D-CORR-4 (M1100) : quand le guide montre « Autorisations du groupe », le clavier du nom
   // se ferme ; ouvert, il ne laissait à la bulle que la place du champ du nom.
-  const isTourOnPerms = tourStatus === 'active' && Boolean(tourStep?.targets?.includes('grp-perms'));
+  const isTourOnPerms = tourStatus === 'active'
+    && Boolean(tourStep?.targets?.includes('grp-perms'));
   useEffect(() => {
     if (isTourOnPerms) Keyboard.dismiss();
   }, [isTourOnPerms]);
@@ -1430,10 +1431,6 @@ const stylesDuChoix = StyleSheet.create({
     minWidth: 0,
     paddingVertical: 8,
   },
-  cibleNom: {
-    flex: 1,
-    minWidth: 0,
-  },
   choisi: {
     alignItems: 'center',
     gap: 4,
@@ -1445,6 +1442,10 @@ const stylesDuChoix = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 15,
     maxWidth: 58,
+  },
+  cibleNom: {
+    flex: 1,
+    minWidth: 0,
   },
   grille: {
     flexDirection: 'row',
