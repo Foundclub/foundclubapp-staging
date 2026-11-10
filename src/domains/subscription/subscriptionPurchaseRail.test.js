@@ -955,6 +955,10 @@ describe('subscriptionPurchaseRail', () => {
 describe('openSubscriptionManagementPortal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Ces temoins decrivent le TELEPHONE (Linking). Platform.OS fuyait du bloc
+    // precedent ; depuis STRIPE-OUVERTURE / L4 le site ouvre le portail autrement
+    // (subscriptionPurchaseRail.STRIPE-OUVERTURE.test.js).
+    Platform.OS = 'ios';
   });
 
   it('ouvre le portail Stripe quand le serveur en rend l\'adresse', async () => {

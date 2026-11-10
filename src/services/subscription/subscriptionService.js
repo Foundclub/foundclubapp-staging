@@ -145,9 +145,10 @@ export const claimOnboardingGift = async () => {
  * 200 avec `available: false` et un motif. Il n'y a AUCUNE cle Stripe en
  * production aujourd'hui, et un ecran « Mon abonnement » ne doit pas casser
  * pour une fonction qui ne concerne que les abonnes web.
+ * @param {{ returnOrigin?: string }} [payload] - STRIPE-OUVERTURE / L1 : le site appelant.
  * @returns {Promise<{available: boolean, reason: string, url: string|null}>} Le verdict.
  */
-export const openSubscriptionBillingPortal = async () => {
-  const response = await client.post('/subscriptions/stripe/billing-portal', {});
+export const openSubscriptionBillingPortal = async (payload = {}) => {
+  const response = await client.post('/subscriptions/stripe/billing-portal', payload);
   return getResponsePayload(response);
 };
