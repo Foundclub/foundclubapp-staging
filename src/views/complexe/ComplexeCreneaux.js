@@ -106,6 +106,12 @@ const planVide = () => ({
  * à venir qui tombent HORS du nouveau modèle (`reservationsHorsHoraires`) ; l'écran le dit avant
  * d'enregistrer, « 3 réservations tombent hors de tes nouveaux horaires. Elles sont gardées. »
  * (rien n'est annulé).
+ * COMPLEXE-TERRAINS (10/11/2026, ligne Gérant 04 du testeur) : la feuille « Nouvelle plage » (et
+ * « Nouveau tarif ») repart sans les jours de la précédente (la 2ᵉ plage reprenait lun. mar. jeu.
+ * ven. et le serveur la refusait comme chevauchement) ; une fin avant l'ouverture passe minuit ; un
+ * tarif posé sur des jours sans plage le dit ; tant que rien n'est enregistré, l'écran le dit et
+ * quitter propose d'enregistrer (le terrain des captures n'avait RIEN d'enregistré) ; « Fermer des
+ * jours » n'apparaît pas pendant la création.
  * Paramètres de route : `complexeId`, `terrainId`, `terrainAjoute` (E-G08 vient de le créer).
  * Caché par `COMPLEXES_GERANT`.
  * @returns {import('react').ReactElement} L'écran.
@@ -143,16 +149,20 @@ function ComplexeCreneaux() {
   // CORR-RESA (81 A) : une plage ajoutée (ou retirée) n'est qu'un aperçu tant qu'on n'a pas
   // enregistré ; quitter l'écran avant le demande (même garde que « Fermer une installation »).
   const [modifie, setModifie] = useState(false);
+  // COMPLEXE-TERRAINS (1) : quitter propose d'ENREGISTRER (Oui) plutôt que de perdre (Non).
+  const enregistrerAvantDePartir = useRef(async () => false);
   useGardeDeSortie(navigation, {
     actif: modifie,
+    enregistrer: () => enregistrerAvantDePartir.current(),
     textes: {
+      enregistrer: t('complexeGerant.terrain.enregistrer', 'Enregistrer'),
       message: t(
         'complexeGerant.creneaux.quitterMessage',
-        'Tu as des changements non enregistrés : ils seront perdus.',
+        'Tes plages et tes tarifs ne sont pas encore enregistrés : les joueurs ne les voient pas.',
       ),
-      quitter: t('complexeGerant.creneaux.quitter', 'Quitter'),
+      quitter: t('complexeGerant.creneaux.quitter', 'Quitter sans enregistrer'),
       rester: t('complexeGerant.creneaux.rester', 'Rester'),
-      titre: t('complexeGerant.creneaux.quitterTitre', 'Quitter sans enregistrer ?'),
+      titre: t('complexeGerant.creneaux.quitterTitre', 'Enregistrer tes créneaux ?'),
     },
   });
   const [plage, setPlage] = useState({
@@ -238,7 +248,8 @@ function ComplexeCreneaux() {
       setRefusFeuille(t('complexeGerant.creneaux.joursManquants', 'Choisis au moins un jour.'));
       return;
     }
-    if (debut === null || fin === null || fin <= debut) {
+    // « nuit 1A » : une fermeture avant l'ouverture finit le lendemain ; seule l'égalité se refuse.
+    if (debut === null || fin === null || fin === debut) {
       setRefusFeuille(t(
         'complexeGerant.creneaux.finAvantDebut',
         'La fin doit être après le début.',
@@ -253,7 +264,10 @@ function ComplexeCreneaux() {
     };
     const candidat = { ...plan, ranges: [...plan.ranges, nouvelle] };
     const accepte = await jugerEtGarder(candidat, setRefusFeuille);
-    if (accepte) fermerLaFeuille();
+    if (accepte) {
+      setPlage((avant) => ({ ...avant, jours: [] }));
+      fermerLaFeuille();
+    }
   };
 
   const ajouterLeTarif = async () => {
@@ -277,7 +291,10 @@ function ComplexeCreneaux() {
       : { days: jours, price: prix };
     const candidat = { ...plan, rates: [...plan.rates, nouveau] };
     const accepte = await jugerEtGarder(candidat, setRefusFeuille);
-    if (accepte) fermerLaFeuille();
+    if (accepte) {
+      setTarif((avant) => ({ ...avant, jours: [], prix: '' }));
+      fermerLaFeuille();
+    }
   };
 
   const ajouterLePonctuel = async () => {
@@ -304,6 +321,10 @@ function ComplexeCreneaux() {
     jugerEtGarder({ ...plan, period: { ...plan.period, ...changement } }, setRefusPlan);
   };
 
+  /**
+   * « Ouvrir ces créneaux » / « Enregistrer ».
+   * @returns {Promise<boolean>} Vrai si c'est enregistré.
+   */
   const enregistrerLesCreneaux = async () => {
     setRefus('');
     setEnregistre(null);
@@ -315,14 +336,17 @@ function ComplexeCreneaux() {
       setModifie(false);
       setNeuf(false);
       setHorsHoraires(0);
+      return true;
     } catch (erreur) {
       setRefus(messageDeRefus(
         t,
         erreur,
         t('complexeGerant.creneaux.echec', 'Les créneaux ne sont pas partis. Réessaie.'),
       ));
+      return false;
     }
   };
+  enregistrerAvantDePartir.current = enregistrerLesCreneaux;
 
   // ── Petites pièces ─────────────────────────────────────────────────────────────────────
   const groupe = (/** @type {string} */ legende, /** @type {any} */ contenu) => (
@@ -537,17 +561,30 @@ function ComplexeCreneaux() {
               )}
           </Text>
         </View>
-        {plan.rates.map((rate, rang) => ligne(
-          `tarif-${rang}`,
-          joursTexte(rate.days),
-          // RESA-FIN-APP : un terrain au prix PAR JOUEUR le dit sur la ligne (« 7 € » seul, tournée 2).
-          [resumeTarif(t, rate), terrain?.priceUnit === 'joueur'
-            ? t('complexeGerant.prix.parJoueur', '{{prix}} par joueur', {
-              prix: formatEuros(rate.price), ...SANS_ECHAPPEMENT,
-            })
-            : formatEuros(rate.price)],
-          () => retirer('rates', rang),
-        ))}
+        {plan.rates.map((rate, rang) => {
+          // COMPLEXE-TERRAINS (2) : un tarif posé sur des jours sans plage ne s'applique à
+          // rien ; la semaine y montre « — » (fermé) : le tarif le dit.
+          const sansPlage = rate.days.filter((/** @type {number} */ jour) => !plan.ranges
+            .some((/** @type {any} */ range) => range.days.includes(jour)));
+          const jours = joursTexte(sansPlage);
+          return ligne(
+            `tarif-${rang}`,
+            joursTexte(rate.days),
+            // RESA-FIN-APP : un terrain au prix PAR JOUEUR le dit sur la ligne (« 7 € » seul,
+            // tournée 2).
+            [resumeTarif(t, rate), terrain?.priceUnit === 'joueur'
+              ? t('complexeGerant.prix.parJoueur', '{{prix}} par joueur', {
+                prix: formatEuros(rate.price), ...SANS_ECHAPPEMENT,
+              })
+              : formatEuros(rate.price),
+            sansPlage.length ? t(
+              'complexeGerant.creneaux.tarifSansPlage',
+              'Aucune plage ouverte {{jours}} : ce tarif ne s’applique pas encore.',
+              { jours: `${jours.charAt(0).toLowerCase()}${jours.slice(1)}`, ...SANS_ECHAPPEMENT },
+            ) : ''],
+            () => retirer('rates', rang),
+          );
+        })}
         <View style={{ alignSelf: 'flex-start' }}>
           <Button
             icon="plus"
@@ -684,17 +721,20 @@ function ComplexeCreneaux() {
         </View>
         {terrainId ? (
           <View style={[Alignments.row, Alignments.wrap, { gap: 12 }]}>
-            <TouchableOpacity
-              accessibilityRole="link"
-              onPress={() => navigation.navigate(RouteNames.ComplexeFermetures, {
-                complexeId, terrainId,
-              })}
-              style={[Alignments.justifyCenter, { minHeight: 44 }]}
-            >
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                {t('complexeReservations.planning.fermerDesJours', 'Fermer des jours')}
-              </Text>
-            </TouchableOpacity>
+            {/* COMPLEXE-TERRAINS (8) : rien à fermer tant que le terrain n'est pas ouvert. */}
+            {neuf ? null : (
+              <TouchableOpacity
+                accessibilityRole="link"
+                onPress={() => navigation.navigate(RouteNames.ComplexeFermetures, {
+                  complexeId, terrainId,
+                })}
+                style={[Alignments.justifyCenter, { minHeight: 44 }]}
+              >
+                <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                  {t('complexeReservations.planning.fermerDesJours', 'Fermer des jours')}
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               accessibilityRole="link"
               onPress={() => navigation.navigate(RouteNames.ComplexeEspace, {
@@ -928,6 +968,22 @@ function ComplexeCreneaux() {
               { nom: params.terrainAjoute, ...SANS_ECHAPPEMENT },
             )}
             ton="ok"
+          />
+        ) : null}
+        {modifie ? (
+          <BandeauComplexe
+            testID="complexe-creneaux-non-enregistre"
+            texte={t(
+              'complexeGerant.creneaux.nonEnregistre',
+              'Pas encore enregistré : appuie sur « {{bouton}} » en bas de la page.',
+              {
+                bouton: neuf
+                  ? t('complexeGerant.creneaux.ouvrir', 'Ouvrir ces créneaux')
+                  : t('complexeGerant.terrain.enregistrer', 'Enregistrer'),
+                ...SANS_ECHAPPEMENT,
+              },
+            )}
+            ton="attention"
           />
         ) : null}
         {terrain.bookingMode === 'telephone' ? (

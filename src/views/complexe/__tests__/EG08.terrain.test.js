@@ -286,13 +286,13 @@ describe('RESA-L5A1 E-G08 — photos', () => {
   it('une photo trop lourde est refusée ; une autre se téléverse et s’affiche', async () => {
     const arbre = await monter();
     mockChoisie = { assets: [{ fileSize: 12 * 1024 * 1024, uri: 'file:///lourde.jpg' }] };
-    await appuyer(arbre, 'Ajouter une photo');
+    await appuyer(arbre, 'Ajouter des photos de l’installation');
     expect(lisibles(arbre)).toContain('Cette photo dépasse 10 Mo.');
     expect(televerserPhoto).not.toHaveBeenCalled();
     mockChoisie = { assets: [{ fileSize: 200000, uri: 'file:///legere.jpg' }] };
     /** @type {any} */ (televerserPhoto)
       .mockResolvedValue({ id: 41, url: 'https://exemple.test/a.jpg' });
-    await appuyer(arbre, 'Ajouter une photo');
+    await appuyer(arbre, 'Ajouter des photos de l’installation');
     expect(parRepere(arbre, 'complexe-terrain-photo-41')).not.toBeNull();
     await appuyer(arbre, 'Retirer la photo 1');
     expect(parRepere(arbre, 'complexe-terrain-photo-41')).toBeNull();
@@ -405,16 +405,19 @@ describe('RESA-L5A2 E-G08 — modifier un terrain qui a des réservations', () =
 
 // RESA-FIN-APP (20/10/2026) — tournée 2 (Android 16) : après la 1re photo, le bouton s'affichait
 // « Ajouter une » (bouton à icône : le libellé épouse sa largeur et perd son dernier mot).
+// COMPLEXE-TERRAINS (7, 10/11) : le libellé devient « Ajouter des photos de l’installation ».
+const PHOTOS = 'Ajouter des photos de l’installation';
+
 describe('RESA-FIN-APP (1) E-G08 — « Ajouter une photo » dessiné en un seul mot', () => {
   it('avant et après la première photo', async () => {
     const arbre = await monter();
-    expect(dessins(arbre, 'Ajouter une photo')).toEqual([enUnMot('Ajouter une photo')]);
+    expect(dessins(arbre, PHOTOS)).toEqual([enUnMot(PHOTOS)]);
     mockChoisie = { assets: [{ fileSize: 200000, uri: 'file:///legere.jpg' }] };
     /** @type {any} */ (televerserPhoto)
       .mockResolvedValue({ id: 41, url: 'https://exemple.test/a.jpg' });
-    await appuyer(arbre, 'Ajouter une photo');
+    await appuyer(arbre, 'Ajouter des photos de l’installation');
     expect(parRepere(arbre, 'complexe-terrain-photo-41')).not.toBeNull();
-    expect(dessins(arbre, 'Ajouter une photo')).toEqual([enUnMot('Ajouter une photo')]);
+    expect(dessins(arbre, PHOTOS)).toEqual([enUnMot(PHOTOS)]);
   });
 });
 

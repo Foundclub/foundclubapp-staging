@@ -9,17 +9,24 @@ const selectFile = (accept, options = {}) => new Promise((resolve, reject) => {
     return;
   }
 
+  // COMPLEXE-TERRAINS (7) : `selectionLimit` > 1 (l'option du téléphone) ouvre un choix multiple et
+  // rend `{ assets: [...] }` comme le téléphone, coupé à la limite ; sinon, un fichier tel quel.
+  const limite = Number(options.selectionLimit) > 1 ? Number(options.selectionLimit) : 0;
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = accept;
-  input.multiple = Boolean(options.multiple);
+  input.multiple = Boolean(options.multiple || limite);
   if (options.capture) {
     input.capture = options.capture;
   }
 
   input.addEventListener('change', () => {
-    const [file] = Array.from(input.files || []);
-    resolve(file || null);
+    const files = Array.from(input.files || []);
+    if (limite) {
+      resolve(files.length ? { assets: files.slice(0, limite) } : null);
+      return;
+    }
+    resolve(files[0] || null);
   }, { once: true });
   // P3-04 : fenêtre fermée sans choix, l'attente se termine.
   input.addEventListener('cancel', () => resolve(null), { once: true });

@@ -181,7 +181,8 @@ describe('RESA-L5A1 P00 — une plage découpée en créneaux (RA4 état 2)', ()
   });
 
   it('une plage impossible ne donne aucun créneau', () => {
-    expect(decoupagePlage({ durationMinutes: 60, from: '23:00', to: '17:00' }).nombre).toBe(0);
+    // COMPLEXE-TERRAINS (« nuit 1A ») : 23:00 → 17:00 passe minuit ; seule une fin égale est vide.
+    expect(decoupagePlage({ durationMinutes: 60, from: '17:00', to: '17:00' }).nombre).toBe(0);
     expect(decoupagePlage({ durationMinutes: 0, from: '17:00', to: '23:00' }).nombre).toBe(0);
   });
 

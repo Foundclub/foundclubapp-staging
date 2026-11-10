@@ -181,22 +181,36 @@ describe('CORR-RESA (81 A) E-G09 — quitter sans enregistrer', () => {
     expect((mockEcouteurs.beforeRemove || []).length).toBeGreaterThan(0);
     const evenement = quitter();
     expect(evenement.preventDefault).toHaveBeenCalledTimes(1);
+    // COMPLEXE-TERRAINS (10/11) : la question propose d'ENREGISTRER (Oui) ou de partir sans (Non).
     expect(Alert.alert).toHaveBeenCalledWith(
-      'Quitter sans enregistrer ?',
-      'Tu as des changements non enregistrés : ils seront perdus.',
+      'Enregistrer tes créneaux ?',
+      'Tes plages et tes tarifs ne sont pas encore enregistrés : les joueurs ne les voient pas.',
       [
-        { style: 'cancel', text: 'Rester' },
-        expect.objectContaining({ style: 'destructive', text: 'Quitter' }),
+        expect.objectContaining({ style: 'cancel', text: 'Quitter sans enregistrer' }),
+        expect.objectContaining({ isPreferred: true, text: 'Enregistrer' }),
       ],
     );
   });
 
-  it('« Quitter » rejoue la sortie', async () => {
+  it('« Quitter sans enregistrer » rejoue la sortie, rien n’est envoyé', async () => {
     const arbre = await monter();
     await ajouterUnePlage(arbre);
     const evenement = quitter();
     const boutons = /** @type {any} */ (Alert.alert).mock.calls[0][2];
-    boutons[1].onPress();
+    boutons[0].onPress();
+    expect(mockNavigation.dispatch).toHaveBeenCalledWith(evenement.data.action);
+    expect(mockEnregistrer).not.toHaveBeenCalled();
+  });
+
+  it('COMPLEXE-TERRAINS (1) — « Enregistrer » enregistre la plage, puis sort', async () => {
+    const arbre = await monter();
+    await ajouterUnePlage(arbre);
+    const evenement = quitter();
+    const boutons = /** @type {any} */ (Alert.alert).mock.calls[0][2];
+    await act(async () => {
+      await boutons[1].onPress();
+    });
+    expect(mockEnregistrer).toHaveBeenCalledTimes(1);
     expect(mockNavigation.dispatch).toHaveBeenCalledWith(evenement.data.action);
   });
 
