@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey, onboardingCollectsBirthdate } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import suiteDuGerant from '@/domains/complexe/suiteDuGerant';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -245,7 +246,7 @@ function UserName({ navigation }) {
         'Impossible de mettre à jour ton profil.',
       ));
     },
-    onSuccess: (updatedUser, submitted) => {
+    onSuccess: async (updatedUser, submitted) => {
       saisieAvantCompteParent.valeurs = null;
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
@@ -284,6 +285,23 @@ function UserName({ navigation }) {
       // pre-demande des notifications s'ouvre par-dessus l'etape suivante : juste apres
       // « Qui es-tu ? », jamais au point de controle d'un ancien compte (retour plus haut).
       proposerPreDemandeNotifications('inscription');
+      // GERANT-INSCRIPTION (10/11/2026) — le gérant d'un complexe (compte sans rôle sportif) va à
+      // son complexe, ou à la fiche du complexe : jamais aux questions de sport du parcours `new`.
+      // Le profil en mémoire porte l'identité AVANT le départ (l'accueil du site le relit).
+      const suite = await suiteDuGerant(userData);
+      if (suite) {
+        queryClient.setQueriesData(
+          { queryKey: ['get-me'] },
+          (/** @type {any} */ ancien) => (
+            ancien?.documentId && ancien.documentId === updatedUser?.documentId
+              ? { ...ancien, ...updatedUser }
+              : ancien
+          ),
+        );
+        if (suite.params) navigation.navigate(suite.name, suite.params);
+        else navigation.navigate(suite.name);
+        return;
+      }
       const nextRoute = resolveAvailableRoute(
         navigation,
         getNextOnboardingRoute(RouteNames.UserName),

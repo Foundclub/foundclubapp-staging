@@ -772,3 +772,78 @@ describe('UserName — la pre-demande suit « Qui es-tu ? » (NOTIF-PREDEMANDE)'
     alerte.mockRestore();
   });
 });
+
+// GERANT-INSCRIPTION (10/11/2026, décisions 3 et 4 A) — un compte SANS rôle sportif qui gère un
+// complexe (ou vient de choisir « Je gère un complexe ») donne son identité ici, avec les règles
+// d'âge de tous ; ensuite son complexe, ou la fiche du complexe, jamais les questions de sport.
+jest.mock('@/services/complexe/complexeService', () => ({
+  lireMesComplexes: (...args) => mockLireMesComplexes(...args),
+}));
+const mockLireMesComplexes = jest.fn();
+
+describe('UserName — le gérant d’un complexe donne son identité (GERANT-INSCRIPTION)', () => {
+  const donnerSonIdentite = async (/** @type {any} */ arbre, /** @type {string} */ annee) => {
+    await saisir(arbre, 'Prénom', 'Gérant');
+    await saisir(arbre, 'Nom', 'Recette');
+    await saisir(arbre, 'JJ', '12');
+    await saisir(arbre, 'MM', '05');
+    await saisir(arbre, 'AAAA', annee);
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+    await act(async () => { await new Promise((resoudre) => { setTimeout(resoudre, 0); }); });
+  };
+
+  it('le compte sans rôle voit les trois champs de date', () => {
+    const arbre = rendre('Authenticated');
+    expect(champ(arbre, 'JJ')).toBeTruthy();
+    expect(champ(arbre, 'MM')).toBeTruthy();
+    expect(champ(arbre, 'AAAA')).toBeTruthy();
+  });
+
+  it('il gère un complexe : identité envoyée, puis l’espace de SON complexe', async () => {
+    mockLireMesComplexes.mockResolvedValue({ data: [{ documentId: 'cx-5', name: 'Five' }] });
+    const arbre = rendre('Authenticated');
+
+    await donnerSonIdentite(arbre, '1990');
+
+    expect(updateMe).toHaveBeenCalledWith({
+      birthdate: '1990-05-12', firstname: 'Gérant', lastname: 'Recette',
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ComplexeEspace', { complexeId: 'cx-5' });
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserAvatar');
+    // Le profil en mémoire porte l'identité avant le départ (l'accueil du site le relit).
+    expect(mockSetQueriesData).toHaveBeenCalledWith({ queryKey: ['get-me'] }, expect.any(Function));
+  });
+
+  it('il a choisi « Je gère un complexe » sans l’avoir créé : la fiche du complexe', async () => {
+    mockLireMesComplexes.mockResolvedValue({ data: [] });
+    const { storage } = jest.requireMock('@/store/appContext');
+    storage.getString.mockImplementation((/** @type {string} */ cle) => (
+      cle === 'user.complexe_mode.user-1' ? 'on' : undefined));
+    const arbre = rendre('Authenticated');
+
+    await donnerSonIdentite(arbre, '1990');
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ComplexeDevenirGerant');
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserAvatar');
+    storage.getString.mockReset();
+  });
+
+  it('13-14 ans : la déclaration parentale d’abord, comme pour tous', async () => {
+    mockLireMesComplexes.mockResolvedValue({ data: [{ documentId: 'cx-5' }] });
+    const arbre = rendre('Authenticated');
+
+    await donnerSonIdentite(arbre, String(new Date().getUTCFullYear() - 14));
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserParentalDeclaration');
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('ComplexeEspace', expect.anything());
+  });
+
+  it('un joueur ne lit pas les complexes et garde son étape suivante', async () => {
+    const arbre = rendre('Joueur');
+
+    await donnerSonIdentite(arbre, '1990');
+
+    expect(mockLireMesComplexes).not.toHaveBeenCalled();
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserAvatar');
+  });
+});

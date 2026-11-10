@@ -7,6 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import suiteDuGerant from '@/domains/complexe/suiteDuGerant';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -91,7 +92,7 @@ function UserParentalDeclaration({ navigation, route }) {
         'Impossible d’enregistrer ta réponse.',
       ));
     },
-    onSuccess: (updatedUser) => {
+    onSuccess: async (updatedUser) => {
       queryClient.setQueriesData({ queryKey: ['get-me'] }, updatedUser);
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
       if (updatedUser?.documentId) {
@@ -110,7 +111,11 @@ function UserParentalDeclaration({ navigation, route }) {
         // laissait l'ado sur la case cochee, sans suite.
         navigation.navigate(getPostOnboardingHomeRoute());
       } else {
-        navigation.navigate(resolveRouteApresLaCase());
+        // GERANT-INSCRIPTION (10/11/2026) — le gérant d'un complexe (compte sans rôle sportif) va à
+        // son complexe, ou à la fiche : jamais aux questions de sport du parcours `new`.
+        const suite = await suiteDuGerant(userData);
+        if (suite?.params) navigation.navigate(suite.name, suite.params);
+        else navigation.navigate(suite?.name || resolveRouteApresLaCase());
       }
     },
   });

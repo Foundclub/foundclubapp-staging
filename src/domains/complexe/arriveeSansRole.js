@@ -13,7 +13,7 @@
 
 /**
  * Le compte a-t-il donné son prénom, son nom et sa date de naissance ?
- * @param {{ firstname?: unknown, lastname?: unknown, birthdate?: unknown } | null | undefined} compte
+ * @param {{ firstname?: unknown, lastname?: unknown, birthdate?: unknown } | null} [compte]
  * @returns {boolean} Vrai si les trois sont connus.
  */
 export const identiteComplete = (compte) => Boolean(
@@ -24,13 +24,14 @@ export const identiteComplete = (compte) => Boolean(
 
 /**
  * L'arrivée d'un compte sans rôle sportif.
- * @param {{ compte?: any, villesGerees?: number, demandeVille?: boolean, complexesGeres?: number }} lu
+ * @param {{ compte?: any, villesGerees?: number, demandeVille?: boolean,
+ *   complexesGeres?: number }} [lu]
  *   - Ce que l'accueil a lu : le profil, le nombre de Villes et de complexes gérés, une demande
  *   de gestion de Ville en cours.
  * @returns {'ville' | 'demande-ville' | 'identite' | 'complexe' | 'statut'} L'arrivée.
  */
 export const arriveeSansRoleSportif = ({
-  compte = null, complexesGeres = 0, demandeVille = false, villesGerees = 0,
+  complexesGeres = 0, compte = null, demandeVille = false, villesGerees = 0,
 } = {}) => {
   if (villesGerees > 0) return 'ville';
   if (demandeVille) return 'demande-ville';

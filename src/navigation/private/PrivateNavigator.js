@@ -8,10 +8,8 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import {
-  aUneDemandeDeGestion,
-  isVilleOnlyAccount,
-} from '@/domains/collectivite/collectiviteAccueil';
+import { aUneDemandeDeGestion } from '@/domains/collectivite/collectiviteAccueil';
+import { arriveeSansRoleSportif } from '@/domains/complexe/arriveeSansRole';
 import { lireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useTheme from '@/theme/themeContext';
 
@@ -83,11 +81,6 @@ function PrivateNavigator() {
   const premiereVille = Array.isArray(villesGerees.data) ? villesGerees.data[0] : null;
   // REPRISE-COLLECTIVITES 102 : une demande annulée ne compte plus (le choix du statut revient).
   const aDemandeAGerer = aUneDemandeDeGestion(demandesGestionnaire.data);
-  const villeSeule = sansRoleSportif && isVilleOnlyAccount({
-    hasManagerRequest: aDemandeAGerer,
-    managedCount: premiereVille?.documentId ? 1 : 0,
-    roleKey,
-  });
   // Tant qu'on ne sait pas, on attend : la pile choisit son écran d'arrivée UNE fois.
   const villeEnLecture = sansRoleSportif
     && Boolean(villesGerees.isLoading || demandesGestionnaire.isLoading);
@@ -97,7 +90,17 @@ function PrivateNavigator() {
   // complexe. La lecture ne part que pour un compte sans rôle sportif, interrupteur allumé.
   const mesComplexes = useMesComplexes({ enabled: COMPLEXES_GERANT && sansRoleSportif });
   const complexesGeres = Array.isArray(mesComplexes.data) ? mesComplexes.data : [];
-  const complexeSeul = COMPLEXES_GERANT && sansRoleSportif && complexesGeres.length > 0;
+  // GERANT-INSCRIPTION (10/11/2026) — LA règle d'arrivée, partagée avec le site (SharedHomeRoute) :
+  // la Ville, puis la demande de Ville, puis le complexe ; un gérant sans identité la donne
+  // d'abord.
+  const arrivee = sansRoleSportif ? arriveeSansRoleSportif({
+    complexesGeres: COMPLEXES_GERANT ? complexesGeres.length : 0,
+    compte: userData,
+    demandeVille: aDemandeAGerer,
+    villesGerees: premiereVille?.documentId ? 1 : 0,
+  }) : null;
+  const villeSeule = arrivee === 'ville' || arrivee === 'demande-ville';
+  const complexeSeul = arrivee === 'complexe' || arrivee === 'identite';
   const complexeEnLecture = COMPLEXES_GERANT && sansRoleSportif && Boolean(mesComplexes.isLoading);
   const pendingSquadInviteNavigationKeyRef = useRef(/** @type {string | null} */(null));
   const onboardingRedirectAttemptRef = useRef(/** @type {string | null} */(null));
@@ -137,7 +140,7 @@ function PrivateNavigator() {
         ? RouteNames.CollectiviteSpace
         : RouteNames.CollectiviteSignupStatus;
     }
-    if (complexeSeul) return RouteNames.ComplexeEspace;
+    if (complexeSeul) return arrivee === 'identite' ? RouteNames.UserName : RouteNames.ComplexeEspace; // eslint-disable-line max-len
     if (route) return route;
     // RESA-L5A1 (13/10/2026) — le mode complexe (planche RB, AT-01) : un choix d'affichage gardé
     // sur le téléphone ; l'app s'ouvre alors sur l'espace du complexe. Après l'onboarding.
@@ -148,7 +151,7 @@ function PrivateNavigator() {
     return RouteNames.HomeTab;
   }, [
     onboardingViews, isGold, villeSeule, premiereVille?.documentId, complexeSeul,
-    userData?.documentId,
+    userData?.documentId, arrivee,
   ]);
 
   const firstPendingOnboardingRoute = useMemo(() => {

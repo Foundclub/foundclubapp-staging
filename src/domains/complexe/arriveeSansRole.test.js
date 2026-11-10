@@ -6,24 +6,25 @@ const IDENTITE = { birthdate: '1990-05-12', firstname: 'Gérant', lastname: 'Rec
 
 describe('arriveeSansRoleSportif', () => {
   it('un compte qui gère un complexe, identité complète, arrive sur son complexe', () => {
-    expect(arriveeSansRoleSportif({ compte: IDENTITE, complexesGeres: 1 })).toBe('complexe');
+    expect(arriveeSansRoleSportif({ complexesGeres: 1, compte: IDENTITE })).toBe('complexe');
   });
 
   it('un compte qui gère un complexe SANS identité (compte 982) la complète d’abord', () => {
-    expect(arriveeSansRoleSportif({ compte: {}, complexesGeres: 1 })).toBe('identite');
+    expect(arriveeSansRoleSportif({ complexesGeres: 1, compte: {} })).toBe('identite');
     expect(arriveeSansRoleSportif({
-      compte: { ...IDENTITE, birthdate: null },
       complexesGeres: 1,
+      compte: { ...IDENTITE, birthdate: null },
     })).toBe('identite');
     expect(arriveeSansRoleSportif({
-      compte: { ...IDENTITE, lastname: '  ' },
       complexesGeres: 1,
+      compte: { ...IDENTITE, lastname: '  ' },
     })).toBe('identite');
   });
 
   it('la Ville garde la priorité sur le complexe (ordre d’avant)', () => {
-    expect(arriveeSansRoleSportif({ compte: {}, complexesGeres: 1, villesGerees: 1 })).toBe('ville');
-    expect(arriveeSansRoleSportif({ compte: {}, complexesGeres: 1, demandeVille: true }))
+    expect(arriveeSansRoleSportif({ complexesGeres: 1, compte: {}, villesGerees: 1 }))
+      .toBe('ville');
+    expect(arriveeSansRoleSportif({ complexesGeres: 1, compte: {}, demandeVille: true }))
       .toBe('demande-ville');
   });
 
@@ -42,9 +43,10 @@ describe('identiteComplete', () => {
 });
 
 describe('suiteApresIdentite', () => {
-  it('« Qui es-tu ? » d’un gérant mène à son complexe, ou à la fiche s’il n’en a pas encore', () => {
+  it('« Qui es-tu ? » d’un gérant : son complexe, ou la fiche s’il n’en a pas', () => {
     expect(suiteApresIdentite({ complexesGeres: 1, intentionComplexe: false })).toBe('complexe');
-    expect(suiteApresIdentite({ complexesGeres: 0, intentionComplexe: true })).toBe('fiche-complexe');
+    expect(suiteApresIdentite({ complexesGeres: 0, intentionComplexe: true }))
+      .toBe('fiche-complexe');
   });
 
   it('un autre compte suit son parcours habituel', () => {
