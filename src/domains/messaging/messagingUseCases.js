@@ -153,6 +153,8 @@ export const isFriendlyMatchChat = (chat) => {
  * Conversation name generator
  * @param {object} params - Parameters for generating the conversation name
  * @param {Club} [params.chatClub] - The chat club object
+ * @param {Array<{ documentId?: string } | string>} [params.chatGroupAdmins] - Les administrateurs
+ *   (un fil complexe ↔ client : son côté complexe, MESSAGERIE-COMPLEXE)
  * @param {string} [params.chatGroupName] - Group chat display name
  * @param {MultisportClubRef} [params.chatMultisportClub] - The multisport club object
  * @param {User[]} [params.chatParticipants] - Array of chat participants
@@ -163,7 +165,8 @@ export const isFriendlyMatchChat = (chat) => {
  * @returns {string} The generated conversation name
  */
 export const getConversationName = ({
-  chatClub, chatGroupName, chatLeagueMatch, chatMultisportClub, chatParticipants, chatTeam, chatType, meId,
+  chatClub, chatGroupAdmins, chatGroupName, chatLeagueMatch, chatMultisportClub, chatParticipants,
+  chatTeam, chatType, meId,
 }) => {
   switch (chatType) {
     // MSG-SUPPORT (20/10) — la conversation avec l'équipe FoundClub (épinglée en tête de Messages).
@@ -221,6 +224,19 @@ export const getConversationName = ({
     case 'team':
       return chatTeam?.name || '';
     case 'whisper': {
+      // MESSAGERIE-COMPLEXE (10/11, décision du chef) — le fil complexe ↔ client porte le nom du
+      // complexe (`groupName`) et son côté complexe (`groupAdmins`) : le client lit « Gérant -
+      // <complexe> », jamais la personne du gérant ; le gérant lit le nom du client (ci-dessous).
+      const complexe = String(chatGroupName || '').trim();
+      const coteComplexe = (Array.isArray(chatGroupAdmins) ? chatGroupAdmins : [])
+        .map((admin) => (typeof admin === 'string' ? admin : admin?.documentId));
+      if (complexe && meId && coteComplexe.length && !coteComplexe.includes(meId)) {
+        return i18next.t(
+          'messagingUseCases.conversationName.gerantDuComplexe',
+          'Gérant - {{complexe}}',
+          { complexe, ...SANS_ECHAPPEMENT },
+        );
+      }
       const participant = chatParticipants?.find(
         (p) => p.documentId !== meId,
       ) || chatParticipants?.[0];

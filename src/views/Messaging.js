@@ -336,6 +336,7 @@ function Messaging({ navigation, route }) {
 
     const title = titreDuFil(t, { chat, espaceVille }) || getConversationName({
       chatClub: chat?.club,
+      chatGroupAdmins: chat?.groupAdmins,
       chatGroupName: chat?.groupName,
       chatLeagueMatch: chat?.league_match,
       chatMultisportClub: chat?.multisportClub,
@@ -419,6 +420,7 @@ function Messaging({ navigation, route }) {
     return filtrerLesFils(filsAffiches, {
       nomDuFil: (chat) => titreDuFil(t, { chat, espaceVille }) || getConversationName({
         chatClub: chat.club,
+        chatGroupAdmins: chat.groupAdmins,
         chatGroupName: chat.groupName,
         chatLeagueMatch: chat.league_match,
         chatMultisportClub: chat.multisportClub,
@@ -890,6 +892,7 @@ function Messaging({ navigation, route }) {
     const sourdine = withAlpha(Colors.neutral00, 0.58);
     const titreDeLaLigne = titreDuFil(t, { chat, espaceVille }) || getConversationName({
       chatClub: chat.club,
+      chatGroupAdmins: chat.groupAdmins,
       chatGroupName: chat.groupName,
       chatLeagueMatch: chat.league_match,
       chatMultisportClub: chat.multisportClub,

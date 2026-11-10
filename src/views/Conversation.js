@@ -4176,6 +4176,7 @@ function Conversation({ navigation, route }) {
     } else {
       displayTitle = getConversationName({
         chatClub: chatData?.club,
+        chatGroupAdmins: chatData?.groupAdmins,
         chatGroupName: chatData?.groupName,
         chatLeagueMatch: chatData?.league_match,
         chatMultisportClub: chatData?.multisportClub,

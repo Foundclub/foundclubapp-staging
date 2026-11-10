@@ -14,7 +14,7 @@ import {
   creerTerrain,
   debannir,
   deciderDemande,
-  ecrireAuReserveur,
+  ecrireLePremierMessageAuClient,
   enregistrerCreneaux,
   enregistrerPartenaires,
   fermerTerrains,
@@ -46,6 +46,7 @@ import {
   reglerFidelite,
   retirerTerrain,
   rouvrirFermetures,
+  trouverConversationDuClient,
   validerRecompense,
 } from './complexeService';
 
@@ -600,16 +601,28 @@ export const useValiderRecompense = () => useGeste(
 );
 
 /**
- * « Écrire » au réserveur (E-G15) : ouvre la conversation de sa réservation ; rien à relire.
+ * « Écrire au client » (E-G15, E-G05) — MESSAGERIE-COMPLEXE (10/11, M1137) : sans `message`, LE fil
+ * complexe ↔ client est RETROUVÉ, jamais créé (`chat: null` s'il n'existe pas) ; avec le premier
+ * `message`, il naît et le message y part. Dès qu'un fil s'ouvre, la liste des conversations est
+ * RELUE, même en veille (`type: 'all'`) : elle est gardée sans relecture au montage
+ * (`useGetChats`), et son propre message ne la relit pas — le fil n'y apparaissait pas.
  * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
- *   `mutateAsync({ complexeId, reservationId })` rend `{ data: { chat } }`.
+ *   `mutateAsync({ complexeId, reservationId, message? })` rend `{ data: { chat } }`.
  */
-export const useEcrireAuReserveur = () => useMutation({
-  meta: { preventToastError: true },
-  mutationFn: (/** @type {any} */ { complexeId, reservationId }) => (
-    ecrireAuReserveur(complexeId, reservationId)
-  ),
-});
+export const useEcrireAuReserveur = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    meta: { preventToastError: true },
+    mutationFn: (/** @type {any} */ { complexeId, message, reservationId }) => (
+      message
+        ? ecrireLePremierMessageAuClient({ complexeId, message, reservationId })
+        : trouverConversationDuClient(complexeId, reservationId)
+    ),
+    onSuccess: (/** @type {any} */ reponse) => {
+      if (reponse?.data?.chat) queryClient.refetchQueries({ queryKey: ['chats'], type: 'all' });
+    },
+  });
+};
 
 /**
  * L'APERÇU du modèle (`dryRun`) : jugé et résumé par le serveur, rien n'est écrit, rien ne se

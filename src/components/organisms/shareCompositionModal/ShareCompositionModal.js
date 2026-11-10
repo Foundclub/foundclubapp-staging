@@ -175,6 +175,7 @@ function ShareCompositionModal({
       <Text style={[Fonts.p2Bold, Fonts.neutral00, Alignments.fill]}>
         {getConversationName({
           chatClub: chat.club,
+          chatGroupAdmins: chat.groupAdmins,
           chatGroupName: chat.groupName,
           chatMultisportClub: chat.multisportClub,
           chatParticipants: chat.participants,

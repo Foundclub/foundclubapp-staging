@@ -955,6 +955,7 @@ function ColonneDesConversations({
 
   const nomDuFil = (/** @type {any} */ fil) => titreDuFil(t, { chat: fil }) || getConversationName({
     chatClub: fil?.club,
+    chatGroupAdmins: fil?.groupAdmins,
     chatGroupName: fil?.groupName,
     chatLeagueMatch: fil?.league_match,
     chatMultisportClub: fil?.multisportClub,
@@ -2122,6 +2123,7 @@ function Conversation({ navigation, route }) {
 
   const conversationName = useMemo(() => filDeLaVille.titre || getConversationName({
     chatClub: chatData?.club,
+    chatGroupAdmins: chatData?.groupAdmins,
     chatGroupName: chatData?.groupName,
     chatLeagueMatch: chatData?.league_match,
     chatMultisportClub: chatData?.multisportClub,

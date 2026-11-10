@@ -8057,7 +8057,8 @@ export default {
       auNomDe: 'In the name of: {{nom}}',
       auNomDeChamp: 'In the name of',
       // RESA-FIN-APP-3 (23/10/2026) — plan E-G05 :549, the booking's conversation.
-      ecrireAuReserveur: 'Message the booker',
+      // MESSAGERIE-COMPLEXE (10/11, M1137) : « client », pas « réserveur » (Adel).
+      ecrireAuReserveur: 'Message the customer',
       enregistrer: 'Save',
       erreur: 'The booking could not be loaded.',
       erreurGeste: 'This could not be done.',
@@ -8069,6 +8070,10 @@ export default {
       motifAnnulation: 'Reason, which {{nom}} will read',
       nomModifie: 'Name updated.',
       numeroNonPartage: 'Number not shared',
+      premierMessageAide: 'The conversation opens when you send this message.',
+      premierMessageAnnuler: 'Cancel',
+      premierMessageEnvoyer: 'Send',
+      premierMessageTitre: 'Your first message to your customer',
       prixCreneau: '{{montant}}, to be paid on site',
       prixJoueur: '{{montant}} per player, to be paid on site',
       quandOu: 'When, where',
@@ -15518,6 +15523,8 @@ export default {
     conversationName: {
       event: 'Event chat',
       friendlyMatch: 'Friendly match',
+      // MESSAGERIE-COMPLEXE (10/11) — le fil complexe ↔ client, vu du client.
+      gerantDuComplexe: 'Manager - {{complexe}}',
       group: 'Group',
       leagueMatch: 'League match',
       leagueMatchOn: 'Match on {{date}}',

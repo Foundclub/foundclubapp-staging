@@ -8578,7 +8578,8 @@ export default {
       auNomDe: 'Au nom de : {{nom}}',
       auNomDeChamp: 'Au nom de',
       // RESA-FIN-APP-3 (23/10/2026) — plan E-G05 :549, la conversation de la réservation.
-      ecrireAuReserveur: 'Écrire au réserveur',
+      // MESSAGERIE-COMPLEXE (10/11, M1137) : « client », pas « réserveur » (Adel).
+      ecrireAuReserveur: 'Écrire au client',
       enregistrer: 'Enregistrer',
       erreur: 'Impossible de charger la réservation.',
       erreurGeste: 'Le geste n’a pas pu être fait.',
@@ -8590,6 +8591,10 @@ export default {
       motifAnnulation: 'Motif, que {{nom}} lira',
       nomModifie: 'Nom modifié.',
       numeroNonPartage: 'Numéro non partagé',
+      premierMessageAide: 'La conversation s’ouvre quand tu envoies ce message.',
+      premierMessageAnnuler: 'Annuler',
+      premierMessageEnvoyer: 'Envoyer',
+      premierMessageTitre: 'Ton premier message à ton client',
       prixCreneau: '{{montant}}, à régler sur place',
       prixJoueur: '{{montant}} par joueur, à régler sur place',
       quandOu: 'Quand, où',
@@ -16481,6 +16486,8 @@ export default {
     conversationName: {
       event: 'Chat de l’événement',
       friendlyMatch: 'Match amical',
+      // MESSAGERIE-COMPLEXE (10/11) — le fil complexe ↔ client, vu du client.
+      gerantDuComplexe: 'Gérant - {{complexe}}',
       group: 'Groupe',
       leagueMatch: 'Match de Ligue',
       leagueMatchOn: 'Match du {{date}}',

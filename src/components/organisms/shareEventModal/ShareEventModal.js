@@ -183,6 +183,7 @@ function ShareEventModal({
   const renderItem = ({ item: chat }) => {
     const chatTitle = getConversationName({
       chatClub: chat.club,
+      chatGroupAdmins: chat.groupAdmins,
       chatGroupName: chat.groupName,
       chatMultisportClub: chat.multisportClub,
       chatParticipants: chat.participants,
