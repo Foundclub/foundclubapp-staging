@@ -1242,8 +1242,10 @@ function EventWizardRecap({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p3, Fonts.neutral200, { flex: 1 }]}>
-              {t('eventWizard.recap.completedCount', '{{done}}/5 infos cles completees', {
+              {/* FINITIONS-T8 : le total suit les rangees (« Autre » nomme = 6), plus 5 en dur. */}
+              {t('eventWizard.recap.completedCount', '{{done}}/{{total}} infos cles completees', {
                 done: completedQuickOverviewCount,
+                total: quickOverviewItems.length,
               })}
             </Text>
             <View

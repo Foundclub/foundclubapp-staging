@@ -12,6 +12,7 @@ import {
   getCollectiviteOffer,
   getCoveringEntitlement,
   getSubscriptionQuotaItem,
+  isGiftEntitlement,
 } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -173,8 +174,7 @@ function SubscriptionQuotaBanner({
       : String(coveringEntitlement?.offeredBy?.name || '').trim();
     // GUIDE-D-CORR-2 TG-21 : l'essai offert (cadeau de bienvenue, plan `fc_trial_…`) n'est pas un
     // paiement ; le bandeau le dit comme un cadeau.
-    const estUnCadeau = String(coveringEntitlement?.subscriptionPlanCode || '')
-      .toLowerCase().startsWith('fc_trial_');
+    const estUnCadeau = isGiftEntitlement(coveringEntitlement);
     let phraseCouverture = offertPar
       ? t('subscriptionQuotaBanner.covered.offeredBy', {
         coveredThing,
