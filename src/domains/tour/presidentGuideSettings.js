@@ -2,8 +2,9 @@ import { Platform } from 'react-native';
 
 import { GUIDE_SUR_LE_SITE } from '@/config/fonctionsMasquees';
 
-// Le guide Dirigeant·e du TÉLÉPHONE : son interrupteur à lui (la TestFlight l'allume à part).
-const GUIDE_DIRIGEANT_SUR_LE_TELEPHONE = false;
+// Le guide Dirigeant·e du TÉLÉPHONE : son interrupteur à lui. Allumé au train 8
+// (« 198- A », la 2.6.99 part de ce train), comme fc74745d8 sur testflight/2.6.96.
+const GUIDE_DIRIGEANT_SUR_LE_TELEPHONE = true;
 
 /**
  * Guide Dirigeant·e : les réglages en attente d'une décision d'Adel, en un seul endroit.

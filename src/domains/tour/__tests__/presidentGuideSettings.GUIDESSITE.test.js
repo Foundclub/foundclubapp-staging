@@ -1,5 +1,6 @@
 // GUIDES-SITE (décision d'Adel du 09/11) : le guide Dirigeant s'allume sur le site avec
-// l'interrupteur du site ; le téléphone garde le sien (éteint dans le code commité).
+// l'interrupteur du site ; le téléphone garde le sien, allumé depuis le train 8 (« 198- A »),
+// comme fc74745d8 sur testflight/2.6.96.
 
 const lireReglages = (os, surLeSite) => {
   let reglages;
@@ -21,9 +22,9 @@ describe('interrupteurs du guide Dirigeant', () => {
     expect(lireReglages('web', false).enabled).toBe(false);
   });
 
-  it('téléphone : son interrupteur à lui, éteint dans le code commité', () => {
-    expect(lireReglages('ios', true).enabled).toBe(false);
-    expect(lireReglages('android', true).enabled).toBe(false);
+  it('téléphone : son interrupteur à lui, allumé sur la ligne du train 8', () => {
+    expect(lireReglages('ios', false).enabled).toBe(true);
+    expect(lireReglages('android', false).enabled).toBe(true);
   });
 
   it('l’interrupteur du site est allumé (09/11)', () => {
