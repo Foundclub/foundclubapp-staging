@@ -30,6 +30,7 @@ import Tag from '@/components/atoms/tag/Tag';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';
+import ActionsInvitationDeStaff from '@/components/organisms/invitationDeStaff/ActionsInvitationDeStaff';
 import PastilleModeComplexe from '@/views/complexe/components/PastilleModeComplexe';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
@@ -519,6 +520,15 @@ function NotificationList() {
             {demandeATrancher(notification.type, notification.data) ? (
               <ActionsDeDemandeDansLaCloche
                 data={/** @type {Record<string, any>} */ (notification.data)}
+                relire={refreshNotifications}
+                testID={String(notification.documentId || notification.id)}
+              />
+            ) : null}
+            {/* INVITE-STAFF (10/11, maquette E) : « Refuser » / « Voir et accepter ». */}
+            {notification.type === 'staffInvitation' && !notification.data?.answered ? (
+              <ActionsInvitationDeStaff
+                data={/** @type {Record<string, any>} */ (notification.data)}
+                navigation={nav}
                 relire={refreshNotifications}
                 testID={String(notification.documentId || notification.id)}
               />

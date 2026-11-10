@@ -56,6 +56,7 @@ import Checkable from '@/components/atoms/checkable/Checkable';
 import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
+import InvitationsDeStaffEnAttente from '@/components/organisms/invitationDeStaff/InvitationsDeStaffEnAttente';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -4411,6 +4412,10 @@ function ClubDetails({ navigation, route }) {
                       ))
                     }
                     </View>
+                    {/* INVITE-STAFF (10/11, maquette C) : les invitations en attente, pour qui gère. */}
+                    {canEdit && club?.documentId ? (
+                      <InvitationsDeStaffEnAttente clubId={club.documentId} clubName={club?.name} />
+                    ) : null}
                     {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
                     {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}
                     {/* Il ne disparait pas pour autant : `startClubChat` n'a AUCUN autre */}

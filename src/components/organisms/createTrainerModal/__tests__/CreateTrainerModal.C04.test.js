@@ -76,7 +76,7 @@ const monter = () => {
 };
 const ajouter = async (/** @type {any} */ arbre) => {
   await act(async () => {
-    await arbre.root.findByProps({ testID: 'bouton-Ajouter' }).props.onPress();
+    await arbre.root.findByProps({ testID: 'bouton-staffInvitation.form.send' }).props.onPress();
   });
 };
 
@@ -85,28 +85,22 @@ beforeEach(() => {
   mockChamps.clear();
 });
 
-describe('🔴 C04 Q2-13 — la date de naissance se tape au pavé numérique', () => {
-  it('« 15012010 » s affiche « 15/01/2010 » et part avec l entraîneur', async () => {
+// INVITE-STAFF (10/11/2026, « 1A ») : on invite, on ne crée plus le compte. La date de naissance
+// (C04 Q2-06 / Q2-13) quitte la feuille : la personne la saisit elle-même à son inscription, et
+// le serveur refuse un mineur à l'acceptation.
+describe('INVITE-STAFF — la feuille d équipe invite un coach, sans date de naissance', () => {
+  it('plus de champ date de naissance ni nom ; l invitation part en coach', async () => {
     const arbre = monter();
+    expect(champ(DATE)).toBeUndefined();
+    expect(champ('Nom')).toBeUndefined();
     act(() => { champ('Telephone *').onChangeText('0612345678'); });
-    act(() => { champ(DATE).onChangeText('15012010'); });
-
-    expect(champ(DATE).value).toBe('15/01/2010');
     await ajouter(arbre);
-    expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({ birthdate: '15/01/2010' }));
-    act(() => arbre.unmount());
-  });
-});
-
-describe('🔴 C04 Q2-06 — un jour qui n existe pas est refusé', () => {
-  it('« 31/02/2010 » : rien ne part, et le champ le dit', async () => {
-    const arbre = monter();
-    act(() => { champ('Telephone *').onChangeText('0612345678'); });
-    act(() => { champ(DATE).onChangeText('31/02/2010'); });
-    await ajouter(arbre);
-
-    expect(mockMutate).not.toHaveBeenCalled();
-    expect(champ(DATE).error).toBeTruthy();
+    expect(mockMutate).toHaveBeenCalledWith(expect.objectContaining({
+      clubId: 'club-1',
+      phoneNumber: '0612345678',
+      role: 'coach',
+    }));
+    expect(mockMutate.mock.calls[0][0]).not.toHaveProperty('birthdate');
     act(() => arbre.unmount());
   });
 });

@@ -10,6 +10,86 @@ export default {
       main: 'Ajouter un dirigeant',
     },
   },
+  // INVITE-STAFF (10/11/2026, maquette validée, « 1A 2A 3A 4A 5A ») — invitation de staff.
+  staffInvitation: {
+    close: 'Fermer',
+    errors: {
+      accept: 'Impossible d’accepter cette invitation pour le moment.',
+      cancel: 'Impossible d’annuler cette invitation.',
+      expiredText: 'Demande au club de t’en envoyer une nouvelle.',
+      expiredTitle: 'Cette invitation n’est plus valable',
+      fullText: 'Ton invitation reste ouverte. Préviens le dirigeant : il peut libérer une place.',
+      fullTitle: 'Le club a atteint sa limite de membres',
+      mine: 'Impossible de charger tes invitations.',
+      minorText: 'Tu peux rester joueur dans tes équipes. Parles-en au dirigeant de ton club.',
+      minorTitle: 'Il faut avoir 18 ans pour rejoindre un staff',
+      protectedText: 'Un compte parent reste un compte parent. Demande au club d’inviter un autre numéro.',
+      protectedTitle: 'Ce compte ne peut pas rejoindre un staff',
+      refuse: 'Impossible de refuser cette invitation pour le moment.',
+      send: 'Impossible d’envoyer l’invitation pour le moment.',
+      sent: 'Impossible de charger les invitations en attente.',
+    },
+    form: {
+      hint: 'La personne reçoit ton invitation et choisit d’accepter. Rien ne change sans son accord.',
+      send: 'Envoyer l’invitation',
+      title: 'Inviter un coach',
+    },
+    ok: 'Compris',
+    pending: {
+      cancel: 'Annuler',
+      note: 'Tu vois ce que tu as tapé, pas le profil de la personne. Elle apparaît dans le staff quand elle accepte.',
+      resend: 'Relancer par SMS',
+      sentOn: 'envoyée le {{date}}',
+      someone: 'Invité·e',
+      state: 'En attente',
+      title: 'Invitations en attente · {{count}}',
+    },
+    received: {
+      by: 'Invitation de {{name}}.',
+      coach: '{{club}} t’invite comme coach',
+      coachOf: '{{club}} t’invite comme coach de l’équipe {{team}}',
+      dirigeant: '{{club}} t’invite comme dirigeant·e du club',
+      open: 'Voir et accepter',
+      refuse: 'Refuser',
+    },
+    refused: {
+      text: 'Rien n’a changé sur ton compte. Le club n’est pas prévenu.',
+      title: 'Invitation refusée',
+    },
+    roles: {
+      coach: 'Coach',
+      dirigeant: 'Dirigeant·e',
+    },
+    sent: {
+      actions: {
+        sms: 'Prévenir par SMS',
+      },
+      description: '{{role}} · numéro se terminant par {{hint}} · valable jusqu’au {{date}}.\n\n'
+        + 'S’il a déjà FoundClub, il la trouve dans ses notifications. Sinon, elle l’attend : '
+        + 'il la verra dès qu’il s’inscrira avec ce numéro.',
+      fallbackName: 'ton invité·e',
+      title: 'Invitation envoyée à {{name}}',
+    },
+    sheet: {
+      accept: 'Accepter',
+      becomeCoach: 'Tu deviens coach du club.',
+      becomeCoachOf: 'Tu deviens coach de l’équipe {{team}} : matchs, entraînements, convocations.',
+      becomeDirigeant: 'Tu deviens dirigeant·e du club : équipes, staff et membres.',
+      ifAccept: 'Si tu acceptes :',
+      ifRefuse: 'Si tu refuses, rien ne change et le club n’est pas prévenu.',
+      ifRefuseUntil: 'Si tu refuses, rien ne change et le club n’est pas prévenu. Invitation valable jusqu’au {{date}}.',
+      joinClub: 'Tu entres au club {{club}}.',
+      refuse: 'Refuser',
+      teamsStay: 'Tes équipes actuelles ne bougent pas.',
+    },
+    welcome: {
+      coach: 'Tu es coach. Tu peux convoquer, créer les entraînements et suivre l’équipe dès maintenant.',
+      dirigeant: 'Tu es dirigeant·e. Tu peux gérer les équipes, le staff et les membres dès maintenant.',
+      later: 'Plus tard',
+      openClub: 'Ouvrir le club',
+      title: 'Bienvenue dans le staff de {{club}}',
+    },
+  },
   addCoach: {
     actions: {
       // RETOURS-TESTEUR-2 (06/11, M0077) — sur ordinateur, à la place du SMS.
@@ -68,7 +148,7 @@ export default {
       },
     },
     hints: {
-      invitation: 'Tu lui enverras le SMS juste après.',
+      invitation: 'Il reçoit l’invitation et choisit d’accepter. Rien ne change sans son accord.',
     },
     roles: {
       manager: 'Dirigeant·e',
@@ -25746,15 +25826,15 @@ export default {
       'm2-back-hub': 'De retour sur la fiche de ton club. Crée maintenant une équipe : ouvre « '
         + 'Nos équipes ».',
       'm2-back-site': 'Tu es sur Staff. Reviens sur la fiche de ton club : touche la flèche.',
-      'm2-fields': 'Son numéro (requis) et son prénom. Un compte est créé à ce numéro, et le SMS, '
-        + 'c’est toi qui l’envoies juste après.',
+      'm2-fields': 'Son numéro (requis) et son prénom. Il reçoit l’invitation et choisit d’accepter ; '
+        + 'le SMS, c’est toi qui l’envoies juste après.',
       'm2-fields-required': 'Donne d’abord son numéro.',
       'm2-invite': 'Ajouté·e au club ! Touche « Inviter » : ta messagerie s’ouvre avec le message '
         + 'prêt. Envoie-le, puis reviens ici.',
       'm2-invite-site': 'Ajouté·e au club ! Touche « Inviter » : le message d’invitation est '
         + 'copié (sur un téléphone, ton partage s’ouvre). Envoie-le à ton coach.',
       'm2-role': 'Le bon rôle est déjà choisi. Garde-le.',
-      'm2-send': 'Touche « Envoyer l’invitation » : son compte est créé.',
+      'm2-send': 'Touche « Envoyer l’invitation » : il la recevra.',
       'm2-sms': 'Envoie le SMS depuis ta messagerie, puis reviens ici. C’est à toi de l’envoyer : '
         + 'l’app ne le fait pas.',
       'm2-sms-next': 'C’est envoyé',

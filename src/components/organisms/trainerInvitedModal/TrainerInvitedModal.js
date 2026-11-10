@@ -23,10 +23,16 @@ import { useIsDesktop } from '@/responsive/useIsDesktop';
  *   compte ; personne n'est ajouté, la feuille dit pourquoi et comment il rejoindra le club.
  * @param {string} [props.messageDInvitation] - RETOURS-TESTEUR-2 (M0077) : le texte du SMS, lien
  *   compris. Sur le site, sur ordinateur, il se copie ou part par e-mail au lieu du SMS.
+ * @param {string} [props.titre] - INVITE-STAFF (10/11) : titre fourni par l'appelant (« Invitation envoyée à … »).
+ * @param {string} [props.texte] - INVITE-STAFF : texte fourni par l'appelant.
+ * @param {string} [props.libelleInviter] - INVITE-STAFF : libellé du bouton SMS (« Prévenir par SMS »).
  * @returns {import('react').ReactElement} La feuille.
  */
 function TrainerInvitedModal({
   dejaInscrit = false,
+  libelleInviter = '',
+  texte: texteFourni = '',
+  titre: titreFourni = '',
   isManager = false,
   isVisible,
   messageDInvitation = '',
@@ -43,15 +49,17 @@ function TrainerInvitedModal({
   }, [isVisible]);
 
   // INVITE-COACH-EXISTANT : « Ajout réussi ! » serait faux, rien n'a été créé.
-  const titre = dejaInscrit
+  let titre = dejaInscrit
     ? t('addCoach.alerts.invitation.title')
     : t('addCoach.alerts.success.title');
+  if (titreFourni) titre = titreFourni;
   let texteDuSucces = isManager
     ? t('addClubManager.alerts.success.description', {
       managerName: trainerName, ...SANS_ECHAPPEMENT,
     })
     : t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT });
   if (dejaInscrit) texteDuSucces = t('addCoach.alerts.invitation.description');
+  if (texteFourni) texteDuSucces = texteFourni;
 
   // RETOURS-TESTEUR-2 (06/11/2026, M0077, décision du chef « A ») — un ordinateur n'envoie pas
   // de SMS : sur le site, sur ordinateur, on copie l'invitation ou on l'envoie par e-mail. Le site
@@ -102,7 +110,7 @@ function TrainerInvitedModal({
   // dans la hauteur de la feuille et sortait par le bas de l'écran.
   return (
     <FeuilleDeSucces
-      actionPrincipale={{ onPress: () => onInvite(), title: t('addCoach.actions.invite') }}
+      actionPrincipale={{ onPress: () => onInvite(), title: libelleInviter || t('addCoach.actions.invite') }}
       actionSecondaire={{ onPress: () => onClose(), title: t('common.actions.askLater') }}
       close={onClose}
       isVisible={isVisible}

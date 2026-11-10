@@ -3,80 +3,74 @@ import { useMutation } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Text,
-  View,
-} from 'react-native';
+import { Text, View } from 'react-native';
 
-import { formatBirthdateToDisplay, isExistingBirthdate } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { Joi } from '@/theme/strings';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
+import { dateCourte } from '@/components/organisms/invitationDeStaff/textesInvitationDeStaff';
 import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
 
-import { createTrainer } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
+import { sendStaffInvitation } from '@/services/staffInvitation/staffInvitationService';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
 import { getFieldError } from '@/utils/form/formUtils';
 
+// INVITE-STAFF (10/11, « 1A ») : on invite comme coach, on ne crée plus de compte. La
+// personne remplit elle-même son nom et sa date de naissance ; le prénom sert au message.
 const defaultValues = {
-  birthdate: '',
   firstname: '',
-  lastname: '',
   phoneNumber: '',
 };
 
 const schema = Joi.object({
-  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
   firstname: Joi.string().allow('').optional(),
-  lastname: Joi.string().allow('').optional(),
   phoneNumber: Joi.string().required(),
 }).unknown(true);
 
 /**
+ * La feuille « Inviter un coach » de la fiche d'équipe et de l'assistant d'équipe.
+ * INVITE-STAFF (maquette validée le 10/11) : l'invitation part ; la personne accepte ou refuse.
+ * La réponse est la même que le numéro ait un compte ou non : un seul succès à montrer.
+ * `onTrainerCreated` n'est plus appelé : personne n'est créé ni ajouté avant son accord.
  * @param {{
  *  clubId?: string | null;
  *  isVisible: boolean;
  *  onClose: () => void;
  *  onTrainerCreated?: (trainer: User) => void;
+ *  teamId?: string | null;
  * }} props
+ * @returns {import('react').ReactElement} La feuille et son succès.
  */
 function CreateTrainerModal({
   clubId,
   isVisible,
   onClose,
-  onTrainerCreated,
+  teamId = null,
 }) {
   const { t } = useTranslation();
   const { invitationDuStaff, inviteTrainer, userData } = useAuth();
-  // INVITESMS (29/10/2026, decision d'Adel « 2- A ») — l'entraineur cree ici n'etait prevenu par
-  // personne. La feuille d'invitation d'AddCoach (SMS pre-rempli) s'ouvre apres la creation.
-  const [entraineurCree, setEntraineurCree] = useState(
-    /** @type {{ dejaInscrit?: boolean, firstname?: string, phoneNumber?: string } | null} */
+  const [invitationEnvoyee, setInvitationEnvoyee] = useState(
+    /** @type {{ expiresAt?: string, firstname?: string, phoneHint?: string, phoneNumber?: string } | null} */
     (null),
   );
-  // Le nom du club, pour le SMS : en cache le plus souvent (l'ecran d'equipe l'a lu).
+  // Le nom du club, pour le SMS : en cache le plus souvent (l'écran d'équipe l'a lu).
   const { data: club } = useGetClub(clubId || undefined, {
-    enabled: Boolean(clubId) && (isVisible || Boolean(entraineurCree)),
+    enabled: Boolean(clubId) && (isVisible || Boolean(invitationEnvoyee)),
   });
-  const {
-    Alignments,
-    Fonts,
-    Spaces,
-  } = useTheme();
+  const { Alignments, Fonts, Spaces } = useTheme();
 
   const {
     control,
     formState: { errors: formErrors },
     handleSubmit,
     reset,
-    setError,
   } = useForm({
     defaultValues,
     mode: 'onBlur',
@@ -84,64 +78,41 @@ function CreateTrainerModal({
     shouldFocusError: false,
   });
 
-  const createTrainerMutation = useMutation({
-    mutationFn: createTrainer,
-    onError: (error, /** @type {any} */ variables) => {
-      // INVITE-COACH-EXISTANT (10/11/2026) : comme sur « Ajouter un coach » (AddCoach.js). Avant,
-      // « Erreur · Failed to create trainer: Uniqueness check failed », en anglais, rien d'autre.
-      const details = /** @type {any} */ (error)?.details
-        || /** @type {any} */ (error)?.response?.data?.error?.details;
-      if (details?.code === 'PHONE_NUMBER_TAKEN' && details.sameClub) {
-        Alert.alert(
-          t('addCoach.alerts.alreadyInThisClub.title'),
-          t('addCoach.alerts.alreadyInThisClub.description'),
-        );
-      } else if (details?.code === 'PHONE_NUMBER_TAKEN') {
-        // Personne n'est ajouté : il rejoindra le club sur son accord (SECU-RATTACHEMENT).
-        reset(defaultValues);
-        onClose();
-        setEntraineurCree({ ...variables, dejaInscrit: true });
-      } else {
-        displayErrorAlert(error);
-      }
+  const inviteMutation = useMutation({
+    meta: { preventToastError: true },
+    mutationFn: sendStaffInvitation,
+    onError: (error) => {
+      // Une seule alerte, traduite, jamais le message brut.
+      displayErrorAlert(error);
     },
-    onSuccess: (/** @type {any} */ createdTrainer, /** @type {any} */ variables) => {
-      if (onTrainerCreated && createdTrainer?.documentId) {
-        onTrainerCreated(createdTrainer);
-      }
+    onSuccess: (/** @type {any} */ data, /** @type {any} */ variables) => {
       reset(defaultValues);
       onClose();
-      setEntraineurCree({ ...variables, ...(createdTrainer || {}) });
+      setInvitationEnvoyee({ ...variables, ...(data?.invitation || {}) });
     },
   });
 
   const handleFormSubmit = useCallback(
-    (/** @type {typeof defaultValues & { clubId?: string }} */ data) => {
-      // C04 Q2-06 — un jour qui n'existe pas (« 31/02/2010 ») est refusé ici, pas par le
-      // schéma : sur le site, la doublure de Joi valide tout.
-      if (data.birthdate && !isExistingBirthdate(data.birthdate)) {
-        setError('birthdate', {
-          message: t(
-            'profile.errors.birthdateIncomplete',
-            'Renseigne une date de naissance valide pour continuer.',
-          ),
-          type: 'date',
-        });
-        return;
-      }
-      createTrainerMutation.mutate({
-        ...data,
-        ...(clubId ? { clubId } : {}),
+    (/** @type {typeof defaultValues} */ data) => {
+      inviteMutation.mutate({
+        clubId: clubId || '',
+        firstname: data.firstname,
+        phoneNumber: data.phoneNumber,
+        role: 'coach',
+        teamId,
       });
     },
-    [clubId, createTrainerMutation, setError, t],
+    [clubId, inviteMutation, teamId],
   );
 
   const handleClose = useCallback(() => {
-    if (createTrainerMutation.isPending) return;
+    if (inviteMutation.isPending) return;
     reset(defaultValues);
     onClose();
-  }, [createTrainerMutation.isPending, onClose, reset]);
+  }, [inviteMutation.isPending, onClose, reset]);
+
+  const clubName = club?.name || userData?.club?.name || t('addCoach.fallbacks.clubName', 'Club');
+  const prenom = invitationEnvoyee?.firstname || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof');
 
   return (
     <>
@@ -156,10 +127,10 @@ function CreateTrainerModal({
               variant="Secondary"
             />
             <Button
-              isLoading={createTrainerMutation.isPending}
+              isLoading={inviteMutation.isPending}
               onPress={handleSubmit(handleFormSubmit)}
               style={{ flex: 1 }}
-              title={t('addCoach.actions.save', 'Ajouter')}
+              title={t('staffInvitation.form.send')}
               variant="Primary"
             />
           </View>
@@ -170,7 +141,10 @@ function CreateTrainerModal({
       >
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {t('addCoach.titles.main', 'Ajouter un entraîneur')}
+            {t('staffInvitation.form.title')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t('staffInvitation.form.hint')}
           </Text>
 
           <Controller
@@ -205,7 +179,7 @@ function CreateTrainerModal({
               },
             }) => (
               <Input
-                enterKeyHint="next"
+                enterKeyHint="done"
                 error={getFieldError({ errors: formErrors, fieldName: name })}
                 label={t('profile.fields.firstname.label', 'Prenom')}
                 onBlur={onBlur}
@@ -216,82 +190,40 @@ function CreateTrainerModal({
               />
             )}
           />
-
-          <Controller
-            control={control}
-            name="lastname"
-            render={({
-              field: {
-                name, onBlur, onChange, ref, value,
-              },
-            }) => (
-              <Input
-                enterKeyHint="next"
-                error={getFieldError({ errors: formErrors, fieldName: name })}
-                label={t('profile.fields.lastname.label', 'Nom')}
-                onBlur={onBlur}
-                onChangeText={onChange}
-                placeholder={t('profile.fields.lastname.placeholder', 'Nom')}
-                ref={ref}
-                value={value}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="birthdate"
-            render={({
-              field: {
-                name, onBlur, onChange, ref, value,
-              },
-            }) => (
-              <Input
-                enterKeyHint="done"
-                error={getFieldError({ errors: formErrors, fieldName: name })}
-                inputMode="numeric"
-                keyboardType="number-pad"
-                label={t('profile.fields.birthdate.label', 'Date de naissance')}
-                maxLength={10}
-                onBlur={onBlur}
-                // C04 Q2-13 — le pavé numérique n'a pas de « / » : la saisie se met en forme seule.
-                onChangeText={(/** @type {string} */ texte) => (
-                  onChange(formatBirthdateToDisplay(texte))
-                )}
-                placeholder="JJ/MM/AAAA"
-                ref={ref}
-                value={value}
-              />
-            )}
-          />
         </View>
       </BottomModal>
       <TrainerInvitedModal
-        dejaInscrit={Boolean(entraineurCree?.dejaInscrit)}
-        isVisible={Boolean(entraineurCree)}
+        isVisible={Boolean(invitationEnvoyee)}
+        libelleInviter={t('staffInvitation.sent.actions.sms')}
         // RETOURS-TESTEUR-2 (M0077) : sur ordinateur, ce texte se copie ou part par e-mail.
-        messageDInvitation={entraineurCree ? invitationDuStaff?.({
+        messageDInvitation={invitationEnvoyee ? invitationDuStaff?.({
           clubId: clubId || undefined,
-          clubName: club?.name || userData?.club?.name
-            || t('addCoach.fallbacks.clubName', 'Club'),
-          firstname: entraineurCree.firstname
-            || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof'),
+          clubName,
+          firstname: prenom,
         })?.message : ''}
-        onClose={() => setEntraineurCree(null)}
+        onClose={() => setInvitationEnvoyee(null)}
         onInvite={() => {
-          if (entraineurCree) {
+          if (invitationEnvoyee) {
             inviteTrainer({
               clubId: clubId || undefined,
-              clubName: club?.name || userData?.club?.name
-                || t('addCoach.fallbacks.clubName', 'Club'),
-              firstname: entraineurCree.firstname
-                || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof'),
-              phoneNumber: entraineurCree.phoneNumber,
+              clubName,
+              firstname: prenom,
+              phoneNumber: invitationEnvoyee.phoneNumber,
             });
           }
-          setEntraineurCree(null);
+          setInvitationEnvoyee(null);
         }}
-        trainerName={entraineurCree?.firstname || ''}
+        texte={t('staffInvitation.sent.description', {
+          date: dateCourte(invitationEnvoyee?.expiresAt),
+          hint: invitationEnvoyee?.phoneHint || '',
+          role: t('staffInvitation.roles.coach'),
+          ...SANS_ECHAPPEMENT,
+        })}
+        titre={t('staffInvitation.sent.title', {
+          name: invitationEnvoyee?.firstname || t('staffInvitation.sent.fallbackName'),
+          ...SANS_ECHAPPEMENT,
+        })}
+        trainerName={invitationEnvoyee?.firstname || ''}
       />
     </>
   );

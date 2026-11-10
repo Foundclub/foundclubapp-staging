@@ -128,6 +128,18 @@ jest.mock('@/services/auth/authService', () => ({
   linkTrainerToClub: jest.fn(),
 }));
 
+// INVITE-STAFF (10/11/2026, « 1A ») : l'écran n'appelle plus createTrainer / createManager, il
+// ENVOIE UNE INVITATION. Adaptateur : l'invitation « coach » passe par la doublure `createTrainer`,
+// l'invitation « dirigeant » par `createManager` ; les assertions de rôle gardent leur sens.
+jest.mock('@/services/staffInvitation/staffInvitationService', () => {
+  const auth = jest.requireMock('@/services/auth/authService');
+  return {
+    sendStaffInvitation: jest.fn((/** @type {any} */ v) => (
+      v.role === 'dirigeant' ? auth.createManager(v) : auth.createTrainer(v)
+    )),
+  };
+});
+
 jest.mock('@/services/club/clubQueries', () => ({
   useGetClub: () => mockClubQuery,
 }));
@@ -373,7 +385,8 @@ describe('GUIDE-D-CORR-3 M1078 — Ajouter un coach, clavier et cadre du guide',
     // La zone qui defile elle-meme : elle ne sort jamais de l'ecran, le guide ne la poursuit pas.
     expect(zone.props.clipChildren).toBe(true);
     const texte = texteDe(zone);
-    ['phoneNumber', 'firstname', 'lastname', 'birthdate'].forEach((champ) => {
+    // INVITE-STAFF (« 1A ») : plus de nom ni de date de naissance, la personne les remplit elle-même.
+    ['phoneNumber', 'firstname'].forEach((champ) => {
       const libelle = jest.requireActual('@/theme/strings/translations/fr').default
         .addCoach.fields[champ].label;
       expect(texte).toContain(libelle);

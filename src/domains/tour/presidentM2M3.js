@@ -153,8 +153,8 @@ const M2_STEPS = [
     get text() {
       return t(
         'm2-fields',
-        'Son numéro (requis) et son prénom. Un compte est créé à ce numéro, et le SMS, c’est toi '
-          + 'qui l’envoies juste après.',
+        'Son numéro (requis) et son prénom. Il reçoit l’invitation et choisit d’accepter ; le SMS, '
+          + 'c’est toi qui l’envoies juste après.',
       );
     },
     veil: false,
@@ -172,7 +172,7 @@ const M2_STEPS = [
     missionId: 'president_m2',
     resumeFrom: 'm2-staff',
     targets: ['cf-send'],
-    get text() { return t('m2-send', 'Touche « Envoyer l’invitation » : son compte est créé.'); },
+    get text() { return t('m2-send', 'Touche « Envoyer l’invitation » : il la recevra.'); },
     when: toInvite,
   }, COACH_PART),
   {
