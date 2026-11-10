@@ -49,3 +49,9 @@ test('S28 : sur le site, le partage de l invitation dit ce qui s ouvre ou est co
     expect(etape('coach', 'm2-pick').text).not.toMatch(/ordinateur/);
   });
 });
+
+test('S05 : en vue « Mois », les flèches du calendrier ont leur cadre et leur texte', () => {
+  const { fallback } = etape('president', 'm1-parrows');
+  expect(fallback.targets).toEqual(['planning.grid']);
+  expect(fallback.text).toMatch(/flèches en haut du calendrier/);
+});

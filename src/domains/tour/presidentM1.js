@@ -495,6 +495,18 @@ const PART_PLANNING = [
   }),
   planningStep({
     advanceOn: { key: 'planning.period.next', type: 'interaction' },
+    // GUIDES-SITE-CORR S05 (tournée du site, 09/11, 1360) : en vue « Mois » (le calendrier), les
+    // flèches sont celles du calendrier, sans l'ancre `planning.head` de la vue semaine : ni voile
+    // ni cadre. Le calendrier entier est encadré, et la bulle dit où sont ses flèches.
+    fallback: {
+      targets: ['planning.grid'],
+      get text() {
+        return t(
+          'm1-parrows-month',
+          'Les flèches en haut du calendrier changent de mois. Essaie celle de droite.',
+        );
+      },
+    },
     id: 'm1-parrows',
     targets: ['planning.head'],
     get text() {

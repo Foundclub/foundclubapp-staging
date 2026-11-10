@@ -25670,6 +25670,8 @@ export default {
       'm1-logo-site': 'Ton logo : clique dessus pour choisir une image de ton appareil.',
       'm1-name': 'Le nom du club, tel qu’il apparaît partout. Corrige-le si besoin.',
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
+      'm1-parrows-month': 'Les flèches en haut du calendrier changent de mois. Essaie celle de '
+        + 'droite.',
       'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
       'm1-partners-have': '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en '

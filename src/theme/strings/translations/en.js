@@ -24603,6 +24603,8 @@ export default {
       'm1-logo-site': 'Your logo: click it to choose an image from your device.',
       'm1-name': 'The club name, as it appears everywhere. Correct it if needed.',
       'm1-padd': 'Add your first partner with “+”.',
+      'm1-parrows-month': 'The arrows at the top of the calendar change the month. Try the right '
+        + 'one.',
       'm1-parrows': 'The arrows change the period. Try the right one.',
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
       'm1-partners-have': '2/5 · You already have your partner: it is in this list. “+” adds '
