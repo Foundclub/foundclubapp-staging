@@ -250,6 +250,9 @@ function TourGuideLayer() {
   const [route, setRoute] = useState(/** @type {string | null} */ (null));
   const routeRef = useRef(/** @type {string | null} */ (null));
   const slotSeenOnStepRef = useRef(/** @type {string | null | undefined} */ (null));
+  // FINITIONS-T8, point 2 : étape où la bulle, faute de place au-dessus du clavier, s'est réduite
+  // (gardé jusqu'à la fermeture du clavier : sinon elle alternerait entre ses deux tailles).
+  const keyboardSqueezeRef = useRef('');
   // G93 : le dernier refus de l'écran (offre), pour la bulle `refused` d'un sous-guide.
   const [refusalKey, setRefusalKey] = useState(/** @type {string | null} */ (null));
   useEffect(() => subscribeToGuidanceSignals((/** @type {any} */ signal) => {
@@ -623,9 +626,31 @@ function TourGuideLayer() {
     primary,
     topLimit: Math.max(insets.top + 4, (headerBottom ?? 0) + 6),
   });
-  const position = avoided ? avoided.position : placed;
-  const maxHeight = avoided?.maxHeight ?? placedRoom;
-  const hasBubbleRoom = Boolean(avoided) || !keyboard;
+  // FINITIONS-T8, point 2 (« Ajouter un coach », clavier ouvert, téléphone) : sans trou qui la
+  // tienne, la bulle attendait que le clavier se ferme, ou se coinçait au-dessus de lui (9 px de
+  // « Suivant » visibles). Elle se réduit à sa consigne et à son bouton, sous l'en-tête, comme dans
+  // les tunnels (FIN-GUIDE, point 3) ; le bas utile s'arrête au clavier.
+  const squeezeKey = keyboard ? String(currentStep?.id || '') : '';
+  if (!keyboard) keyboardSqueezeRef.current = '';
+  const canSqueeze = Boolean(keyboard && !isCompact && !slot && !sheetGuide);
+  if (canSqueeze && (!avoided || (avoided.maxHeight ?? placedRoom) + 1 < wantedHeight)) {
+    keyboardSqueezeRef.current = squeezeKey;
+  }
+  const isKeyboardSqueeze = canSqueeze && Boolean(squeezeKey)
+    && keyboardSqueezeRef.current === squeezeKey;
+  const isCompactBubble = isCompact || isKeyboardSqueeze;
+  const squeezeTop = Math.max(insets.top + 4, (headerBottom ?? 0) + 6);
+  let position = avoided ? avoided.position : placed;
+  let maxHeight = avoided?.maxHeight ?? placedRoom;
+  if (isKeyboardSqueeze) {
+    position = {
+      arrow: 'none', arrowX: 0, ...wideBubbleFrame(width), top: squeezeTop,
+    };
+    maxHeight = Math.max(MIN_TOUCH, keyboardTop - squeezeTop - 4);
+  }
+  const hasBubbleRoom = isKeyboardSqueeze
+    ? compactBubbleFits(/** @type {any} */ (keyboard).screenY)
+    : Boolean(avoided) || !keyboard;
   // G93 (rejeu, captures m3 et m7) : bulle en haut, la tête de la cible est sous elle
   // (« Extérieur » après Annuler) : on la retrouve vers le haut, même si son bas dépasse aussi.
   const bubbleBottom = position.top + Math.min(wantedHeight, maxHeight);
@@ -782,7 +807,7 @@ function TourGuideLayer() {
     : currentStep.nextLabel || null;
   if (isLost) buttonLabel = canReturn ? t('tourGuide.lostResume', 'Reprendre') : null;
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
-  const fontScale = isCompact
+  const fontScale = isCompactBubble
     ? 1
     : Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
   /**
@@ -1004,7 +1029,7 @@ function TourGuideLayer() {
           style={{ flexGrow: 0 }}
           testID={__DEV__ ? 'tour.bubble.scroll' : undefined}
         >
-          {isCompact ? null : (
+          {isCompactBubble ? null : (
           <View style={{ alignItems: 'flex-start', columnGap: 8, flexDirection: 'row' }}>
             <View style={{
               alignItems: 'center', columnGap: 8, flex: 1, flexDirection: 'row', marginBottom: 6,
