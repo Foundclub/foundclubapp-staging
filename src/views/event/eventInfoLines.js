@@ -135,7 +135,8 @@ export const formatEventPlaceLine = (event) => {
  * ACCUEIL-JOUEUR (point 4) — ce que le GPS ouvre : le lieu écrit et ses coordonnées connues (les
  * mêmes sources que l'en-tête du téléphone, `EventHeader`). Pour `openExternalMap`.
  * @param {any} event - L'événement.
- * @returns {{ label: string, latitude?: number, longitude?: number } | null} - Rien sans lieu.
+ * @returns {{ label: string, latitude?: number | null, longitude?: number | null } | null} Le
+ *   lieu, ou rien sans lieu.
  */
 export const eventMapTarget = (event) => {
   const parsed = event?.locationDetails ? safeJsonParse(event.locationDetails, null) : null;
