@@ -50,13 +50,22 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
     queryClient.invalidateQueries({ queryKey: ['planning', 'fullscreen'] });
   };
+  // PERF-EQUIPE (10/11) — la fiche (`[event, id]`) et ses participations sont RELUES par
+  // `refetch()` et `refetchParticipations()` juste apres chaque invalidation de ce fichier :
+  // invalidees avec relecture, elles partaient deux fois (react-query annule la 1re cote app,
+  // pas sur le reseau).
+  // Elles sont donc seulement marquees perimees (`refetchType: none`).
+  // Temoin : __tests__/useEventMutations.PERF-EQUIPE.test.js.
   const invalidateEventParticipationState = () => {
     queryClient.invalidateQueries({ queryKey: ['events'] });
     queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
     queryClient.invalidateQueries({ queryKey: ['myApplications'] });
     if (eventId) {
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
-      queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId], refetchType: 'none' });
+      queryClient.invalidateQueries({
+        queryKey: ['eventParticipations', eventId],
+        refetchType: 'none',
+      });
       // 🧊 S1 (constat d Adel du 2026-08-25) — LE BADGE « ARRIVE » FANTOME.
       //
       // Changer sa reponse change AUSSI ce que le pointage raconte : le serveur
@@ -465,7 +474,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       invalidatePersonalPlanning();
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
@@ -487,7 +496,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       invalidatePersonalPlanning();
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
@@ -506,7 +515,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       invalidatePersonalPlanning();
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
@@ -525,7 +534,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       invalidatePersonalPlanning();
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
@@ -544,7 +553,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       invalidatePersonalPlanning();
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event', eventId], refetchType: 'none' });
       queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
       queryClient.invalidateQueries({ queryKey: ['teamStats'] });
       refetch();
@@ -563,7 +572,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       if (eventId) {
-        queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+        queryClient.invalidateQueries({ queryKey: ['event', eventId], refetchType: 'none' });
       }
       queryClient.invalidateQueries({ queryKey: ['requestsHub'] });
       queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] });
