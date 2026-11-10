@@ -113,6 +113,10 @@ function UserParentalDeclaration({ navigation, route }) {
       } else {
         // GERANT-INSCRIPTION (10/11/2026) — le gérant d'un complexe (compte sans rôle sportif) va à
         // son complexe, ou à la fiche : jamais aux questions de sport du parcours `new`.
+        // ponytail: filet INATTEIGNABLE depuis les 18 ans (Adel « 224- B », 10/11) :
+        // « Qui es-tu ? » refuse un gérant de moins de 18 ans avant la déclaration.
+        // Gardé si l'âge minimum redescend. À retirer, avec son témoin
+        // (UserParentalDeclaration.test.js), au premier train en prod qui porte GERANT-INSCRIPTION.
         const suite = await suiteDuGerant(userData);
         if (suite?.params) navigation.navigate(suite.name, suite.params);
         else navigation.navigate(suite?.name || resolveRouteApresLaCase());
