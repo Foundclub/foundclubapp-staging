@@ -2,7 +2,7 @@ import { useRoute } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, TouchableOpacity, View,
+  Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import {
@@ -29,6 +29,10 @@ import {
   useModifierComplexe,
 } from '@/services/complexe/complexeQueries';
 
+import { buildPublicWebUrl } from '@/utils/shareLinks';
+
+import { LEGAL_COMPLEXE_RULES_PATH } from '@/config/legalUrls';
+
 const MOT_MAX = 500;
 
 /**
@@ -51,6 +55,10 @@ const MOT_MAX = 500;
 function ComplexeReglages() {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
+  const texteLireRegles = t(
+    'complexeGerant.reglages.lireRegles',
+    'Lire les règles d’utilisation des complexes',
+  );
   const route = useRoute();
   const params = /** @type {{ complexeId?: string } | undefined} */ (route?.params);
   // RESA-L5B-2 : sans `?complexeId=` (site), le complexe du compte.
@@ -454,6 +462,21 @@ function ComplexeReglages() {
           title={t('complexeGerant.terrain.enregistrer', 'Enregistrer')}
           variant="Primary"
         />
+        {/* REGLES-COMPLEXES (10/11, « 225- A ») : relire ce que la création a fait accepter. */}
+        <TouchableOpacity
+          accessibilityLabel={texteLireRegles}
+          accessibilityRole="link"
+          onPress={() => {
+            Promise.resolve(Linking.openURL(buildPublicWebUrl({ path: LEGAL_COMPLEXE_RULES_PATH })))
+              .catch(() => {});
+          }}
+          style={{ alignSelf: 'center', justifyContent: 'center', minHeight: 44 }}
+          testID="complexe-reglages-lire-regles"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary500, { textDecorationLine: 'underline' }]}>
+            {texteLireRegles}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </ScreenContainer>
   );

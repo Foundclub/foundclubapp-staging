@@ -41,7 +41,9 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useCreerMonComplexe } from '@/services/complexe/complexeQueries';
 
-import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
+import { buildPublicWebUrl } from '@/utils/shareLinks';
+
+import { LEGAL_COMPLEXE_RULES_PATH, SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
 const ETAPES = 3;
 const SIRET_RE = /^\d{14}$/;
@@ -189,6 +191,12 @@ function ComplexeDevenirGerant() {
   const ecrireAFoundClub = () => {
     setDoublon(null);
     Promise.resolve(Linking.openURL(SUPPORT_CONTACT_MAILTO)).catch(() => {});
+  };
+  // REGLES-COMPLEXES (10/11, « 225- A ») : la page publique, hors du tunnel (un nouvel onglet
+  // sur le site, le navigateur sur le téléphone) ; rien n'est perdu de ce qui est rempli.
+  const lireLesRegles = () => {
+    Promise.resolve(Linking.openURL(buildPublicWebUrl({ path: LEGAL_COMPLEXE_RULES_PATH })))
+      .catch(() => {});
   };
 
   const aide = (/** @type {string} */ texte) => (
@@ -419,6 +427,18 @@ function ComplexeDevenirGerant() {
         </View>
         <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
           {texteAccepter}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityRole="link"
+        onPress={lireLesRegles}
+        style={{
+          alignSelf: 'flex-start', justifyContent: 'center', minHeight: 44, paddingLeft: 36,
+        }}
+        testID="complexe-creation-lire-regles"
+      >
+        <Text style={[Fonts.p2Bold, Fonts.primary500, { textDecorationLine: 'underline' }]}>
+          {t('complexeGerant.creation.lireRegles', 'Lire les règles')}
         </Text>
       </TouchableOpacity>
     </View>
