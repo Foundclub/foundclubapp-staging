@@ -313,8 +313,11 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     expect(mockReset).toHaveBeenCalledTimes(1);
   });
 
-  it('RB-3 3c · joueur avec un enfant : 3 positions ; « Parent », l accueil parent', async () => {
+  // BANDEAU-PARENT (10/11, « useTonMode A ») : la position Parent suit la règle de l'accueil
+  // (ACCUEIL-JOUEUR, Adel 09/11) : le cas 3c part d'un Joueur né Parent ; 3d, un Joueur né Joueur.
+  it('RB-3 3c · né Parent, un enfant : 3 positions, « Parent » : l accueil parent', async () => {
     mockEnfants = { lignes: [{ prenom: 'Léa' }], reste: 0, total: 1 };
+    mockValeurs.set('user.parent_origin.u-1', 'parent');
     const arbre = await monter();
     const lus = textes(arbre);
     expect(lus.slice(lus.indexOf('TON MODE'), lus.indexOf('TON MODE') + 5)).toEqual([
@@ -324,6 +327,15 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     expect(mockValeurs.get('user.player_mode.u-1')).toBe('parent');
     expect(mockValeurs.has('user.complexe_mode.u-1')).toBe(false);
     expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
+  });
+
+  it('RB-3 3d · joueur NÉ JOUEUR avec un enfant : 2 positions, pas de « Parent »', async () => {
+    mockEnfants = { lignes: [{ prenom: 'Léa' }], reste: 0, total: 1 };
+    mockValeurs.set('user.parent_origin.u-1', 'player');
+    const lus = textes(await monter());
+    expect(lus.slice(lus.indexOf('TON MODE'), lus.indexOf('TON MODE') + 4)).toEqual([
+      'TON MODE', 'Complexe', 'Joueur', 'Tu gères Le Five de Montrivage.',
+    ]);
   });
 
   it('RB-3 5b · arrivé par la bascule : « Mode complexe. Tu gères … », une fois', async () => {

@@ -2,10 +2,11 @@ import { useCallback, useMemo } from 'react';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import {
-  canUseParentMode,
   canUsePlayerMode,
+  offersParentSwitch,
   resolveDisplayRoleKey,
   useDisplayModeRequest,
+  useParentOrigin,
   writeDisplayModeRequest,
 } from '@/domains/auth/playerMode';
 import { complexeChoisi, complexesOuvrables } from '@/domains/complexe/complexeGerant';
@@ -51,6 +52,7 @@ export default function useTonMode({
   const compteId = compte?.documentId || null;
   const lu = Boolean(lire && compteId);
   const demande = useDisplayModeRequest(compteId);
+  const origine = useParentOrigin(compteId);
   const affichage = resolveDisplayRoleKey({
     accountRoleKey: roleDuCompte, displayModeRequest: demande, userData: compte,
   });
@@ -64,7 +66,11 @@ export default function useTonMode({
   const enfants = useMesEnfantsEnBref({ actif: lu && peutAvoirDesEnfants(roleDuCompte) });
   const prenoms = useMemo(() => enfants.lignes.map((ligne) => ligne.prenom), [enfants.lignes]);
   const positions = positionsDuCompte({
-    aDesEnfants: canUseParentMode(roleDuCompte) && enfants.total > 0,
+    // BANDEAU-PARENT (10/11) : la règle de l'accueil (ACCUEIL-JOUEUR, Adel 09/11) — un Joueur né
+    // Joueur n'a pas « Parent » ici non plus (sauf en mode parent, pour revenir).
+    aDesEnfants: offersParentSwitch({
+      accountRoleKey: roleDuCompte, displayModeRequest: demande, origin: origine,
+    }) && enfants.total > 0,
     // Dans l'espace du complexe, la position Complexe est sûre avant même la lecture (5b).
     aUnComplexe: dansLeComplexe || Boolean(complexe),
     peutJouer: canUsePlayerMode(roleDuCompte, compte),
