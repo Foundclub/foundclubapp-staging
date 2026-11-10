@@ -69,6 +69,7 @@ import {
 import { carteDAnnonce } from '@/domains/complexe/annonceDuCanal';
 import useQuiEcrit from '@/domains/messaging/useQuiEcrit';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
+import { isTourExample } from '@/domains/tour/tourExamples';
 // MSG1W (07/10) — les glyphes de la messagerie (coches, envoyer, micro, +), ceux du telephone.
 import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGlyph';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
@@ -87,6 +88,7 @@ import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMess
 // AMICAUX-CORRECTIFS 81 — la bulle de proposition AMICALE du telephone, et ses regles.
 // eslint-disable-next-line max-len -- un chemin d'import ne se coupe pas
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
+import TourCanalExemple from '@/components/molecules/tour/TourCanalExemple';
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import ScreenContainer from '@/components/templates/ScreenContainer'
 // MSG1W (07/10) — la forme du fil (groupes, puces de date, coches), sans rendu.
@@ -132,8 +134,6 @@ import {
   getTeamIdOfChat,
 } from '@/views/conversationConvocation/convocationWizardUtils';
 import { RouteNames } from '@/navigation/routeNames'
-import { isTourExample } from '@/domains/tour/tourExamples';
-import TourCanalExemple from '@/components/molecules/tour/TourCanalExemple';
 import links from '@/platform/links'
 // MSG1W (1-A) — les liens des applis de cartes, ceux du telephone (FeuilleDAdresse de MSG1A).
 import { buildExternalMapLinks } from '@/platform/maps/externalMap';
