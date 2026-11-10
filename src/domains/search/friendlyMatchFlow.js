@@ -41,20 +41,6 @@ export const CHOSEN_HOSTINGS = /** @type {const} */ (['HOST', 'AWAY']);
 /** Intentions de recherche du filtre « je veux recevoir / me deplacer » (§4.2). */
 export const HOSTING_INTENTS = /** @type {const} */ (['any', 'host', 'away']);
 
-/** Valeur libre du catalogue de formats, pour ne bloquer aucun sport (§3.4). */
-export const FORMAT_OTHER = 'Autre';
-
-const SPORT_FORMAT_CATALOG = /** @type {Record<string, string[]>} */ ({
-  basketball: ['5v5', '3x3'],
-  football: ['11v11', '8v8', '7v7', '5v5'],
-  'football a 5': ['5v5'],
-  handball: ['7v7', '4v4'],
-  padel: ['double'],
-  rugby: ['XV', 'X', 'VII'],
-  tennis: ['simple', 'double'],
-  volleyball: ['6v6', '4v4', '2v2'],
-});
-
 const EARTH_RADIUS_KM = 6371;
 
 /**
@@ -284,28 +270,6 @@ export const matchesHostingIntent = (ad, intent) => {
 };
 
 /**
- * Catalogue ferme + « Autre » (§3.4) : une liste fermee se filtre, « Autre »
- * evite qu un sport oublie bloque une publication. Ajouter un sport = une ligne.
- * @param {any} sportName
- * @returns {string[]}
- */
-export const getFormatsForSport = (sportName) => [
-  ...(SPORT_FORMAT_CATALOG[normalizeText(sportName)] || []),
-  FORMAT_OTHER,
-];
-
-/**
- * Tous les formats connus, tous sports confondus. Sert le filtre de la liste,
- * ou aucun sport n est encore choisi : proposer l union est plus honnete que
- * d imposer le catalogue d un sport que le lecteur n a pas demande.
- * @returns {string[]}
- */
-export const getAllFriendlyMatchFormats = () => Array.from(new Set([
-  FORMAT_OTHER,
-  ...Object.values(SPORT_FORMAT_CATALOG).flat(),
-])).sort();
-
-/**
  * Dates candidates d une annonce, nettoyees et triees (§3.1).
  * Cote app on ECARTE les entrees illisibles au lieu de lever : le serveur est la
  * frontiere de confiance, l ecran ne doit pas planter sur une ligne abimee.
@@ -523,7 +487,7 @@ const matchesReference = (adValues, expected) => {
  * C est donc ici que « distance », « periode » et « qui recoit » s appliquent.
  * @param {any[]} ads
  * @param {{
- *  category?: any, format?: any, hostingIntent?: any, level?: any,
+ *  category?: any, hostingIntent?: any, level?: any,
  *  maxDistanceKm?: any, periodDays?: any, viewerLocation?: any
  * }} [filters]
  * @param {Date} [now]
@@ -539,7 +503,9 @@ export const filterFriendlyMatchAds = (ads, filters = {}, now = new Date()) => {
     if (!matchesHostingIntent(ad, filters.hostingIntent)) return false;
     if (!matchesReference(getAdCategories(ad), filters.category)) return false;
     if (!matchesReference(getAdLevels(ad), filters.level)) return false;
-    if (filters.format && normalizeText(ad?.format) !== normalizeText(filters.format)) return false;
+    // AMICAUX-FORMAT (« 4 A ») : le format et le sport se filtrent au SERVEUR
+    // (friendlyMatchService.getFriendlyMatchAds) ; filtrer ici une page deja
+    // chargee pouvait rendre une page vide alors que d autres annonces existaient.
     if (!matchesPeriod(ad, filters.periodDays, now)) return false;
 
     if (hasDistanceLimit) {

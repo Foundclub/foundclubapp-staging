@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 
 import { normalizeCandidateDates } from '@/domains/search/friendlyMatchFlow';
+import { buildFormatServerFilters } from '@/domains/search/friendlyMatchFormats';
 
 import client from '@/services/client';
 
@@ -215,14 +216,20 @@ const buildSearchFilter = (search) => {
 
 /**
  * Liste publique des annonces (Q12 : visible sans compte).
- * @param {{ page?: number, pageSize?: number, search?: string, status?: string }} [filters]
+ * AMICAUX-FORMAT (« 4 A ») : `sport` et `format` se trient ICI, au serveur, et une
+ * annonce sans format reste dans la liste (« 5 A », buildFormatServerFilters).
+ * @param {{
+ *  format?: string, page?: number, pageSize?: number, search?: string,
+ *  sport?: string, status?: string
+ * }} [filters]
  * @returns {Promise<{ data: any[], meta: any }>}
  */
 export const getFriendlyMatchAds = async (filters = {}) => {
   const {
-    page = 1, pageSize = 20, search = '', status = 'open',
+    format = '', page = 1, pageSize = 20, search = '', sport = '', status = 'open',
   } = filters;
   const searchFilter = buildSearchFilter(search);
+  const formatClauses = buildFormatServerFilters({ format, sport });
 
   const response = await client.get('/friendly-match-ads', {
     params: {
@@ -233,6 +240,7 @@ export const getFriendlyMatchAds = async (filters = {}) => {
         lastCandidateDate: { $gte: new Date().toISOString() },
         ...(status ? { status } : {}),
         ...(searchFilter || {}),
+        ...(formatClauses.length > 0 ? { $and: formatClauses } : {}),
       },
       pagination: { page, pageSize },
       populate: AD_CARD_POPULATE,

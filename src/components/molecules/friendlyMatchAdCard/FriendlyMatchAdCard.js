@@ -19,6 +19,7 @@ import {
   getReferenceNames,
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
+import { formatDurationLabel, getFormatLabel } from '@/domains/search/friendlyMatchFormats';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -91,6 +92,8 @@ function FriendlyMatchAdCard({
   // un voile a 8 % sur lequel le blanc reste parfaitement lisible.
   const palette = useMemo(() => ({
     accentBorder: withAlpha(Colors.primary500, 0.18),
+    bandBorder: withAlpha(Colors.primary500, 0.28),
+    bandSurface: withAlpha(Colors.primary500, 0.1),
     ctaOutlineBorder: withAlpha(Colors.primary500, 0.7),
     disabledBorder: withAlpha(Colors.neutral00, 0.12),
     disabledSurface: withAlpha(Colors.neutral00, 0.06),
@@ -119,15 +122,19 @@ function FriendlyMatchAdCard({
   const sectionName = ad?.section?.name || '';
   const levelName = getReferenceNames(getAdLevels(ad))
     || t('friendlyMatch.adCard.fallback.level', 'Niveau libre');
-  const formatLabel = ad?.format || t('friendlyMatch.adCard.fallback.format', 'Format à convenir');
   const sportName = ad?.activity?.name
     || team?.sport
     || t('friendlyMatch.adCard.fallback.sport', 'Football');
+  // AMICAUX-FORMAT (maquette validée le 10/11/2026) : format et durée passent dans
+  // un bandeau à eux, sous le nom du club. Une annonce ancienne affiche « À convenir ».
+  const toBeAgreed = t('friendlyMatch.adCard.toBeAgreed', 'À convenir');
+  const formatText = getFormatLabel(ad?.format, sportName);
+  const durationText = formatDurationLabel(ad?.formatDetails?.duration);
   const hostingTag = getHostingTag(ad);
   const isOpen = ad?.status === 'open' && ad?.isActive !== false;
 
-  // Sous-ligne de la maquette : « Seniors A · Basketball · Sénior +18 · 5v5 ».
-  const subLine = [team?.name, sportName, categoryName, sectionName, formatLabel]
+  // Sous-ligne : « Seniors A · Basketball · Sénior +18 ». Le format a son bandeau.
+  const subLine = [team?.name, sportName, categoryName, sectionName]
     .filter(Boolean)
     .join(' · ');
 
@@ -316,7 +323,9 @@ function FriendlyMatchAdCard({
 
       <Pressable
         accessibilityHint={openHint}
-        accessibilityLabel={`${adPrefix}, ${clubName}, ${subLine}, ${hostingTag.label}`}
+        accessibilityLabel={[
+          adPrefix, clubName, formatText || toBeAgreed, durationText, subLine, hostingTag.label,
+        ].filter(Boolean).join(', ')}
         accessibilityRole="button"
         onPress={() => onPress?.(ad)}
         onPressIn={() => { scale.value = withTiming(0.985, { duration: 100 }); }}
@@ -345,6 +354,50 @@ function FriendlyMatchAdCard({
                 {subLine}
               </Text>
             </View>
+          </View>
+
+          {/* AMICAUX-FORMAT — le bandeau « Format | Durée ». Gris quand rien n'est dit. */}
+          <View
+            style={[
+              styles.formatBand,
+              formatText
+                ? { backgroundColor: palette.bandSurface, borderColor: palette.bandBorder }
+                : { backgroundColor: palette.disabledSurface, borderColor: palette.disabledBorder },
+            ]}
+            testID="friendlyMatchAdCard.formatBand"
+          >
+            {[
+              { caption: t('friendlyMatch.adCard.formatCaption', 'Format'), value: formatText },
+              { caption: t('friendlyMatch.adCard.durationCaption', 'Durée'), value: durationText },
+            ].map((cell, index) => (
+              <View
+                key={cell.caption}
+                style={[
+                  styles.formatCell,
+                  index > 0
+                    ? [styles.formatCellSecond, { borderLeftColor: palette.bandBorder }]
+                    : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    Fonts.p4Bold,
+                    styles.formatCaption,
+                    { color: formatText ? Colors.primary300 : Colors.neutral400 },
+                  ]}
+                >
+                  {cell.caption}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={cell.value
+                    ? [Fonts.p1Black, { color: Colors.neutral00 }]
+                    : [Fonts.p3Bold, { color: Colors.neutral300 }]}
+                >
+                  {cell.value || toBeAgreed}
+                </Text>
+              </View>
+            ))}
           </View>
 
           {/* ② Le tag lieu occupe sa PROPRE ligne, sous le nom : sur la meme
@@ -474,6 +527,26 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 12,
     width: '100%',
+  },
+  formatBand: {
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  formatCaption: {
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  formatCell: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+  },
+  formatCellSecond: {
+    borderLeftWidth: 1,
   },
   hostingTag: {
     alignItems: 'center',

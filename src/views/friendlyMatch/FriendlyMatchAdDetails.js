@@ -18,6 +18,7 @@ import {
   getReferenceNames,
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
+import { formatDurationLabel, getFormatLabel } from '@/domains/search/friendlyMatchFormats';
 import { canManageTeamAd, getManagedTeams } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -361,6 +362,9 @@ function FriendlyMatchAdDetails({ navigation, route }) {
     (/** @type {any} */ application) => application?.status !== 'pending',
   );
 
+  const matchFormatLabel = getFormatLabel(ad.format, ad.activity?.name || ad.team?.sport);
+  const matchDurationLabel = formatDurationLabel(ad.formatDetails?.duration);
+
   /**
    * Un bloc encadre, le motif visuel unique de l ecran.
    * @param {string} title
@@ -421,6 +425,44 @@ function FriendlyMatchAdDetails({ navigation, route }) {
           </View>
         ) : null}
 
+        {/* AMICAUX-FORMAT (maquette validée le 10/11/2026) : le bloc « Le match » en tête,
+            format et durée en très gros. Une annonce ancienne dit « Format à convenir ». */}
+        <View
+          style={[Spaces.padding[16], Spaces.gap[8], {
+            backgroundColor: withAlpha(Colors.primary700, 0.94),
+            borderColor: withAlpha(Colors.primary500, 0.24),
+            borderRadius: 18,
+            borderWidth: 1,
+          }]}
+          testID="friendlyMatchAdDetails.matchBlock"
+        >
+          <Text
+            style={[Fonts.p4Bold, {
+              color: Colors.primary300, letterSpacing: 0.8, textTransform: 'uppercase',
+            }]}
+          >
+            {t('friendlyMatchAdDetails.theMatch', 'Le match')}
+          </Text>
+          {matchFormatLabel ? (
+            <View style={[Spaces.gap[4]]}>
+              <Text style={[Fonts.h3, { color: Colors.neutral00 }]}>{matchFormatLabel}</Text>
+              <Text style={[Fonts.p1Bold, { color: Colors.primary300 }]}>
+                {matchDurationLabel
+                  || t('friendlyMatchAdDetails.durationToBeAgreed', 'Durée à convenir')}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[Fonts.p1Bold, { color: Colors.neutral300 }]}>
+              {t('friendlyMatch.adCard.fallback.format', 'Format à convenir')}
+            </Text>
+          )}
+          {ad.formatDetails?.precision ? (
+            <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+              {ad.formatDetails.precision}
+            </Text>
+          ) : null}
+        </View>
+
         {renderCard(
           t('friendlyMatchAdDetails.whatThisTeamOffers', 'Ce que cette équipe propose'), (
             <View style={[Spaces.gap[4]]}>
@@ -430,11 +472,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                 {[locationLabel, radiusLabel].filter(Boolean).join(' · ')}
               </Text>
-              {ad.format ? (
-                <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                  {`Format : ${ad.format}`}
-                </Text>
-              ) : null}
+
               {ad.refereeing ? (
                 <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                   {`Arbitrage : ${ad.refereeing}`}

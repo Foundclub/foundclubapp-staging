@@ -1,10 +1,11 @@
 /* eslint-disable max-len -- chemins d'import du tunnel amicaux : les raccourcir
-   demanderait de renommer les 7 etapes, pour zero gain de lisibilite. */
+   demanderait de renommer les 8 etapes, pour zero gain de lisibilite. */
 import { createStackNavigator } from '@react-navigation/stack';
 
 import { FriendlyMatchWizardProvider } from '@/views/friendlyMatch/wizard/FriendlyMatchWizardContext';
 import FriendlyMatchWizardDates from '@/views/friendlyMatch/wizard/FriendlyMatchWizardDates';
 import FriendlyMatchWizardDescription from '@/views/friendlyMatch/wizard/FriendlyMatchWizardDescription';
+import FriendlyMatchWizardFormat from '@/views/friendlyMatch/wizard/FriendlyMatchWizardFormat';
 import FriendlyMatchWizardHosting from '@/views/friendlyMatch/wizard/FriendlyMatchWizardHosting';
 import FriendlyMatchWizardLocation from '@/views/friendlyMatch/wizard/FriendlyMatchWizardLocation';
 import FriendlyMatchWizardOpponent from '@/views/friendlyMatch/wizard/FriendlyMatchWizardOpponent';
@@ -36,6 +37,11 @@ function FriendlyMatchWizardStack() {
         <Stack.Screen
           component={FriendlyMatchWizardTeam}
           name={RouteNames.FriendlyMatchWizardTeam}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          component={FriendlyMatchWizardFormat}
+          name={RouteNames.FriendlyMatchWizardFormat}
           options={{ headerShown: false }}
         />
         <Stack.Screen

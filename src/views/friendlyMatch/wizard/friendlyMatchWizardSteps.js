@@ -5,16 +5,23 @@ import {
   HOSTING_PREFERENCES,
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
+import {
+  buildCustomFormatCode,
+  CUSTOM_FORMAT,
+  CUSTOM_LIMITS,
+  formatDurationLabel,
+  PRECISION_MAX_LENGTH,
+} from '@/domains/search/friendlyMatchFormats';
 
 import { normalizeLocationInput } from '@/utils/location';
 
 /**
- * La carte des 7 etapes de l assistant de publication (spec §4.1) et le corps
+ * La carte des 8 etapes de l assistant de publication (spec §4.1) et le corps
  * envoye au serveur.
  *
  * Ce fichier ne dessine rien : il dit ce qui BLOQUE une etape et ce qui part
  * dans la requete. C est le pendant de recruitment/wizard/adWizardStepUtils.js,
- * et la raison pour laquelle les 7 ecrans n ont aucune regle a eux.
+ * et la raison pour laquelle les 8 ecrans n ont aucune regle a eux.
  *
  * Ce qu il n a PAS a faire, parce que le serveur le fait deja :
  *   · `city` et `geohash`      -> derives de `location` (lifecycles.ts:62-91)
@@ -23,9 +30,13 @@ import { normalizeLocationInput } from '@/utils/location';
  * Les envoyer serait au mieux inutile, au pire falsifiable.
  */
 
-/** Les 7 etapes, dans l ordre ou l assistant les traverse (§4.1). */
+/**
+ * Les 8 etapes, dans l ordre ou l assistant les traverse (§4.1).
+ * AMICAUX-FORMAT (« 1 A », 10/11/2026) : le format vient juste apres l equipe.
+ */
 export const FRIENDLY_MATCH_WIZARD_STEPS = /** @type {const} */ ([
   'team',
+  'format',
   'hosting',
   'dates',
   'location',
@@ -33,9 +44,6 @@ export const FRIENDLY_MATCH_WIZARD_STEPS = /** @type {const} */ ([
   'description',
   'recap',
 ]);
-
-/** Format libre du catalogue (§3.4) : il exige son texte, sinon il ne dit rien. */
-export const FORMAT_OTHER_VALUE = 'Autre';
 
 /**
  * Le nombre d etapes affiche par le gabarit de tunnel.
@@ -74,14 +82,39 @@ const getDocumentId = (value) => {
 const trimmed = (value) => String(value ?? '').trim();
 
 /**
- * Le format tel qu il doit partir : « Autre » cede la place au texte saisi.
+ * Un entier dans ses bornes ?
+ * @param {any} value
+ * @param {{ min: number, max: number }} limits
+ * @returns {boolean}
+ */
+const isIntegerWithin = (value, limits) => (
+  Number.isInteger(value) && value >= limits.min && value <= limits.max
+);
+
+/**
+ * Le format tel qu il doit partir : « Personnalisé » devient « 10v11 ».
  * @param {any} draft
  * @returns {string}
  */
 const resolveFormat = (draft) => {
   const format = trimmed(draft?.format);
-  if (format === FORMAT_OTHER_VALUE) return trimmed(draft?.formatOther);
-  return format;
+  if (format !== CUSTOM_FORMAT) return format;
+  const { them, us } = draft?.formatCustom || {};
+  return buildCustomFormatCode(us, them);
+};
+
+/**
+ * AMICAUX-FORMAT (« 2 A ») — la duree et la precision, dans `formatDetails`.
+ * La precision libre n existe que pour le personnalise (maquette, ecran 2).
+ * @param {any} draft
+ * @returns {{ duration?: any, precision?: string } | null}
+ */
+const resolveFormatDetails = (draft) => {
+  const details = /** @type {{ duration?: any, precision?: string }} */ ({});
+  if (formatDurationLabel(draft?.formatDuration)) details.duration = draft.formatDuration;
+  const precision = trimmed(draft?.formatPrecision).slice(0, PRECISION_MAX_LENGTH);
+  if (trimmed(draft?.format) === CUSTOM_FORMAT && precision) details.precision = precision;
+  return Object.keys(details).length > 0 ? details : null;
 };
 
 /**
@@ -121,6 +154,29 @@ export const getFriendlyMatchWizardStepIssue = (stepKey, draft, now = new Date()
       // Description et arbitrage sont facultatifs (§4.1, etape 6).
       return null;
 
+    // AMICAUX-FORMAT (« 3 A ») : le format est obligatoire, sa duree aussi. La
+    // duree par defaut se pose au choix du format : ce blocage ne se voit que
+    // si une duree a ete retiree, ou sur un personnalise hors bornes.
+    case 'format': {
+      const format = trimmed(draft?.format);
+      if (!format) {
+        return i18next.t('friendlyMatchWizardSteps.chooseAFormat', 'Choisis un format.');
+      }
+      if (format === CUSTOM_FORMAT) {
+        const { them, us } = draft?.formatCustom || {};
+        const { players } = CUSTOM_LIMITS;
+        if (!isIntegerWithin(us, players) || !isIntegerWithin(them, players)) {
+          return i18next.t(
+            'friendlyMatchWizardSteps.playersBetween',
+            'Indique entre 1 et 15 joueurs de chaque côté.',
+          );
+        }
+      }
+      return formatDurationLabel(draft?.formatDuration)
+        ? null
+        : i18next.t('friendlyMatchWizardSteps.chooseADuration', 'Choisis une durée.');
+    }
+
     case 'hosting':
       // Q1 : le choix est TOUJOURS explicite, meme quand il parait evident.
       return HOSTING_PREFERENCES.includes(/** @type {any} */ (trimmed(draft?.hostingPreference)))
@@ -148,14 +204,8 @@ export const getFriendlyMatchWizardStepIssue = (stepKey, draft, now = new Date()
     }
 
     case 'opponent':
-      // Le catalogue est ferme + « Autre » (§3.4). « Autre » sans texte ne
-      // decrit rien : ni l adversaire ni le filtre ne sauraient quoi en faire.
-      if (trimmed(draft?.format) === FORMAT_OTHER_VALUE && !trimmed(draft?.formatOther)) {
-        return i18next.t(
-          'friendlyMatchWizardSteps.writeTheFormatYouRe',
-          'Écris le format que tu cherches.',
-        );
-      }
+      // Categories et niveaux : facultatifs (rien coche = toutes). Le format a
+      // quitte cette etape pour la sienne (AMICAUX-FORMAT).
       return null;
 
     case 'recap': {
@@ -254,6 +304,7 @@ export const buildFriendlyMatchFacilitySelection = (facility) => {
 export const buildFriendlyMatchAdPayload = (draft) => {
   const hostingPreference = trimmed(draft?.hostingPreference);
   const format = resolveFormat(draft);
+  const formatDetails = resolveFormatDetails(draft);
   const description = trimmed(draft?.description);
   const refereeing = trimmed(draft?.refereeing);
   const radius = Number(draft?.travelRadiusKm);
@@ -268,6 +319,7 @@ export const buildFriendlyMatchAdPayload = (draft) => {
   if (Number.isFinite(radius) && radius >= 1) payload.travelRadiusKm = Math.round(radius);
   if (description) payload.description = description;
   if (format) payload.format = format;
+  if (format && formatDetails) payload.formatDetails = formatDetails;
   if (refereeing) payload.refereeing = refereeing;
 
   [

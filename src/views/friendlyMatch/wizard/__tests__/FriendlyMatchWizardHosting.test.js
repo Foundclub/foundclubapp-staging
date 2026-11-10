@@ -279,8 +279,8 @@ describe('Etape 2/7 « Tu peux recevoir ? » — CE QUI NE DOIT PAS BOUGER', () 
 
   it('est bien la 2e etape sur 7', () => {
     rendre();
-    expect(dernierGabarit().stepIndex).toBe(2);
-    expect(dernierGabarit().stepCount).toBe(7);
+    expect(dernierGabarit().stepIndex).toBe(3);
+    expect(dernierGabarit().stepCount).toBe(8); // AMICAUX-FORMAT : 8 etapes
   });
 
   // Q1 : aucune valeur par defaut, meme « Les deux ». Un choix implicite serait

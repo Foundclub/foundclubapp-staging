@@ -61,7 +61,7 @@ jest.mock('@/views/event/wizard/components/EventWizardTeamCard', () => function 
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  // eslint-disable-next-line no-use-before-define
+
   default: () => ({ userData: mockUtilisateur }),
 }));
 
@@ -114,7 +114,7 @@ describe('Etape 1/7 « Publier une annonce »', () => {
     const gabarit = mockPropsDuGabarit[mockPropsDuGabarit.length - 1];
 
     expect(gabarit.stepIndex).toBe(1);
-    expect(gabarit.stepCount).toBe(7);
+    expect(gabarit.stepCount).toBe(8); // AMICAUX-FORMAT : 8 etapes
     expect(JSON.stringify(arbre.toJSON())).toContain('U15');
   });
 
@@ -130,7 +130,8 @@ describe('Etape 1/7 « Publier une annonce »', () => {
       payload: { documentId: 'team-1', name: 'U15' },
       type: 'SET_TEAM',
     });
-    expect(navigation.navigate).toHaveBeenCalledWith('FriendlyMatchWizardHosting');
+    // AMICAUX-FORMAT (« 1 A ») : apres l equipe, le format.
+    expect(navigation.navigate).toHaveBeenCalledWith('FriendlyMatchWizardFormat');
   });
 
   it('sans equipe encadree, elle explique au lieu de montrer une liste vide', () => {

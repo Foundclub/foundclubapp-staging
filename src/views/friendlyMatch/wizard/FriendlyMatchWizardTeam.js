@@ -62,7 +62,8 @@ function FriendlyMatchWizardTeam({ navigation, route }) {
    */
   const handleSelectTeam = (team) => {
     dispatch({ payload: team, type: 'SET_TEAM' });
-    navigation.navigate(RouteNames.FriendlyMatchWizardHosting);
+    // AMICAUX-FORMAT (« 1 A ») : apres l equipe, le format.
+    navigation.navigate(RouteNames.FriendlyMatchWizardFormat);
   };
 
   if (managedTeams.length === 0) {

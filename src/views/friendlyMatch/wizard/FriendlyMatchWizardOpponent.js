@@ -1,10 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { getFormatsForSport } from '@/domains/search/friendlyMatchFlow';
-import { withAlpha } from '@/theme/colors';
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGroup';
@@ -17,7 +14,6 @@ import { useGetLevels } from '@/services/level/levelQueries';
 
 import { useFriendlyMatchWizard } from './FriendlyMatchWizardContext';
 import {
-  FORMAT_OTHER_VALUE,
   getFriendlyMatchWizardStepCount,
   getFriendlyMatchWizardStepIndex,
   getFriendlyMatchWizardStepIssue,
@@ -71,9 +67,9 @@ const getSelectedChipValues = (selected) => {
 };
 
 /**
- * Etape 5/7 — « Qui je cherche » (§4.1).
+ * Etape 6/8 — « Qui je cherche » (§4.1).
  *
- * Les trois champs sont FACULTATIFS et c est voulu : une annonce ouverte
+ * Les deux champs sont FACULTATIFS et c est voulu : une annonce ouverte
  * (« n importe quel adversaire du coin ») est parfaitement legitime, et le
  * schema serveur ne les exige pas. Ils servent surtout aux filtres de la liste.
  *
@@ -82,8 +78,8 @@ const getSelectedChipValues = (selected) => {
  * l ecran le dit deux fois plutot qu une (la pastille « Toutes » reste allumee,
  * et l aide sous les pastilles l ecrit en toutes lettres).
  *
- * Le catalogue de formats depend du SPORT de l equipe (§3.4) : c est ce qui
- * evite une liste 11v11/7v7/5v5 qui serait du football deguise.
+ * AMICAUX-FORMAT (10/11/2026) : le format a quitte cette etape pour la sienne,
+ * en 2/8 (FriendlyMatchWizardFormat), avec sa duree.
  * @param {{ navigation: any }} props
  * @returns {import('react').ReactElement}
  */
@@ -96,7 +92,6 @@ function FriendlyMatchWizardOpponent({ navigation }) {
   const { data: levels } = useGetLevels();
 
   const issue = getFriendlyMatchWizardStepIssue('opponent', state);
-  const sportName = state.activity?.name || '';
 
   const categoryOptions = useMemo(() => [
     { label: t('friendlyMatchWizardOpponent.allFeminine', 'Toutes'), value: '' },
@@ -113,11 +108,6 @@ function FriendlyMatchWizardOpponent({ navigation }) {
       value: level.documentId || '',
     })),
   ], [levels, t]);
-
-  const formatOptions = useMemo(() => [
-    { label: t('friendlyMatchWizardOpponent.any', 'Peu importe'), value: '' },
-    ...getFormatsForSport(sportName).map((format) => ({ label: format, value: format })),
-  ], [sportName, t]);
 
   return (
     <WizardStepLayout
@@ -163,49 +153,6 @@ function FriendlyMatchWizardOpponent({ navigation }) {
           selectedValues={getSelectedChipValues(state.levels)}
           title={t('friendlyMatchWizardOpponent.levels', 'Niveaux')}
         />
-
-        <ChoiceChipGroup
-          hint={sportName
-            ? t(
-              'friendlyMatchWizardOpponent.theFormatsOfferedAreThose',
-              'Les formats proposés sont ceux du {{sport}}.',
-              { sport: sportName.toLowerCase(), ...SANS_ECHAPPEMENT },
-            )
-            : t(
-              'friendlyMatchWizardOpponent.chooseOtherIfYourFormat',
-              'Choisis « Autre » si ton format n’est pas dans la liste.',
-            )}
-          onSelect={(value) => dispatch({ payload: value, type: 'SET_FORMAT' })}
-          options={formatOptions}
-          selectedValue={state.format || ''}
-          title="Format"
-        />
-
-        {state.format === FORMAT_OTHER_VALUE ? (
-          <View style={[Spaces.gap[8]]}>
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-              {t('friendlyMatchWizardOpponent.yourFormat', 'Ton format')}
-            </Text>
-            <TextInput
-              accessibilityLabel={t('friendlyMatchWizardOpponent.gameFormat', 'Format de jeu')}
-              maxLength={40}
-              onChangeText={(value) => dispatch({ payload: value, type: 'SET_FORMAT_OTHER' })}
-              placeholder={t('friendlyMatchWizardOpponent.eGBeach3v39v9', 'Ex : beach 3v3, 9v9...')}
-              placeholderTextColor={Colors.neutral400}
-              style={[Fonts.p1, {
-                backgroundColor: withAlpha(Colors.primary900, 0.94),
-                borderColor: withAlpha(Colors.primary500, 0.15),
-                borderRadius: 12,
-                borderWidth: 1,
-                color: Colors.neutral00,
-                minHeight: 48,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-              }]}
-              value={state.formatOther || ''}
-            />
-          </View>
-        ) : null}
 
         {issue ? (
           <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>{issue}</Text>

@@ -355,6 +355,7 @@ export const RouteNames = /** @type {const} */ ({
   FriendlyMatchAdDetails: 'FriendlyMatchAdDetails',
   FriendlyMatchWizardDates: 'FriendlyMatchWizardDates',
   FriendlyMatchWizardDescription: 'FriendlyMatchWizardDescription',
+  FriendlyMatchWizardFormat: 'FriendlyMatchWizardFormat',
   FriendlyMatchWizardHosting: 'FriendlyMatchWizardHosting',
   FriendlyMatchWizardLocation: 'FriendlyMatchWizardLocation',
   FriendlyMatchWizardOpponent: 'FriendlyMatchWizardOpponent',

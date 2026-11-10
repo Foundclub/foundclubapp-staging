@@ -40,8 +40,12 @@ const createInitialState = () => ({
   // ⚠️ Elle ne part JAMAIS au serveur : buildFriendlyMatchAdPayload liste ce
   // qu il envoie, il ne recopie pas le brouillon.
   entryOrigin: '',
-  format: '', // Valeur du catalogue par sport, ou 'Autre'
-  formatOther: '', // Le texte libre quand format === 'Autre'
+  // AMICAUX-FORMAT (10/11/2026) : un code du catalogue du sport
+  // (domains/search/friendlyMatchFormats.js), ou 'custom' pour « Personnalisé ».
+  format: '',
+  formatCustom: { them: 7, themTouched: false, us: 7 }, // « Nous contre Eux » du personnalise
+  formatDuration: null, // { periods, minutes, points? } | { sets, setsMode }
+  formatPrecision: '', // precision libre du personnalise (40 caracteres)
   hostingPreference: '', // HOST | AWAY | BOTH — jamais pre-rempli (Q1)
   installation: null, // Terrain propose, seulement si on recoit
   levels: [], // Level[] — voir `categories`
@@ -152,11 +156,34 @@ function friendlyMatchWizardReducer(state, action) {
     case 'SET_ENTRY_ORIGIN':
       return { ...state, entryOrigin: String(action.payload || '').trim() };
 
+    // Choisir un format pose sa duree habituelle : l ecran la montre deja cochee.
     case 'SET_FORMAT':
-      return { ...state, format: action.payload };
+      return {
+        ...state,
+        format: String(action.payload?.code || ''),
+        formatDuration: action.payload?.duration || null,
+      };
 
-    case 'SET_FORMAT_OTHER':
-      return { ...state, formatOther: action.payload };
+    // « Eux » suit « Nous » tant que le coach ne l a pas touche (maquette, ecran 2).
+    case 'SET_FORMAT_CUSTOM': {
+      const current = state.formatCustom || createInitialState().formatCustom;
+      const next = { ...current };
+      if (action.payload?.them !== undefined) {
+        next.them = action.payload.them;
+        next.themTouched = true;
+      }
+      if (action.payload?.us !== undefined) {
+        next.us = action.payload.us;
+        if (!next.themTouched) next.them = action.payload.us;
+      }
+      return { ...state, formatCustom: next };
+    }
+
+    case 'SET_FORMAT_DURATION':
+      return { ...state, formatDuration: action.payload || null };
+
+    case 'SET_FORMAT_PRECISION':
+      return { ...state, formatPrecision: action.payload };
 
     case 'SET_HOSTING_PREFERENCE':
       // « Je me deplace » : le terrain propose n a plus de sens, on le lache
@@ -196,7 +223,8 @@ function friendlyMatchWizardReducer(state, action) {
         categories: team?.category ? [team.category] : [],
         // Le sport change : un format de football n a rien a faire au handball.
         format: '',
-        formatOther: '',
+        formatDuration: null,
+        formatPrecision: '',
         levels: team?.level ? [team.level] : [],
         location: state.location || team?.address || team?.club?.address || null,
         section: team?.section || null,
@@ -262,4 +290,4 @@ export function useFriendlyMatchWizard() {
   return context;
 }
 
-export { FRIENDLY_MATCH_WIZARD_STORAGE_KEY };
+export { FRIENDLY_MATCH_WIZARD_STORAGE_KEY, friendlyMatchWizardReducer };

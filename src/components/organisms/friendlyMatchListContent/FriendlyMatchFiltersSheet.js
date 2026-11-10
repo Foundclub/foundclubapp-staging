@@ -11,7 +11,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getAllFriendlyMatchFormats } from '@/domains/search/friendlyMatchFlow';
+import {
+  getFilterSports,
+  getSportFormats,
+  OTHER_FORMATS_FILTER,
+} from '@/domains/search/friendlyMatchFormats';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -31,6 +35,7 @@ export const EMPTY_FRIENDLY_MATCH_FILTERS = Object.freeze({
   level: '',
   maxDistanceKm: 0,
   periodDays: 0,
+  sport: '',
 });
 
 // I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
@@ -103,6 +108,7 @@ export const countFriendlyMatchFilters = (filters) => Object.entries(filters || 
  * @param {any} props.filters
  * @param {() => void} props.onClose
  * @param {(filters: any) => void} props.onApply
+ * @param {any[]} [props.sportNames] - Les sports des equipes du lecteur (AMICAUX-FORMAT).
  * @param {boolean} props.visible
  * @returns {import('react').ReactElement}
  */
@@ -110,6 +116,7 @@ function FriendlyMatchFiltersSheet({
   filters,
   onApply,
   onClose,
+  sportNames = [],
   visible,
 }) {
   const { t } = useTranslation();
@@ -145,10 +152,21 @@ function FriendlyMatchFiltersSheet({
     })),
   ], [levels, t]);
 
+  // AMICAUX-FORMAT (maquette validée le 10/11/2026) : d'abord le sport, puis les
+  // formats DE CE SPORT — plus le mélange « 11v11, 2v2, double, VII » de tous les sports.
+  const sportOptions = useMemo(() => [
+    { label: t('friendlyMatchFiltersSheet.allSports', 'Tous les sports'), value: '' },
+    ...getFilterSports(sportNames).map((name) => ({ label: name, value: name })),
+  ], [sportNames, t]);
+
   const formatOptions = useMemo(() => [
     { label: t('friendlyMatchFiltersSheet.all', 'Tous'), value: '' },
-    ...getAllFriendlyMatchFormats().map((format) => ({ label: format, value: format })),
-  ], [t]);
+    ...getSportFormats(draft.sport).map((format) => ({ label: format.label, value: format.code })),
+    {
+      label: t('friendlyMatchFiltersSheet.otherFormats', 'Autres formats'),
+      value: OTHER_FORMATS_FILTER,
+    },
+  ], [draft.sport, t]);
 
   /**
    * Modifie une seule cle du brouillon, sans toucher aux autres.
@@ -307,11 +325,31 @@ function FriendlyMatchFiltersSheet({
             )}
 
             {renderChipGroup(
-              'Format',
-              formatOptions,
-              draft.format,
-              (value) => updateDraft('format', value),
+              t('friendlyMatchFiltersSheet.sport', 'Sport'),
+              sportOptions,
+              draft.sport || '',
+              // Changer de sport efface le format : un « 3x3 » n'a pas de sens au handball.
+              (value) => setDraft((/** @type {any} */ previous) => ({
+                ...previous, format: '', sport: value,
+              })),
             )}
+
+            {draft.sport ? (
+              <View style={[Spaces.gap[8]]}>
+                {renderChipGroup(
+                  'Format',
+                  formatOptions,
+                  draft.format,
+                  (value) => updateDraft('format', value),
+                )}
+                <Text style={[Fonts.small, { color: withAlpha(Colors.neutral100, 0.63) }]}>
+                  {t(
+                    'friendlyMatchFiltersSheet.formatHint',
+                    'Les annonces sans format restent affichées : elles sont ouvertes à tout.',
+                  )}
+                </Text>
+              </View>
+            ) : null}
           </ScrollView>
 
           <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
