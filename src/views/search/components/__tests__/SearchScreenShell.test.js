@@ -12,10 +12,11 @@ import SearchScreenShell from '../SearchScreenShell';
 //
 // Mesure faite AVANT d'ecrire ce filet, et elle contredit le brief :
 //   · SquadSearchScreen.js n'est PAS cet ecran (il cherche des SQUADS League) ;
-//   · les 4 ecrans SearchEventsScreen / SearchClubsScreen / SearchReservations
-//     Screen / SearchRecruitmentScreen consomment aussi ce gabarit mais ne sont
-//     MONTES NULLE PART (routeNames.js:16-19) : le seul appelant vivant est
-//     SearchHubScreen.
+//   · dans l'APP, le seul appelant vivant est SearchHubScreen ; les ecrans
+//     SearchEventsScreen / SearchReservationsScreen / SearchRecruitmentScreen
+//     consomment aussi ce gabarit et restent montes par le SITE
+//     (web/src/routes/screenRegistry.tsx) — SearchClubsScreen, lui, a ete
+//     supprime le 10/11/2026 (ORPHELINS-RECHERCHE, 0 appelant).
 //
 // Deux etages, comme pour l'etape 2/7 : ce qui ne doit pas bouger, puis ce que
 // D07 change. Le premier reste vert des deux cotes du lot.
