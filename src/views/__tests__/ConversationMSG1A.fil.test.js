@@ -373,6 +373,18 @@ describe('MSG1A — G1 : on écrit dans un groupe', () => {
 
     expect(contientLeTexte(barre, LECTURE_SEULE)).toBe(true);
   });
+
+  // CHAT-EVT-ECRIRE (10/11/2026, recette train 8, event 3434) — le chat d'un evenement
+  // s'affichait en canal d'annonce sur le telephone : `canWrite` ne connaissait pas `event`.
+  // Ses membres sont calcules par le serveur : aucun participant enregistre, c'est voulu.
+  test("G1-3 — le CHAT D'UN EVENEMENT n'est pas un canal d'annonce : la saisie est là", () => {
+    mockChatData = { documentId: 'chat-1', event: { documentId: 'evt-1' }, type: 'event' };
+    const { gifted } = monterLaConversation();
+
+    const barre = gifted.renderInputToolbar({ text: '' });
+
+    expect(contientLeTexte(barre, LECTURE_SEULE)).toBe(false);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
