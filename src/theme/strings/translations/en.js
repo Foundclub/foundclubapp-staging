@@ -1944,6 +1944,7 @@ export default {
     MEMBERSHIP_REQUEST_NOT_PENDING: 'The membership request is not pending.',
     MEMBERSHIP_REQUEST_REFUSED: 'The membership request has been refused.',
     MESSAGE_TOO_LONG: 'The message is too long.',
+    MINOR_DIRECT_CHAT_AGE_UNKNOWN: "This person's age is not known: they need to add their date of birth to receive private messages.",
     MINOR_DIRECT_CHAT_FORBIDDEN: "Private chat not possible: a minor can only message privately with their parent or their club's staff.",
     MISSING_REQUIRED_FIELD: 'A required field is missing.',
     MISSING_TOKEN: 'Missing authentication token.',
@@ -18097,6 +18098,7 @@ export default {
     coachGuide: {
       bonus: 'Do a bonus',
       bonusDetail: "See who's coming, then call up players for a match",
+      needsClub: 'Opens as soon as your club is linked to your account.',
       paused: 'Paused',
       restart: 'Start over from scratch',
       restartConfirm: {
@@ -18106,7 +18108,11 @@ export default {
         title: 'Restart the guide?',
       },
       resume: 'Pick up where I left off',
-      review: 'Review the guide without creating anything',
+      review: 'Review without creating',
+      switchConfirm: {
+        confirm: 'Start',
+        message: 'The paused guide stops and its progress starts again from zero. Nothing you created is deleted.',
+      },
     },
     contactSupport: {
       ecrire: 'Write to support',
@@ -24530,9 +24536,9 @@ export default {
         + 'nothing.',
       'b3-few': 'A group needs at least 2 other members, and your club doesn’t have enough yet. '
         + 'Come back when they’ve joined. Let’s continue.',
-      'b3-name': 'Give it a name. In “Group permissions”, turn off “Send messages” so only admins '
-        + 'can write.',
+      'b3-name': 'Give it a name. It’s optional.',
       'b3-new': 'Tap this button for a new conversation.',
+      'b3-perms': 'In “Group permissions”, turn off “Send messages” so only admins can write.',
       'b3-sel': 'Tick at least 2 members, the “Example” ones are enough, then “Next”. It’s a '
         + 'simulation: nothing is created.',
       'b3-whisper': 'That’s a one-to-one chat. For a group, tick at least 2 people from the same '

@@ -175,28 +175,38 @@ function Profile({ navigation, route }) {
   const hasMultipleConnectedAccounts = safeAuthSessions.length > 1;
   const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const tour = useTour();
-  // GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : guide déjà lancé ⇒ petit menu.
-  const [isGuideChoiceOpen, setIsGuideChoiceOpen] = useState(false);
+  // GUIDE-RELANCE (décision d'Adel 3- A, 28/10) : guide déjà lancé ⇒ petit menu (celui du guide
+  // touché : il peut y en avoir deux, GUIDE-MENU-ROLE).
+  const [openGuideKey, setOpenGuideKey] = useState(/** @type {string | null} */ (null));
   // Petit écran : le menu s'ouvrait sous le bord. La liste y va, une fois le menu posé.
   const listeRef = useRef(/** @type {any} */ (null));
   const menuVientDOuvrirRef = useRef(false);
   const isGuideInProgress = Boolean(tour.isGuide && tour.isTourActive);
-  // Le guide en cours, sinon celui du rôle. Coach devenu dirigeant en créant son club (« Moi »)
-  // : il retrouve son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
+  // GUIDE-MENU-ROLE (testeur, M1105, 2.6.98, 10/11) : le guide en cours passait AVANT celui du
+  // rôle. Un dirigeant qui avait laissé un guide entraîneur en pause (gardé sur le téléphone par
+  // personne, pas par rôle, et que la déconnexion ne retire pas) ne voyait que lui. Désormais : le
+  // guide du rôle d'abord, toujours ; l'autre guide en cours en second, avec son propre menu.
   const roleGuideKey = getGuideKeyForRole(currentRoleKey);
   const canStartRoleGuide = /** @type {any} */ (getTourProfile(roleGuideKey))
     ?.canStart?.(userData) ?? true;
-  const guideKey = (tour.isGuide && tour.profileKey)
-    || (canStartRoleGuide ? roleGuideKey : null)
-    || (currentRoleKey === 'president' && tour.hasGuideHistory ? 'coach' : null);
-  const guideProfile = /** @type {any} */ (getTourProfile(guideKey));
+  // Le guide du rôle qui ne peut pas partir (Dirigeant sans club rattaché) le dit d'une phrase.
+  const isRoleGuideBlocked = Boolean(roleGuideKey && !canStartRoleGuide);
+  // Le guide en cours ; sans nom (TourContext n'en produit pas), il compte pour celui du rôle.
+  const activeGuideKey = tour.isGuide ? (tour.profileKey || roleGuideKey) : null;
+  const guideKeys = [...new Set([
+    roleGuideKey,
+    activeGuideKey,
+    // Coach devenu dirigeant en créant son club (« Moi »), club pas encore rattaché : il retrouve
+    // son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
+    isRoleGuideBlocked && currentRoleKey === 'president' && tour.hasGuideHistory ? 'coach' : null,
+  ].filter(Boolean))].map(String);
   /**
    * Choix du menu du guide : le menu se referme, puis le guide part.
    * @param {() => void} action - Ce que fait le choix.
    * @returns {void}
    */
   const chooseGuide = (action) => {
-    setIsGuideChoiceOpen(false);
+    setOpenGuideKey(null);
     action();
   };
   const canShowSubscriptionExperience = currentRoleKey === 'coach'
@@ -874,8 +884,10 @@ function Profile({ navigation, route }) {
         />
       </View>
       <View style={{ flex: 1 }}>
+        {/* GUIDE-E-CORR-2 : un choix en retrait (42) passe sur deux lignes au lieu d'être coupé
+            (« Revoir le guide sans rien c… », iPhone, 10/11). */}
         <Text
-          numberOfLines={1}
+          numberOfLines={sousLigne ? 2 : 1}
           style={{
             color: destructive ? Colors.error300 : Colors.neutral00,
             fontFamily: 'Montserrat-Bold',
@@ -1145,6 +1157,128 @@ function Profile({ navigation, route }) {
       : []),
   ];
 
+  /**
+   * GUIDE-MENU-ROLE : la rangée d'un guide et, dépliés, ses choix (GUIDE-RELANCE 3- A et 5- A).
+   * @param {string} guideKey - Clé du guide (`coach`, `president`).
+   * @param {number} rang - Place dans `guideKeys` : le premier garde les clés d'avant.
+   * @returns {any[]} Rangées.
+   */
+  const guideRowsOf = (guideKey, rang) => {
+    const guideProfile = /** @type {any} */ (getTourProfile(guideKey));
+    const base = rang === 0 ? 'coachGuide' : `coachGuide-${guideKey}`;
+    const label = t(guideProfile?.accountLabelKey, 'Guide entraîneur·e');
+    const isBlocked = guideKey === roleGuideKey && isRoleGuideBlocked;
+    const isThisInProgress = isGuideInProgress && activeGuideKey === guideKey;
+    const needsClub = t(
+      'profile.coachGuide.needsClub',
+      'S’ouvre dès que ton club est rattaché à ton compte.',
+    );
+    const row = {
+      accessoire: isThisInProgress && tour.tourStatus === 'paused' ? (
+        <PastilleDEtat
+          testID="coachGuide-pause"
+          texte={t('profile.coachGuide.paused', 'En pause')}
+          ton="attente"
+        />
+      ) : null,
+      icon: Images.flag,
+      key: base,
+      label,
+      onPress: () => {
+        if (isBlocked) {
+          Alert.alert(label, needsClub);
+          return;
+        }
+        // Le téléphone ne garde qu'un guide à la fois : en lancer un autre arrête celui en cours.
+        if (isGuideInProgress && !isThisInProgress) {
+          Alert.alert(
+            label,
+            t(
+              'profile.coachGuide.switchConfirm.message',
+              'Le guide en pause s’arrête et sa progression repart de zéro. '
+                + 'Rien de ce que tu as créé n’est effacé.',
+            ),
+            [
+              { style: 'cancel', text: t('profile.coachGuide.restartConfirm.cancel', 'Annuler') },
+              {
+                onPress: () => chooseGuide(() => tour.startTour(guideKey)),
+                text: t('profile.coachGuide.switchConfirm.confirm', 'Lancer'),
+              },
+            ],
+          );
+          return;
+        }
+        if (!tour.hasGuideHistory) {
+          tour.startTour(guideKey);
+          return;
+        }
+        setOpenGuideKey((ouvert) => {
+          const suivant = ouvert === guideKey ? null : guideKey;
+          menuVientDOuvrirRef.current = suivant !== null;
+          return suivant;
+        });
+      },
+      value: isBlocked ? needsClub : undefined,
+    };
+    if (isBlocked || openGuideKey !== guideKey || !tour.hasGuideHistory) return [row];
+    return [
+      row,
+      ...(isThisInProgress ? [{
+        icon: Images.flag,
+        key: `${base}-resume`,
+        label: t('profile.coachGuide.resume', 'Reprendre là où j’en étais'),
+        onPress: () => chooseGuide(() => tour.resumeTour({ pop: true })),
+        sousLigne: true,
+      }] : []),
+      // Guide Dirigeant : pas d'étape de visite, la ligne ne mènerait à rien.
+      ...(guideProfile?.steps?.some((/** @type {any} */ step) => step.review) ? [{
+        icon: Images.flag,
+        key: `${base}-review`,
+        label: t('profile.coachGuide.review', 'Revoir sans rien créer'),
+        onPress: () => chooseGuide(() => tour.startTour(guideKey, { review: true })),
+        sousLigne: true,
+      }] : []),
+      // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
+      ...(isGuideInProgress ? [] : [{
+        icon: Images.flag,
+        key: `${base}-bonus`,
+        label: t('profile.coachGuide.bonus', 'Faire un bonus'),
+        sousLigne: true,
+        // N10 : lesquels (B1 puis B2, `startTour` part du premier).
+        onPress: () => chooseGuide(() => tour.startTour(guideKey, {
+          fromMission: guideProfile?.bonusFromMission,
+        })),
+        value: guideProfile?.bonusDetail || t(
+          'profile.coachGuide.bonusDetail',
+          'Voir qui vient, puis convoquer pour un match',
+        ),
+      }]),
+      // GUIDE-RECOMMENCER (décision d'Adel 29/10 « 5- B ») : seule la progression
+      // repart de zéro, rien de ce qui a été créé n'est effacé ; une question d'abord.
+      {
+        icon: Images.flag,
+        key: `${base}-restart`,
+        label: t('profile.coachGuide.restart', 'Recommencer à zéro'),
+        onPress: () => Alert.alert(
+          t('profile.coachGuide.restartConfirm.title', 'Recommencer le guide ?'),
+          t(
+            'profile.coachGuide.restartConfirm.message',
+            'Ta progression repart de zéro. Rien de ce que tu as créé n’est effacé.',
+          ),
+          [
+            { style: 'cancel', text: t('profile.coachGuide.restartConfirm.cancel', 'Annuler') },
+            {
+              onPress: () => chooseGuide(() => tour.restartTour(guideKey)),
+              text: t('profile.coachGuide.restartConfirm.confirm', 'Recommencer'),
+            },
+          ],
+        ),
+        sousLigne: true,
+      },
+    ];
+  };
+  const guideRows = isGuideSupported() ? guideKeys.flatMap(guideRowsOf) : [];
+
   const accountNonLogoutRows = [
     // Garde-fou du 14/09 : pas de choix de langue tant que l anglais est fermé (production).
     ...(anglaisDisponible() ? languageRows : []),
@@ -1181,83 +1315,7 @@ function Profile({ navigation, route }) {
     // téléphone seulement (le site ne joue aucun tour).
     // GUIDE-RELANCE (3- A et 5- A) : déjà lancé, il ouvre un menu au lieu de tout
     // refaire en vrai ; en pause (« Plus tard »), une pastille le dit.
-    ...(guideKey && isGuideSupported() ? [{
-      accessoire: isGuideInProgress && tour.tourStatus === 'paused' ? (
-        <PastilleDEtat
-          testID="coachGuide-pause"
-          texte={t('profile.coachGuide.paused', 'En pause')}
-          ton="attente"
-        />
-      ) : null,
-      icon: Images.flag,
-      key: 'coachGuide',
-      label: t(guideProfile?.accountLabelKey, 'Guide entraîneur·e'),
-      onPress: () => {
-        if (!tour.hasGuideHistory) {
-          tour.startTour(guideKey);
-          return;
-        }
-        setIsGuideChoiceOpen((ouvert) => {
-          menuVientDOuvrirRef.current = !ouvert;
-          return !ouvert;
-        });
-      },
-    }] : []),
-    ...(guideKey && isGuideSupported() && isGuideChoiceOpen
-      && tour.hasGuideHistory ? [
-        ...(isGuideInProgress ? [{
-          icon: Images.flag,
-          key: 'coachGuide-resume',
-          label: t('profile.coachGuide.resume', 'Reprendre là où j’en étais'),
-          onPress: () => chooseGuide(() => tour.resumeTour({ pop: true })),
-          sousLigne: true,
-        }] : []),
-        // Guide Dirigeant : pas d'étape de visite, la ligne ne mènerait à rien.
-        ...(guideProfile?.steps?.some((/** @type {any} */ step) => step.review) ? [{
-          icon: Images.flag,
-          key: 'coachGuide-review',
-          label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
-          onPress: () => chooseGuide(() => tour.startTour(guideKey, { review: true })),
-          sousLigne: true,
-        }] : []),
-        // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
-        ...(isGuideInProgress ? [] : [{
-          icon: Images.flag,
-          key: 'coachGuide-bonus',
-          label: t('profile.coachGuide.bonus', 'Faire un bonus'),
-          sousLigne: true,
-          // N10 : lesquels (B1 puis B2, `startTour` part du premier).
-          onPress: () => chooseGuide(() => tour.startTour(guideKey, {
-            fromMission: guideProfile?.bonusFromMission,
-          })),
-          value: guideProfile?.bonusDetail || t(
-            'profile.coachGuide.bonusDetail',
-            'Voir qui vient, puis convoquer pour un match',
-          ),
-        }]),
-        // GUIDE-RECOMMENCER (décision d'Adel 29/10 « 5- B ») : seule la progression
-        // repart de zéro, rien de ce qui a été créé n'est effacé ; une question d'abord.
-        {
-          icon: Images.flag,
-          key: 'coachGuide-restart',
-          label: t('profile.coachGuide.restart', 'Recommencer à zéro'),
-          onPress: () => Alert.alert(
-            t('profile.coachGuide.restartConfirm.title', 'Recommencer le guide ?'),
-            t(
-              'profile.coachGuide.restartConfirm.message',
-              'Ta progression repart de zéro. Rien de ce que tu as créé n’est effacé.',
-            ),
-            [
-              { style: 'cancel', text: t('profile.coachGuide.restartConfirm.cancel', 'Annuler') },
-              {
-                onPress: () => chooseGuide(() => tour.restartTour(guideKey)),
-                text: t('profile.coachGuide.restartConfirm.confirm', 'Recommencer'),
-              },
-            ],
-          ),
-          sousLigne: true,
-        },
-      ] : []),
+    ...guideRows,
     {
       icon: Images.envelope,
       key: 'contactSupport',

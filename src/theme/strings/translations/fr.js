@@ -2059,6 +2059,9 @@ export default {
     FAILED_TO_JOIN_CHAT: 'Impossible de rejoindre le chat.',
     FAILED_TO_SEND_MESSAGE: 'Impossible d\'envoyer le message.',
     MESSAGE_TOO_LONG: 'Le message est trop long.',
+    // RATTRAPAGE (172 C) — age inconnu : ce qui debloque, sans dire « mineur ».
+    MINOR_DIRECT_CHAT_AGE_UNKNOWN: "L'âge de cette personne n'est pas connu : "
+      + 'elle doit ajouter sa date de naissance pour recevoir des messages privés.',
     // CONVAVERT — LE REFUS DU GARDE-FOU DES MINEURS, ENFIN LISIBLE.
     // Le serveur pose ce code pour les deux ages (moins de 13 ans sans le
     // compte du parent, et 13-17 ans hors encadrants du club) avec une phrase
@@ -18823,6 +18826,8 @@ export default {
     coachGuide: {
       bonus: 'Faire un bonus',
       bonusDetail: 'Voir qui vient, puis convoquer pour un match',
+      // GUIDE-MENU-ROLE : guide Dirigeant sans club (`canStart`), passage d'un guide à l'autre.
+      needsClub: 'S’ouvre dès que ton club est rattaché à ton compte.',
       paused: 'En pause',
       restart: 'Recommencer à zéro',
       restartConfirm: {
@@ -18832,7 +18837,12 @@ export default {
         title: 'Recommencer le guide ?',
       },
       resume: 'Reprendre là où j’en étais',
-      review: 'Revoir le guide sans rien créer',
+      review: 'Revoir sans rien créer',
+      switchConfirm: {
+        confirm: 'Lancer',
+        message: 'Le guide en pause s’arrête et sa progression repart de zéro. '
+          + 'Rien de ce que tu as créé n’est effacé.',
+      },
     },
     contactSupport: {
       ecrire: 'Écrire à l’assistance',
@@ -25591,9 +25601,10 @@ export default {
         + 'rien.',
       'b3-few': 'Un groupe demande au moins 2 autres membres, et ton club n’en a pas encore '
         + 'assez. Reviens ici quand ils auront rejoint le club. On continue.',
-      'b3-name': 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
-        + 'messages » pour que seuls les admins écrivent.',
+      'b3-name': 'Donne-lui un nom. C’est facultatif.',
       'b3-new': 'Touche ce bouton pour une nouvelle discussion.',
+      'b3-perms': 'Dans « Autorisations du groupe », coupe « Envoyer des messages » pour que seuls '
+        + 'les admins écrivent.',
       'b3-sel': 'Coche au moins 2 membres, ceux marqués « Exemple » suffisent, puis « Suivant ». '
         + 'C’est une simulation : rien n’est créé.',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '
