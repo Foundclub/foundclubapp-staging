@@ -11,6 +11,10 @@ import {
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { getActiveTrial } from '@/domains/subscription/subscriptionBilling';
+import {
+  getCoveringEntitlement,
+  isGiftEntitlement,
+} from '@/domains/subscription/subscriptionDecision';
 import isGuideSupported from '@/domains/tour/guideSupport';
 import { getTourProfile } from '@/domains/tour/tourCatalog';
 import { storage, useAppContext } from '@/store/appContext';
@@ -38,8 +42,11 @@ function Welcome({ navigation }) {
   const insets = useSafeAreaInsets();
   const [{ auth }] = useAppContext();
   const {
+    clubVerificationSummary,
+    entitlementsSummary,
     getPostOnboardingHomeRoute,
     refetchUserData,
+    subscriptionAccessLevel,
     subscriptionSummary,
     userData,
     userDataError,
@@ -51,6 +58,39 @@ function Welcome({ navigation }) {
     .toLowerCase() === 'fc_trial_club';
   const { startTour } = useTour();
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  // FINITIONS-T8 point 7 (« 201 A », 10/11) : un coach dont le CLUB est couvert par le cadeau du
+  // dirigeant (même juge que le bandeau de quota) le lit ici, au lieu de « Commence gratuitement ».
+  const couverture = roleKey === 'coach' && !isClubGift ? getCoveringEntitlement({
+    clubDocumentId: String(
+      clubVerificationSummary?.clubDocumentId || userData?.club?.documentId || '',
+    ).trim(),
+    entitlementsSummary,
+    subscriptionAccessLevel,
+    subscriptionSummary,
+    userDocumentId: userData?.documentId,
+  }) : null;
+  const isCoachClubGift = String(couverture?.scopeType || '').toUpperCase() === 'CLUB'
+    && isGiftEntitlement(couverture);
+  let sousTitre = t(
+    roleKey === 'president'
+      ? 'welcome.subscription.presidentSubtitle'
+      : 'welcome.subscription.coachSubtitle',
+    roleKey === 'president'
+      ? 'Commence gratuitement. Débloque la suite quand ton club grandit.'
+      : 'Commence gratuitement. Débloque la suite quand ton équipe grandit.',
+  );
+  let kickerGratuit = t('welcome.subscription.free.kicker', "Aujourd'hui");
+  if (isCoachClubGift) {
+    sousTitre = t(
+      'welcome.subscription.coachClubGiftSubtitle',
+      'Ton club a l’offre Club en cadeau : tout est inclus pour ton équipe.',
+    );
+    kickerGratuit = t('welcome.subscription.free.kickerAfterClubGift', 'Après le cadeau');
+  }
+  if (isClubGift) {
+    sousTitre = t('welcome.subscription.giftSubtitle', 'Offre Club offerte 7 jours');
+    kickerGratuit = t('welcome.subscription.free.kickerAfterGift', 'Après les 7 jours');
+  }
   const canShowSubscriptionWelcome = roleKey === 'coach'
     || roleKey === 'president'
     || roleKey === 'superAdmin';
@@ -165,9 +205,7 @@ function Welcome({ navigation }) {
       fillColor: withAlpha(Colors.neutral00, 0.05),
       isReached: true,
       key: 'free',
-      kicker: isClubGift
-        ? t('welcome.subscription.free.kickerAfterGift', 'Après les 7 jours')
-        : t('welcome.subscription.free.kicker', "Aujourd'hui"),
+      kicker: kickerGratuit,
       kickerColor: Colors.success200,
       title: t('welcome.subscription.free.title', 'Commence sans payer'),
     },
@@ -406,16 +444,7 @@ function Welcome({ navigation }) {
               {t('welcome.subscription.title', 'Bienvenue dans FoundClub')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {isClubGift
-                ? t('welcome.subscription.giftSubtitle', 'Offre Club offerte 7 jours')
-                : t(
-                  roleKey === 'president'
-                    ? 'welcome.subscription.presidentSubtitle'
-                    : 'welcome.subscription.coachSubtitle',
-                  roleKey === 'president'
-                    ? 'Commence gratuitement. Débloque la suite quand ton club grandit.'
-                    : 'Commence gratuitement. Débloque la suite quand ton équipe grandit.',
-                )}
+              {sousTitre}
             </Text>
           </View>
           {/* La cible est ZERO defilement : le ScrollView n'est qu'un filet pour

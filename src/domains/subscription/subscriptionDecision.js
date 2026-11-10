@@ -1450,6 +1450,15 @@ export const getCoveredTeamCount = (entitlementsSummary, subscriptionSummary) =>
  * @param {string} [params.userDocumentId]
  * @returns {any | null}
  */
+/**
+ * FINITIONS-T8 (point 7) — un droit OFFERT par le cadeau de bienvenue (plan `fc_trial_…`), pas
+ * payé : le bandeau de quota le dit « en cadeau », la Bienvenue du coach aussi.
+ * @param {any} entitlement - Un droit, typiquement celui de `getCoveringEntitlement`.
+ * @returns {boolean} Vrai pour un droit offert.
+ */
+export const isGiftEntitlement = (entitlement) => String(entitlement?.subscriptionPlanCode || '')
+  .toLowerCase().startsWith('fc_trial_');
+
 export const getCoveringEntitlement = ({
   clubDocumentId,
   entitlementsSummary,

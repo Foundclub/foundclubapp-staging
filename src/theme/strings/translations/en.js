@@ -26536,11 +26536,13 @@ export default {
         kicker: 'When your club gets organised',
         title: 'Manage the whole club',
       },
+      coachClubGiftSubtitle: 'Your club has the Club plan as a gift: everything is included for your team.',
       free: {
         bullet1: '1 free team, facility and partner',
         bullet2: '2 free events, 1 free match and 1 free ad',
         bullet3: 'Unlimited chat, forever',
         kicker: 'Today',
+        kickerAfterClubGift: 'After the gift',
         kickerAfterGift: 'After the 7 days',
         title: 'Start for free',
       },

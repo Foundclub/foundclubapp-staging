@@ -71,11 +71,20 @@ jest.mock('@/domains/auth/authUseCases', () => ({
 }));
 
 const mockSubscriptionSummary = { current: /** @type {any} */ (null) };
+// FINITIONS-T8 point 7 : la couverture du club (droits du compte, niveau d'accès).
+const mockCouverture = {
+  current: /** @type {{ entitlementsSummary: any; subscriptionAccessLevel: any }} */ ({
+    entitlementsSummary: null, subscriptionAccessLevel: null,
+  }),
+};
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
+    clubVerificationSummary: null,
+    entitlementsSummary: mockCouverture.current.entitlementsSummary,
     getPostOnboardingHomeRoute: () => 'HomeTab',
     refetchUserData: jest.fn(),
+    subscriptionAccessLevel: mockCouverture.current.subscriptionAccessLevel,
     subscriptionSummary: mockSubscriptionSummary.current,
     userData: { documentId: 'user-d23', role: { name: 'Entraineur' } },
     userDataError: null,
@@ -485,6 +494,45 @@ describe('Bienvenue pendant le cadeau de 7 jours', () => {
     const lus = textes(rendre().tree).join(' | ');
     expect(lus).toContain('Commence gratuitement');
     expect(lus).not.toContain('Offre Club offerte');
+  });
+});
+
+// FINITIONS-T8 point 7 (décision « 201 A », 10/11) : un COACH dont le club est couvert par le
+// cadeau de bienvenue du dirigeant (droit de CLUB `fc_trial_club`, payé par un autre) le lit sur la
+// Bienvenue, au lieu de « Commence gratuitement » et « 1 équipe offerte » sans nuance.
+describe('Bienvenue du coach dont le club a le cadeau Club', () => {
+  const couvertPar = (/** @type {string} */ planCode) => ({
+    entitlementsSummary: [{
+      paidBy: { documentId: 'dirigeant-1', firstname: 'Karim', lastname: 'Benali' },
+      scopeType: 'CLUB',
+      subscriptionPlanCode: planCode,
+    }],
+    subscriptionAccessLevel: 'CLUB',
+  });
+  afterEach(() => {
+    mockCouverture.current = { entitlementsSummary: null, subscriptionAccessLevel: null };
+    mockRole.current = 'coach';
+  });
+
+  it('coach couvert par le cadeau Club : il le lit, et la carte gratuite vient après', () => {
+    mockRole.current = 'coach';
+    mockCouverture.current = couvertPar('fc_trial_club');
+    const lus = textes(rendre().tree).join(' | ');
+    expect(lus).toContain('Ton club a l’offre Club en cadeau : tout est inclus pour ton équipe.');
+    expect(lus).not.toContain('Commence gratuitement');
+    expect(lus).toContain('Après le cadeau');
+  });
+
+  it('témoin : offre Club PAYÉE, ou rien : la Bienvenue du coach ne change pas', () => {
+    mockRole.current = 'coach';
+    mockCouverture.current = couvertPar('fc_club_monthly');
+    let lus = textes(rendre().tree).join(' | ');
+    expect(lus).toContain('Commence gratuitement');
+    expect(lus).not.toContain('en cadeau');
+    mockCouverture.current = { entitlementsSummary: null, subscriptionAccessLevel: null };
+    lus = textes(rendre().tree).join(' | ');
+    expect(lus).toContain('Commence gratuitement');
+    expect(lus).toContain("Aujourd'hui");
   });
 });
 

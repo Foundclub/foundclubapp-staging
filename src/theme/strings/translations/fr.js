@@ -28240,11 +28240,13 @@ export default {
         kicker: "Quand ton club s'organise",
         title: 'Pilote tout le club',
       },
+      coachClubGiftSubtitle: 'Ton club a l’offre Club en cadeau : tout est inclus pour ton équipe.',
       free: {
         bullet1: '1 équipe, 1 installation, 1 partenaire offerts',
         bullet2: '2 événements, 1 match et 1 annonce offerts',
         bullet3: 'Chat illimité, pour toujours',
         kicker: "Aujourd'hui",
+        kickerAfterClubGift: 'Après le cadeau',
         kickerAfterGift: 'Après les 7 jours',
         title: 'Commence sans payer',
       },
