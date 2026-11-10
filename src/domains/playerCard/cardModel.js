@@ -332,21 +332,25 @@ export const countCardFill = (user = {}) => [
 ].filter(Boolean).length;
 
 /**
- * CARTECODE Q5 B — la rareté de la carte joueur : remplissage 50, parcours 15 (5 par club
- * déclaré, jusqu'à 3), vie dans FoundClub 35 (membre d'une équipe 10, 5 matchs 10, 20 matchs
- * 15 de plus). Jamais les présences, les notes ni les avis. Paliers : < 40 commune,
- * 40-64 rare, 65-84 épique, ≥ 85 légendaire.
+ * La rareté de la carte joueur — barème d'Adel « 150 A » (06/11/2026), qui remplace celui de
+ * CARTECODE Q5 B : cases remplies jusqu'à 40, +15 pour une carte complète (les 13 cases),
+ * parcours 15 dès le 1er club déclaré, membre d'une équipe 15, 5 matchs +10, 20 matchs +5.
+ * Jamais les présences, les notes ni les avis. Paliers inchangés : < 40 commune, 40-64 rare,
+ * 65-84 épique, ≥ 85 légendaire. D'où : carte complète = Rare (55) ; avec le parcours = Épique
+ * (70) ; avec une équipe en plus = Légendaire (85), sans aucun match.
  * @param {{ clubCount?: number, fill?: number, isTeamMember?: boolean, matchCount?: number }} args
  * @returns {{ rarity: string, score: number }}
  */
 export const computeCardRarity = ({
   clubCount = 0, fill = 0, isTeamMember = false, matchCount = 0,
 } = {}) => {
-  const score = Math.round((Math.min(fill, CARD_FILL_TOTAL) / CARD_FILL_TOTAL) * 50)
-    + (Math.min(clubCount, 3) * 5)
-    + (isTeamMember ? 10 : 0)
+  const cases = Math.min(fill, CARD_FILL_TOTAL);
+  const score = Math.round((cases / CARD_FILL_TOTAL) * 40)
+    + (cases === CARD_FILL_TOTAL ? 15 : 0)
+    + (clubCount >= 1 ? 15 : 0)
+    + (isTeamMember ? 15 : 0)
     + (matchCount >= 5 ? 10 : 0)
-    + (matchCount >= 20 ? 15 : 0);
+    + (matchCount >= 20 ? 5 : 0);
   const palier = RARITY_FLOORS.find(([seuil]) => score >= seuil);
   return { rarity: palier ? palier[1] : RARITY.COMMON, score };
 };
