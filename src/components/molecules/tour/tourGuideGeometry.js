@@ -443,7 +443,14 @@ export const avoidTargets = ({
 }) => {
   const crosses = (/** @type {number} */ top, /** @type {number} */ size) => obstacles
     .some((rect) => top < rect.y + rect.height && top + size > rect.y);
-  if (!obstacles.length || !crosses(position.top, Math.min(bubbleHeight, maxHeight))) {
+  // GUIDES-SITE-CORR famille 3 (tournée du site, 09/11, S25, S08, S03) : une bulle bornée à sa
+  // place (entre l'en-tête et la cible) s'y écrasait, 2 lignes sur 4 et « Suivant » coupé, alors
+  // qu'un autre trou la tenait entière. Écrasée, elle va dans un trou qui la tient ; sinon elle
+  // reste et défile, comme avant.
+  const isSqueezed = maxHeight + 1 < bubbleHeight;
+  const isCrossing = obstacles.length > 0
+    && crosses(position.top, Math.min(bubbleHeight, maxHeight));
+  if (!obstacles.length || (!isCrossing && !isSqueezed)) {
     return { maxHeight: null, position };
   }
   const busy = obstacles
@@ -467,6 +474,8 @@ export const avoidTargets = ({
     ? open.find((gap) => Math.abs(gap.end - (primary.y - HEADER_GAP)) < 2)
     : null;
   const fitting = open.filter((gap) => size(gap) >= bubbleHeight);
+  // Écrasée sans rien couvrir : seul un trou qui la tient entière vaut le déplacement.
+  if (!isCrossing && !fitting.length) return { maxHeight: null, position };
   let gap = null;
   if (below && size(below) >= bubbleHeight) gap = below;
   else if (above && size(above) >= bubbleHeight) gap = above;

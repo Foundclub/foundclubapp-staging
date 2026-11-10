@@ -1,4 +1,4 @@
-import { planSiteReveal } from '@/components/molecules/tour/tourGuideGeometry';
+import { avoidTargets, planSiteReveal } from '@/components/molecules/tour/tourGuideGeometry';
 
 // GUIDES-SITE-CORR (tournée du site du 09/11) : ce que le défilement automatique du site ramène,
 // et vers quel bord. Zone utile 0 → 844 (390), puis 0 → 900 (1360).
@@ -38,5 +38,46 @@ describe('planSiteReveal', () => {
 
   test('tout est à l écran : rien', () => {
     expect(planSiteReveal([{ box: { height: 48, y: 400 }, id: 'b' }], 0, 844)).toBeNull();
+  });
+});
+
+// Famille 3 (S25, D 390 rangs 049-050) : bulle « en haut », bornée entre l'en-tête et le
+// formulaire, 2 lignes sur 4 et « Suivant » coupé ; la place sous le formulaire la tenait entière.
+describe('avoidTargets : une bulle écrasée va là où elle tient', () => {
+  const champs = { height: 300, width: 360, x: 15, y: 160 };
+  test('écrasée (90 pour 150), elle passe sous la cible, entière', () => {
+    const place = avoidTargets({
+      bottomLimit: 780,
+      bubbleHeight: 150,
+      maxHeight: 90,
+      obstacles: [champs],
+      position: {
+        arrow: 'none', left: 14, top: 60, width: 362,
+      },
+      primary: champs,
+      topLimit: 60,
+    });
+    expect(place?.position.top).toBeGreaterThanOrEqual(champs.y + champs.height);
+    expect(place?.maxHeight).toBeGreaterThanOrEqual(150);
+  });
+
+  test('écrasée sans autre trou assez grand : elle reste où elle est', () => {
+    const place = avoidTargets({
+      bottomLimit: 520,
+      bubbleHeight: 150,
+      maxHeight: 90,
+      obstacles: [champs],
+      position: {
+        arrow: 'none', left: 14, top: 60, width: 362,
+      },
+      primary: champs,
+      topLimit: 60,
+    });
+    expect(place).toEqual({
+      maxHeight: null,
+      position: {
+        arrow: 'none', left: 14, top: 60, width: 362,
+      },
+    });
   });
 });
