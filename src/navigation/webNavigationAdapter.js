@@ -85,6 +85,13 @@ const carryParams = (routeName, params = {}) => {
 };
 
 /**
+ * GUIDES-SITE-CORR S30 (10/11) : le pont de navigation du site (`WebNavigationBridge`, chemin du
+ * guide) garde les objets de la même façon ; sans eux, la convocation d'exemple du bonus 2 de
+ * l'Entraîneur arrivait sans ses joueurs « Exemple ».
+ */
+export const carryWebParams = carryParams;
+
+/**
  * Les parametres gardes sous cette cle, ou `null` (cle absente, inconnue, ou
  * oubliee par un rechargement).
  * @param {string | undefined | null} carry

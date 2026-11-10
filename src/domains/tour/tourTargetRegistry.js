@@ -12,7 +12,7 @@
 // récente des ancres actives (son écran a le focus, lu au moment de mesurer).
 /**
  * @typedef {{ clipTo?: string; inSheet?: boolean; isActive?: () => boolean;
- *   measure: TourMeasure; reveal?: () => void }} TourEntry
+ *   measure: TourMeasure; reveal?: (options?: any) => void }} TourEntry
  */
 /** @type {Map<string, TourEntry[]>} */
 const targets = new Map();
@@ -181,13 +181,15 @@ export const measureTourTargetClipSide = async (id) => {
  * GUIDES-SITE (09/11) : sur le site, l'ancre sait se ramener elle-même à l'écran
  * (`scrollIntoView` du navigateur, qui fait défiler la page et tous ses conteneurs).
  * @param {string} id
+ * @param {{ block?: string; marginBottom?: number; marginTop?: number }} [options] - Bord visé
+ *   (`center`, `start`, `nearest`) et marges à garder (en-tête, barre d'onglets).
  * @returns {boolean} Vrai si l'ancre a été ramenée.
  */
-export const revealTourTarget = (id) => {
+export const revealTourTarget = (id, options) => {
   const reveal = activeEntry(id)?.reveal;
   if (!reveal) return false;
   try {
-    reveal();
+    reveal(options);
     return true;
   } catch (error) {
     return false;

@@ -49,6 +49,7 @@ import {
   isOnScreen,
   isUnderHeader,
   placeBubble,
+  planSiteReveal,
   slotBubbleTop,
   stableHeight,
   toAbsoluteStyle,
@@ -249,6 +250,9 @@ function TourGuideLayer() {
   const [route, setRoute] = useState(/** @type {string | null} */ (null));
   const routeRef = useRef(/** @type {string | null} */ (null));
   const slotSeenOnStepRef = useRef(/** @type {string | null | undefined} */ (null));
+  // FINITIONS-T8, point 2 : étape où la bulle, faute de place au-dessus du clavier, s'est réduite
+  // (gardé jusqu'à la fermeture du clavier : sinon elle alternerait entre ses deux tailles).
+  const keyboardSqueezeRef = useRef('');
   // G93 : le dernier refus de l'écran (offre), pour la bulle `refused` d'un sous-guide.
   const [refusalKey, setRefusalKey] = useState(/** @type {string | null} */ (null));
   useEffect(() => subscribeToGuidanceSignals((/** @type {any} */ signal) => {
@@ -277,6 +281,8 @@ function TourGuideLayer() {
   // GUIDE-D-CORR-2 : défilement automatique vers la cible (essais par étape, animation en cours).
   const autoScrollRef = useRef({ key: '', tries: 0 });
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  // GUIDES-SITE-CORR : étape où le site n'a plus rien à faire défiler (cible assez visible).
+  const [settledKey, setSettledKey] = useState('');
   const autoScrollTimerRef = useRef(/** @type {any} */ (null));
   const pulse = useRef(new Animated.Value(0)).current;
   const appear = useRef(new Animated.Value(0)).current;
@@ -520,8 +526,12 @@ function TourGuideLayer() {
     || visibleRects[id].height < rects[id].height - 1
     || rects[id].y + rects[id].height > height - 2
   ));
+  // GUIDES-SITE-CORR S14, S15 (tournée du 09/11) : sur le site, « Suivant » ou « Ouvrir la
+  // campagne » restaient sous le bas de l'écran tant qu'une AUTRE cible de l'étape y était.
+  const offScreenOnSite = variant.targets.some((id) => rects[id] && !measuredTargets.includes(id)
+    && !DOCK_IDS.includes(id) && !IN_HEADER_IDS.includes(id) && canRevealTourTarget(id));
   const needsScroll = isStepVisible && !sheetGuide && !keyboard && !isOffStepRoute
-    && (isAnyTargetCut || Boolean(!primary && (offTarget || clipSide)));
+    && (isAnyTargetCut || offScreenOnSite || Boolean(!primary && (offTarget || clipSide)));
   const scroller = needsScroll ? getActiveTourScroller() : null;
   // GUIDES-SITE : sur le site, l'ancre se ramène elle-même (`scrollIntoView`), sans zone branchée.
   const revealId = needsScroll
@@ -543,6 +553,9 @@ function TourGuideLayer() {
   }
   // Défilement automatique en cours ou à venir : la bulle ne demande rien au doigt.
   if (canAutoScroll) scrollHint = null;
+  // GUIDES-SITE-CORR : sur le site, la couche a jugé la cible assez visible (une longue liste
+  // dont le haut est à l'écran) : rien à demander au doigt non plus.
+  if (revealId && settledKey === autoScrollKey) scrollHint = null;
   // Feuille ouverte : rien n'est bloqué, la bulle reste en haut (la feuille est en bas).
   const withVeil = Boolean(primary) && currentStep?.veil !== false && !sheetGuide && !isOffStepRoute
     && !isTargetCut;
@@ -562,7 +575,10 @@ function TourGuideLayer() {
   // Recette L10 (l10-n8) : liste défilée, la mesure coupée par la liste n'est que la lamelle
   // restante de la place ; la bulle s'y réduisait à son en-tête. Coupée ou partie, elle flotte
   // sous l'en-tête.
-  const isSlotWhole = Boolean(slotRect) && isOnScreen(slotRect, width, height)
+  // GUIDES-SITE-CORR S20 (tournée du 09/11, a3) : sur le site, la page entière défile ; une place
+  // à moitié au-dessus de la fenêtre comptait entière, et la bulle s'y posait à y = -109.
+  const isSlotWhole = Boolean(slotRect)
+    && isOnScreen(slotRect, width, height, TOUR_BUBBLE_SLOT_HEIGHT - 1)
     && slotRect.height >= TOUR_BUBBLE_SLOT_HEIGHT - 1;
   const slot = isSlotWhole ? slotRect : null;
   if (slotRect) slotSeenOnStepRef.current = currentStep?.id;
@@ -610,9 +626,31 @@ function TourGuideLayer() {
     primary,
     topLimit: Math.max(insets.top + 4, (headerBottom ?? 0) + 6),
   });
-  const position = avoided ? avoided.position : placed;
-  const maxHeight = avoided?.maxHeight ?? placedRoom;
-  const hasBubbleRoom = Boolean(avoided) || !keyboard;
+  // FINITIONS-T8, point 2 (« Ajouter un coach », clavier ouvert, téléphone) : sans trou qui la
+  // tienne, la bulle attendait que le clavier se ferme, ou se coinçait au-dessus de lui (9 px de
+  // « Suivant » visibles). Elle se réduit à sa consigne et à son bouton, sous l'en-tête, comme dans
+  // les tunnels (FIN-GUIDE, point 3) ; le bas utile s'arrête au clavier.
+  const squeezeKey = keyboard ? String(currentStep?.id || '') : '';
+  if (!keyboard) keyboardSqueezeRef.current = '';
+  const canSqueeze = Boolean(keyboard && !isCompact && !slot && !sheetGuide);
+  if (canSqueeze && (!avoided || (avoided.maxHeight ?? placedRoom) + 1 < wantedHeight)) {
+    keyboardSqueezeRef.current = squeezeKey;
+  }
+  const isKeyboardSqueeze = canSqueeze && Boolean(squeezeKey)
+    && keyboardSqueezeRef.current === squeezeKey;
+  const isCompactBubble = isCompact || isKeyboardSqueeze;
+  const squeezeTop = Math.max(insets.top + 4, (headerBottom ?? 0) + 6);
+  let position = avoided ? avoided.position : placed;
+  let maxHeight = avoided?.maxHeight ?? placedRoom;
+  if (isKeyboardSqueeze) {
+    position = {
+      arrow: 'none', arrowX: 0, ...wideBubbleFrame(width), top: squeezeTop,
+    };
+    maxHeight = Math.max(MIN_TOUCH, keyboardTop - squeezeTop - 4);
+  }
+  const hasBubbleRoom = isKeyboardSqueeze
+    ? compactBubbleFits(/** @type {any} */ (keyboard).screenY)
+    : Boolean(avoided) || !keyboard;
   // G93 (rejeu, captures m3 et m7) : bulle en haut, la tête de la cible est sous elle
   // (« Extérieur » après Annuler) : on la retrouve vers le haut, même si son bas dépasse aussi.
   const bubbleBottom = position.top + Math.min(wantedHeight, maxHeight);
@@ -653,6 +691,7 @@ function TourGuideLayer() {
   // grande), puis la bulle se pose ; la couche se retire le temps de l'animation.
   const autoScrollTargets = variant.targets.join('|');
   const dockTop = dock ? dock.y : null;
+  const isSlotStep = Boolean(currentStep?.bubbleSlot && !sheetGuide && !keyboard);
   useEffect(() => {
     if (!canAutoScroll || isAutoScrolling) return undefined;
     let cancelled = false;
@@ -665,8 +704,35 @@ function TourGuideLayer() {
         setIsAutoScrolling(false);
       }, AUTO_SCROLL_MS);
     };
-    if (revealId && revealTourTarget(revealId)) {
-      pause();
+    if (revealId) {
+      // GUIDES-SITE-CORR (tournée du 09/11, S10, S11, S14, S15, S19, S20, S26, S31) : le site
+      // choisit QUOI ramener et COMMENT, sur les mesures entières des cibles.
+      const order = [
+        ...(isSlotStep ? [SLOT_ID] : []),
+        ...autoScrollTargets.split('|').filter(Boolean),
+      ].filter((id) => canRevealTourTarget(id));
+      Promise.all(order.map(measureTourTargetRaw)).then((found) => {
+        if (cancelled) return;
+        const origin = originRef.current;
+        const areaTop = Math.max(fixedHeaderBottom ?? 0, insets.top);
+        const areaBottom = Math.min(dockTop ?? height, height - insets.bottom);
+        const boxes = order.map((id, index) => ({
+          box: found[index] ? toLayerFrame(/** @type {any} */ (found[index]), origin) : null,
+          id,
+        })).filter((entry) => entry.box);
+        const plan = planSiteReveal(/** @type {any} */ (boxes), areaTop, areaBottom);
+        if (!plan) {
+          setSettledKey(autoScrollKey);
+          return;
+        }
+        const target = plan.block === 'start' && isSlotStep && plan.id !== SLOT_ID
+          && canRevealTourTarget(SLOT_ID) ? SLOT_ID : plan.id;
+        if (revealTourTarget(target, {
+          block: plan.block,
+          marginBottom: height - areaBottom + AUTO_SCROLL_MARGIN,
+          marginTop: areaTop + AUTO_SCROLL_MARGIN,
+        })) pause();
+      });
       return () => { cancelled = true; };
     }
     if (!scroller) return undefined;
@@ -699,7 +765,7 @@ function TourGuideLayer() {
     return () => { cancelled = true; };
   }, [
     autoScrollKey, autoScrollTargets, canAutoScroll, dockTop, fixedHeaderBottom, height,
-    insets.bottom, insets.top, isAutoScrolling, revealId, scroller,
+    insets.bottom, insets.top, isAutoScrolling, isSlotStep, revealId, scroller,
   ]);
   useEffect(() => () => {
     if (autoScrollTimerRef.current) clearTimeout(autoScrollTimerRef.current);
@@ -741,7 +807,7 @@ function TourGuideLayer() {
     : currentStep.nextLabel || null;
   if (isLost) buttonLabel = canReturn ? t('tourGuide.lostResume', 'Reprendre') : null;
   // Plafond 1,3, puis ce qui tient au-dessus de la cible (jamais sous 1).
-  const fontScale = isCompact
+  const fontScale = isCompactBubble
     ? 1
     : Math.max(1, Math.min(windowSize.fontScale || 1, MAX_FONT_SCALE, fitScale));
   /**
@@ -963,7 +1029,7 @@ function TourGuideLayer() {
           style={{ flexGrow: 0 }}
           testID={__DEV__ ? 'tour.bubble.scroll' : undefined}
         >
-          {isCompact ? null : (
+          {isCompactBubble ? null : (
           <View style={{ alignItems: 'flex-start', columnGap: 8, flexDirection: 'row' }}>
             <View style={{
               alignItems: 'center', columnGap: 8, flex: 1, flexDirection: 'row', marginBottom: 6,

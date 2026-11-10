@@ -133,7 +133,9 @@ export const B1_STEPS = [
   )),
   Object.defineProperties(campaignStep('c6', () => t(
     'c6',
-    'Relis chaque bloc, puis touche le bouton : simulation, rien n’est envoyé.',
+    // GUIDES-SITE-CORR S15 : le bouton est loin sous les blocs, la bulle le nomme.
+    'Relis chaque bloc, puis touche « Ouvrir la campagne », tout en bas : simulation, rien n’est '
+      + 'envoyé.',
   )), Object.getOwnPropertyDescriptors({
     advanceOn: [
       { key: 'licenseCampaign.open.example', type: 'interaction' },

@@ -25374,6 +25374,8 @@ export default {
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
       'm2-pick-next': 'Continuer',
+      'm2-pick-site': 'Envoie-le sur le groupe de ton équipe : la fenêtre de partage de ton '
+        + 'ordinateur s’ouvre ; sinon le message est copié, colle-le dans ton groupe.',
       'm2-sent': 'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le partager.',
       'm2-sent-next': 'Oui, c’est envoyé',
       'm2-share': 'Le plus simple : un lien d’invitation.',
@@ -25623,7 +25625,8 @@ export default {
         + 'Suivant.',
       c4: 'Facultatif : demande un document, un certificat médical par exemple. Tu peux passer.',
       c5: 'Les relances partent seules jusqu’au paiement. Leur cadence se règle ici. Puis Suivant.',
-      c6: 'Relis chaque bloc, puis touche le bouton : simulation, rien n’est envoyé.',
+      c6: 'Relis chaque bloc, puis touche « Ouvrir la campagne », tout en bas : simulation, rien '
+        + 'n’est envoyé.',
       close: {
         bonus: 'BONUS',
         club: 'Infos du club enregistrées',
@@ -25663,6 +25666,7 @@ export default {
         + 'Passe cette partie.',
       'm1-facadd': 'Ajoute une installation.',
       'm1-fback': 'Puis retourne sur la fiche du club.',
+      'm1-fback-site': 'Puis retourne sur la fiche du club : touche l’onglet entouré.',
       'm1-ff2': 'Conflit de créneaux : une demande à valider, ou réservée tout de suite.',
       'm1-ff2-cap': 'Capacité : combien d’équipes peuvent l’utiliser en même temps.',
       'm1-ff2-color': 'Couleur : son repère dans le planning.',
@@ -25684,6 +25688,8 @@ export default {
       'm1-name': 'Le nom du club, tel qu’il apparaît partout. Corrige-le si besoin.',
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
       'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
+      'm1-parrows-month': 'Les flèches en haut du calendrier changent de mois. Essaie celle de '
+        + 'droite.',
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
       'm1-partners-have': '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en '
         + 'ajoute un autre plus tard. On passe à tes installations.',
@@ -25700,8 +25706,8 @@ export default {
         + 'club : touche-le.',
       'm1-pclose': 'Ton affiche reste disponible sur la fiche du club. Ferme-la avec la croix '
         + 'pour continuer.',
-      'm1-pdemo': 'Ton planning est encore vide : on y a mis quelques événements d’exemple pour '
-        + 'te montrer. Ils disparaissent à la fin du guide.',
+      'm1-pdemo': 'Voici ton planning, avec quelques événements d’exemple ajoutés pour te montrer. '
+        + 'Ils disparaissent à la fin du guide.',
       'm1-pempty': 'Une période sans événement s’affiche comme ça. Les créneaux de tes coachs '
         + 'apparaîtront ici automatiquement.',
       'm1-pfields': 'Change le titre, l’accroche, les sports ou le texte sous le QR code. Laisse '

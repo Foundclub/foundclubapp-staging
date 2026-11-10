@@ -1703,3 +1703,26 @@ describe('GUIDE-D-QUOTA-CLUB — le partenaire offert deja la, dit au guide', ()
     expect(emitGuidanceAction).not.toHaveBeenCalledWith('sponsor.free.taken');
   });
 });
+
+// GUIDES-SITE-CORR famille 1 (tournée du site, 09/11, S01, S02, S07) : sur ordinateur, le hub
+// montre l'en-tête compact (ECRAN18-ENTETE) ; il ne portait aucune ancre du guide : « La carte de
+// ton club », « Modifier » et l'affiche restaient sans voile ni cadre à 1360.
+describe('GUIDES-SITE-CORR : les ancres du guide sur le hub de l ordinateur', () => {
+  afterEach(() => {
+    mockIsDesktop = false;
+  });
+
+  it('la carte, « Modifier » et l affiche portent leurs ancres, ordinateur et téléphone', () => {
+    [false, true].forEach((ordinateur) => {
+      mockIsDesktop = ordinateur;
+      const arbre = monter();
+      const ancres = arbre.root
+        .findAll((/** @type {any} */ noeud) => typeof noeud.props?.id === 'string'
+          && ['club.card', 'club.edit', 'club.poster'].includes(noeud.props.id)
+          && noeud.props?.children)
+        .map((/** @type {any} */ noeud) => noeud.props.id);
+      expect([ordinateur, [...new Set(ancres)].sort()])
+        .toEqual([ordinateur, ['club.card', 'club.edit', 'club.poster']]);
+    });
+  });
+});

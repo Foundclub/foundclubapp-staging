@@ -24316,6 +24316,8 @@ export default {
       'm2-more': "The team's actions are in this menu.",
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",
       'm2-pick-next': 'Continue',
+      'm2-pick-site': "Send it to your team's group chat: your computer's share window opens; "
+        + 'otherwise the message is copied, paste it into your group.',
       'm2-sent': 'Did you send it? If so, tap “Yes, it’s sent”. Otherwise, reopen this menu to share it.',
       'm2-sent-next': 'Yes, it’s sent',
       'm2-share': 'The easiest way: an invitation link.',
@@ -24558,7 +24560,8 @@ export default {
         + 'Next.',
       c4: 'Optional: ask for a document, such as a medical certificate. You can skip this.',
       c5: 'Reminders go out by themselves until payment. Set their pace here. Then Next.',
-      c6: 'Read each block, then tap the button: simulation, nothing is sent.',
+      c6: 'Read each block, then tap “Open the campaign” at the bottom: simulation, nothing is '
+        + 'sent.',
       close: {
         bonus: 'BONUS',
         club: 'Club details saved',
@@ -24596,6 +24599,7 @@ export default {
         + 'this part.',
       'm1-facadd': 'Add a facility.',
       'm1-fback': 'Then return to the club page.',
+      'm1-fback-site': 'Then return to the club page: tap the highlighted tab.',
       'm1-ff2': 'Slot conflict: a request to approve, or booked straight away.',
       'm1-ff2-cap': 'Capacity: how many teams can use it at the same time.',
       'm1-ff2-color': 'Colour: its marker in the schedule.',
@@ -24616,6 +24620,8 @@ export default {
       'm1-name': 'The club name, as it appears everywhere. Correct it if needed.',
       'm1-padd': 'Add your first partner with “+”.',
       'm1-parrows': 'The arrows change the period. Try the right one.',
+      'm1-parrows-month': 'The arrows at the top of the calendar change the month. Try the right '
+        + 'one.',
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
       'm1-partners-have': '2/5 · You already have your partner: it is in this list. “+” adds '
         + 'another one later. On to your facilities.',
@@ -24632,7 +24638,7 @@ export default {
         + 'tap it.',
       'm1-pclose': 'Your poster stays available on the club page. Close it with the cross to '
         + 'continue.',
-      'm1-pdemo': 'Your schedule is still empty: we’ve added a few sample events to show you. '
+      'm1-pdemo': 'Here is your schedule, with a few sample events added to show you. '
         + 'They disappear at the end of the guide.',
       'm1-pempty': 'A period with no events looks like this. Your coaches’ slots will appear here '
         + 'automatically.',
