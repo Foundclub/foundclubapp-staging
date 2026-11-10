@@ -369,17 +369,16 @@ const textesDesAlertes = () => /** @type {any} */ (Alert.alert).mock.calls
 describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français', () => {
   beforeEach(() => { mockMutationOptions.length = 0; });
 
-  it('numéro d’un compte existant : une alerte qui propose l’invitation', async () => {
+  it('numéro d’un compte existant : la feuille d’invitation, aucune alerte brute', async () => {
     /** @type {any} */ (createTrainer)
       .mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
     const arbre = await monterEcran();
     await saisirTelephone('+33639980001');
     await appuyerSur(arbre, LIBELLE_CTA);
 
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    expect(textesDesAlertes().join(' ')).not.toContain('Failed to');
-    // SECU-NOM-NUMERO : le geste devient « Envoyer l'invitation » (plus de rattachement direct).
-    expect(/** @type {any} */ (Alert.alert).mock.calls[0][2]).toHaveLength(2);
+    // INVITE-COACH-EXISTANT (10/11) : l'alerte à 2 boutons devient la feuille d'invitation.
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(dernieresProps(mockInvitedModalProps).dejaInscrit).toBe(true);
   });
 
   it('autre refus d’unicité : l’alerte traduite, seule', async () => {
@@ -440,21 +439,19 @@ describe.each([
     await saisirTelephone('+33600000098');
     await appuyerSur(arbre, LIBELLE_CTA);
 
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    const texte = textesDesAlertes().join(' ');
-    expect(texte).toContain('Une invitation sera envoyée à ce numéro.');
-    expect(texte).not.toMatch(/Audit|Rejeu|autre club|Club Ailleurs/);
+    expect(Alert.alert).not.toHaveBeenCalled();
+    const feuille = dernieresProps(mockInvitedModalProps);
+    expect(feuille).toEqual(expect.objectContaining({ dejaInscrit: true, isVisible: true }));
+    expect(JSON.stringify(feuille)).not.toMatch(/Audit|Rejeu|autre club|Club Ailleurs/);
   });
 
-  it("« Envoyer l'invitation » ouvre le SMS vers le numéro tapé, sans rattacher", async () => {
+  it('« Inviter » ouvre le SMS vers le numéro tapé, sans rattacher', async () => {
     /** @type {any} */ (creer).mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
     const arbre = await monterEcran({ name: routeName });
     await saisirTelephone('+33600000098');
     await appuyerSur(arbre, LIBELLE_CTA);
 
-    const boutons = /** @type {any} */ (Alert.alert).mock.calls[0][2];
-    expect(boutons[1].text).toBe("Envoyer l'invitation");
-    await act(async () => boutons[1].onPress());
+    await act(async () => dernieresProps(mockInvitedModalProps).onInvite());
     expect(mockInviteTrainer).toHaveBeenCalledWith(expect.objectContaining({
       clubId: 'club-1',
       phoneNumber: '+33600000098',

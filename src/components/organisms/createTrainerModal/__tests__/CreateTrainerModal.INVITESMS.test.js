@@ -1,4 +1,7 @@
+import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { buildPreservedApiError } from '@/utils/errors/apiError';
 
 import CreateTrainerModal from '../CreateTrainerModal';
 
@@ -13,12 +16,16 @@ const mockFeuilles = [];
 const mockChamps = new Map();
 /** @type {any} */
 let mockReponse;
+/** @type {any} */
+let mockErreur;
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
     mutate: (/** @type {any} */ variables) => Promise.resolve()
-      .then(() => options.onSuccess?.(mockReponse, variables)),
+      .then(() => (mockErreur
+        ? options.onError?.(mockErreur, variables)
+        : options.onSuccess?.(mockReponse, variables))),
   }),
 }));
 jest.mock('react-i18next', () => ({
@@ -97,6 +104,12 @@ beforeEach(() => {
   mockFeuilles.length = 0;
   mockChamps.clear();
   mockReponse = { documentId: 'u-1', firstname: 'Luc', phoneNumber: '+33612345678' };
+  mockErreur = null;
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  /** @type {any} */ (Alert.alert).mockRestore?.();
 });
 
 describe('🔴 INVITESMS — après « Créer un entraîneur », la feuille d invitation', () => {
@@ -121,6 +134,52 @@ describe('🔴 INVITESMS — après « Créer un entraîneur », la feuille d in
     const { arbre } = await creer();
     await act(async () => { derniereFeuille().onClose(); });
     expect(mockInviteTrainer).not.toHaveBeenCalled();
+    expect(derniereFeuille().isVisible).toBe(false);
+    act(() => arbre.unmount());
+  });
+});
+
+// INVITE-COACH-EXISTANT (10/11/2026) — depuis une équipe, un numéro déjà inscrit affichait
+// « Erreur · Failed to create trainer: Uniqueness check failed » (anglais brut), et rien d'autre.
+// Comme sur « Ajouter un coach » : la feuille d'invitation, qui dit que la personne doit accepter.
+const refusUnicite = (/** @type {any} */ details) => buildPreservedApiError({
+  response: {
+    data: { error: { details, message: 'Uniqueness check failed', status: 400 } },
+    status: 400,
+  },
+}, 'Failed to create trainer');
+
+describe('INVITE-COACH-EXISTANT — depuis une équipe, un numéro déjà inscrit', () => {
+  it('ouvre la feuille d invitation (sans alerte) et referme le formulaire', async () => {
+    mockErreur = refusUnicite({ code: 'PHONE_NUMBER_TAKEN' });
+    const { arbre, onClose } = await creer();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(derniereFeuille())
+      .toEqual(expect.objectContaining({ dejaInscrit: true, isVisible: true }));
+    expect(onClose).toHaveBeenCalled();
+    await act(async () => { derniereFeuille().onInvite(); });
+    expect(mockInviteTrainer).toHaveBeenCalledWith(expect.objectContaining({
+      clubId: 'club-1', phoneNumber: '0612345678',
+    }));
+    act(() => arbre.unmount());
+  });
+
+  it('déjà dans CE club : le dit, sans feuille', async () => {
+    mockErreur = refusUnicite({ code: 'PHONE_NUMBER_TAKEN', sameClub: true });
+    const { arbre } = await creer();
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(/** @type {any} */ (Alert.alert).mock.calls[0][1])
+      .toBe('addCoach.alerts.alreadyInThisClub.description');
+    expect(derniereFeuille().isVisible).toBe(false);
+    act(() => arbre.unmount());
+  });
+
+  it('autre erreur du serveur : un message, jamais l anglais brut', async () => {
+    mockErreur = refusUnicite({ code: 'EMAIL_TAKEN' });
+    const { arbre } = await creer();
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    const alerte = /** @type {any} */ (Alert.alert).mock.calls[0];
+    expect(JSON.stringify(alerte)).not.toContain('Failed to');
     expect(derniereFeuille().isVisible).toBe(false);
     act(() => arbre.unmount());
   });

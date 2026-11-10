@@ -28,8 +28,11 @@ export default {
         actions: {
           send: "Envoyer l'invitation",
         },
-        description: 'Une invitation sera envoyée à ce numéro.',
-        title: 'Invitation',
+        // INVITE-COACH-EXISTANT (10/11) : rien n'est ajouté, la feuille dit la suite.
+        description: 'Ce numéro ne peut pas être ajouté directement : la personne doit d’abord '
+          + 'accepter. Envoie-lui l’invitation. Depuis le lien, elle demande à rejoindre ton club, '
+          + 'puis tu acceptes sa demande dans « Demandes d’adhésion ».',
+        title: 'Invitation à envoyer',
       },
       inviteCopied: 'Invitation copiée : colle-la dans un e-mail, WhatsApp ou un SMS.',
       success: {

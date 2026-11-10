@@ -31,8 +31,10 @@ export default {
         actions: {
           send: 'Send invitation',
         },
-        description: 'An invitation will be sent to this number.',
-        title: 'Invitation',
+        description: 'This number cannot be added directly: the person has to accept first. '
+          + 'Send them the invitation. From the link, they ask to join your club, then you accept '
+          + 'their request in “Membership requests”.',
+        title: 'Invitation to send',
       },
       inviteCopied: 'Invitation copied: paste it into an email, WhatsApp or a text message.',
       success: {

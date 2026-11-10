@@ -19,11 +19,14 @@ import { useIsDesktop } from '@/responsive/useIsDesktop';
  * @param {() => void} props.onInvite - Function to call when clicking on "Invite"
  * @param {string} props.trainerName - Name of the trainer
  * @param {boolean} [props.isManager] - INVITESMS (29/10) : un dirigeant (son texte).
+ * @param {boolean} [props.dejaInscrit] - INVITE-COACH-EXISTANT (10/11) : le numéro a déjà un
+ *   compte ; personne n'est ajouté, la feuille dit pourquoi et comment il rejoindra le club.
  * @param {string} [props.messageDInvitation] - RETOURS-TESTEUR-2 (M0077) : le texte du SMS, lien
  *   compris. Sur le site, sur ordinateur, il se copie ou part par e-mail au lieu du SMS.
  * @returns {import('react').ReactElement} La feuille.
  */
 function TrainerInvitedModal({
+  dejaInscrit = false,
   isManager = false,
   isVisible,
   messageDInvitation = '',
@@ -39,11 +42,16 @@ function TrainerInvitedModal({
     if (!isVisible) setCopie('');
   }, [isVisible]);
 
-  const texteDuSucces = isManager
+  // INVITE-COACH-EXISTANT : « Ajout réussi ! » serait faux, rien n'a été créé.
+  const titre = dejaInscrit
+    ? t('addCoach.alerts.invitation.title')
+    : t('addCoach.alerts.success.title');
+  let texteDuSucces = isManager
     ? t('addClubManager.alerts.success.description', {
       managerName: trainerName, ...SANS_ECHAPPEMENT,
     })
     : t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT });
+  if (dejaInscrit) texteDuSucces = t('addCoach.alerts.invitation.description');
 
   // RETOURS-TESTEUR-2 (06/11/2026, M0077, décision du chef « A ») — un ordinateur n'envoie pas
   // de SMS : sur le site, sur ordinateur, on copie l'invitation ou on l'envoie par e-mail. Le site
@@ -83,7 +91,7 @@ function TrainerInvitedModal({
         close={onClose}
         isVisible={isVisible}
         texte={texte}
-        titre={t('addCoach.alerts.success.title')}
+        titre={titre}
         tourTargetId="ok-sheet"
       />
     );
@@ -99,7 +107,7 @@ function TrainerInvitedModal({
       close={onClose}
       isVisible={isVisible}
       texte={texteDuSucces}
-      titre={t('addCoach.alerts.success.title')}
+      titre={titre}
       tourTargetId="ok-sheet"
     />
   );
