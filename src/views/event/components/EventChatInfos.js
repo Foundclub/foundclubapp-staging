@@ -37,7 +37,7 @@ const TITRE_DE_GROUPE = { letterSpacing: 0.6, textTransform: 'uppercase' };
  * @returns {[object | null, () => void]} L'etat, et de quoi le relire.
  */
 export const useChatDeLEvenement = (chatId, estUnChatDEvenement) => {
-  const [info, setInfo] = useState(null);
+  const [info, setInfo] = useState(/** @type {any} */ (null));
   const [tour, setTour] = useState(0);
   useEffect(() => {
     if (!chatId || !estUnChatDEvenement) return undefined;
@@ -53,7 +53,7 @@ export const useChatDeLEvenement = (chatId, estUnChatDEvenement) => {
   return [info, relire];
 };
 
-const premiereMajuscule = (texte) => (texte ? texte.charAt(0).toUpperCase() + texte.slice(1) : '');
+const premiereMajuscule = (/** @type {string} */ texte) => (texte ? texte.charAt(0).toUpperCase() + texte.slice(1) : '');
 
 /**
  * « Sam. 15 nov. » et « 14:00 », a l'heure de Paris (l'heure saisie, `startTime`, d'abord).
@@ -108,7 +108,7 @@ export const sousTitreDuChatDEvenement = (info, t) => {
  * @param {object} props
  * @param {object | null} props.info - L'etat du serveur.
  * @param {(eventId: string) => void} props.onVoirLEvenement - Ouvre la fiche.
- * @returns {JSX.Element | null}
+ * @returns {import('react').ReactElement | null}
  */
 export function BandeauDuChatDEvenement({ info, onVoirLEvenement }) {
   const { t } = useTranslation();
@@ -156,11 +156,11 @@ export function BandeauDuChatDEvenement({ info, onVoirLEvenement }) {
   );
 }
 
-const initiales = (nom) => String(nom || '')
+const initiales = (/** @type {string} */ nom) => String(nom || '')
   .split(/\s+/)
   .filter(Boolean)
   .slice(0, 2)
-  .map((mot) => mot.charAt(0).toUpperCase())
+  .map((/** @type {string} */ mot) => mot.charAt(0).toUpperCase())
   .join('');
 
 /**
@@ -168,7 +168,7 @@ const initiales = (nom) => String(nom || '')
  * @param {object} props
  * @param {string} props.nom - « Karim B. ».
  * @param {string} props.precision - « Coach », « Titulaire », « parent : Rayan, 12 ans ».
- * @returns {JSX.Element}
+ * @returns {import('react').ReactElement}
  */
 function Membre({ nom, precision }) {
   const { Colors, Fonts, Spaces } = useTheme();
@@ -203,7 +203,7 @@ function Membre({ nom, precision }) {
  * @param {Array<{ documentId: string, nom: string, precision: string }>} props.lignes
  *   Les membres.
  * @param {string} props.testID - L'ancre du groupe.
- * @returns {JSX.Element | null}
+ * @returns {import('react').ReactElement | null}
  */
 function Groupe({ lignes, testID, titre }) {
   const { t } = useTranslation();
@@ -251,15 +251,15 @@ function Groupe({ lignes, testID, titre }) {
  */
 export const groupesDesInfos = (info, t) => {
   const membres = info?.membres || {};
-  const role = (r) => (r === 'coach'
+  const role = (/** @type {string} */ r) => (r === 'coach'
     ? t('eventDetails.eventChat.infos.coach', 'Coach')
     : t('eventDetails.eventChat.infos.leader', 'Dirigeant'));
-  const statut = (s) => {
+  const statut = (/** @type {string} */ s) => {
     if (s === 'titulaire') return t('eventDetails.eventChat.infos.starter', 'Titulaire');
     if (s === 'remplacant') return t('eventDetails.eventChat.infos.substitute', 'Remplaçant');
     return '';
   };
-  const enfant = (e) => (typeof e?.age === 'number'
+  const enfant = (/** @type {any} */ e) => (typeof e?.age === 'number'
     ? t(`${K}.infos.child`, '{{name}}, {{age}} ans', {
       age: e.age,
       name: e.prenom,
@@ -267,15 +267,15 @@ export const groupesDesInfos = (info, t) => {
     })
     : String(e?.prenom || ''));
   return {
-    comptes: (membres.comptes || []).map((m) => ({ ...m, precision: statut(m.statut) })),
-    parents: (membres.parents || []).map((m) => ({
+    comptes: (membres.comptes || []).map((/** @type {any} */ m) => ({ ...m, precision: statut(m.statut) })),
+    parents: (membres.parents || []).map((/** @type {any} */ m) => ({
       ...m,
       precision: t('eventDetails.eventChat.infos.parentOf', 'parent : {{children}}', {
         children: (m.enfants || []).map(enfant).join(', '),
         ...SANS_ECHAPPEMENT,
       }),
     })),
-    staff: (membres.staff || []).map((m) => ({ ...m, precision: role(m.role) })),
+    staff: (membres.staff || []).map((/** @type {any} */ m) => ({ ...m, precision: role(m.role) })),
   };
 };
 
@@ -286,7 +286,7 @@ export const groupesDesInfos = (info, t) => {
  * @param {string} props.titre - Le nom du chat (celui de l'evenement).
  * @param {boolean} props.visible - Ouvert ?
  * @param {() => void} props.onClose - Le referme.
- * @returns {JSX.Element}
+ * @returns {import('react').ReactElement}
  */
 export function InfosDuChatDEvenement({
   info, onClose, titre, visible,
@@ -306,6 +306,7 @@ export function InfosDuChatDEvenement({
       'La liste suit les invités de l’événement. Un invité ajouté rejoint le chat ; '
         + 'un invité retiré le quitte. Personne ne s’ajoute à la main.',
     );
+  /** @type {(cle: string, repli: string, liste: unknown[]) => string} */
   const compte = (cle, repli, liste) => t(cle, repli, { count: liste.length, ...SANS_ECHAPPEMENT });
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent={false} visible={visible}>
