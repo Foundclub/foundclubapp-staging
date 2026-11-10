@@ -381,7 +381,8 @@ const SITE_REVEAL_MARGIN = 12;
  * de la bulle passait au-dessus de l'écran, la bulle se posant alors sur les choix (S26, S31).
  * Règles, cible par cible, dans l'ordre donné (la place de la bulle d'abord) :
  * - entière dans la zone utile : rien ;
- * - plus haute que la zone : rien si son HAUT est visible, sinon son haut sous l'en-tête (`start`) ;
+ * - plus haute que la zone : rien si son HAUT est visible, sinon son haut sous l'en-tête
+ *   (`start`) ;
  * - sinon : ramenée au plus court, juste au bord (`nearest`) : « Suivant » sous le bas (S14) ;
  * - jamais au prix d'une cible déjà visible qui sortirait de l'écran.
  * @param {{ box: { height: number; y: number }; id: string }[]} entries - Mesures entières, dans le

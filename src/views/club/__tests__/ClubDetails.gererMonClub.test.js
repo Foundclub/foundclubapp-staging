@@ -1712,7 +1712,7 @@ describe('GUIDES-SITE-CORR : les ancres du guide sur le hub de l ordinateur', ()
     mockIsDesktop = false;
   });
 
-  it('la carte, « Modifier » et l affiche portent leurs ancres, à l ordinateur comme au téléphone', () => {
+  it('la carte, « Modifier » et l affiche portent leurs ancres, ordinateur et téléphone', () => {
     [false, true].forEach((ordinateur) => {
       mockIsDesktop = ordinateur;
       const arbre = monter();

@@ -49,7 +49,9 @@ test('le canal d exemple du guide s ouvre sans le vrai fil', () => {
     arbre = renderer.create(
       <Conversation
         navigation={{ goBack: jest.fn(), navigate: jest.fn() }}
-        route={{ params: { chatId: 'tour-example-canal', clubName: 'CR-T5', tourExample: 'canal' } }}
+        route={{
+          params: { chatId: 'tour-example-canal', clubName: 'CR-T5', tourExample: 'canal' },
+        }}
       />,
     );
   });

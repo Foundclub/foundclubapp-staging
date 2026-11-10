@@ -305,7 +305,10 @@ describe('Y06 · geste 2 — le createur peut regarder le modele qu il a depose'
 // à régler … avant le 2026-09-15 » pour une campagne à 50 € (montant faux, date passée et au
 // format machine).
 test('S31 : l aperçu de la relance reprend le montant saisi et une date lisible', () => {
-  const apercu = renderReminderPreview({ campaignName: 'Cotisation 2026/2027', totalLabel: '50 EUR' });
+  const apercu = renderReminderPreview({
+    campaignName: 'Cotisation 2026/2027',
+    totalLabel: '50 EUR',
+  });
   expect(apercu).toContain('50 EUR');
   expect(apercu).not.toContain('120,00 EUR');
   expect(apercu).not.toMatch(/\d{4}-\d{2}-\d{2}/);

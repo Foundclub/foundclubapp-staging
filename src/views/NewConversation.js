@@ -322,7 +322,8 @@ function NewConversation({ navigation, route }) {
   const isGroupSimulated = tourStatus === 'active' && Boolean(tourStep?.simulatesGroup)
     && !modeVille && !isAddMembersMode;
   // GUIDES-SITE-CORR S27 (tournée du site, 09/11) : le site éteint les groupes par défaut
-  // (`FC_CHAT_GROUP_V1`, web/vite.config.ts) ; 3 « Exemple » cochés donnaient « Discussion privée ».
+  // (`FC_CHAT_GROUP_V1`, web/vite.config.ts) ; 3 « Exemple » cochés donnaient
+  // « Discussion privée ».
   // En simulation rien n'est créé : le groupe d'exemple se joue, drapeau ou pas.
   const groupesPossibles = isGroupChatEnabled || isGroupSimulated;
   const membresAffiches = useMemo(

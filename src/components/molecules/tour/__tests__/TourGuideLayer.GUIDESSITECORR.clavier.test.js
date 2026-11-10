@@ -128,7 +128,7 @@ describe('« Ajouter un coach », clavier ouvert', () => {
     }));
   };
 
-  it('la bulle tient au-dessus du clavier, sous l en-tête, avec la place de son bouton', async () => {
+  it('la bulle tient au-dessus du clavier, sous l en-tête, avec son bouton', async () => {
     mockKeyboard = { height: 180, screenY: 460 };
     mockTour = activeTour(step('m2-fields'));
     poser();

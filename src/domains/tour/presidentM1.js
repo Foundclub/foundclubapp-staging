@@ -566,7 +566,10 @@ const PART_PLANNING = [
       return Platform.OS === 'web' ? {
         targets: ['dock.teams'],
         get text() {
-          return t('m1-fback-site', 'Puis retourne sur la fiche du club : touche l’onglet entouré.');
+          return t(
+            'm1-fback-site',
+            'Puis retourne sur la fiche du club : touche l’onglet entouré.',
+          );
         },
       } : undefined;
     },

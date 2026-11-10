@@ -11,7 +11,6 @@ import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
 // n'est créé : le drapeau ne compte pas.
 // Le drapeau est lu au chargement du module : on le pose AVANT de charger l'écran.
 process.env.FC_CHAT_GROUP_V1 = 'false';
-// eslint-disable-next-line global-require
 const NewConversation = require('../NewConversation').default;
 
 const mockStartWhisperChat = jest.fn();
@@ -67,7 +66,10 @@ jest.mock('@/domains/auth/useAuth', () => ({
     allMyTeams: [],
     clubVerificationSummary: null,
     userData: {
-      club: { documentId: 'club-1' }, documentId: 'moi', firstname: 'Adel', role: { name: 'Dirigeant' },
+      club: { documentId: 'club-1' },
+      documentId: 'moi',
+      firstname: 'Adel',
+      role: { name: 'Dirigeant' },
     },
   }),
 }));

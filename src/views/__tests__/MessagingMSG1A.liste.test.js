@@ -436,11 +436,13 @@ describe('Guide Dirigeant·e, B2 : le canal du club', () => {
 
   // GUIDES-SITE-CORR S17 (tournée du site, 09/11, D 390 rang 084) : le cadre entourait le canal
   // d'un AUTRE club que le club actif (« AS Montrivage »), et le canal du club actif manquait.
-  it('le canal d un autre club n est pas celui du club actif : pas d ancre, canal absent', async () => {
+  it('le canal d un autre club n est pas celui du club actif : ni ancre, ni canal', async () => {
     /** @type {any} */ (mockAuth.userData).club = { documentId: 'club-1' };
     try {
       mockTour = ETAPE;
-      mockChatsQuery = pageDe([{ ...CANAL, club: { documentId: 'club-2' }, documentId: 'canal-2' }]);
+      mockChatsQuery = pageDe([
+        { ...CANAL, club: { documentId: 'club-2' }, documentId: 'canal-2' },
+      ]);
       const arbre = await monter();
       const ids = arbre.root
         .findAll((/** @type {any} */ noeud) => (

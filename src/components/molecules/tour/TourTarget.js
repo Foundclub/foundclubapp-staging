@@ -79,7 +79,9 @@ function TourTarget({
       // des longues listes ; la couche choisit le bord (`start`, `nearest`) et la marge à garder
       // sous l'en-tête et au-dessus de la barre d'onglets.
       reveal: Platform.OS === 'web'
-        ? (/** @type {{ block?: string; marginBottom?: number; marginTop?: number }} */ options = {}) => {
+        ? (
+          /** @type {{ block?: string; marginBottom?: number; marginTop?: number }} */ options = {},
+        ) => {
           const node = viewRef.current;
           if (!node?.scrollIntoView) return;
           if (node.style) {
