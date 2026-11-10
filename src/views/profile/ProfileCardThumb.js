@@ -5,16 +5,16 @@
  * membre connecté. Jamais pour un mineur. Elle ne montre que ce que le profil public rend déjà :
  * ni numéro, ni nationalité, ni ville (le serveur ne les rend pas), aucune case vide.
  * RATTRAPAGE (149 A, 150 A) : la rareté compte le parcours et les matchs que l'écran du profil a
- * déjà chargés. ponytail: les 3 cases cachées et les matchs refusés (403 hors encadrants) restent
- * hors du compte, la vignette peut donc rester sous la vraie rareté ; sortie : le serveur rend la
- * rareté calculée sur le profil complet (question au chef, lot RATTRAPAGE).
+ * déjà chargés. RARETE-SERVEUR (213 A) : le serveur rend le palier calculé sur le profil complet
+ * (`cardRarity` : cases cachées et matchs refusés compris) ; la vignette l'affiche. Sans palier
+ * (ancien serveur, panne) ou avec une valeur inconnue, elle garde ce calcul du téléphone.
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { canShowCardOnProfile } from '@/domains/playerCard/cardConsent';
-import { buildPlayerCardModel } from '@/domains/playerCard/cardModel';
+import { buildPlayerCardModel, RARITY_ORDER } from '@/domains/playerCard/cardModel';
 import { buildPlayerCardProps } from '@/domains/playerCard/cardProps';
 
 import PlayerCard from '@/components/organisms/playerCard/PlayerCard';
@@ -40,6 +40,7 @@ function ProfileCardThumb({
     const model = buildPlayerCardModel({
       histories, matchCount, qrUrl: qr.url, user: profile,
     });
+    if (RARITY_ORDER.includes(profile.cardRarity)) model.rarity = profile.cardRarity;
     const {
       nationalite, numero, ville, ...carte
     } = buildPlayerCardProps({

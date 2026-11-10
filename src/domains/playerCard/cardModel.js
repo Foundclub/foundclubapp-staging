@@ -339,6 +339,9 @@ export const countCardFill = (user = {}) => [
  * Jamais les présences, les notes ni les avis. Paliers inchangés : < 40 commune, 40-64 rare,
  * 65-84 épique, ≥ 85 légendaire. D'où : carte complète = Rare (55) ; avec le parcours = Épique
  * (70) ; avec une équipe en plus = Légendaire (85), sans aucun match.
+ * ⚠️ RARETE-SERVEUR : le serveur en garde une COPIE (admin `services/card-rarity.ts`) pour le
+ * palier du profil public ; le témoin d'égalité (admin `tests/authz/RARETE-SERVEUR-*`) rougit si
+ * les deux divergent : changer le barème, c'est changer les deux.
  * @param {{ clubCount?: number, fill?: number, isTeamMember?: boolean, matchCount?: number }} args
  * @returns {{ rarity: string, score: number }}
  */
