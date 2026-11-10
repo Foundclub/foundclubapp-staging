@@ -32,7 +32,8 @@ const service = () => require('@/services/chat/chatService');
 /**
  * Ce que `GET /chats/event/:id` renvoie.
  * @typedef {object} EtatChatEvenement
- * @property {{ documentId: string, title?: string } | null} chat - Le chat ouvert, s'il existe.
+ * @property {{ documentId: string, title?: string, nonLus?: number, ouvertPar?: string | null }
+ *   | null} chat - Le chat ouvert, s'il existe (CONVERSATION-EVENEMENT-2 : non-lus, ouvert par).
  * @property {boolean} estMembre - Le lecteur est dans le chat.
  * @property {boolean} estUnMatch - L'evenement est un match.
  * @property {{ membres: number, staff: number }} nombre - Combien ils sont.
@@ -43,7 +44,10 @@ const service = () => require('@/services/chat/chatService');
  * La rangee du chat de l'evenement, sous la carte de la fiche.
  * @param {object} props
  * @param {string} props.eventDocumentId - L'evenement.
- * @param {{ navigate: (route: string, params?: object) => void }} props.navigation - La navigation.
+ * @param {{
+ *   navigate: (route: string, params?: object) => void,
+ *   addListener?: (evenement: string, rappel: () => void) => (() => void) | void,
+ * }} props.navigation - La navigation (`focus` relit la rangee au retour du chat).
  * @returns {import('react').ReactElement | null}
  */
 function EventChatRow({ eventDocumentId, navigation }) {
