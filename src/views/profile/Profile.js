@@ -874,8 +874,10 @@ function Profile({ navigation, route }) {
         />
       </View>
       <View style={{ flex: 1 }}>
+        {/* GUIDE-E-CORR-2 : un choix en retrait (42) passe sur deux lignes au lieu d'être coupé
+            (« Revoir le guide sans rien c… », iPhone, 10/11). */}
         <Text
-          numberOfLines={1}
+          numberOfLines={sousLigne ? 2 : 1}
           style={{
             color: destructive ? Colors.error300 : Colors.neutral00,
             fontFamily: 'Montserrat-Bold',
@@ -1216,7 +1218,7 @@ function Profile({ navigation, route }) {
         ...(guideProfile?.steps?.some((/** @type {any} */ step) => step.review) ? [{
           icon: Images.flag,
           key: 'coachGuide-review',
-          label: t('profile.coachGuide.review', 'Revoir le guide sans rien créer'),
+          label: t('profile.coachGuide.review', 'Revoir sans rien créer'),
           onPress: () => chooseGuide(() => tour.startTour(guideKey, { review: true })),
           sousLigne: true,
         }] : []),
