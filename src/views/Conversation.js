@@ -6761,6 +6761,9 @@ function Conversation({ navigation, route }) {
     if (
       chatData.type === 'whisper'
       || chatData.type === 'team'
+      // CHAT-EVT-ECRIRE — le chat d'un evenement : ses membres (calcules par le serveur)
+      // ecrivent tous, comme sur le site (canWriteInChat).
+      || chatData.type === 'event'
       || isLeagueConversation
       || isFriendlyMatchChat(chatData)
     ) return true;
