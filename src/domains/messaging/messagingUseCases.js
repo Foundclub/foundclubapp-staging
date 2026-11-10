@@ -185,6 +185,10 @@ export const getConversationName = ({
     // R17-CANAUX (19/10) — « Toute la ville » ; titreDuFil y ajoute le nom de la Ville.
     case 'collectivite_ville':
       return i18next.t('collectiviteCanaux.ville.titre', 'Toute la ville');
+    // CONVERSATION-EVENEMENT (10/11) — le serveur pose le nom de l'evenement dans groupName.
+    case 'event':
+      return chatGroupName
+        || i18next.t('messagingUseCases.conversationName.event', 'Chat de l’événement');
     case 'friendly_match':
       // Le serveur pose deja « Match amical : A vs B » dans groupName
       // (friendly-match-workflow.ts:279). Sans ce cas, le `default` rendait ''

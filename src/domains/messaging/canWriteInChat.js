@@ -35,6 +35,9 @@ const canWriteInChat = ({ chat, hasClubAccess, user }) => {
     chat.type === 'whisper'
     || chat.type === 'group'
     || chat.type === 'team'
+    // CONVERSATION-EVENEMENT — le chat d'un evenement : ses membres (calcules par le
+    // serveur) ecrivent tous.
+    || chat.type === 'event'
     || chat.type === 'league_match'
     || Boolean(chat.league_match)
     || isFriendlyMatchChat(chat)
