@@ -321,6 +321,10 @@ function NewConversation({ navigation, route }) {
   // Trois membres « Exemple » s'ajoutent à la liste le temps du bonus ; « Créer » ne crée rien.
   const isGroupSimulated = tourStatus === 'active' && Boolean(tourStep?.simulatesGroup)
     && !modeVille && !isAddMembersMode;
+  // GUIDES-SITE-CORR S27 (tournée du site, 09/11) : le site éteint les groupes par défaut
+  // (`FC_CHAT_GROUP_V1`, web/vite.config.ts) ; 3 « Exemple » cochés donnaient « Discussion privée ».
+  // En simulation rien n'est créé : le groupe d'exemple se joue, drapeau ou pas.
+  const groupesPossibles = isGroupChatEnabled || isGroupSimulated;
   const membresAffiches = useMemo(
     () => (isGroupSimulated ? [...exampleGroupMembers(), ...(users || [])] : users),
     [isGroupSimulated, users],
@@ -521,7 +525,7 @@ function NewConversation({ navigation, route }) {
     // GUIDE-D-CORR-3 (M1082) : en simulation, rien ne part. Le groupe « créé » valide le bonus et
     // l'écran se referme : les membres d'exemple s'effacent avec lui.
     if (isGroupSimulated) {
-      if (isGroupChatEnabled && selectedUserIds.size > 1) {
+      if (selectedUserIds.size > 1) {
         emitGuidanceAction('conversation.group.created');
         navigation.goBack();
       } else {
@@ -674,7 +678,7 @@ function NewConversation({ navigation, route }) {
 
   // 🧾 MSG1A (§3.15) — la barre du bas ANNONCE le resultat avant qu'on appuie.
   const nombreChoisi = selectedUserIds.size;
-  const vaVersLeNom = !isAddMembersMode && isGroupChatEnabled && nombreChoisi > 1;
+  const vaVersLeNom = !isAddMembersMode && groupesPossibles && nombreChoisi > 1;
   /** @type {{ titre: string, sous: string, bouton: string, suivant?: boolean } | null} */
   let appelALAction = null;
   if (nombreChoisi > 0) {
@@ -684,7 +688,7 @@ function NewConversation({ navigation, route }) {
         sous: personnesChoisies.map((personne) => personne?.firstname).filter(Boolean).join(', '),
         titre: t('newConversation.cta.addTitle', 'Ajouter au groupe'),
       };
-    } else if (nombreChoisi === 1 || !isGroupChatEnabled) {
+    } else if (nombreChoisi === 1 || !groupesPossibles) {
       appelALAction = {
         bouton: t('newConversation.cta.start', 'Démarrer'),
         sous: t('newConversation.cta.privateWith', {
