@@ -2060,7 +2060,8 @@ export default {
     FAILED_TO_SEND_MESSAGE: 'Impossible d\'envoyer le message.',
     MESSAGE_TOO_LONG: 'Le message est trop long.',
     // RATTRAPAGE (172 C) — age inconnu : ce qui debloque, sans dire « mineur ».
-    MINOR_DIRECT_CHAT_AGE_UNKNOWN: "L'âge de cette personne n'est pas connu : elle doit ajouter sa date de naissance pour recevoir des messages privés.",
+    MINOR_DIRECT_CHAT_AGE_UNKNOWN: "L'âge de cette personne n'est pas connu : "
+      + 'elle doit ajouter sa date de naissance pour recevoir des messages privés.',
     // CONVAVERT — LE REFUS DU GARDE-FOU DES MINEURS, ENFIN LISIBLE.
     // Le serveur pose ce code pour les deux ages (moins de 13 ans sans le
     // compte du parent, et 13-17 ans hors encadrants du club) avec une phrase
