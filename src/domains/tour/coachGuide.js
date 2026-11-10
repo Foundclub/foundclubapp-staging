@@ -578,10 +578,16 @@ const STEPS = [
     get nextLabel() { return t('m2-pick-next', 'Continuer'); },
     resumeFrom: 'm2-card',
     get text() {
-      return t(
-        'm2-pick',
-        'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
-      );
+      // GUIDES-SITE-CORR S28 (tournée du site, 09/11) : sur un ordinateur, « Partager » ouvre la
+      // fenêtre de partage du système, ou copie le message (navigateur sans partage) ; rien ne le
+      // disait.
+      return Platform.OS === 'web'
+        ? t(
+          'm2-pick-site',
+          'Envoie-le sur le groupe de ton équipe : la fenêtre de partage de ton ordinateur '
+            + 's’ouvre ; sinon le message est copié, colle-le dans ton groupe.',
+        )
+        : t('m2-pick', 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.');
     },
   },
   {

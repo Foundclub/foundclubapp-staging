@@ -1,6 +1,6 @@
 import renderer, { act } from 'react-test-renderer';
 
-import ClubLicenseCampaignSettings from '../ClubLicenseCampaignSettings';
+import ClubLicenseCampaignSettings, { renderReminderPreview } from '../ClubLicenseCampaignSettings';
 
 /**
  * Y06 (E6) — LE MODELE DEPOSE PAR LE CREATEUR NE SE REGARDE PAS.
@@ -299,4 +299,15 @@ describe('Y06 · geste 2 — le createur peut regarder le modele qu il a depose'
     expect(intitules()).not.toContain('Voir le modèle');
     mockFichierChoisi = null;
   });
+});
+
+// GUIDES-SITE-CORR S31 (tournée du site, 09/11, c5) : l'aperçu annonçait « il te reste 120,00 EUR
+// à régler … avant le 2026-09-15 » pour une campagne à 50 € (montant faux, date passée et au
+// format machine).
+test('S31 : l aperçu de la relance reprend le montant saisi et une date lisible', () => {
+  const apercu = renderReminderPreview({ campaignName: 'Cotisation 2026/2027', totalLabel: '50 EUR' });
+  expect(apercu).toContain('50 EUR');
+  expect(apercu).not.toContain('120,00 EUR');
+  expect(apercu).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  expect(apercu).toMatch(/\d{2}\/\d{2}\/\d{4}/);
 });

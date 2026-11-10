@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { clubHubTarget, homeTarget } from '@/domains/tour/guideCommon';
 import { PRESIDENT_GUIDE_SETTINGS } from '@/domains/tour/presidentGuideSettings';
 import t, { tSite } from '@/domains/tour/presidentText';
@@ -456,8 +458,10 @@ const PART_PLANNING = [
     get text() {
       return t(
         'm1-pdemo',
-        'Ton planning est encore vide : on y a mis quelques événements d’exemple pour te '
-          + 'montrer. Ils disparaissent à la fin du guide.',
+        // GUIDES-SITE-CORR S04, S23 : « encore vide » était faux pour un club qui a déjà des
+        // événements (un vrai entraînement le 20/11, tournée du site).
+        'Voici ton planning, avec quelques événements d’exemple ajoutés pour te montrer. Ils '
+          + 'disparaissent à la fin du guide.',
       );
     },
     veil: false,
@@ -544,6 +548,16 @@ const PART_PLANNING = [
   },
   {
     advanceOn: { key: RouteNames.Club, type: 'route' },
+    // GUIDES-SITE-CORR S06 (tournée du site, 09/11) : sur le site, « Tes installations » n'a pas
+    // de flèche Retour ; le club est dans les onglets (colonne de gauche, barre du bas).
+    get fallback() {
+      return Platform.OS === 'web' ? {
+        targets: ['dock.teams'],
+        get text() {
+          return t('m1-fback-site', 'Puis retourne sur la fiche du club : touche l’onglet entouré.');
+        },
+      } : undefined;
+    },
     id: 'm1-fback',
     missionId: MISSION_ID,
     resumeFrom: 'm1-poster',

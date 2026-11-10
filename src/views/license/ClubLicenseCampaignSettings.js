@@ -1106,7 +1106,15 @@ const describeDocumentRequest = (documentRequest) => [
     )
     : null,
 ].filter(Boolean).join(' · ');
-const renderReminderPreview = ({
+/**
+ * Le message de relance, tel que le membre le lira (exemple « Lucas Martin »).
+ * GUIDES-SITE-CORR S31 (tournée du site, 09/11) : l'aperçu disait « il te reste 120,00 EUR … avant
+ * le 2026-09-15 » pour une campagne à 50 € : le reste à payer est le montant saisi (rien n'est
+ * encore payé), et la date d'exemple est à venir, au format du pays.
+ * @param {{ campaignName?: string; dueDate?: string; message?: string; totalLabel?: string }} args
+ * @returns {string} Le message.
+ */
+export const renderReminderPreview = ({
   campaignName,
   dueDate,
   message,
@@ -1135,9 +1143,12 @@ const renderReminderPreview = ({
       'Cotisation FoundClub',
     ))
     .replace(/\{\{\s*amountTotal\s*\}\}/g, totalLabel || '180,00 EUR')
-    .replace(/\{\{\s*amountPaid\s*\}\}/g, '60,00 EUR')
-    .replace(/\{\{\s*amountRemaining\s*\}\}/g, '120,00 EUR')
-    .replace(/\{\{\s*dueDate\s*\}\}/g, dueDate || '2026-09-15')
+    .replace(/\{\{\s*amountPaid\s*\}\}/g, totalLabel
+      ? totalLabel.replace(/^[\d.,\s]+/, '0 ')
+      : '60,00 EUR')
+    .replace(/\{\{\s*amountRemaining\s*\}\}/g, totalLabel || '120,00 EUR')
+    .replace(/\{\{\s*dueDate\s*\}\}/g, dueDate
+      || format(new Date(Date.now() + (30 * 24 * 3600 * 1000)), 'dd/MM/yyyy'))
     .replace(/\{\{\s*paymentLink\s*\}\}/g, 'https://foundclub.app/licenses/pay/demo');
 };
 
