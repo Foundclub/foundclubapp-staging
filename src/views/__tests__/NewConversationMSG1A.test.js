@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SectionList, Text, TouchableOpacity } from 'react-native';
+import {
+  Keyboard, SectionList, Text, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { subscribeToGuidanceSignals } from '@/domains/guidance/guidanceRuntime';
@@ -539,5 +541,61 @@ describe('GUIDE-D-CORR-3 : B3 en simulation, membres d exemple', () => {
     await appuyer(arbre, 'Démarrer');
     expect(mockStartWhisperChat).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+});
+
+// GUIDE-D-CORR-4, M1100 (TestFlight 2.6.98, 10/11), bonus 3 « Créer un groupe » : « il faut refaire
+// les cadres quand on arrive à la création du groupe, l'écran est trop chargé ». Le nom et les
+// autorisations étaient désignés ensemble, le cadre du nom se resserrait sur le texte tapé, et le
+// clavier ouvert ne laissait à la bulle que la place du champ.
+describe('GUIDE-D-CORR-4 : création du groupe, une chose désignée à la fois', () => {
+  const SIMULATION = { checksMembers: true, simulatesGroup: true };
+  const versLeNom = async (/** @type {any} */ arbre) => {
+    const exemples = arbre.root.findAllByType(TouchableOpacity).filter((
+      /** @type {any} */ n,
+    ) => (
+      n.props?.accessibilityRole === 'checkbox'
+      && String(n.props?.accessibilityLabel || '').includes('Exemple')
+    ));
+    await act(async () => { exemples[0].props.onPress(); });
+    await act(async () => { exemples[1].props.onPress(); });
+    await appuyer(arbre, 'Suivant');
+  };
+  const aplatir = (/** @type {any} */ style) => Object.assign(
+    {},
+    ...[style].flat(5).filter(Boolean),
+  );
+
+  afterEach(() => {
+    mockTour = {};
+    mockMembresDuServeur = null;
+  });
+
+  test('le cadre du nom prend toute la largeur du champ, pas celle du texte tapé', async () => {
+    mockMembresDuServeur = [{
+      documentId: 'moi', firstname: 'Adel', lastname: 'F', role: { name: 'Dirigeant' },
+    }];
+    mockTour = { currentStep: { ...SIMULATION, targets: ['grp-name'] }, tourStatus: 'active' };
+    const arbre = await monter();
+    await versLeNom(arbre);
+    const ancre = arbre.root.find((/** @type {any} */ n) => n.props?.id === 'grp-name'
+      && typeof n.type !== 'string');
+    expect(aplatir(ancre.props.style).flex).toBe(1);
+  });
+
+  test('le guide montre « Autorisations du groupe » : le clavier du nom se ferme', async () => {
+    const fermer = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+    mockTour = { currentStep: { ...SIMULATION, targets: ['grp-perms'] }, tourStatus: 'active' };
+    await monter();
+    expect(fermer).toHaveBeenCalled();
+    fermer.mockRestore();
+  });
+
+  test('témoin : hors de cette étape, le clavier reste ouvert', async () => {
+    const fermer = jest.spyOn(Keyboard, 'dismiss').mockImplementation(() => {});
+    mockTour = { currentStep: { ...SIMULATION, targets: ['grp-name'] }, tourStatus: 'active' };
+    await monter();
+    expect(fermer).not.toHaveBeenCalled();
+    fermer.mockRestore();
   });
 });

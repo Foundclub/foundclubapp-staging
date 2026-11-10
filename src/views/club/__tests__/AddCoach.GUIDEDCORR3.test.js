@@ -380,3 +380,65 @@ describe('GUIDE-D-CORR-3 M1078 — Ajouter un coach, clavier et cadre du guide',
     });
   });
 });
+
+// GUIDE-D-CORR-4, M1098 (TestFlight 2.6.98, 10/11) : « le pop up de la mission cache le bouton et
+// il est coupé ». Pendant m2-fields, l'écran garde à la bulle sa place entre la zone du formulaire
+// et les boutons du bas : la zone rétrécit, les boutons restent à découvert.
+describe('GUIDE-D-CORR-4 M1098 — la place de la bulle au-dessus des boutons', () => {
+  afterEach(() => {
+    mockClavier = null;
+    mockTour = { currentStep: null, tourStatus: null };
+  });
+
+  /**
+   * L'ordre des enfants du conteneur de la zone : zone, place de la bulle, boutons.
+   * @param {any} arbre
+   * @returns {string[]}
+   */
+  const ordre = (arbre) => {
+    const zone = arbre.root.find((/** @type {any} */ noeud) => noeud.props?.id === 'cf-zone'
+      && typeof noeud.type !== 'string');
+    // Un enfant qui ne dessine rien (la place, hors de son etape) ne compte pas.
+    const dessine = (/** @type {any} */ enfant) => typeof enfant === 'string'
+      || enfant.findAll((/** @type {any} */ n) => typeof n.type === 'string').length > 0;
+    return zone.parent.children.filter(dessine).map((/** @type {any} */ enfant) => {
+      if (typeof enfant === 'string') return enfant;
+      if (enfant.props?.id) return enfant.props.id;
+      const place = enfant.findAll((/** @type {any} */ n) => n.props?.testID === 'tour.bubbleSlot');
+      if (place.length) return 'tour.bubbleSlot';
+      const envoi = enfant.findAll((/** @type {any} */ n) => n.props?.id === 'cf-send');
+      return envoi.length ? 'boutons' : '?';
+    });
+  };
+
+  /**
+   * Monte l'ecran dans le guide Dirigeant, a l'etape donnee.
+   * @param {string} id
+   * @returns {Promise<any>}
+   */
+  const monterAEtape = async (id) => {
+    mockTour = { currentStep: etape(id), isGuide: true, tourStatus: 'active' };
+    const route = { name: RouteNames.AddCoach, params: { clubId: 'club-1' } };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<AddCoach navigation={mockNavigation} route={route} />);
+    });
+    return arbre;
+  };
+
+  it('m2-fields : la place de la bulle est entre la zone et les boutons', async () => {
+    const arbre = await monterAEtape('m2-fields');
+    expect(ordre(arbre)).toEqual(['cf-zone', 'tour.bubbleSlot', 'boutons']);
+  });
+
+  it('témoin : hors du guide, rien entre la zone et les boutons', async () => {
+    const arbre = await monterEcran();
+    expect(ordre(arbre)).toEqual(['cf-zone', 'boutons']);
+  });
+
+  it('témoin : m2-send, pas de place, le bouton désigné est juste sous la zone', async () => {
+    const arbre = await monterAEtape('m2-send');
+    expect(ordre(arbre)).toEqual(['cf-zone', 'boutons']);
+  });
+});

@@ -271,6 +271,10 @@ describe('les bonus de bout en bout', () => {
     touch('conversation.step.name');
     expect(stepId()).toBe('b3-name');
     next();
+    // GUIDE-D-CORR-4 (M1100) : le nom, puis les autorisations, une chose à la fois.
+    expect(stepId()).toBe('b3-perms');
+    next();
+    expect(stepId()).toBe('b3-create');
     action('conversation.group.created');
     expect(tour.reward).toMatchObject({ missionId: 'president_b3' });
     expect(tour.created['conversation.group.created']).toBeTruthy();

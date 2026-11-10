@@ -25589,9 +25589,10 @@ export default {
         + 'rien.',
       'b3-few': 'Un groupe demande au moins 2 autres membres, et ton club n’en a pas encore '
         + 'assez. Reviens ici quand ils auront rejoint le club. On continue.',
-      'b3-name': 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
-        + 'messages » pour que seuls les admins écrivent.',
+      'b3-name': 'Donne-lui un nom. C’est facultatif.',
       'b3-new': 'Touche ce bouton pour une nouvelle discussion.',
+      'b3-perms': 'Dans « Autorisations du groupe », coupe « Envoyer des messages » pour que seuls '
+        + 'les admins écrivent.',
       'b3-sel': 'Coche au moins 2 membres, ceux marqués « Exemple » suffisent, puis « Suivant ». '
         + 'C’est une simulation : rien n’est créé.',
       'b3-whisper': 'C’est une discussion à deux. Pour un groupe, coche au moins 2 personnes '

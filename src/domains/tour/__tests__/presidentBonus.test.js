@@ -83,7 +83,7 @@ describe('B2 : le canal du club', () => {
 describe('B3 : créer un groupe', () => {
   it('le parcours réel, validé à la création', () => {
     expect(playedOf('president_b3'))
-      .toEqual(['b3-back', 'b3-new', 'b3-sel', 'b3-name', 'b3-create']);
+      .toEqual(['b3-back', 'b3-new', 'b3-sel', 'b3-name', 'b3-perms', 'b3-create']);
     expect(idAt(send('b3-new', { key: RouteNames.NewConversation, kind: 'route' }).index))
       .toBe('b3-sel');
     expect(idAt(send('b3-sel', { key: 'conversation.step.name', kind: 'interaction' }).index))
@@ -117,8 +117,12 @@ describe('B3 : créer un groupe', () => {
   });
 
   it('la fenêtre des autorisations n a pas de cadre : la bulle la raconte avant', () => {
-    expect(step('b3-name').targets).toEqual(['grp-name', 'grp-perms']);
-    expect(step('b3-name').text).toMatch(/Autorisations/);
+    // GUIDE-D-CORR-4 (M1100) : une seule zone désignée à la fois, le nom puis les autorisations.
+    expect(step('b3-name').targets).toEqual(['grp-name']);
+    expect(step('b3-perms').targets).toEqual(['grp-perms']);
+    expect(step('b3-perms').text).toMatch(/Autorisations/);
+    expect(step('b3-perms').resumeFrom).toBe('b3-new');
+    expect(step('b3-perms').simulatesGroup).toBe(true);
     ['perms-write', 'perms-back'].forEach((target) => {
       profile.steps.forEach((one) => expect(one.targets || []).not.toContain(target));
     });
