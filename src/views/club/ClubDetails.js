@@ -3296,62 +3296,69 @@ function ClubDetails({ navigation, route }) {
               rapport à la grande carte : « Modifier » et l'affiche à droite dans la ligne,
               l'encart de la Ville juste dessous, en petit. L'adresse, la certification et les
               coordonnées du club (absentes de la planche) restent dans « Modifier ». */}
+          {/* GUIDES-SITE-CORR famille 1 (tournée du site, 09/11, S01, S02, S07) : l'en-tête
+              compact de l'ordinateur porte les ancres de la carte du téléphone. */}
           {enTeteCompact ? (
-            <ClubCompactHeader
-              actions={(
-                <Button
-                  onPress={handleOpenClubPoster}
-                  size="sm"
-                  title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
-                  variant="Secondary"
-                />
-              )}
-              club={club}
-              onEdit={handleEditClub}
-              subtitle={sportsDuClub}
-              title={club?.name}
-            >
-              {collectiviteOffer ? (
-                <TouchableOpacity
-                  accessibilityLabel={t(
-                    'clubDetails.collectiviteOffer.ouvrir',
-                    '{{offert}} : voir ses installations',
-                    { offert: offertParLaVille, ...SANS_ECHAPPEMENT },
-                  )}
-                  accessibilityRole="link"
-                  onPress={handleOpenFacilityList}
-                  style={[
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Spaces.gap[8],
-                    {
-                      alignSelf: 'flex-start',
-                      backgroundColor: withAlpha(Colors.success500, 0.08),
-                      borderColor: withAlpha(Colors.success500, 0.4),
-                      borderRadius: 16,
-                      borderWidth: 1,
-                      minHeight: 32,
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>
-                    {offertParLaVille}
-                  </Text>
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {t(
-                      'clubDetails.collectiviteOffer.voir',
-                      'Voir les installations de la Ville',
+            <TourTarget id="club.card">
+              <ClubCompactHeader
+                actions={(
+                  <TourTarget id="club.poster">
+                    <Button
+                      onPress={handleOpenClubPoster}
+                      size="sm"
+                      title={t('clubDetails.actions.joinPoster', 'Affiche — Rejoindre le club')}
+                      variant="Secondary"
+                    />
+                  </TourTarget>
+                )}
+                club={club}
+                editTourTargetId="club.edit"
+                onEdit={handleEditClub}
+                subtitle={sportsDuClub}
+                title={club?.name}
+              >
+                {collectiviteOffer ? (
+                  <TouchableOpacity
+                    accessibilityLabel={t(
+                      'clubDetails.collectiviteOffer.ouvrir',
+                      '{{offert}} : voir ses installations',
+                      { offert: offertParLaVille, ...SANS_ECHAPPEMENT },
                     )}
-                  </Text>
-                  <Image
-                    source={Images.arrowRight}
-                    style={{ height: 12, tintColor: Colors.success200, width: 12 }}
-                  />
-                </TouchableOpacity>
-              ) : null}
-            </ClubCompactHeader>
+                    accessibilityRole="link"
+                    onPress={handleOpenFacilityList}
+                    style={[
+                      Alignments.row,
+                      Alignments.alignCenter,
+                      Spaces.gap[8],
+                      {
+                        alignSelf: 'flex-start',
+                        backgroundColor: withAlpha(Colors.success500, 0.08),
+                        borderColor: withAlpha(Colors.success500, 0.4),
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        minHeight: 32,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>
+                      {offertParLaVille}
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      {t(
+                        'clubDetails.collectiviteOffer.voir',
+                        'Voir les installations de la Ville',
+                      )}
+                    </Text>
+                    <Image
+                      source={Images.arrowRight}
+                      style={{ height: 12, tintColor: Colors.success200, width: 12 }}
+                    />
+                  </TouchableOpacity>
+                ) : null}
+              </ClubCompactHeader>
+            </TourTarget>
           ) : null}
           {!isClubSubPage && !enTeteCompact ? (
             <TourTarget id="club.card">

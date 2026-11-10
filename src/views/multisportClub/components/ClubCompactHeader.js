@@ -9,8 +9,18 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 
 import proprietesDeTitre from '@/utils/accessibilite/proprietesDeTitre';
+
+/**
+ * L'ancre du guide autour de l'enfant, seulement si un id est donné.
+ * @param {{ children: import('react').ReactElement; id: string }} props
+ * @returns {import('react').ReactElement} L'enfant, ancré ou tel quel.
+ */
+function TourTargetSiDonne({ children, id }) {
+  return id ? <TourTarget id={id}>{children}</TourTarget> : children;
+}
 
 /**
  * ECRAN18-ENTETE / ECRAN18-OMNI (06/10, décisions d'Adel `entete compact` et `omni A`) — la
@@ -27,6 +37,7 @@ import proprietesDeTitre from '@/utils/accessibilite/proprietesDeTitre';
  *  children?: import('react').ReactNode;
  *  club?: any;
  *  editAccessibilityLabel?: string;
+ *  editTourTargetId?: string;
  *  onEdit?: () => void;
  *  subtitle?: string;
  *  title?: string;
@@ -39,6 +50,7 @@ function ClubCompactHeader({
   children = null,
   club,
   editAccessibilityLabel,
+  editTourTargetId = '',
   onEdit,
   subtitle = '',
   title = '',
@@ -121,29 +133,33 @@ function ClubCompactHeader({
           ]}
           >
             {actions}
+            {/* GUIDES-SITE-CORR famille 1 (S02) : l'ancre du guide sur « Modifier », si l'écran
+                la donne (le hub du club simple). */}
             {onEdit ? (
-              <TouchableOpacity
-                accessibilityLabel={editAccessibilityLabel}
-                accessibilityRole="button"
-                onPress={onEdit}
-                style={[
-                  Alignments.row,
-                  Alignments.alignCenter,
-                  Spaces.gap[8],
-                  { minHeight: 44 },
-                ]}
-              >
-                <Image
-                  source={Images.edit}
+              <TourTargetSiDonne id={editTourTargetId}>
+                <TouchableOpacity
+                  accessibilityLabel={editAccessibilityLabel}
+                  accessibilityRole="button"
+                  onPress={onEdit}
                   style={[
-                    ApplicationStyle.icon20,
-                    ApplicationStyle.tintColor.primary500,
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.gap[8],
+                    { minHeight: 44 },
                   ]}
-                />
-                <Text style={[Fonts.p1Bold, Fonts.primary500]}>
-                  {t('clubDetails.actions.editInfo', 'Modifier')}
-                </Text>
-              </TouchableOpacity>
+                >
+                  <Image
+                    source={Images.edit}
+                    style={[
+                      ApplicationStyle.icon20,
+                      ApplicationStyle.tintColor.primary500,
+                    ]}
+                  />
+                  <Text style={[Fonts.p1Bold, Fonts.primary500]}>
+                    {t('clubDetails.actions.editInfo', 'Modifier')}
+                  </Text>
+                </TouchableOpacity>
+              </TourTargetSiDonne>
             ) : null}
           </View>
         ) : null}

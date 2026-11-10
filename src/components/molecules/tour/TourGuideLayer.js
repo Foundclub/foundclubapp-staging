@@ -49,12 +49,12 @@ import {
   isOnScreen,
   isUnderHeader,
   placeBubble,
+  planSiteReveal,
   slotBubbleTop,
   stableHeight,
   toAbsoluteStyle,
   toCutout,
   toLayerFrame,
-  planSiteReveal,
   wideBubbleFrame,
 } from '@/components/molecules/tour/tourGuideGeometry';
 import { TOUR_SHEET_TARGET } from '@/components/molecules/tour/tourSheetContext';
