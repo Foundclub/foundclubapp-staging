@@ -98,7 +98,18 @@ function TeamWizardName({ navigation, route }) {
   // (TourTeamChoice).
   const { currentMission, tourStatus } = useTour();
   const askedByGuide = tourStatus === 'active' && Boolean(currentMission?.asksTeamChoice);
-  const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed && !askedByGuide;
+  // GUIDE-E-CORR-2 (testeur, 10/11) : cet écran reste monté sous le récapitulatif. Jugée à chaque
+  // rendu, la feuille se rouvrait APRÈS la création, par-dessus la mission 2 : le guide passait
+  // de la mission 1 (qui la cachait) à la 2, ou le club recevait sa première équipe. La question
+  // se tranche donc une fois, à l'entrée, quand le club a répondu.
+  // Témoin : __tests__/TeamWizardName.test.js, « GUIDE-E-CORR-2 ».
+  const [chooserAtEntry, setChooserAtEntry] = useState(/** @type {boolean | null} */ (null));
+  const isChooserSettled = !(routeClubId || accountClubId || state.clubId) || clubQuery.isFetched;
+  const wantsChooser = clubTeams.length > 0 && !askedByGuide;
+  useEffect(() => {
+    if (chooserAtEntry === null && isChooserSettled) setChooserAtEntry(wantsChooser);
+  }, [chooserAtEntry, isChooserSettled, wantsChooser]);
+  const shouldOfferChooser = chooserAtEntry === true && !isChooserDismissed;
 
   // 🔴 Q2 (recette d Adel du 28/08) — LE REFUS ARRIVE ICI, PAS A LA 8/8.
   //
@@ -136,8 +147,7 @@ function TeamWizardName({ navigation, route }) {
   // on la reporte au moment ou la question est TRANCHEE : tout de suite s'il n'y
   // a pas de pop-up, apres la reponse s'il y en a un.
   const nameInputRef = useRef(/** @type {any} */ (null));
-  const isChooserSettled = !(routeClubId || accountClubId || state.clubId) || clubQuery.isFetched;
-  const shouldFocusName = hasClubContext && isChooserSettled && !shouldOfferChooser;
+  const shouldFocusName = hasClubContext && chooserAtEntry !== null && !shouldOfferChooser;
 
   useEffect(() => {
     if (!shouldFocusName) {

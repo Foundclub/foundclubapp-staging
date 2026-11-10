@@ -525,3 +525,69 @@ describe('REPRISE-INSCRIPTION — l’entraîneur coché d’office dans son éq
     (/** @type {any} */ (mockCompte)).role = { name: 'Entraineur', type: 'coach' };
   });
 });
+
+// GUIDE-E-CORR-2 (testeur, iPhone, 10/11 11:16) — guide Entraîneur, club qui a déjà des équipes :
+// l'équipe créée, « Félicitations » puis OK, et la feuille « Ton club a déjà des équipes » se
+// rouvrait par-dessus la mission 2 ; seul « quitter le guide » la fermait. L'écran 1/8 reste monté
+// sous le récapitulatif : la feuille se décidait à CHAQUE rendu, donc dès que la mission 1 (qui
+// la cachait) cédait la place, ou que la liste du club recevait la nouvelle équipe.
+describe('GUIDE-E-CORR-2 — la feuille se décide à l’entrée, pas après la création', () => {
+  const { TourContext } = jest.requireActual('@/context/useTour');
+  const MISSION_1 = { asksTeamChoice: true, id: 'coach_m1' };
+  const MISSION_2 = { id: 'coach_m2' };
+  const pilote = {
+    getParent: () => null, goBack: () => {}, navigate: () => {}, reset: () => {},
+  };
+  /**
+   * L'écran 1/8 sous un guide donné.
+   * @param {any} tour Valeur du guide (null : pas de guide).
+   * @returns {any} L'élément à monter.
+   */
+  const ecran = (tour) => createElement(
+    TourContext.Provider,
+    { value: tour },
+    createElement(
+      TeamWizardProvider,
+      null,
+      createElement(TeamWizardName, {
+        navigation: /** @type {any} */ (pilote),
+        route: /** @type {any} */ ({ params: { clubId: 'club-1' } }),
+      }),
+    ),
+  );
+  const EQUIPE_EXISTANTE = { documentId: 'eq-1', name: 'Senior 1', trainers: [{ documentId: 'autre' }] };
+  const EQUIPE_CREEE = { documentId: 'eq-2', name: 'Seniors A', trainers: [{ documentId: 'moi' }] };
+  const FEUILLE = 'Ton club a déjà des équipes';
+
+  test('guide : la mission 1 passe à la mission 2, la feuille ne se rouvre pas', () => {
+    mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_EXISTANTE] };
+    act(() => { arbre = renderer.create(ecran({ currentMission: MISSION_1, tourStatus: 'active' })); });
+    expect(textesSous(arbre.root)).not.toContain(FEUILLE);
+
+    // L'équipe est créée : le guide avance AVANT que la navigation ne retire le tunnel.
+    mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_EXISTANTE, EQUIPE_CREEE] };
+    act(() => { arbre.update(ecran({ currentMission: MISSION_2, tourStatus: 'active' })); });
+
+    expect(textesSous(arbre.root)).not.toContain(FEUILLE);
+  });
+
+  test('hors guide : un club sans équipe reçoit la première, la feuille ne s’ouvre pas', () => {
+    mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [] };
+    act(() => { arbre = renderer.create(ecran(null)); });
+    expect(textesSous(arbre.root)).not.toContain(FEUILLE);
+
+    mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_CREEE] };
+    act(() => { arbre.update(ecran(null)); });
+
+    expect(textesSous(arbre.root)).not.toContain(FEUILLE);
+  });
+
+  test('mission 3 (une autre équipe) : la feuille reste proposée à l’entrée, sans clavier', () => {
+    mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_EXISTANTE] };
+    mockFocus.appels = 0;
+    act(() => { arbre = renderer.create(ecran({ currentMission: { id: 'coach_m3' }, tourStatus: 'active' })); });
+
+    expect(textesSous(arbre.root)).toContain(FEUILLE);
+    expect(mockFocus.appels).toBe(0);
+  });
+});

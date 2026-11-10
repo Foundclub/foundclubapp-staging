@@ -679,6 +679,28 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
     expect(textes[0]).toBe(LIBELLE_ENTETE_MENU);
     expect(textes).toContain("Quitter l'équipe");
   });
+
+  // GUIDE-E-CORR-2 (testeur, iPhone, 10/11 11:14) : la feuille montait presque en haut, la liste
+  // s'arrêtait à 70 % de l'écran (plafond par défaut de la zone qui défile), un grand vide dessous
+  // et la dernière carte coupée. Même défaut et même remède que « Changer de compte » (SUPADM) :
+  // la zone qui défile reçoit le plafond de la feuille (fenêtre moins sa marge du haut, `topInset`
+  // de BottomModal = marge + 20), et le bas ne garde que la zone sûre.
+  test('🔴 GUIDE-E-CORR-2 — la liste remplit la feuille, sans vide en bas', () => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    const feuille = racine.findAll(
+      (/** @type {any} */ noeud) => noeud.type?.name === 'BottomModalMock'
+        && noeud.props?.isVisible === true,
+    )[0];
+    const { Dimensions } = jest.requireActual('react-native');
+    const fenetre = Dimensions.get('window').height;
+    const dalle = Dimensions.get('screen').height;
+
+    // Sans fournisseur de zone sûre (témoin) : marge du haut 0, marge du bas 0.
+    expect(feuille.props.maxContentHeightRatio).toBeCloseTo(Math.max(0.7, (fenetre - 20) / dalle), 5);
+    expect(feuille.props.contentBottomPaddingOverride).toBeLessThanOrEqual(12);
+  });
 });
 
 // ABOPARCLUB (2026-09-29) — l'offre Club se juge au club de CETTE equipe

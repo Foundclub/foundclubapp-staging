@@ -228,7 +228,7 @@ describe('Mon compte › Guide entraîneur·e', () => {
     await monter();
     await toucher('Guide entraîneur·e');
     expect(mockTour.startTour).toHaveBeenCalledWith('coach');
-    expect(textes()).not.toContain('Revoir le guide sans rien créer');
+    expect(textes()).not.toContain('Revoir sans rien créer');
   });
 
   it('déjà fait : un petit menu, sans rien lancer', async () => {
@@ -237,12 +237,12 @@ describe('Mon compte › Guide entraîneur·e', () => {
     await toucher('Guide entraîneur·e');
     expect(mockTour.startTour).not.toHaveBeenCalled();
     expect(textes()).toEqual(expect.arrayContaining([
-      'Revoir le guide sans rien créer',
+      'Revoir sans rien créer',
       'Faire un bonus',
     ]));
     // Rien en cours : pas de « Reprendre ».
     expect(textes()).not.toContain('Reprendre là où j’en étais');
-    await toucher('Revoir le guide sans rien créer');
+    await toucher('Revoir sans rien créer');
     expect(mockTour.startTour).toHaveBeenLastCalledWith('coach', { review: true });
   });
 
@@ -266,7 +266,7 @@ describe('Mon compte › Guide entraîneur·e', () => {
     await toucher('Guide entraîneur·e');
     // Point 1 du chef (28/10, B) : un bonus remplacerait la progression en cours.
     expect(textes()).not.toContain('Faire un bonus');
-    expect(textes()).toContain('Revoir le guide sans rien créer');
+    expect(textes()).toContain('Revoir sans rien créer');
     await toucher('Reprendre là où j’en étais');
     expect(mockTour.resumeTour).toHaveBeenCalledWith({ pop: true });
     expect(mockTour.startTour).not.toHaveBeenCalled();
