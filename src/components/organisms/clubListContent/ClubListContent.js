@@ -962,7 +962,10 @@ function ClubListContent({
       {/* ANNUAIRE-E1 (maquette validée le 29/09) — le sport et le lieu en deux pastilles écrites,
           qui ouvrent CHACUNE leur choix en un geste. Elles remplacent la ligne-résumé de D6
           (« Football · Lyon · 10 km »), qui ouvrait toute la fenêtre « Filtrer ». */}
-      <PastillesFiltresClub filters={clubFilters} onApply={appliquerFiltres} />
+      {/* GUIDE-RECHERCHER (M1101) : le guide Dirigeant présente ces deux pastilles. */}
+      <TourTarget id="search.clubs.chips">
+        <PastillesFiltresClub filters={clubFilters} onApply={appliquerFiltres} />
+      </TourTarget>
       {showInlineLoadingHint ? (
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Loader color={Colors.primary500} size="small" />

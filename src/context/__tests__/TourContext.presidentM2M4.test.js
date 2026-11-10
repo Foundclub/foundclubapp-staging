@@ -561,3 +561,53 @@ describe('L11 bis — deux retours rapides de M2 à M3', () => {
     expect(stepId()).toBe('m3-create');
   });
 });
+
+// GUIDE-RECHERCHER (M1101, « 216- A ») : sur une page de Rechercher, « Suivant » passe à la bulle
+// suivante de la MÊME page (sans navigation ni validation du bonus) ; la flèche mène à la case
+// suivante ; la dernière bulle des matchs amicaux finit le bonus.
+describe('B5 de bout en bout : les bulles des pages de Rechercher', () => {
+  const toCard = (id) => {
+    for (let i = 0; i < 8 && stepId() !== id; i += 1) next();
+    expect(stepId()).toBe(id);
+  };
+
+  it('Événements : les dates, puis les filtres, puis la flèche mène à Club', () => {
+    start('president_b5');
+    route(RouteNames.SearchHome);
+    expect(stepId()).toBe('b5-ev');
+    route(RouteNames.SearchHub);
+    expect(stepId()).toBe('b5-ev-page');
+    mockNavigate.mockClear();
+    next();
+    expect(stepId()).toBe('b5-ev-filters');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    route(RouteNames.SearchHome);
+    expect(stepId()).toBe('b5-cl');
+  });
+
+  it('Matchs amicaux : trois bulles, le bonus ne finit qu’à « Compris »', () => {
+    start('president_b5');
+    route(RouteNames.SearchHome);
+    toCard('b5-fr');
+    route(RouteNames.SearchHub);
+    expect(stepId()).toBe('b5-fr-page');
+    next();
+    expect(stepId()).toBe('b5-fr-filters');
+    expect(tour.missionStatus?.president_b5).toBeUndefined();
+    next();
+    expect(stepId()).toBe('b5-fr-create');
+    expect(tour.missionStatus?.president_b5).toBeUndefined();
+    next();
+    expect(tour.missionStatus.president_b5).toBe('done');
+  });
+
+  it('Matchs amicaux : la flèche à la 1ʳᵉ bulle finit aussi le bonus', () => {
+    start('president_b5');
+    route(RouteNames.SearchHome);
+    toCard('b5-fr');
+    route(RouteNames.SearchHub);
+    expect(stepId()).toBe('b5-fr-page');
+    route(RouteNames.SearchHome);
+    expect(tour.missionStatus.president_b5).toBe('done');
+  });
+});

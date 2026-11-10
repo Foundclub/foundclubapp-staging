@@ -25606,16 +25606,24 @@ export default {
       'b4-noteam-next': 'Bonus suivant',
       'b5-back': 'Dernier coup d’œil : retourne à l’accueil.',
       'b5-cl': 'Club : les autres clubs, pour un partenariat ou un amical.',
-      'b5-cl-page': 'Voici les clubs : ouvre une fiche pour les contacter. La flèche te ramène à '
+      'b5-cl-filters': 'D’autres filtres ici : sport, lieu et rayon. La flèche te ramène à '
         + 'l’accueil.',
+      'b5-cl-page': 'Choisis un sport et une ville ici, en un geste.',
       'b5-ev': 'Événement : tournois, stages et détections autour de toi.',
-      'b5-ev-page': 'Voici les événements près de toi, jour par jour. La flèche te ramène à '
-        + 'l’accueil.',
+      'b5-ev-filters': 'Les filtres : sport, ville et rayon, catégorie, niveau, type d’événement. '
+        + 'La flèche te ramène à l’accueil.',
+      'b5-ev-page': 'Touche un jour pour voir ses événements, ou le mois pour changer de mois.',
       'b5-fr': 'Matchs amicaux : trouve un adversaire, ou publie ton annonce.',
-      'b5-fr-page': 'Voici les équipes qui cherchent un adversaire. Tu peux aussi publier ton '
-        + 'annonce.',
+      'b5-fr-create': 'Ou publie ton annonce ici.',
+      'b5-fr-filters': 'Filtres : recevoir ou se déplacer, quand, distance, catégorie, niveau, '
+        + 'format.',
+      'b5-fr-page': 'Annonces : celles des autres équipes. Mes annonces et Mes propositions : les '
+        + 'tiennes.',
       'b5-pr': 'Profils : les joueur·se·s et coachs ouverts au recrutement.',
-      'b5-pr-page': 'Voici les profils ouverts au recrutement. La flèche te ramène à l’accueil.',
+      'b5-pr-filters': 'Filtre par sport, ville et rayon, catégorie, poste. La flèche te ramène à '
+        + 'l’accueil.',
+      'b5-pr-page': 'Profils : les joueur·se·s à recruter. Opportunités : les annonces. '
+        + 'Candidatures : les réponses reçues.',
       'b5-re': 'Réservations : les créneaux de terrains à réserver près de toi.',
       'b5-re-page': 'Voici les créneaux de terrains libres. La flèche te ramène à l’accueil.',
       bonusDetail: 'Cotisation, canal, groupe, recrutement, recherche',

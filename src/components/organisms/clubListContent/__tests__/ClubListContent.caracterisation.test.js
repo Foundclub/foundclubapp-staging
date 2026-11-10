@@ -877,3 +877,14 @@ describe('REPRISE-PLACE — fin de la liste des clubs sur le site', () => {
     expect(reserves(monte)).not.toContain(144);
   });
 });
+
+// GUIDE-RECHERCHER (M1101) : la 1ʳᵉ bulle de la page des clubs désigne les deux pastilles.
+describe('ClubListContent — l ancre du guide sur les pastilles', () => {
+  test('🔴 l ancre « search.clubs.chips » tient les pastilles sport et lieu', async () => {
+    await monter();
+    const ancre = monte.root.find((/** @type {any} */ n) => n.props?.id === 'search.clubs.chips'
+      && typeof n.type !== 'string');
+    expect(ancre.findAll((/** @type {any} */ n) => n.type === 'PastillesFiltresClub'))
+      .toHaveLength(1);
+  });
+});

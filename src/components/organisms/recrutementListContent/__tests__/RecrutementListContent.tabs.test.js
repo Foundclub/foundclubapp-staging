@@ -1,3 +1,4 @@
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import RecrutementListContent from '../RecrutementListContent';
@@ -929,5 +930,20 @@ describe('RecrutementListContent — CORR-RECHERCHE point 2 : tout defile', () =
     const tree = await rendreDansLaRecherche(JOUEUR, { initialTab: 'annonces' });
 
     expect(textesDeLaListe(tree)).toContain('temoin-entete-recherche');
+  });
+});
+
+// GUIDE-RECHERCHER (M1101) : la 1ʳᵉ bulle de la page des profils désigne les 3 onglets du staff.
+describe('RecrutementListContent — l ancre du guide sur les onglets', () => {
+  const ancreDe = (/** @type {any} */ tree) => tree.root.findAll((/** @type {any} */ n) => (
+    n.props?.id === 'search.recruitment.tabs' && typeof n.type !== 'string'
+  ));
+
+  it('🔴 un Dirigeant : l ancre tient Profils, Opportunités et Candidatures', async () => {
+    const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
+    const [ancre] = ancreDe(tree);
+    expect(ancre).toBeDefined();
+    const lus = ancre.findAllByType(Text).map((/** @type {any} */ n) => String(n.props.children));
+    expect(lus).toEqual(['Profils', 'Opportunités', 'Candidatures']);
   });
 });

@@ -521,9 +521,17 @@ function FriendlyMatchListContent({
       },
     ]}
     >
-      {renderTab('annonces', t('friendlyMatchListContent.listings', 'Annonces'))}
-      {renderTab('mes-annonces', t('friendlyMatchListContent.myListings', 'Mes annonces'))}
-      {renderTab('candidatures', t('friendlyMatchListContent.myProposals', 'Mes propositions'))}
+      {/* GUIDE-RECHERCHER (M1101) : l'ancre du guide tient les seuls onglets (même rangée). */}
+      <TourTarget
+        id="friendly.tabs"
+        style={{
+          flex: 1, flexDirection: 'row', gap: 8, justifyContent: 'center',
+        }}
+      >
+        {renderTab('annonces', t('friendlyMatchListContent.listings', 'Annonces'))}
+        {renderTab('mes-annonces', t('friendlyMatchListContent.myListings', 'Mes annonces'))}
+        {renderTab('candidatures', t('friendlyMatchListContent.myProposals', 'Mes propositions'))}
+      </TourTarget>
     </View>
   ) : null;
 

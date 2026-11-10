@@ -47,6 +47,7 @@ import Loader from '@/components/atoms/loader/Loader';
 import DateSlider from '@/components/molecules/dateSlider/DateSlider';
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import SearchResultsLoadingState from '@/components/molecules/searchResultsLoadingState/SearchResultsLoadingState';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import {
   CarteMePrevenir,
@@ -1530,12 +1531,15 @@ function EventListContent({
           ) : null}
         </View>
 
-        <DateSlider
-          isRefreshing={Boolean(isDateRefreshPending || (isFetching && displayEvents.length > 0))}
-          onDateSelected={handleDateSelected}
-          refreshLabel={t('eventList.loadingUpdating', 'Actualisation des événements...')}
-          selectedDate={selectedDate}
-        />
+        {/* GUIDE-RECHERCHER (M1101) : le guide Dirigeant présente le mois et les jours. */}
+        <TourTarget id="search.events.dates">
+          <DateSlider
+            isRefreshing={Boolean(isDateRefreshPending || (isFetching && displayEvents.length > 0))}
+            onDateSelected={handleDateSelected}
+            refreshLabel={t('eventList.loadingUpdating', 'Actualisation des événements...')}
+            selectedDate={selectedDate}
+          />
+        </TourTarget>
         {showDateRefreshBanner ? renderLoadingHint(
           t('eventList.loadingUpdating', 'Actualisation des événements...'),
           true,
