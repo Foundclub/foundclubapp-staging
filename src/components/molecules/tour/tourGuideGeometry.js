@@ -371,6 +371,52 @@ export const bubbleRoom = ({
   return Math.max(MIN_BUBBLE_ROOM, room);
 };
 
+// Marge gardée autour d'une cible ramenée à l'écran sur le site (même valeur que la couche).
+const SITE_REVEAL_MARGIN = 12;
+
+/**
+ * GUIDES-SITE-CORR (tournée du site du 09/11) : sur le site, ce que le défilement automatique doit
+ * ramener, et vers quel bord. Avant, chaque cible coupée allait AU MILIEU de l'écran : une longue
+ * liste montrait son milieu (sports, niveaux, équipes : S10, S11, S19), et dans un tunnel la place
+ * de la bulle passait au-dessus de l'écran, la bulle se posant alors sur les choix (S26, S31).
+ * Règles, cible par cible, dans l'ordre donné (la place de la bulle d'abord) :
+ * - entière dans la zone utile : rien ;
+ * - plus haute que la zone : rien si son HAUT est visible, sinon son haut sous l'en-tête (`start`) ;
+ * - sinon : ramenée au plus court, juste au bord (`nearest`) : « Suivant » sous le bas (S14) ;
+ * - jamais au prix d'une cible déjà visible qui sortirait de l'écran.
+ * @param {{ box: { height: number; y: number }; id: string }[]} entries - Mesures entières, dans le
+ *   repère de la couche, par ordre de priorité.
+ * @param {number} areaTop - Haut utile (sous l'en-tête fixe).
+ * @param {number} areaBottom - Bas utile (au-dessus de la barre d'onglets).
+ * @returns {{ block: 'nearest' | 'start'; id: string } | null} Ce qu'il faut ramener, ou rien.
+ */
+export const planSiteReveal = (entries, areaTop, areaBottom) => {
+  const room = areaBottom - areaTop - (2 * SITE_REVEAL_MARGIN);
+  const isTall = (/** @type {{ height: number }} */ box) => box.height > room;
+  const isSeen = (/** @type {{ height: number; y: number }} */ box, shift = 0) => {
+    const y = box.y - shift;
+    if (isTall(box)) return y >= areaTop - 1 && y <= areaBottom - MIN_TOUCH;
+    return y >= areaTop - 1 && y + box.height <= areaBottom + 1;
+  };
+  /** @type {{ height: number; y: number }[]} */
+  const seen = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    const { box, id } = entries[index];
+    if (isSeen(box)) {
+      seen.push(box);
+    } else {
+      const fromTop = isTall(box) || box.y < areaTop;
+      const shift = fromTop
+        ? box.y - areaTop - SITE_REVEAL_MARGIN
+        : box.y + box.height - areaBottom + SITE_REVEAL_MARGIN;
+      if (seen.every((done) => isSeen(done, shift))) {
+        return { block: isTall(box) ? 'start' : 'nearest', id };
+      }
+    }
+  }
+  return null;
+};
+
 // Hauteur sous laquelle un trou entre les cibles ne peut plus recevoir la bulle (en-tête + une
 // ligne serrés) : clavier ouvert, la bulle attend qu'il se ferme plutôt que de couvrir le champ.
 const MIN_GAP_ROOM = 56;

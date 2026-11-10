@@ -73,10 +73,21 @@ function TourTarget({
     }, {
       clipTo,
       inSheet,
-      // GUIDES-SITE : sur le site, le navigateur ramène l'ancre au milieu de l'écran, en faisant
-      // défiler la page et chaque conteneur qui l'entoure (défilement automatique du guide).
+      // GUIDES-SITE : sur le site, le navigateur ramène l'ancre à l'écran, en faisant défiler la
+      // page et chaque conteneur qui l'entoure (défilement automatique du guide).
+      // GUIDES-SITE-CORR (tournée du 09/11, S10, S11, S19, S26) : « au milieu » amenait le MILIEU
+      // des longues listes ; la couche choisit le bord (`start`, `nearest`) et la marge à garder
+      // sous l'en-tête et au-dessus de la barre d'onglets.
       reveal: Platform.OS === 'web'
-        ? () => viewRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+        ? (/** @type {{ block?: string; marginBottom?: number; marginTop?: number }} */ options = {}) => {
+          const node = viewRef.current;
+          if (!node?.scrollIntoView) return;
+          if (node.style) {
+            node.style.scrollMarginTop = `${Math.round(options.marginTop || 0)}px`;
+            node.style.scrollMarginBottom = `${Math.round(options.marginBottom || 0)}px`;
+          }
+          node.scrollIntoView({ behavior: 'smooth', block: options.block || 'center' });
+        }
         : undefined,
       // Le focus se lit à la mesure : un événement « focus » arrivé avant
       // l'abonnement laissait le cadre absent 30 à 45 s (CALIBRAGE-2).
