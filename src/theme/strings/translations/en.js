@@ -24299,9 +24299,9 @@ export default {
       'm2-card': 'Bring your players in: open your team.',
       'm2-more': "The team's actions are in this menu.",
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",
+      'm2-pick-next': 'Continue',
       'm2-pick-site': "Send it to your team's group chat: your computer's share window opens; "
         + 'otherwise the message is copied, paste it into your group.',
-      'm2-pick-next': 'Continue',
       'm2-sent': 'Did you send it? If so, tap “Yes, it’s sent”. Otherwise, reopen this menu to share it.',
       'm2-sent-next': 'Yes, it’s sent',
       'm2-share': 'The easiest way: an invitation link.',
@@ -24603,9 +24603,9 @@ export default {
       'm1-logo-site': 'Your logo: click it to choose an image from your device.',
       'm1-name': 'The club name, as it appears everywhere. Correct it if needed.',
       'm1-padd': 'Add your first partner with “+”.',
+      'm1-parrows': 'The arrows change the period. Try the right one.',
       'm1-parrows-month': 'The arrows at the top of the calendar change the month. Try the right '
         + 'one.',
-      'm1-parrows': 'The arrows change the period. Try the right one.',
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
       'm1-partners-have': '2/5 · You already have your partner: it is in this list. “+” adds '
         + 'another one later. On to your facilities.',

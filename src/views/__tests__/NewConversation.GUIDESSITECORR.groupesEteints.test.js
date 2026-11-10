@@ -37,8 +37,14 @@ jest.mock('i18next', () => ({
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, Circle: VueRN, default: VueRN, Line: VueRN, Path: VueRN, Polyline: VueRN,
-    Rect: VueRN, Svg: VueRN,
+    __esModule: true,
+    Circle: VueRN,
+    default: VueRN,
+    Line: VueRN,
+    Path: VueRN,
+    Polyline: VueRN,
+    Rect: VueRN,
+    Svg: VueRN,
   };
 });
 jest.mock('@/theme/themeContext', () => {

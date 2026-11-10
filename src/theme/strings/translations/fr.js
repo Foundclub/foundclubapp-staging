@@ -25356,9 +25356,9 @@ export default {
       'm2-card': 'Fais entrer tes joueur·se·s : ouvre ton équipe.',
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
+      'm2-pick-next': 'Continuer',
       'm2-pick-site': 'Envoie-le sur le groupe de ton équipe : la fenêtre de partage de ton '
         + 'ordinateur s’ouvre ; sinon le message est copié, colle-le dans ton groupe.',
-      'm2-pick-next': 'Continuer',
       'm2-sent': 'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le partager.',
       'm2-sent-next': 'Oui, c’est envoyé',
       'm2-share': 'Le plus simple : un lien d’invitation.',
@@ -25670,9 +25670,9 @@ export default {
       'm1-logo-site': 'Ton logo : clique dessus pour choisir une image de ton appareil.',
       'm1-name': 'Le nom du club, tel qu’il apparaît partout. Corrige-le si besoin.',
       'm1-padd': 'Ajoute ton premier partenaire avec « + ».',
+      'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
       'm1-parrows-month': 'Les flèches en haut du calendrier changent de mois. Essaie celle de '
         + 'droite.',
-      'm1-parrows': 'Les flèches changent de période. Essaie celle de droite.',
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
       'm1-partners-have': '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en '
         + 'ajoute un autre plus tard. On passe à tes installations.',

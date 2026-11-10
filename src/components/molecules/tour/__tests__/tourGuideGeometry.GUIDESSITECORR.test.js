@@ -44,7 +44,9 @@ describe('planSiteReveal', () => {
 // Famille 3 (S25, D 390 rangs 049-050) : bulle « en haut », bornée entre l'en-tête et le
 // formulaire, 2 lignes sur 4 et « Suivant » coupé ; la place sous le formulaire la tenait entière.
 describe('avoidTargets : une bulle écrasée va là où elle tient', () => {
-  const champs = { height: 300, width: 360, x: 15, y: 160 };
+  const champs = {
+    height: 300, width: 360, x: 15, y: 160,
+  };
   test('écrasée (90 pour 150), elle passe sous la cible, entière', () => {
     const place = avoidTargets({
       bottomLimit: 780,
