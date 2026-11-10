@@ -16413,6 +16413,7 @@ export default {
     },
     loadError: 'Impossible de charger les conversations.',
     loadUsersError: 'Impossible de charger les membres pour cette conversation.',
+    newConversation: 'Nouvelle conversation',
     noClassicData: 'Aucune conversation classique.',
     noData: 'Aucune conversation trouvée.',
     noLeagueData: 'Aucune conversation League.',

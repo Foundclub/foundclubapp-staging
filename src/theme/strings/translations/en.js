@@ -15453,6 +15453,7 @@ export default {
     },
     loadError: 'Unable to load conversations.',
     loadUsersError: 'Unable to load members for this conversation.',
+    newConversation: 'New conversation',
     noClassicData: 'No classic conversations.',
     noData: 'No conversations found.',
     noLeagueData: 'No League conversations.',
