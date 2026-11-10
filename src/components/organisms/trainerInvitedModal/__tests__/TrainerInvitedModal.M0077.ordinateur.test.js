@@ -94,6 +94,29 @@ describe('M0077 — inviter depuis un ordinateur', () => {
     expect(onInvite).not.toHaveBeenCalled();
   });
 
+  // INVITE-COACH-EXISTANT (10/11) : un numéro déjà inscrit n'est PAS ajouté ; la feuille ne dit
+  // pas « Ajout réussi ! », elle dit ce qui se passe et ce qu'il faut faire.
+  it('numéro déjà inscrit : pas de « Ajout réussi ! », et Copier marche', async () => {
+    act(() => {
+      renderer.create(
+        <TrainerInvitedModal
+          dejaInscrit
+          isVisible
+          messageDInvitation={MESSAGE}
+          onClose={jest.fn()}
+          onInvite={jest.fn()}
+          trainerName="Léa"
+        />,
+      );
+    });
+    expect(derniere().titre).toBe('addCoach.alerts.invitation.title');
+    expect(derniere().texte).toBe('addCoach.alerts.invitation.description');
+    await act(async () => { await derniere().actionPrincipale.onPress(); });
+    expect(mockCopier).toHaveBeenCalledWith(MESSAGE);
+    expect(derniere().texte)
+      .toBe('Invitation copiée : colle-la dans un e-mail, WhatsApp ou un SMS.');
+  });
+
   it('site sur téléphone, ou application : le SMS, inchangé', () => {
     mockOrdinateur = false;
     monter();

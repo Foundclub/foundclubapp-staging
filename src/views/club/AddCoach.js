@@ -103,6 +103,8 @@ function AddCoach({ navigation, route }) {
     (undefined),
   );
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  // INVITE-COACH-EXISTANT : la feuille s'ouvre pour un numéro déjà inscrit, sans ajout.
+  const [isDejaInscrit, setIsDejaInscrit] = useState(false);
   const [createdTrainer, setCreatedTrainer] = useState(
     /** @type {{ firstname?: string, lastname?: string, phoneNumber?: string } | null} */
     (null),
@@ -192,30 +194,14 @@ function AddCoach({ navigation, route }) {
           t('addCoach.alerts.alreadyInThisClub.description'),
         );
       } else if (details?.code === 'PHONE_NUMBER_TAKEN') {
-        Alert.alert(
-          t('addCoach.alerts.invitation.title'),
-          t('addCoach.alerts.invitation.description'),
-          [
-            { style: 'cancel', text: t('common.cancel', 'Annuler') },
-            {
-              onPress: () => {
-                // Le guide avance comme apres l'ancien rattachement direct.
-                emitGuidanceAction('staff.linked');
-                inviteTrainer({
-                  clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
-                  clubName: resolvedClubName,
-                  firstname: variables?.firstname || (isManagerMode
-                    ? t('addCoach.roles.manager')
-                    : t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof')),
-                  isManager: isManagerMode,
-                  phoneNumber: variables?.phoneNumber,
-                });
-                navigation.goBack();
-              },
-              text: t('addCoach.alerts.invitation.actions.send'),
-            },
-          ],
-        );
+        // INVITE-COACH-EXISTANT (10/11/2026) : le numéro a déjà un compte. Il ne rejoint le club
+        // que sur son accord (SECU-RATTACHEMENT) : la feuille d'invitation dit pourquoi, et
+        // propose le SMS (téléphone) ou la copie / l'e-mail (ordinateur). Personne n'est ajouté :
+        // le guide ne compte RIEN (avant : `staff.linked`, M2 comptée faite à tort).
+        Keyboard.dismiss();
+        setCreatedTrainer({ ...variables });
+        setIsDejaInscrit(true);
+        setIsSuccessModalVisible(true);
       } else {
         // Une seule alerte, traduite (code EMAIL_TAKEN…), jamais le message brut.
         displayErrorAlert(error);
@@ -496,6 +482,7 @@ function AddCoach({ navigation, route }) {
         </View>
       </View>
       <TrainerInvitedModal
+        dejaInscrit={isDejaInscrit}
         isManager={isManagerMode}
         isVisible={isSuccessModalVisible}
         // RETOURS-TESTEUR-2 (M0077) : sur ordinateur, ce texte se copie ou part par e-mail.
@@ -508,12 +495,17 @@ function AddCoach({ navigation, route }) {
           isManager: isManagerMode,
         })?.message : ''}
         onClose={() => {
-          emitGuidanceInteraction('staff.invite.later');
           setIsSuccessModalVisible(false);
+          if (isDejaInscrit) {
+            // Rien n'a été créé : on reste sur le formulaire (corriger le numéro, ou revenir).
+            setIsDejaInscrit(false);
+            return;
+          }
+          emitGuidanceInteraction('staff.invite.later');
           navigation.goBack();
         }}
         onInvite={() => {
-          emitGuidanceInteraction('staff.sms.opened');
+          if (!isDejaInscrit) emitGuidanceInteraction('staff.sms.opened');
           if (createdTrainer) {
             inviteTrainer({
               clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,

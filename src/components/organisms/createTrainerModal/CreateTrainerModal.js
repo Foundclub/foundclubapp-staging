@@ -22,6 +22,7 @@ import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/Trai
 import { createTrainer } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
 
+import { displayErrorAlert } from '@/utils/errors/displayError';
 import { getFieldError } from '@/utils/form/formUtils';
 
 const defaultValues = {
@@ -57,7 +58,8 @@ function CreateTrainerModal({
   // INVITESMS (29/10/2026, decision d'Adel « 2- A ») — l'entraineur cree ici n'etait prevenu par
   // personne. La feuille d'invitation d'AddCoach (SMS pre-rempli) s'ouvre apres la creation.
   const [entraineurCree, setEntraineurCree] = useState(
-    /** @type {{ firstname?: string, phoneNumber?: string } | null} */ (null),
+    /** @type {{ dejaInscrit?: boolean, firstname?: string, phoneNumber?: string } | null} */
+    (null),
   );
   // Le nom du club, pour le SMS : en cache le plus souvent (l'ecran d'equipe l'a lu).
   const { data: club } = useGetClub(clubId || undefined, {
@@ -84,11 +86,24 @@ function CreateTrainerModal({
 
   const createTrainerMutation = useMutation({
     mutationFn: createTrainer,
-    onError: (error) => {
-      const message = error && typeof error === 'object' && 'message' in error
-        ? String(error.message)
-        : t('APIerrors.unknown');
-      Alert.alert(t('common.error', 'Erreur'), message);
+    onError: (error, /** @type {any} */ variables) => {
+      // INVITE-COACH-EXISTANT (10/11/2026) : comme sur « Ajouter un coach » (AddCoach.js). Avant,
+      // « Erreur · Failed to create trainer: Uniqueness check failed », en anglais, rien d'autre.
+      const details = /** @type {any} */ (error)?.details
+        || /** @type {any} */ (error)?.response?.data?.error?.details;
+      if (details?.code === 'PHONE_NUMBER_TAKEN' && details.sameClub) {
+        Alert.alert(
+          t('addCoach.alerts.alreadyInThisClub.title'),
+          t('addCoach.alerts.alreadyInThisClub.description'),
+        );
+      } else if (details?.code === 'PHONE_NUMBER_TAKEN') {
+        // Personne n'est ajouté : il rejoindra le club sur son accord (SECU-RATTACHEMENT).
+        reset(defaultValues);
+        onClose();
+        setEntraineurCree({ ...variables, dejaInscrit: true });
+      } else {
+        displayErrorAlert(error);
+      }
     },
     onSuccess: (/** @type {any} */ createdTrainer, /** @type {any} */ variables) => {
       if (onTrainerCreated && createdTrainer?.documentId) {
@@ -252,6 +267,7 @@ function CreateTrainerModal({
         </View>
       </BottomModal>
       <TrainerInvitedModal
+        dejaInscrit={Boolean(entraineurCree?.dejaInscrit)}
         isVisible={Boolean(entraineurCree)}
         // RETOURS-TESTEUR-2 (M0077) : sur ordinateur, ce texte se copie ou part par e-mail.
         messageDInvitation={entraineurCree ? invitationDuStaff?.({
