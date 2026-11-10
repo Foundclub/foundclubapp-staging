@@ -444,7 +444,10 @@ function UserDetails({ navigation, route }) {
     enabled: isSelfProfile,
   });
 
-  const { data: targetHistories, refetch: refetchTargetHistories } = useGetUserHistories(targetUserId, {
+  const {
+    data: targetHistories,
+    refetch: refetchTargetHistories,
+  } = useGetUserHistories(targetUserId, {
     enabled: Boolean(targetUserId) && !isSelfProfile,
   });
 

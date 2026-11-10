@@ -106,7 +106,7 @@ describe('CARTECODE Q5 B — la rareté', () => {
       clubCount: 3, fill: 13, isTeamMember: true, matchCount: 20,
     }).score).toBe(100);
   });
-  test('150 A : complète = Rare, + parcours = Épique, + une équipe = Légendaire, sans match', () => {
+  test('150 A : complète = Rare, + parcours = Épique, + équipe = Légendaire, sans match', () => {
     const palier = (fill, extra = {}) => computeCardRarity({ fill, ...extra }).rarity;
     expect(palier(12)).toBe('common'); // 37
     expect(palier(13)).toBe('rare'); // 55
