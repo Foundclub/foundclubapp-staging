@@ -18821,6 +18821,8 @@ export default {
     coachGuide: {
       bonus: 'Faire un bonus',
       bonusDetail: 'Voir qui vient, puis convoquer pour un match',
+      // GUIDE-MENU-ROLE : guide Dirigeant sans club (`canStart`), passage d'un guide à l'autre.
+      needsClub: 'S’ouvre dès que ton club est rattaché à ton compte.',
       paused: 'En pause',
       restart: 'Recommencer à zéro',
       restartConfirm: {
@@ -18831,6 +18833,11 @@ export default {
       },
       resume: 'Reprendre là où j’en étais',
       review: 'Revoir sans rien créer',
+      switchConfirm: {
+        confirm: 'Lancer',
+        message: 'Le guide en pause s’arrête et sa progression repart de zéro. '
+          + 'Rien de ce que tu as créé n’est effacé.',
+      },
     },
     contactSupport: {
       ecrire: 'Écrire à l’assistance',
