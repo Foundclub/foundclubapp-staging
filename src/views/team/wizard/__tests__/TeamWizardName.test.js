@@ -555,17 +555,23 @@ describe('GUIDE-E-CORR-2 — la feuille se décide à l’entrée, pas après la
       }),
     ),
   );
-  const EQUIPE_EXISTANTE = { documentId: 'eq-1', name: 'Senior 1', trainers: [{ documentId: 'autre' }] };
+  const EQUIPE_EXISTANTE = {
+    documentId: 'eq-1', name: 'Senior 1', trainers: [{ documentId: 'autre' }],
+  };
   const EQUIPE_CREEE = { documentId: 'eq-2', name: 'Seniors A', trainers: [{ documentId: 'moi' }] };
   const FEUILLE = 'Ton club a déjà des équipes';
 
   test('guide : la mission 1 passe à la mission 2, la feuille ne se rouvre pas', () => {
     mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_EXISTANTE] };
-    act(() => { arbre = renderer.create(ecran({ currentMission: MISSION_1, tourStatus: 'active' })); });
+    act(() => {
+      arbre = renderer.create(ecran({ currentMission: MISSION_1, tourStatus: 'active' }));
+    });
     expect(textesSous(arbre.root)).not.toContain(FEUILLE);
 
     // L'équipe est créée : le guide avance AVANT que la navigation ne retire le tunnel.
-    mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_EXISTANTE, EQUIPE_CREEE] };
+    mockReseau.club = {
+      documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_EXISTANTE, EQUIPE_CREEE],
+    };
     act(() => { arbre.update(ecran({ currentMission: MISSION_2, tourStatus: 'active' })); });
 
     expect(textesSous(arbre.root)).not.toContain(FEUILLE);
@@ -585,7 +591,9 @@ describe('GUIDE-E-CORR-2 — la feuille se décide à l’entrée, pas après la
   test('mission 3 (une autre équipe) : la feuille reste proposée à l’entrée, sans clavier', () => {
     mockReseau.club = { documentId: 'club-1', name: 'FC Test', teams: [EQUIPE_EXISTANTE] };
     mockFocus.appels = 0;
-    act(() => { arbre = renderer.create(ecran({ currentMission: { id: 'coach_m3' }, tourStatus: 'active' })); });
+    act(() => {
+      arbre = renderer.create(ecran({ currentMission: { id: 'coach_m3' }, tourStatus: 'active' }));
+    });
 
     expect(textesSous(arbre.root)).toContain(FEUILLE);
     expect(mockFocus.appels).toBe(0);
