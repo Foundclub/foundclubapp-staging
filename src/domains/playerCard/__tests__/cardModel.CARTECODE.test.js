@@ -92,30 +92,32 @@ describe('CARTECODE Q5 B — la rareté', () => {
     expect(countCardFill(tennis)).toBe(13);
     expect(countCardFill({ ...COMPLET, position: '' })).toBe(12);
   });
-  test('barème : remplissage 50, parcours 15, vie dans FoundClub 35', () => {
-    expect(computeCardRarity({ fill: 13 }).score).toBe(50);
-    expect(computeCardRarity({ clubCount: 3, fill: 13 }).score).toBe(65);
-    expect(computeCardRarity({ clubCount: 9, fill: 13 }).score).toBe(65);
-    expect(computeCardRarity({ clubCount: 1, fill: 0 }).score).toBe(5);
-    expect(computeCardRarity({ fill: 0, isTeamMember: true }).score).toBe(10);
+  // RATTRAPAGE (10/11/2026) — barème d'Adel « 150 A » du 06/11 : cases jusqu'à 40, +15 pour une
+  // carte complète, parcours 15 dès 1 club, équipe 15, 5 matchs +10, 20 matchs +5.
+  test('barème 150 A : cases 40, carte complète +15, parcours 15, équipe 15, matchs 10 + 5', () => {
+    expect(computeCardRarity({ fill: 12 }).score).toBe(37);
+    expect(computeCardRarity({ fill: 13 }).score).toBe(55);
+    expect(computeCardRarity({ clubCount: 1, fill: 0 }).score).toBe(15);
+    expect(computeCardRarity({ clubCount: 9, fill: 0 }).score).toBe(15);
+    expect(computeCardRarity({ fill: 0, isTeamMember: true }).score).toBe(15);
     expect(computeCardRarity({ fill: 0, matchCount: 5 }).score).toBe(10);
-    expect(computeCardRarity({ fill: 0, matchCount: 20 }).score).toBe(25);
+    expect(computeCardRarity({ fill: 0, matchCount: 20 }).score).toBe(15);
     expect(computeCardRarity({
       clubCount: 3, fill: 13, isTeamMember: true, matchCount: 20,
     }).score).toBe(100);
   });
-  test('paliers : <40 commune, 40-64 rare, 65-84 épique, ≥85 légendaire', () => {
+  test('150 A : complète = Rare, + parcours = Épique, + équipe = Légendaire, sans match', () => {
     const palier = (fill, extra = {}) => computeCardRarity({ fill, ...extra }).rarity;
-    expect(palier(10)).toBe('common'); // 38
-    expect(palier(11)).toBe('rare'); // 42
-    expect(palier(13, { clubCount: 3 })).toBe('epic'); // 65
-    expect(palier(13, { clubCount: 3, isTeamMember: true, matchCount: 5 })).toBe('legendary'); // 85
+    expect(palier(12)).toBe('common'); // 37
+    expect(palier(13)).toBe('rare'); // 55
+    expect(palier(13, { clubCount: 1 })).toBe('epic'); // 70
+    expect(palier(13, { clubCount: 1, isTeamMember: true })).toBe('legendary'); // 85
   });
   test('le modèle de la carte suit le barème (membre d’une équipe, matchs)', () => {
     const model = buildPlayerCardModel({
       matchCount: 20, now: NOW, user: { ...COMPLET, myTeams: [{ name: 'Séniors' }] },
     });
-    expect(model.rarityScore).toBe(50 + 10 + 25);
+    expect(model.rarityScore).toBe(55 + 15 + 15);
     expect(model.rarity).toBe('legendary');
   });
 });

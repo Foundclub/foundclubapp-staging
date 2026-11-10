@@ -167,10 +167,23 @@ export const B3_STEPS = [
     get nextLabel() { return t('next', 'Suivant'); },
     resumeFrom: 'b3-new',
     simulatesGroup: true,
-    targets: ['grp-name', 'grp-perms'],
+    // GUIDE-D-CORR-4 (M1100, TestFlight 2.6.98) : « l'écran est trop chargé » ; le nom et les
+    // autorisations étaient désignés ensemble. Une seule chose à la fois : le nom, puis b3-perms.
+    targets: ['grp-name'],
+    get text() { return t('b3-name', 'Donne-lui un nom. C’est facultatif.'); },
+  },
+  {
+    bubblePlacement: 'top',
+    id: 'b3-perms',
+    missionId: 'president_b3',
+    get nextLabel() { return t('next', 'Suivant'); },
+    resumeFrom: 'b3-new',
+    simulatesGroup: true,
+    // Clavier ouvert, la bulle passait sur le nom : l'écran ferme le clavier (NewConversation).
+    targets: ['grp-perms'],
     get text() {
-      return t('b3-name', 'Donne-lui un nom. Dans « Autorisations du groupe », coupe « Envoyer des '
-        + 'messages » pour que seuls les admins écrivent.');
+      return t('b3-perms', 'Dans « Autorisations du groupe », coupe « Envoyer des messages » pour '
+        + 'que seuls les admins écrivent.');
     },
   },
   {

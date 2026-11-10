@@ -30,18 +30,29 @@ import { RouteNames } from '@/navigation/routeNames';
 const service = () => require('@/services/chat/chatService');
 
 /**
+ * Ce que `GET /chats/event/:id` renvoie.
+ * @typedef {object} EtatChatEvenement
+ * @property {{ documentId: string, title?: string } | null} chat - Le chat ouvert, s'il existe.
+ * @property {boolean} estMembre - Le lecteur est dans le chat.
+ * @property {boolean} estUnMatch - L'evenement est un match.
+ * @property {{ membres: number, staff: number }} nombre - Combien ils sont.
+ * @property {boolean} peutOuvrir - Le lecteur est du staff de l'equipe.
+ */
+
+/**
  * La rangee du chat de l'evenement, sous la carte de la fiche.
  * @param {object} props
  * @param {string} props.eventDocumentId - L'evenement.
  * @param {{ navigate: (route: string, params?: object) => void }} props.navigation - La navigation.
- * @returns {JSX.Element | null}
+ * @returns {import('react').ReactElement | null}
  */
 function EventChatRow({ eventDocumentId, navigation }) {
   const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
-  const [etat, setEtat] = useState(null);
+  /** @type {[EtatChatEvenement | null, (v: any) => void]} */
+  const [etat, setEtat] = useState(/** @type {EtatChatEvenement | null} */ (null));
   const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
@@ -55,6 +66,11 @@ function EventChatRow({ eventDocumentId, navigation }) {
     return () => { vivant = false; };
   }, [eventDocumentId]);
 
+  /**
+   * Ouvre la conversation du chat.
+   * @param {{ documentId: string, title?: string }} chat - Le chat à ouvrir.
+   * @returns {void}
+   */
   const aller = (chat) => navigation.navigate(RouteNames.Conversation, {
     chatId: chat.documentId,
     chatType: 'event',
@@ -66,7 +82,9 @@ function EventChatRow({ eventDocumentId, navigation }) {
     try {
       const resultat = await service().openEventChat(eventDocumentId);
       if (resultat?.chat?.documentId) {
-        setEtat((avant) => ({ ...avant, chat: resultat.chat, estMembre: true }));
+        setEtat((/** @type {EtatChatEvenement} */ avant) => ({
+          ...avant, chat: resultat.chat, estMembre: true,
+        }));
         aller(resultat.chat);
       }
     } catch (_error) {

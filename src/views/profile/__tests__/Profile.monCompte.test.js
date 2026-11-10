@@ -311,11 +311,15 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
       'Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Guide entraîneur·e',
       'Nous contacter', 'Déconnexion', 'Supprimer mon compte',
     ]],
+    // GUIDE-MENU-ROLE (10/11) : dirigeant sans club rattaché, son guide le dit d'une phrase.
     ['president', [
       'Voir le détail des offres',
       'Mes réservations', 'Mes complexes favoris',
       'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
-      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
+      'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
+      'Changer de compte', 'Personnes bloquées', 'Confidentialité',
+      'Guide dirigeant·eS’ouvre dès que ton club est rattaché à ton compte.',
+      'Nous contacter', 'Déconnexion', 'Supprimer mon compte',
     ]],
     ['superAdmin', [
       'Voir le détail des offres',

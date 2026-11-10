@@ -26,7 +26,12 @@ const mockInsets = {
   right: 0,
   top: 59,
 };
-jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => mockInsets }));
+// GUIDE-E-CORR-2 : la fiche lit aussi `SafeAreaInsetsContext` (feuille « Actions d'équipe ») :
+// le vrai module, seules les marges de la feuille testée ici sont doublées.
+jest.mock('react-native-safe-area-context', () => ({
+  ...jest.requireActual('react-native-safe-area-context'),
+  useSafeAreaInsets: () => mockInsets,
+}));
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: () => {} }));
 jest.mock(
   'react-i18next',

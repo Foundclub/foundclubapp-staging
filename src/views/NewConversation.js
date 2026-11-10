@@ -5,8 +5,8 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, FlatList, Image, Platform, SectionList, StyleSheet, Text, TextInput, TouchableOpacity,
-  View,
+  Alert, FlatList, Image, Keyboard, Platform, SectionList, StyleSheet, Text, TextInput,
+  TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -321,6 +321,13 @@ function NewConversation({ navigation, route }) {
   // Trois membres « Exemple » s'ajoutent à la liste le temps du bonus ; « Créer » ne crée rien.
   const isGroupSimulated = tourStatus === 'active' && Boolean(tourStep?.simulatesGroup)
     && !modeVille && !isAddMembersMode;
+  // GUIDE-D-CORR-4 (M1100) : quand le guide montre « Autorisations du groupe », le clavier du nom
+  // se ferme ; ouvert, il ne laissait à la bulle que la place du champ du nom.
+  const isTourOnPerms = tourStatus === 'active'
+    && Boolean(tourStep?.targets?.includes('grp-perms'));
+  useEffect(() => {
+    if (isTourOnPerms) Keyboard.dismiss();
+  }, [isTourOnPerms]);
   // GUIDES-SITE-CORR S27 (tournée du site, 09/11) : le site éteint les groupes par défaut
   // (`FC_CHAT_GROUP_V1`, web/vite.config.ts) ; 3 « Exemple » cochés donnaient
   // « Discussion privée ».
@@ -892,7 +899,9 @@ function NewConversation({ navigation, route }) {
                 <GlyphIcon color={Colors.primary900} name="camera" size={14} />
               </View>
             </TouchableOpacity>
-            <TourTarget id="grp-name">
+            {/* GUIDE-D-CORR-4 (M1100) : l'ancre prend la largeur du champ ; sans elle, son */}
+            {/* cadre se resserrait sur le texte tapé (« Test »). */}
+            <TourTarget id="grp-name" style={stylesDuChoix.cibleNom}>
               <TextInput
                 accessibilityLabel={t(
                   'newConversation.groupNamePlaceholder',
@@ -1433,6 +1442,10 @@ const stylesDuChoix = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 15,
     maxWidth: 58,
+  },
+  cibleNom: {
+    flex: 1,
+    minWidth: 0,
   },
   grille: {
     flexDirection: 'row',

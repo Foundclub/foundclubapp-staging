@@ -19,6 +19,7 @@ import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
+import TourBubbleSlot from '@/components/molecules/tour/TourBubbleSlot';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
@@ -461,6 +462,9 @@ function AddCoach({ navigation, route }) {
             </View>
           </ScrollView>
         </TourTarget>
+        {/* GUIDE-D-CORR-4 (M1098) : la place de la bulle du guide (m2-fields), au-dessus des */}
+        {/* boutons ; la zone rétrécit d'autant. Rien hors du guide. */}
+        <TourBubbleSlot scrollRef={tourScroll.ref} />
 
         <View style={[Spaces.gap[4], keyboard && !isTourOnSend ? { display: 'none' } : null]}>
           <TourTarget id="cf-send">

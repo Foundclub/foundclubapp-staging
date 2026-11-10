@@ -2,11 +2,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
 import {
-  useCallback, useEffect, useMemo, useRef, useState,
+  useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Dimensions,
   FlatList,
   Image,
   Keyboard,
@@ -16,8 +17,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import {
   markOnboardingComplete,
@@ -2022,6 +2025,21 @@ function TeamDetails({ navigation, route }) {
       setIsTeamActionsPanelOpen(false);
     }
   }, [hasTeamActionsPanel]);
+
+  // GUIDE-E-CORR-2 (testeur, iPhone, 10/11) — « Actions d'équipe » : la feuille montait presque en
+  // haut (hauteur réglée sur le CONTENU, plafonnée à l'écran moins `topInset`, marge haut + 20),
+  // mais la liste s'arrêtait à 70 % de l'écran (plafond par défaut de BottomModal) : un grand vide
+  // dessous, la dernière carte coupée. Même remède que « Changer de compte » (Profile.js, SUPADM) :
+  // la zone qui défile reçoit le plafond de la feuille, et le bas ne garde que la zone sûre.
+  // Contexte lu sans exiger son fournisseur : 0 de marge s'il manque (témoins).
+  // Témoin : __tests__/TeamDetails.menuTroisPoints.test.js, « GUIDE-E-CORR-2 ».
+  const margesDeLEcran = useContext(SafeAreaInsetsContext);
+  const { height: hauteurDeLaFenetre } = useWindowDimensions();
+  const plafondDesActions = Math.max(
+    0.7,
+    (hauteurDeLaFenetre - (margesDeLEcran?.top || 0) - 20) / Dimensions.get('screen').height,
+  );
+  const margeBasseDesActions = (margesDeLEcran?.bottom || 0) + 12;
 
   const handleDeleteTrainer = (/** @type {string} */ trainerId) => {
     Alert.alert(
@@ -4863,7 +4881,9 @@ function TeamDetails({ navigation, route }) {
       {hasTeamActionsPanel ? (
         <BottomModal
           close={() => setIsTeamActionsPanelOpen(false)}
+          contentBottomPaddingOverride={margeBasseDesActions}
           isVisible={isTeamActionsPanelOpen}
+          maxContentHeightRatio={plafondDesActions}
         >
           <View style={[Spaces.gap[8]]}>
             <Text

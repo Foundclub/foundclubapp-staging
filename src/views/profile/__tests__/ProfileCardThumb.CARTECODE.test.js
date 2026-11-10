@@ -40,10 +40,12 @@ const LEA = {
 };
 const LECTEUR = { documentId: 'moi' };
 
-const rendre = (profile, viewer = LECTEUR) => {
+const rendre = (profile, viewer = LECTEUR, extra = {}) => {
   mockCartes.length = 0;
   act(() => {
-    renderer.create(createElement(ProfileCardThumb, { profile, viewer, width: 240 }));
+    renderer.create(createElement(ProfileCardThumb, {
+      profile, viewer, width: 240, ...extra,
+    }));
   });
   return mockCartes[mockCartes.length - 1];
 };
@@ -75,5 +77,30 @@ describe('CARTECODE Q2 B — la carte sur le profil d’un autre', () => {
     expect(rendre({ ...LEA, age: null })).toBeUndefined();
     expect(rendre({ ...LEA, isProfileVisible: false })).toBeUndefined();
     expect(rendre(LEA, null)).toBeUndefined();
+  });
+});
+
+// RATTRAPAGE (10/11/2026, Adel « 149 A » puis « 150 A ») — la vignette comptait la rareté sans le
+// parcours, sans les matchs et sans l'âge (le profil public rend l'âge, jamais la date) : elle
+// affichait moins que la carte. Elle lit maintenant ce que l'écran du profil a déjà chargé.
+describe('149 A — la vignette compte le parcours, les matchs lisibles et l’âge', () => {
+  const COMPLETE_EN_PUBLIC = {
+    ...LEA, bestLevel: 'Régional 1', category: 'Sénior', section: { name: 'Féminine' },
+  };
+  it('sans équipe : l’âge et 1 club du parcours la font passer de commune à rare', () => {
+    // Cases lisibles en public : photo, nom, âge, section, poids, taille, niveau, catégorie,
+    // sport, poste = 10 (31) ; + parcours 15 = 46 : rare. Avant : 9 cases (28), commune.
+    const carte = rendre({ ...COMPLETE_EN_PUBLIC, myTeams: [] }, LECTEUR, {
+      histories: [{ customClubName: 'BC Gardanne', startYear: 2015 }],
+    });
+    expect(carte.rarity).toBe('RARE');
+  });
+  it('les matchs comptent quand le serveur les rend (5 matchs : +10)', () => {
+    // 31 + parcours 15 + équipe 15 + 5 matchs 10 = 71 : épique. Avant : 28 + 15 = 43, rare.
+    const carte = rendre(COMPLETE_EN_PUBLIC, LECTEUR, {
+      histories: [{ customClubName: 'BC Gardanne', startYear: 2015 }],
+      matchCount: 5,
+    });
+    expect(carte.rarity).toBe('EPIC');
   });
 });
