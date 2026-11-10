@@ -444,7 +444,7 @@ function UserDetails({ navigation, route }) {
     enabled: isSelfProfile,
   });
 
-  const { refetch: refetchTargetHistories } = useGetUserHistories(targetUserId, {
+  const { data: targetHistories, refetch: refetchTargetHistories } = useGetUserHistories(targetUserId, {
     enabled: Boolean(targetUserId) && !isSelfProfile,
   });
 
@@ -1307,6 +1307,8 @@ function UserDetails({ navigation, route }) {
           {/* CARTECODE Q2 B — la carte d'un AUTRE joueur majeur, au compte non privé. */}
           {!isSelfProfile ? (
             <ProfileCardThumb
+              histories={Array.isArray(targetHistories) ? targetHistories : []}
+              matchCount={Number(personalStats?.overall?.matches || 0)}
               profile={{ ...user, age: profileAge }}
               viewer={currentUserId ? { documentId: currentUserId } : null}
               width={Math.min(screenWidth * 0.62, 260)}

@@ -317,7 +317,8 @@ const isJersey = (value) => {
 export const countCardFill = (user = {}) => [
   user.avatar?.url || user.avatarUrl,
   user.firstname && user.lastname,
-  user.birthdate,
+  // Le profil public rend l'âge, jamais la date (SECU-2) : la vignette compte la case par l'âge.
+  user.birthdate || Number.isInteger(user.age),
   user.section?.name || user.section?.documentId
     || (typeof user.section === 'string' && user.section),
   user.weight,
