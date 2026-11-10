@@ -8322,16 +8322,23 @@ export default {
       // eslint-disable-next-line max-len
       ageAide: 'Un joueur plus jeune ne peut ni réserver, ni rejoindre une partie, ni recevoir tes annonces. Un joueur qui a cet âge peut t’écrire dans sa réservation.',
       ageMinimum: 'Âge minimum',
+      aide: 'Aide : {{reglage}}',
       annulation: 'Annulation gratuite jusqu’à',
       annulerReserver: 'Annuler et réserver',
       auPlusTard: 'Réserver au plus tard',
+      // eslint-disable-next-line max-len
+      auPlusTardAide: 'Un joueur ne peut plus réserver un créneau qui commence dans moins de ce délai.',
       aVenir: 'Réservations à venir par personne',
       aVenirAide: 'Les demandes et les collectes en cours comptent.',
       bannir: 'Bannir automatiquement après',
       bannirAide: 'Le bannissement ne vaut que chez toi. Tu peux le lever à tout moment.',
+      // eslint-disable-next-line max-len
+      bannirExplication: 'Une réservation non honorée : le joueur n’est pas venu. À ce nombre, il ne peut plus réserver chez toi.',
       collectes: 'Collectes',
       compte: '{{nombre}} / {{max}}',
       dateLimite: 'Date limite de collecte au plus tard',
+      // eslint-disable-next-line max-len
+      dateLimiteAide: 'Une collecte attend que ses joueurs la rejoignent. Elle doit être complète au plus tard ce délai avant le créneau ; sinon elle s’arrête et le créneau reste libre.',
       echec: 'Les réglages ne sont pas partis. Réessaie.',
       enregistres: 'Réglages enregistrés. Ils valent pour les prochaines réservations.',
       erreur: 'Impossible de charger tes réglages.',

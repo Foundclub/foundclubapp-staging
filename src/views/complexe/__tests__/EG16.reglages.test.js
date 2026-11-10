@@ -114,8 +114,6 @@ describe('RESA-L5A1 E-G16 — les réglages (état 1, RA6 état 1)', () => {
       'Annulation gratuite jusqu’à',
       'Réserver au plus tard',
       '2 h avant le créneau',
-      'Réservations à venir par personne',
-      'Les demandes et les collectes en cours comptent.',
       'TON MESSAGE AUX JOUEURS',
       'COLLECTES',
       'Date limite de collecte au plus tard',
@@ -140,7 +138,6 @@ describe('RESA-L5A1 E-G16 — les réglages (état 1, RA6 état 1)', () => {
     await appuyer(arbre, 'Moins : Bannir automatiquement après');
     await appuyer(arbre, 'Moins : Bannir automatiquement après');
     expect(lisibles(arbre)).toContain('Jamais');
-    await appuyer(arbre, 'Plus : Réservations à venir par personne');
     await appuyer(arbre, 'Demander aux joueurs de confirmer la veille');
     const [mot] = arbre.root.findAll((n) => n.type === TextInput
       && n.props.accessibilityLabel === 'Ce que les joueurs doivent savoir (facultatif)');
@@ -156,7 +153,8 @@ describe('RESA-L5A1 E-G16 — les réglages (état 1, RA6 état 1)', () => {
         cancellationDelayHours: 48,
         collectDeadlineHours: 24,
         dayBeforeConfirmation: false,
-        maxUpcomingPerUser: 3,
+        // COMPLEXE-TERRAINS (9) : plus de compteur ; la valeur lue repart telle quelle (non lue).
+        maxUpcomingPerUser: 2,
         minAge: 16,
         minLeadTimeHours: 2,
         morningDigest: true,
