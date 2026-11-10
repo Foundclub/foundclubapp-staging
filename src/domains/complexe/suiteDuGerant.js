@@ -14,8 +14,7 @@ import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
  * la fiche du complexe s'il a choisi « Je gère un complexe » (mode complexe) sans l'avoir créé.
  * Seul un compte SANS rôle sportif est concerné : les autres gardent leur parcours.
  *
- * C'est ici qu'un âge minimum propre au gérant s'ajouterait (question 224 posée à Adel) : rien de
- * tel aujourd'hui, les règles d'âge sont celles de tous les rôles (serveur et UserName).
+ * L'âge minimum du gérant (18 ans, Adel « 224- B ») : `AGE_MINIMUM_GERANT`, lu par UserName.
  * ponytail: une lecture de « mes complexes » en panne ramène à la fiche si le mode complexe est
  * allumé (au pire, la fiche d'un gérant qui en a déjà un) ; sinon au parcours habituel.
  * @param {any} compte - Le profil connecté (avant l'envoi : seuls son rôle et son id comptent).

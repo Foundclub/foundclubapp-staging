@@ -146,6 +146,9 @@ describe('RESA-L5A1 — les refus du serveur, nommés', () => {
   it('chaque code du contrat a sa phrase', () => {
     expect(messageDeRefus(t, refus('COMPLEXE_ALREADY_MANAGED'), 'repli'))
       .toBe('Tu gères déjà un complexe.');
+    // GERANT-INSCRIPTION (10/11, Adel « 224- B ») : le refus du serveur aux moins de 18 ans.
+    expect(messageDeRefus(t, refus('COMPLEXE_GERANT_MAJEUR_REQUIS'), 'repli'))
+      .toBe('Il faut avoir 18 ans pour gérer un complexe.');
     expect(messageDeRefus(t, refus('COMPLEXE_RULES_NOT_ACCEPTED'), 'repli'))
       .toBe('Accepte les règles d’utilisation des complexes pour continuer.');
     expect(messageDeRefus(t, refus('COMPLEXE_RETIRED'), 'repli'))

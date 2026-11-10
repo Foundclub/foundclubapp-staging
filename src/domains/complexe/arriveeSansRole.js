@@ -12,6 +12,12 @@
  */
 
 /**
+ * GERANT-INSCRIPTION (10/11/2026, décision d'Adel « 224- B ») — l'âge minimum pour gérer un
+ * complexe. Le serveur pose la même règle (admin `selfOnboard`, COMPLEXE_GERANT_MAJEUR_REQUIS).
+ */
+export const AGE_MINIMUM_GERANT = 18;
+
+/**
  * Le compte a-t-il donné son prénom, son nom et sa date de naissance ?
  * @param {{ firstname?: unknown, lastname?: unknown, birthdate?: unknown } | null} [compte]
  * @returns {boolean} Vrai si les trois sont connus.

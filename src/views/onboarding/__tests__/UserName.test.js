@@ -828,14 +828,20 @@ describe('UserName — le gérant d’un complexe donne son identité (GERANT-IN
     storage.getString.mockReset();
   });
 
-  it('13-14 ans : la déclaration parentale d’abord, comme pour tous', async () => {
+  // Remplacé par la décision d'Adel « 224- B » (18 ans pour gérer un complexe) : un gérant de
+  // 14 ans (compte 982 qui taperait une date de mineur) est refusé, son complexe reste en place.
+  it('14 ans, gère déjà un complexe : refusé (18 ans), rien ne part, pas de complexe ouvert', async () => {
     mockLireMesComplexes.mockResolvedValue({ data: [{ documentId: 'cx-5' }] });
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const arbre = rendre('Authenticated');
 
     await donnerSonIdentite(arbre, String(new Date().getUTCFullYear() - 14));
 
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserParentalDeclaration');
+    expect(updateMe).not.toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledTimes(1);
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserParentalDeclaration');
     expect(mockNavigation.navigate).not.toHaveBeenCalledWith('ComplexeEspace', expect.anything());
+    alerte.mockRestore();
   });
 
   it('un joueur ne lit pas les complexes et garde son étape suivante', async () => {
@@ -845,5 +851,84 @@ describe('UserName — le gérant d’un complexe donne son identité (GERANT-IN
 
     expect(mockLireMesComplexes).not.toHaveBeenCalled();
     expect(mockNavigation.navigate).toHaveBeenCalledWith('UserAvatar');
+  });
+});
+
+// GERANT-INSCRIPTION (10/11/2026, Adel « 224- B ») — 18 ANS POUR GÉRER UN COMPLEXE. Dans le
+// parcours gérant, un compte de moins de 18 ans voit un refus clair et revient au choix du statut ;
+// rien ne part, aucun complexe n'est créé. Les autres rôles gardent leurs règles d'âge.
+describe('UserName — 18 ans pour gérer un complexe (GERANT-INSCRIPTION, 224 B)', () => {
+  const dateIlYA = (/** @type {number} */ ans, /** @type {number} */ jours) => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - ans);
+    date.setDate(date.getDate() + jours);
+    return {
+      day: String(date.getDate()).padStart(2, '0'),
+      month: String(date.getMonth() + 1).padStart(2, '0'),
+      year: String(date.getFullYear()),
+    };
+  };
+  const donner = async (/** @type {any} */ arbre, /** @type {any} */ date) => {
+    await saisir(arbre, 'Prénom', 'Gérant');
+    await saisir(arbre, 'Nom', 'Recette');
+    await saisir(arbre, 'JJ', date.day);
+    await saisir(arbre, 'MM', date.month);
+    await saisir(arbre, 'AAAA', date.year);
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+    await act(async () => { await new Promise((resoudre) => { setTimeout(resoudre, 0); }); });
+  };
+  const modeComplexeAllume = () => {
+    const { storage } = jest.requireMock('@/store/appContext');
+    storage.getString.mockImplementation((/** @type {string} */ cle) => (
+      cle === 'user.complexe_mode.user-1' ? 'on' : undefined));
+    return storage;
+  };
+
+  afterEach(() => {
+    jest.requireMock('@/store/appContext').storage.getString.mockReset();
+  });
+
+  it('17 ans (18 ans moins un jour) : refus clair, rien ne part, retour au choix du statut', async () => {
+    mockLireMesComplexes.mockResolvedValue({ data: [] });
+    const storage = modeComplexeAllume();
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const arbre = rendre('Authenticated');
+
+    await donner(arbre, dateIlYA(18, 1));
+
+    expect(updateMe).not.toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledTimes(1);
+    const [titre, message, boutons] = alerte.mock.calls[0];
+    expect(titre).toBe('Réservé aux 18 ans et plus');
+    expect(message).toBe('Il faut avoir 18 ans pour gérer un complexe sur FoundClub.');
+    expect(boutons.map((/** @type {any} */ b) => b.text)).toEqual(['Revenir au choix du statut']);
+    await act(async () => { boutons[0].onPress(); });
+    expect(storage.delete).toHaveBeenCalledWith('user.complexe_mode.user-1');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserRole');
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('ComplexeDevenirGerant');
+    alerte.mockRestore();
+  });
+
+  it('18 ans et un jour : l’identité part, puis la fiche du complexe', async () => {
+    mockLireMesComplexes.mockResolvedValue({ data: [] });
+    modeComplexeAllume();
+    const arbre = rendre('Authenticated');
+
+    await donner(arbre, dateIlYA(18, -1));
+
+    expect(updateMe).toHaveBeenCalledTimes(1);
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ComplexeDevenirGerant');
+  });
+
+  it('un joueur de 16 ans garde ses règles : rien ne lui est refusé ici', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const arbre = rendre('Joueur');
+
+    await donner(arbre, dateIlYA(16, -1));
+
+    expect(alerte).not.toHaveBeenCalled();
+    expect(updateMe).toHaveBeenCalledTimes(1);
+    expect(mockLireMesComplexes).not.toHaveBeenCalled();
+    alerte.mockRestore();
   });
 });

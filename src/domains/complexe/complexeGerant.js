@@ -181,6 +181,9 @@ export const messageDeRefus = (t, erreur, repli) => {
         'complexeGerant.refus.photoDejaUtilisee',
         'Cette photo est déjà utilisée ailleurs : choisis-en une autre.',
       );
+    // GERANT-INSCRIPTION (10/11/2026, Adel « 224- B »).
+    case 'COMPLEXE_GERANT_MAJEUR_REQUIS':
+      return t('complexeGerant.refus.majeurRequis', 'Il faut avoir 18 ans pour gérer un complexe.');
     case 'COMPLEXE_GESTIONNAIRE_REQUIRED':
     case 'COMPLEXE_NOT_FOUND':
       return t(
