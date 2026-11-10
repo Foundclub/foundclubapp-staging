@@ -1,4 +1,3 @@
-import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import RecrutementListContent from '../RecrutementListContent';
@@ -943,7 +942,8 @@ describe('RecrutementListContent — l ancre du guide sur les onglets', () => {
     const tree = await rendrePour(DIRIGEANT, { initialTab: 'profils' });
     const [ancre] = ancreDe(tree);
     expect(ancre).toBeDefined();
-    const lus = ancre.findAllByType(Text).map((/** @type {any} */ n) => String(n.props.children));
+    const lus = ancre.findAll((/** @type {any} */ n) => n.type === 'Text')
+      .map((/** @type {any} */ n) => String(n.props.children));
     expect(lus).toEqual(['Profils', 'Opportunités', 'Candidatures']);
   });
 });

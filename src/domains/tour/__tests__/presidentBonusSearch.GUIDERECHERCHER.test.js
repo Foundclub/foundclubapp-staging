@@ -52,7 +52,8 @@ describe('GUIDE-RECHERCHER : chaque page de Rechercher s’explique en quelques 
       expect(step(id).text.length).toBeLessThanOrEqual(150);
     });
     // La case aiguille toujours vers la première bulle de sa page.
-    const opened = matchSignal(profile, at(card), { key: RouteNames.SearchHub, kind: 'route' }, ctx);
+    const hub = { key: RouteNames.SearchHub, kind: 'route' };
+    const opened = matchSignal(profile, at(card), hub, ctx);
     expect(idAt(opened.index)).toBe(bubbles[0][0]);
   });
 
@@ -63,7 +64,7 @@ describe('GUIDE-RECHERCHER : chaque page de Rechercher s’explique en quelques 
     });
   });
 
-  it.each(PAGES)('%s : à chaque bulle, la flèche mène à la case suivante', (_card, bubbles, next) => {
+  it.each(PAGES)('%s : à chaque bulle, la flèche mène à la case suivante', (_c, bubbles, next) => {
     bubbles.forEach(([id]) => {
       const back = matchSignal(profile, at(id), HOME, ctx);
       expect(back).not.toBeNull();
