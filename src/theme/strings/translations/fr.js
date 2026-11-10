@@ -18835,7 +18835,8 @@ export default {
       review: 'Revoir sans rien créer',
       switchConfirm: {
         confirm: 'Lancer',
-        message: 'Le guide en pause s’arrête et sa progression repart de zéro. Rien de ce que tu as créé n’est effacé.',
+        message: 'Le guide en pause s’arrête et sa progression repart de zéro. '
+          + 'Rien de ce que tu as créé n’est effacé.',
       },
     },
     contactSupport: {
