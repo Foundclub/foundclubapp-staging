@@ -369,13 +369,15 @@ test('172 C — âge inconnu : la personne doit ajouter sa date, et non « un mi
   await appuyerSur(arbre, 'Contacter');
 
   const { message } = derniereAlerte();
-  expect(message).toBe("L'âge de cette personne n'est pas connu : elle doit ajouter sa date de naissance "
-    + 'pour recevoir des messages privés.');
+  expect(message).toBe("L'âge de cette personne n'est pas connu : elle doit ajouter sa date de "
+    + 'naissance pour recevoir des messages privés.');
   expect(message).not.toMatch(/un mineur/);
 });
 
 test('172 C — sous la vraie forme du client, la phrase du serveur arrive à l écran', async () => {
-  mockErreurContact = refusTelQueRejete({ message: PHRASE_SERVEUR_POUR_L_ADULTE, reason: 'TEEN_STAFF_ONLY' });
+  mockErreurContact = refusTelQueRejete({
+    message: PHRASE_SERVEUR_POUR_L_ADULTE, reason: 'TEEN_STAFF_ONLY',
+  });
   mockStartWhisperChat.mockImplementation(() => Promise.reject(mockErreurContact));
 
   const arbre = await rendre(dirigeantConnecte, { userId: 'ado-1' });

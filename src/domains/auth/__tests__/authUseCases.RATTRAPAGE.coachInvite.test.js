@@ -52,7 +52,12 @@ describe('RATTRAPAGE 172 C — le coach invite donne sa date a sa prochaine ouve
   });
 
   it('une date qui le dit mineur de moins de 15 ans : la declaration parentale suit, comme a l inscription', () => {
-    const resultat = getOnboardingViews({ ...COACH_INVITE, birthdate: '2012-03-01', onboardingCompletedAt: '2026-11-07T10:00:00.000Z', parentalDeclarationAccepted: false });
+    const resultat = getOnboardingViews({
+      ...COACH_INVITE,
+      birthdate: '2012-03-01',
+      onboardingCompletedAt: '2026-11-07T10:00:00.000Z',
+      parentalDeclarationAccepted: false,
+    });
 
     expect(etapes(resultat)).toEqual([RouteNames.UserParentalDeclaration]);
   });

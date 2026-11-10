@@ -38,7 +38,7 @@ describe('CARTEFIN — la prochaine marche de rareté', () => {
     }).actions).toEqual([{ count: 3, kind: 'fill' }]);
   });
 
-  test('carte pleine et parcours, sans équipe : rejoindre une équipe suffit pour Légendaire', () => {
+  test('carte pleine et parcours, sans équipe : une équipe suffit pour Légendaire', () => {
     // 55 + 15 = 70, épique ; légendaire à 85 : équipe (+15), aucun match.
     expect(computeNextRarityStep({
       clubCount: 1, fill: 13, isTeamMember: false, matchCount: 0,
