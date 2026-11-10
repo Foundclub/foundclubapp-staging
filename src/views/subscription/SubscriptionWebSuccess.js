@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 
+import { getSubscriptionBillingErrorMessage } from '@/domains/subscription/subscriptionBilling';
 import {
   invalidateSubscriptionState,
   scheduleSubscriptionStateRefresh,
@@ -76,10 +77,14 @@ function SubscriptionWebSuccess({ navigation, route }) {
       } catch (error) {
         if (!cancelled) {
           setStatus('error');
-          setErrorMessage(error?.message || i18next.t(
-            'subscriptionWebSuccess.errors.confirmFailed',
-            'Impossible de confirmer le paiement.',
-          ));
+          // STRIPE-OUVERTURE / L0 — jamais le message du serveur tel quel : il
+          // nommait Stripe et RevenueCat a un client qui vient de payer.
+          setErrorMessage(error?.message
+            ? getSubscriptionBillingErrorMessage(error)
+            : i18next.t(
+              'subscriptionWebSuccess.errors.confirmFailed',
+              'Impossible de confirmer le paiement.',
+            ));
         }
       }
     };
