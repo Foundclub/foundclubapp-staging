@@ -11285,7 +11285,7 @@ export default {
       capacity: 'Max participants: {{value}}',
       capacityTitle: 'Capacity',
       capacityValue: '{{count}} players',
-      completedCount: '{{done}}/5 key details completed',
+      completedCount: '{{done}}/{{total}} key details completed',
       creationProgress: {
         description: '{{completed}}/{{total}} events processed',
         partialFailures_one: '{{count}} creation to check',

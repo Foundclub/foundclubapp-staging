@@ -11970,7 +11970,7 @@ export default {
       capacity: 'Participants max : {{value}}',
       capacityTitle: 'Capacité',
       capacityValue: '{{count}} joueurs',
-      completedCount: '{{done}}/5 infos clés complétées',
+      completedCount: '{{done}}/{{total}} infos clés complétées',
       creationProgress: {
         description: '{{completed}}/{{total}} événements traités',
         partialFailures_one: '{{count}} création à vérifier',
