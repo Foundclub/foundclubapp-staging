@@ -1944,6 +1944,7 @@ export default {
     MEMBERSHIP_REQUEST_NOT_PENDING: 'The membership request is not pending.',
     MEMBERSHIP_REQUEST_REFUSED: 'The membership request has been refused.',
     MESSAGE_TOO_LONG: 'The message is too long.',
+    MINOR_DIRECT_CHAT_AGE_UNKNOWN: "This person's age is not known: they need to add their date of birth to receive private messages.",
     MINOR_DIRECT_CHAT_FORBIDDEN: "Private chat not possible: a minor can only message privately with their parent or their club's staff.",
     MISSING_REQUIRED_FIELD: 'A required field is missing.',
     MISSING_TOKEN: 'Missing authentication token.',

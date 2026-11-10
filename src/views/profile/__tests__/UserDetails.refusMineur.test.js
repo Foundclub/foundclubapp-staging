@@ -19,6 +19,9 @@ import UserDetails from '../UserDetails';
 // l'écran. Et si elle manque, le repli traduit prend le relais : plus jamais
 // « Une erreur est survenue » sur ce refus-là.
 
+// Le premier rendu charge tout l ecran du profil : plus de 5 s a froid, sous charge.
+jest.setTimeout(30000);
+
 /** @type {any} */
 let mockAuthValue;
 /** @type {any} */
@@ -332,4 +335,53 @@ test("C3-2 — si le serveur n'envoie pas de phrase, le repli traduit prend le r
   const { message } = derniereAlerte();
   expect(message).toBe(PHRASE_DE_REPLI);
   expect(message).not.toMatch(/Une erreur est survenue/i);
+});
+
+// RATTRAPAGE (10/11/2026, Adel « 172 C », TG-12 du 07/11) — LA FORME QUE LE CLIENT REJETTE
+// VRAIMENT : `client.native.js` rejette `response.data.error`, soit { status, message, details }.
+// Avant ce lot, l'app ne lisait la phrase du serveur que sous `response.data.error` : sous la vraie
+// forme, tout refus retombait sur la phrase de repli « un mineur… », meme pour un coach de 35 ans
+// sans date de naissance (Karim, guide Dirigeant).
+const refusTelQueRejete = ({ message, reason }) => ({
+  details: { code: 'MINOR_DIRECT_CHAT_FORBIDDEN', protectedUnderAge: 13, reason },
+  message,
+  name: 'ForbiddenError',
+  status: 403,
+});
+
+const coachSansDate = {
+  age: null,
+  documentId: 'coach-karim',
+  firstname: 'Karim',
+  lastname: 'Benali',
+  role: { name: 'Entraineur', type: 'entraineur' },
+};
+
+test('172 C — âge inconnu : la personne doit ajouter sa date, et non « un mineur »', async () => {
+  mockFetchedUser = coachSansDate;
+  mockErreurContact = refusTelQueRejete({
+    message: 'Impossible d ouvrir une discussion privee : l age de cette personne n est pas connu.',
+    reason: 'AGE_UNKNOWN',
+  });
+  mockStartWhisperChat.mockImplementation(() => Promise.reject(mockErreurContact));
+
+  const arbre = await rendre(dirigeantConnecte, { userId: 'coach-karim' });
+  await appuyerSur(arbre, 'Contacter');
+
+  const { message } = derniereAlerte();
+  expect(message).toBe("L'âge de cette personne n'est pas connu : elle doit ajouter sa date de "
+    + 'naissance pour recevoir des messages privés.');
+  expect(message).not.toMatch(/un mineur/);
+});
+
+test('172 C — sous la vraie forme du client, la phrase du serveur arrive à l écran', async () => {
+  mockErreurContact = refusTelQueRejete({
+    message: PHRASE_SERVEUR_POUR_L_ADULTE, reason: 'TEEN_STAFF_ONLY',
+  });
+  mockStartWhisperChat.mockImplementation(() => Promise.reject(mockErreurContact));
+
+  const arbre = await rendre(dirigeantConnecte, { userId: 'ado-1' });
+  await appuyerSur(arbre, 'Contacter');
+
+  expect(derniereAlerte().message).toBe(PHRASE_SERVEUR_POUR_L_ADULTE);
 });

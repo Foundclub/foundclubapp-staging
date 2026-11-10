@@ -440,7 +440,8 @@ describe('CARTEFIN 1 — l écran du poste dit le vrai sport du joueur', () => {
 });
 
 describe('CARTEFIN 2 — la fin du parcours donne la prochaine marche', () => {
-  // 12 cases sur 13 (46 : déjà rare), ni club, ni équipe, ni match. Il manque le numéro.
+  // 12 cases sur 13 (37 : commune, barème « 150 A »), ni club, ni équipe, ni match. Il manque
+  // le numéro.
   const PRESQUE = {
     ...COMPLET,
     avatar: { url: '/a.jpg' },
@@ -459,8 +460,8 @@ describe('CARTEFIN 2 — la fin du parcours donne la prochaine marche', () => {
   };
 
   it('« Commune », chevron, « Rare », puis la marche la plus simple vers épique', async () => {
-    // 10 cases (38, commune) ; le numéro en fait 11 (42, rare). Épique à 65 : 2 cases + 3 clubs.
-    mockUser = { ...PRESQUE, category: null, section: null };
+    // 12 cases (37, commune) ; le numéro complète la carte (55, rare). Épique à 65 : 1 club (70).
+    mockUser = PRESQUE;
     const arbre = await finir();
     // SANS-EMOJI : pas de flèche typographique ; le lecteur d écran lit la montée en mots.
     expect(arbre.root.findAll((n) => n.props.accessibilityLabel === 'De commune à rare'))
@@ -468,28 +469,29 @@ describe('CARTEFIN 2 — la fin du parcours donne la prochaine marche', () => {
     expect(textes(arbre)).toEqual(expect.arrayContaining([
       'Commune',
       'Rare',
-      'Pour passer épique : remplis 2 cases de plus sur ta carte '
-        + 'et déclare 3 clubs de plus dans ton parcours.',
+      'Pour passer épique : déclare 1 club de plus dans ton parcours.',
     ]));
   });
 
-  it('rareté inchangée : son nom seul ; les matchs comptés depuis ceux déjà joués', async () => {
-    mockUser = { ...PRESQUE, myTeams: [{ club: { name: 'AS Aix' }, name: 'Séniors' }] };
-    mockHistories = [1, 2, 3].map((n) => ({ customClubName: `Club ${n}`, startYear: 2010 + n }));
+  it('rareté inchangée : son nom seul ; la marche la plus simple, sans match', async () => {
+    // 11 cases + 1 club (49, rare) ; le numéro en fait 12 (52, rare). Épique : la 13e case (70).
+    mockUser = { ...PRESQUE, category: null };
+    mockHistories = [{ customClubName: 'Club 1', startYear: 2011 }];
     mockStats = { overall: { matches: 2 } };
     const arbre = await finir();
     expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Épique',
-      'Pour passer légendaire : joue encore 3 matchs avec ton équipe.',
+      'Rare',
+      'Pour passer épique : remplis 1 case de plus sur ta carte.',
     ]));
     expect(arbre.root.findAll((n) => /^De /.test(n.props.accessibilityLabel || '')))
       .toHaveLength(0);
   });
 
-  it('légendaire : plus de marche, l écran le dit', async () => {
+  it('légendaire sans aucun match (150 A) : plus de marche, l écran le dit', async () => {
+    // Carte complète (55) + parcours (15) + équipe (15) = 85.
     mockUser = { ...PRESQUE, myTeams: [{ club: { name: 'AS Aix' }, name: 'Séniors' }] };
-    mockHistories = [1, 2, 3].map((n) => ({ customClubName: `Club ${n}`, startYear: 2010 + n }));
-    mockStats = { overall: { matches: 20 } };
+    mockHistories = [{ customClubName: 'Club 1', startYear: 2011 }];
+    mockStats = { overall: { matches: 0 } };
     const arbre = await finir();
     expect(textes(arbre)).toEqual(expect.arrayContaining([
       'Légendaire', 'C\'est la plus haute rareté.',

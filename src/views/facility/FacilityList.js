@@ -59,6 +59,7 @@ import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import PlanningDesInstallations from '@/components/organisms/planning/PlanningDesInstallations';
 import SeasonSlotForm from '@/components/organisms/seasonSlot/SeasonSlotForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { RouteNames } from '@/navigation/routeNames';
@@ -222,6 +223,7 @@ function FacilityList() {
   const route = useRoute();
   const { getSubscriptionAccessLevelForClub, subscriptionAccessLevel, userData } = useAuth();
   const { sceneBottomInset } = useBottomDockLayout();
+  const retraitBas = useRetraitBasDuDefilement(12);
 
   // 🏛️ COLLECTIVITES 1c — MODE COLLECTIVITE (route CollectiviteInstallations) : la liste est
   // celle des installations de LA collectivite (GET /collectivites/:id/installations, juge :
@@ -1535,6 +1537,124 @@ function FacilityList() {
     </TourTarget>
   );
 
+  // TEXTES-COLLECTIVITES (01/10) — cote club, « Tes installations · 4 » comptait celles de
+  // la Ville comme celles du club : les deux nombres se disent separement.
+  const collectiviteFacilities = isCollectiviteMode
+    ? []
+    : facilities.filter((/** @type {any} */ facility) => facility?.ownerType === 'collectivite');
+  // COLL-C2C (02/10) — design P8v2 : « 1 au club · 1 avec tes creneaux de la Ville · 2 a
+  // demander ».
+  const sousTitreGroupes = enGroupes
+    ? [
+      t('clubInstallations.compte.auClub', '{{count}} au club', { count: groupes.auClub.length }),
+      groupes.avecCreneaux.length
+        ? t('clubInstallations.compte.avecCreneaux', '{{count}} avec tes créneaux de la Ville', {
+          count: groupes.avecCreneaux.length,
+        })
+        : null,
+      groupes.aDemander.length
+        ? t('clubInstallations.compte.aDemander', '{{count}} à demander', {
+          count: groupes.aDemander.length,
+        })
+        : null,
+    ].filter(Boolean).join(' · ')
+    : null;
+  const listSubtitle = sousTitreGroupes || (collectiviteFacilities.length > 0
+    ? [
+      t('facilityList.count.club', {
+        count: facilities.length - collectiviteFacilities.length,
+        defaultValue_one: '{{count}} installation du club',
+        defaultValue_other: '{{count}} installations du club',
+      }),
+      t('facilityList.count.collectivite', {
+        count: collectiviteFacilities.length,
+        defaultValue_one: '{{count}} gérée par {{who}}',
+        defaultValue_other: '{{count}} gérées par {{who}}',
+        who: formatCollectiviteOfferedBy(collectiviteFacilities[0]?.ownerName),
+        ...SANS_ECHAPPEMENT,
+      }),
+    ].join(' · ')
+    // TEXTES-COLLECTIVITES : « 1 installation » etait ecrit en dur, en francais.
+    : t('facilityList.count.total', {
+      count: facilities.length,
+      defaultValue_one: '{{count}} installation',
+      defaultValue_other: '{{count}} installations',
+    }));
+  let listTitle = t('facilityList.title', 'Tes installations');
+  if (isCollectiviteMode) {
+    // COLL-C2B (02/10) — design P4 : « Ma collectivite » au-dessus, « Installations de la
+    // Ville » en titre, UNE fois (l en-tete de navigation se tait, voir plus haut). Le nom de
+    // la Ville (TEXTES-COLLECTIVITES) n est plus le titre : le menu du site le porte deja.
+    listTitle = t('facilityList.collectiviteTitle', 'Installations de la Ville');
+  }
+  const surtitre = isCollectiviteMode
+    ? t('collectiviteCreneaux.liste.surtitre', 'Ma collectivité')
+    : null;
+
+  // RATTRAPAGE (10/11, Adel « 212 ») — le haut défile avec la liste du club (règle de
+  // T3-BANDEAU-HAUT : tout défile sauf la flèche) ; il restait fixe, environ 30 % de l'écran.
+  const enTete = (
+    <View
+      style={[
+        Spaces.marginBottom[24],
+        // La rangée ne sert qu'à la Ville (« Chiffres et export » à droite).
+        isCollectiviteMode && Alignments.row,
+        isCollectiviteMode && Alignments.justifySpaceBetween,
+        isCollectiviteMode && Alignments.alignCenter,
+        Spaces.gap[12],
+      ]}
+    >
+      <View style={{ flex: 1 }}>
+        {surtitre ? (
+          <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
+            {surtitre}
+          </Text>
+        ) : null}
+        <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
+          {listTitle}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.primary100]}>
+          {listSubtitle}
+        </Text>
+        {/* FINITIONS12-COLL (03/10) — la porte PERMANENTE de « Tes demandes à la Ville ». */}
+        {/* RATTRAPAGE (212) : sous la ligne des nombres, en pleine largeur. */}
+        {enGroupes ? (
+          <TouchableOpacity
+            accessibilityRole="link"
+            onPress={() => /** @type {any} */ (navigation).navigate(
+              RouteNames.ClubSlotRequests,
+              { clubId: contextClubId },
+            )}
+            style={{ justifyContent: 'center', minHeight: 44 }}
+            testID="facility-list-tes-demandes"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+              {t('collectiviteDemandes.club.tesDemandes', 'Tes demandes à la Ville')}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      {/* D34 : une SEULE grammaire d'ajout — le bouton plein de l'en-tete a */}
+      {/* laisse la place au pointille en pied de liste (ListFooterComponent). */}
+      {/* COLL-C5 (03/10) — design P5v3 : la page « Chiffres » se range sous le planning. */}
+      {isCollectiviteMode ? (
+        <TouchableOpacity
+          accessibilityRole="link"
+          onPress={() => /** @type {any} */ (navigation).navigate(
+            RouteNames.CollectiviteChiffres,
+            { collectiviteId },
+          )}
+          style={{ justifyContent: 'center', minHeight: 44 }}
+          testID="facility-list-chiffres"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+            {t('collectiviteChiffres.lien', 'Chiffres et export')}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+
   // COLL-C2B (02/10) — la Ville : une liste (une colonne sur telephone, trois sur ordinateur),
   // l ajout en derniere case. Le club garde sa liste a sections, ci-dessous.
   let content = isCollectiviteMode ? (
@@ -1575,14 +1695,22 @@ function FacilityList() {
   ) : (
     <SectionList
       contentContainerStyle={[
-        { paddingBottom: sceneBottomInset },
+        // RATTRAPAGE (212) — T3-BANDE-BAS : le cadre ne garde rien en bas, la fin de la liste
+        // laisse 24 + le retrait commun ; plus la place d'un dock que cette page n'a pas. Le site
+        // garde la sienne (sa coque a sa barre).
+        { paddingBottom: Platform.OS === 'web' ? sceneBottomInset : 24 + retraitBas },
         facilities.length === 0 && Alignments.fill,
         facilities.length === 0 && Alignments.mainCenter,
       ]}
       keyExtractor={getFacilityKey}
       ListEmptyComponent={etatVide}
       ListFooterComponent={!enGroupes && facilities.length > 0 ? boutonAjouter : null}
-      ListHeaderComponent={blocEnAttente}
+      ListHeaderComponent={(
+        <>
+          {enTete}
+          {blocEnAttente}
+        </>
+      )}
       onScroll={tourScroll.onScroll}
       ref={tourScroll.ref}
       refreshControl={(
@@ -1602,6 +1730,8 @@ function FacilityList() {
       stickySectionHeadersEnabled={false}
     />
   );
+
+  const listeDuClub = isCollectiviteMode ? null : content;
 
   if (isMissingContext) {
     content = (
@@ -1681,127 +1811,23 @@ function FacilityList() {
     );
   }
 
-  // TEXTES-COLLECTIVITES (01/10) — cote club, « Tes installations · 4 » comptait celles de
-  // la Ville comme celles du club : les deux nombres se disent separement.
-  const collectiviteFacilities = isCollectiviteMode
-    ? []
-    : facilities.filter((/** @type {any} */ facility) => facility?.ownerType === 'collectivite');
-  // COLL-C2C (02/10) — design P8v2 : « 1 au club · 1 avec tes creneaux de la Ville · 2 a
-  // demander ».
-  const sousTitreGroupes = enGroupes
-    ? [
-      t('clubInstallations.compte.auClub', '{{count}} au club', { count: groupes.auClub.length }),
-      groupes.avecCreneaux.length
-        ? t('clubInstallations.compte.avecCreneaux', '{{count}} avec tes créneaux de la Ville', {
-          count: groupes.avecCreneaux.length,
-        })
-        : null,
-      groupes.aDemander.length
-        ? t('clubInstallations.compte.aDemander', '{{count}} à demander', {
-          count: groupes.aDemander.length,
-        })
-        : null,
-    ].filter(Boolean).join(' · ')
-    : null;
-  const listSubtitle = sousTitreGroupes || (collectiviteFacilities.length > 0
-    ? [
-      t('facilityList.count.club', {
-        count: facilities.length - collectiviteFacilities.length,
-        defaultValue_one: '{{count}} installation du club',
-        defaultValue_other: '{{count}} installations du club',
-      }),
-      t('facilityList.count.collectivite', {
-        count: collectiviteFacilities.length,
-        defaultValue_one: '{{count}} gérée par {{who}}',
-        defaultValue_other: '{{count}} gérées par {{who}}',
-        who: formatCollectiviteOfferedBy(collectiviteFacilities[0]?.ownerName),
-        ...SANS_ECHAPPEMENT,
-      }),
-    ].join(' · ')
-    // TEXTES-COLLECTIVITES : « 1 installation » etait ecrit en dur, en francais.
-    : t('facilityList.count.total', {
-      count: facilities.length,
-      defaultValue_one: '{{count}} installation',
-      defaultValue_other: '{{count}} installations',
-    }));
-  let listTitle = t('facilityList.title', 'Tes installations');
-  if (isCollectiviteMode) {
-    // COLL-C2B (02/10) — design P4 : « Ma collectivite » au-dessus, « Installations de la
-    // Ville » en titre, UNE fois (l en-tete de navigation se tait, voir plus haut). Le nom de
-    // la Ville (TEXTES-COLLECTIVITES) n est plus le titre : le menu du site le porte deja.
-    listTitle = t('facilityList.collectiviteTitle', 'Installations de la Ville');
-  }
-  const surtitre = isCollectiviteMode
-    ? t('collectiviteCreneaux.liste.surtitre', 'Ma collectivité')
-    : null;
+  // Le haut est dans la liste du club quand elle s'affiche ; sinon (chargement, erreur, Ville),
+  // il reste au-dessus, comme avant.
+  const hautDansLaListe = listeDuClub !== null && content === listeDuClub;
 
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode={isCollectiviteMode ? undefined : 'scroll-edge'}
       // CORR-SOCLE (30/10, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
       contentContainerStyle={[
-        Spaces.paddingVertical[24],
+        isCollectiviteMode || Platform.OS === 'web'
+          ? Spaces.paddingVertical[24]
+          : Spaces.paddingTop[24],
         Alignments.fill,
       ]}
     >
-      <View
-        style={[
-          Spaces.marginBottom[24],
-          Alignments.row,
-          Alignments.justifySpaceBetween,
-          Alignments.alignCenter,
-          Spaces.gap[12],
-        ]}
-      >
-        <View style={{ flex: 1 }}>
-          {surtitre ? (
-            <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
-              {surtitre}
-            </Text>
-          ) : null}
-          <Text accessibilityRole="header" style={[Fonts.h2Black, Fonts.neutral00]}>
-            {listTitle}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.primary100]}>
-            {listSubtitle}
-          </Text>
-        </View>
-        {/* D34 : une SEULE grammaire d'ajout — le bouton plein de l'en-tete a */}
-        {/* laisse la place au pointille en pied de liste (ListFooterComponent). */}
-        {/* COLL-C5 (03/10) — design P5v3 : la page « Chiffres » se range sous le planning. */}
-        {isCollectiviteMode ? (
-          <TouchableOpacity
-            accessibilityRole="link"
-            onPress={() => /** @type {any} */ (navigation).navigate(
-              RouteNames.CollectiviteChiffres,
-              { collectiviteId },
-            )}
-            style={{ justifyContent: 'center', minHeight: 44 }}
-            testID="facility-list-chiffres"
-          >
-            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('collectiviteChiffres.lien', 'Chiffres et export')}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-        {/* FINITIONS12-COLL (03/10) — la porte PERMANENTE de « Tes demandes à la Ville » */}
-        {/* (avant : l'accusé d'envoi seul, tournée T11), là où le club demande à la Ville. */}
-        {enGroupes ? (
-          <TouchableOpacity
-            accessibilityRole="link"
-            onPress={() => /** @type {any} */ (navigation).navigate(
-              RouteNames.ClubSlotRequests,
-              { clubId: contextClubId },
-            )}
-            style={{ justifyContent: 'center', minHeight: 44 }}
-            testID="facility-list-tes-demandes"
-          >
-            <Text style={[Fonts.p2Bold, Fonts.primary200]}>
-              {t('collectiviteDemandes.club.tesDemandes', 'Tes demandes à la Ville')}
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      {hautDansLaListe ? null : enTete}
 
       {content}
 
