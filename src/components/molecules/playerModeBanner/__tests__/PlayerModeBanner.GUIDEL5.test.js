@@ -17,6 +17,43 @@ jest.mock('@/context/useTour', () => ({
   }),
 }));
 
+// BANDEAU-PARENT (10/11) : le bandeau du parent monte le contrôle de « Ton mode »
+// (SegmentedControl) ; ses doublures, comme dans SegmentedControl.RESABASCULE.test.js.
+jest.mock('react-native-reanimated', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: {
+      View: function AnimatedViewMock(/** @type {any} */ props) {
+        return reactActuel.createElement(VueRN, props);
+      },
+    },
+    useAnimatedStyle: (/** @type {any} */ fabrique) => fabrique(),
+    useSharedValue: (/** @type {any} */ valeur) => ({ value: valeur }),
+  };
+});
+
+jest.mock('react-native-gesture-handler', () => {
+  const reactActuel = jest.requireActual('react');
+  const { ScrollView: DefilementRN, View: VueRN } = jest.requireActual('react-native');
+  const enchainable = () => {
+    /** @type {any} */
+    const geste = {};
+    ['activeOffsetX', 'failOffsetY', 'onStart', 'onUpdate', 'onEnd'].forEach((nom) => {
+      geste[nom] = () => geste;
+    });
+    return geste;
+  };
+  return {
+    Gesture: { Pan: enchainable },
+    GestureDetector: function GestureDetectorMock(/** @type {any} */ { children }) {
+      return reactActuel.createElement(VueRN, null, children);
+    },
+    ScrollView: DefilementRN,
+  };
+});
+
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
