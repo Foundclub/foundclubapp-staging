@@ -18088,7 +18088,7 @@ export default {
         title: 'Restart the guide?',
       },
       resume: 'Pick up where I left off',
-      review: 'Review the guide without creating anything',
+      review: 'Review without creating',
     },
     contactSupport: {
       ecrire: 'Write to support',

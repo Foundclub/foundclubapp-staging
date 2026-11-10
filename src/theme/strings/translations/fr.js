@@ -18813,7 +18813,7 @@ export default {
         title: 'Recommencer le guide ?',
       },
       resume: 'Reprendre là où j’en étais',
-      review: 'Revoir le guide sans rien créer',
+      review: 'Revoir sans rien créer',
     },
     contactSupport: {
       ecrire: 'Écrire à l’assistance',
