@@ -20255,6 +20255,11 @@ export default {
     title: 'Comment souhaites-te participer ?',
   },
   reserverTerrain: {
+    accueil: {
+      ouvrir: 'Ouvrir',
+      prochaine: 'Ta prochaine réservation',
+      toutes: 'Toutes mes réservations ({{nombre}})',
+    },
     annonce: {
       aPartirDe: 'À partir de {{age}} ans dans ce complexe.',
       apercu: 'Aperçu de l’annonce',

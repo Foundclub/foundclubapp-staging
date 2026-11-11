@@ -19522,6 +19522,11 @@ export default {
     title: 'How would you like to take part?',
   },
   reserverTerrain: {
+    accueil: {
+      ouvrir: 'Open',
+      prochaine: 'Your next booking',
+      toutes: 'All my bookings ({{nombre}})',
+    },
     annonce: {
       aPartirDe: 'Ages {{age}} and over at this venue.',
       apercu: 'Ad preview',

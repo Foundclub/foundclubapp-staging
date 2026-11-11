@@ -145,6 +145,11 @@ jest.mock('@/services/home/homeSummaryQueries', () => ({
 jest.mock('@/services/collectivite/collectiviteQueries', () => ({
   useAdminCollectivitesATraiter: () => ({ demandesGestionnaire: 0, mairiesAActiver: 0 }),
 }));
+// RESA-JOUEUR-2 (11/11) : « Ta prochaine réservation » lit les réservations à venir ; aucune ici.
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useGroupesDeReservations: () => ({ groupes: {} }),
+  useMesReservations: () => ({ data: [] }),
+}));
 // T3-TICKETS-VILLE (03/11) : « Ma collectivité » du dirigeant.
 const mockMaCollectivite = jest.fn(() => ({ data: undefined, isSuccess: false }));
 jest.mock('@/services/collectivite/collectiviteRattachementQueries', () => ({
