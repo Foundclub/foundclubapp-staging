@@ -22,6 +22,7 @@ import {
 import {
   casquetteDeLaNotification, casquettesMelees, libelleDeCasquette,
 } from '@/domains/messaging/casquette';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
@@ -388,6 +389,11 @@ function NotificationList() {
     let couleurIcone = Colors.neutral00;
     if (ton === 'succes') couleurIcone = Colors.success500;
     if (ton === 'refus') couleurIcone = Colors.error300;
+    // INVITE-STAFF-DESIGN (maquette E validée) : une invitation de staff qui attend sa réponse
+    // porte la teinte or (bord, fond, icône) ; répondue, elle redevient une ligne ordinaire.
+    const estInvitationOuverte = notification.type === 'staffInvitation'
+      && !notification.data?.answered;
+    if (estInvitationOuverte) couleurIcone = Colors.gold500;
     const isDeclinedParticipation = isDeclinedParticipationNotification(notification);
     const isRsvpReminder = isRsvpReminderNotification(notification);
 
@@ -411,7 +417,14 @@ function NotificationList() {
                 borderLeftWidth: notification.read ? 0 : 4,
                 borderRadius: 12,
               },
+              estInvitationOuverte ? {
+                backgroundColor: withAlpha(Colors.gold500, 0.08),
+                borderColor: withAlpha(Colors.gold500, 0.45),
+                borderLeftColor: Colors.gold500,
+                borderWidth: 1,
+              } : null,
             ]}
+            testID={`cloche-ligne-${notification.documentId || notification.id}`}
           >
             <TouchableOpacity
               // CORR-ROBUSTESSE point 55 — un bouton, nommé par le titre et le texte.
@@ -428,7 +441,9 @@ function NotificationList() {
               <View
                 style={{
                   alignItems: 'center',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: estInvitationOuverte
+                    ? withAlpha(Colors.gold500, 0.16)
+                    : 'rgba(255, 255, 255, 0.1)',
                   borderRadius: 20,
                   height: 40,
                   justifyContent: 'center',

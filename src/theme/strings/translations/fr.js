@@ -22053,8 +22053,12 @@ export default {
     form: {
       hint: 'La personne reçoit ton invitation et choisit d’accepter. Rien ne change sans son accord.',
       send: 'Envoyer l’invitation',
+      team: 'Son équipe',
+      teamHint: 'Facultatif. Tu pourras l’ajouter à une équipe plus tard.',
+      teamNone: 'Sans équipe',
       title: 'Inviter un coach',
     },
+    newMember: 'Nouveau',
     ok: 'Compris',
     pending: {
       cancel: 'Annuler',
@@ -22085,10 +22089,16 @@ export default {
       actions: {
         sms: 'Prévenir par SMS',
       },
-      description: '{{role}} · numéro se terminant par {{hint}} · valable jusqu’au {{date}}.\n\n'
-        + 'S’il a déjà FoundClub, il la trouve dans ses notifications. Sinon, elle l’attend : '
-        + 'il la verra dès qu’il s’inscrira avec ce numéro.',
+      explain: 'S’il a déjà FoundClub, il la trouve dans ses notifications. Sinon, elle l’attend : '
+        + 'il la verra dès qu’il s’inscrira avec ce numéro.\n\n'
+        + 'Tu peux le prévenir par SMS, avec le lien pour installer l’application.',
       fallbackName: 'ton invité·e',
+      rows: {
+        number: 'Numéro',
+        role: 'Rôle',
+        valid: 'Valable',
+        validUntil: 'jusqu’au {{date}}',
+      },
       title: 'Invitation envoyée à {{name}}',
     },
     sheet: {
@@ -22096,6 +22106,7 @@ export default {
       becomeCoach: 'Tu deviens coach du club.',
       becomeCoachOf: 'Tu deviens coach de l’équipe {{team}} : matchs, entraînements, convocations.',
       becomeDirigeant: 'Tu deviens dirigeant·e du club : équipes, staff et membres.',
+      eyebrow: 'Invitation',
       ifAccept: 'Si tu acceptes :',
       ifRefuse: 'Si tu refuses, rien ne change et le club n’est pas prévenu.',
       ifRefuseUntil: 'Si tu refuses, rien ne change et le club n’est pas prévenu. Invitation valable jusqu’au {{date}}.',
@@ -22105,9 +22116,12 @@ export default {
     },
     welcome: {
       coach: 'Tu es coach. Tu peux convoquer, créer les entraînements et suivre l’équipe dès maintenant.',
+      coachOf: 'Tu es coach de l’équipe {{team}}. Tu peux convoquer, créer les entraînements et '
+        + 'suivre l’équipe dès maintenant.',
       dirigeant: 'Tu es dirigeant·e. Tu peux gérer les équipes, le staff et les membres dès maintenant.',
       later: 'Plus tard',
       openClub: 'Ouvrir le club',
+      openTeam: 'Ouvrir l’équipe {{team}}',
       title: 'Bienvenue dans le staff de {{club}}',
     },
   },

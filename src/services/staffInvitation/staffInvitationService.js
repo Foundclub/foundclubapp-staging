@@ -72,16 +72,21 @@ export const sendStaffInvitation = ({
 );
 
 /**
- * Les invitations en attente d'un club (rubrique du Staff).
+ * Les invitations en attente d'un club (rubrique du Staff), et les comptes entrés par une
+ * invitation acceptée depuis moins de 7 jours (INVITE-STAFF-DESIGN, maquette D ; champ absent
+ * d'un serveur plus ancien : liste vide).
  * @param {string} clubId - le club.
- * @returns {Promise<any[]>} la liste.
+ * @returns {Promise<{ invitations: any[], recentlyAccepted: string[] }>} la lecture.
  */
 export const getSentStaffInvitations = async (clubId) => {
   const data = await unwrap(
     () => client.get('/staff-invitations/sent', { params: { clubId } }),
     i18next.t('staffInvitation.errors.sent', 'Impossible de charger les invitations en attente.'),
   );
-  return Array.isArray(data?.invitations) ? data.invitations : [];
+  return {
+    invitations: Array.isArray(data?.invitations) ? data.invitations : [],
+    recentlyAccepted: Array.isArray(data?.recentlyAccepted) ? data.recentlyAccepted : [],
+  };
 };
 
 /**

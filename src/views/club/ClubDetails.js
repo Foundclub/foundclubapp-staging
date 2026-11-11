@@ -69,8 +69,9 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import InvitationsDeStaffEnAttente from
-  '@/components/organisms/invitationDeStaff/InvitationsDeStaffEnAttente';
+import InvitationsDeStaffEnAttente, {
+  useInvitationsDeStaffEnvoyees,
+} from '@/components/organisms/invitationDeStaff/InvitationsDeStaffEnAttente';
 import { lireOngletDOrigine, useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
@@ -946,6 +947,11 @@ function ClubDetails({ navigation, route }) {
   const clubMembersCount = Number(club?.membersCount || club?.members?.length || 0);
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
+  // INVITE-STAFF-DESIGN (maquette D) : « Nouveau » sur la ligne d'un coach arrivé par invitation.
+  const { nouveaux: nouveauxDuStaff } = useInvitationsDeStaffEnvoyees(
+    club?.documentId,
+    canEdit && route?.params?.section === 'staff',
+  );
   const facilitiesLoading = canLoadFacilityContext && isLoadingFacilities;
   const facilities = useMemo(() => {
     const duContexte = Array.isArray(facilityContext?.allFacilities)
@@ -4367,6 +4373,9 @@ function ClubDetails({ navigation, route }) {
                             Alignments.justifySpaceBetween,
                             Spaces.padding[16],
                             Spaces.gap[24],
+                            nouveauxDuStaff.has(user.documentId)
+                              ? { borderColor: Colors.success500, borderWidth: 1 }
+                              : null,
                           ]}
                         >
                           <View style={[
@@ -4378,13 +4387,20 @@ function ClubDetails({ navigation, route }) {
                               name={[user.firstname, user.lastname].filter(Boolean).join(' ')}
                               size={40}
                             />
-                            <Text
-                              numberOfLines={2}
-                              style={[Fonts.p1Bold, Fonts.neutral00]}
-                            >
-                              {/* Recette L11 : un coach invité n'a qu'un prénom. */}
-                              {[user.firstname, user.lastname].filter(Boolean).join(' ')}
-                            </Text>
+                            <View style={[Alignments.fill]}>
+                              <Text
+                                numberOfLines={2}
+                                style={[Fonts.p1Bold, Fonts.neutral00]}
+                              >
+                                {/* Recette L11 : un coach invité n'a qu'un prénom. */}
+                                {[user.firstname, user.lastname].filter(Boolean).join(' ')}
+                              </Text>
+                              {nouveauxDuStaff.has(user.documentId) ? (
+                                <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+                                  {t('staffInvitation.newMember', 'Nouveau')}
+                                </Text>
+                              ) : null}
+                            </View>
                           </View>
                           {canEdit ? (
                             <View style={[Alignments.row, Spaces.gap[8]]}>

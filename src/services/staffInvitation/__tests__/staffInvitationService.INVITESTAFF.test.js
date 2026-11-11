@@ -65,7 +65,11 @@ describe('INVITE-STAFF — staffInvitationService', () => {
     /** @type {any} */ (client.get).mockResolvedValue({
       data: { data: { invitations: [{ documentId: 'i1' }] } },
     });
-    await expect(getSentStaffInvitations('club-1')).resolves.toEqual([{ documentId: 'i1' }]);
+    // INVITE-STAFF-DESIGN : la lecture rend aussi les arrivées récentes (vide sans le champ).
+    await expect(getSentStaffInvitations('club-1')).resolves.toEqual({
+      invitations: [{ documentId: 'i1' }],
+      recentlyAccepted: [],
+    });
     expect(client.get).toHaveBeenCalledWith('/staff-invitations/sent', {
       params: { clubId: 'club-1' },
     });
