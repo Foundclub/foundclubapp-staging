@@ -354,7 +354,7 @@ export const grouperParJour = (items) => {
  * @param {unknown} iso - L'instant.
  * @returns {string} Le texte, ou ''.
  */
-const quand = (iso) => {
+export const quand = (iso) => {
   if (!iso) return '';
   const instant = new Date(String(iso));
   if (Number.isNaN(instant.getTime())) return '';
@@ -519,6 +519,19 @@ const VERS_LA_FRISE = Object.freeze({
 export const etatDeFrise = (etat) => /** @type {any} */ (VERS_LA_FRISE)[String(etat)] || 'libre';
 
 /**
+ * GERANT-CONSTRUCTION (11/11/2026, D50) — l'état d'un créneau du planning, « construction »
+ * compris : le serveur le laisse « libre » (un autre groupe peut le prendre, A-P08) et y pose
+ * `construction`.
+ * @param {any} creneau - Un créneau du planning (`state`, `construction`).
+ * @returns {'app' | 'attente' | 'bloque' | 'construction' | 'exterieur' | 'ferme' | 'libre'}
+ *   L'état.
+ */
+export const etatDuCreneau = (creneau) => {
+  const etat = etatDeFrise(creneau?.state);
+  return etat === 'libre' && creneau?.construction ? 'construction' : etat;
+};
+
+/**
  * Le motif d'une fermeture ou d'un blocage : le nom donné, sinon le motif de la liste du serveur
  * (« travaux », « vacances », « manifestation »).
  * @param {Traduire} t - Traduction.
@@ -567,6 +580,11 @@ export const libelleDuCreneau = (t, creneau) => {
     case 'reserve-exterieur':
       return `${nom} · ${t('complexeReservations.source.exterieur', 'Extérieur')}`;
     default:
+      // GERANT-CONSTRUCTION : « Sarah K. · En construction » (le créneau reste libre).
+      if (creneau?.construction) {
+        const enConstruction = t('complexeGerant.frise.construction', 'En construction');
+        return `${String(creneau.construction.label || '')} · ${enConstruction}`;
+      }
       return t('complexeReservations.planning.libre', 'Libre');
   }
 };
@@ -659,13 +677,14 @@ export const lignesDeLaFrise = (t, planning, date) => (
   .map((/** @type {any} */ terrain) => ({
     cle: String(terrain.documentId),
     creneaux: creneauxDe(terrain, date).map((/** @type {any} */ creneau) => {
-      const etat = etatDeFrise(creneau.state);
+      const etat = etatDuCreneau(creneau);
       const libelle = creneau.reservation?.label || libelleDuCreneau(t, creneau);
       return {
         ...heuresDe(creneau),
         etat,
         ...(etat === 'libre' ? {} : { libelle }),
-        reservationId: creneau.reservation?.documentId || null,
+        // GERANT-CONSTRUCTION : toucher une réservation en construction ouvre sa fiche.
+        reservationId: creneau.reservation?.documentId || creneau.construction?.documentId || null,
       };
     }),
     nom: String(terrain.name || ''),

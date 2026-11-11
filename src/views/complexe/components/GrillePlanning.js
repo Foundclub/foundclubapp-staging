@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 
 import {
-  etatDeFrise,
+  etatDuCreneau,
   libelleDuCreneau,
   minutesAParis,
   plageHoraire,
@@ -15,14 +15,15 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { styleDuCreneau } from '@/views/complexe/components/allureDuCreneau';
+import HachuresDuCreneau from '@/views/complexe/components/HachuresDuCreneau';
 
 const PAR_MINUTE = 1.5;
 const AXE = 44;
 const ENTETE = 40;
 
 /**
- * @typedef {{ closure: any, date: string, endsAt: string, from: string | null, reservation: any,
- *   startsAt: string, state: string, terrainId: string, terrainNom: string,
+ * @typedef {{ closure: any, construction?: any, date: string, endsAt: string, from: string | null,
+ *   reservation: any, startsAt: string, state: string, terrainId: string, terrainNom: string,
  *   to: string | null }} CreneauDuPlanning
  * @typedef {{ cle: string, couleur?: string | null, creneaux: CreneauDuPlanning[],
  *   titre: string }} ColonneDuPlanning
@@ -92,7 +93,9 @@ function GrillePlanning({
     /** @type {CreneauDuPlanning} */ creneau,
   ) => {
     const { a, de } = minutesDuCreneau(creneau);
-    const etat = etatDeFrise(creneau.state);
+    // GERANT-CONSTRUCTION (D50) : une réservation en construction, hachurée ; la case reste libre.
+    const etat = etatDuCreneau(creneau);
+    const libre = etat === 'libre' || etat === 'construction';
     const libelle = libelleDuCreneau(t, creneau);
     const actif = estActif(creneau);
     const debutTexte = creneau.from || heureDe(de);
@@ -113,7 +116,7 @@ function GrillePlanning({
         delayLongPress={400}
         disabled={!actif}
         key={`${colonne.cle}-${creneau.startsAt}`}
-        onLongPress={etat === 'libre' ? () => onAppuiLong(creneau) : undefined}
+        onLongPress={libre ? () => onAppuiLong(creneau) : undefined}
         onPress={() => onToucher(creneau)}
         style={[
           Alignments.justifyCenter,
@@ -132,6 +135,7 @@ function GrillePlanning({
         ]}
         testID={`creneau-${creneau.terrainId}-${creneau.date}-${debutTexte}`}
       >
+        {etat === 'construction' ? <HachuresDuCreneau /> : null}
         <Text numberOfLines={2} style={[Fonts.p4Bold, Fonts.neutral00]}>
           {etat === 'libre' ? '' : libelle}
         </Text>
