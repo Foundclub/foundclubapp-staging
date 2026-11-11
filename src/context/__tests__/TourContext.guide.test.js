@@ -244,6 +244,8 @@ describe('guide Entraîneur — missions verrouillées et jauge', () => {
     expect(tour.currentStep.id).toBe('m4-frc');
     [
       RouteNames.FriendlyMatchWizardTeam,
+      // AMICAUX-FORMAT (10/11) : l etape « Format » (2/8) a sa bulle m4-amf ; reporte a la recolte du train 9.
+      RouteNames.FriendlyMatchWizardFormat,
       RouteNames.FriendlyMatchWizardHosting,
       RouteNames.FriendlyMatchWizardDates,
       RouteNames.FriendlyMatchWizardLocation,
