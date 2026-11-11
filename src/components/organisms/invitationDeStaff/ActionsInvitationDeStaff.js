@@ -109,13 +109,13 @@ function ActionsInvitationDeStaff({
     .join('\n');
   const texteQuestion = [
     invitation.inviterName
-      ? t('staffInvitation.received.by', { name: invitation.inviterName })
+      ? t('staffInvitation.received.by', { name: invitation.inviterName, interpolation: { escapeValue: false } })
       : '',
     t('staffInvitation.sheet.ifAccept'),
     effets,
     '',
     echeance
-      ? t('staffInvitation.sheet.ifRefuseUntil', { date: echeance })
+      ? t('staffInvitation.sheet.ifRefuseUntil', { date: echeance, interpolation: { escapeValue: false } })
       : t('staffInvitation.sheet.ifRefuse'),
   ]
     .filter((ligne, index) => index > 0 || ligne)
@@ -172,7 +172,10 @@ function ActionsInvitationDeStaff({
             ? t('staffInvitation.welcome.dirigeant')
             : t('staffInvitation.welcome.coach')
         }
-        titre={t('staffInvitation.welcome.title', { club: invitation.clubName || '' })}
+        titre={t('staffInvitation.welcome.title', {
+          club: invitation.clubName || '',
+          interpolation: { escapeValue: false },
+        })}
       />
 
       <FeuilleDeSucces

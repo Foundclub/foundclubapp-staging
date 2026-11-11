@@ -66,6 +66,7 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '' }) {
           invitation.team?.name,
           t('staffInvitation.pending.sentOn', {
             date: dateCourte(invitation.createdAt),
+            interpolation: { escapeValue: false },
           }),
         ]
           .filter(Boolean)
