@@ -28,8 +28,10 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -65,6 +67,10 @@ function CollectiviteSignupStatus() {
   const route = useRoute();
   const params = /** @type {{ justSent?: boolean } | undefined} */ (route?.params);
   const [envoyeeVue, setEnvoyeeVue] = useState(!params?.justSent);
+  // DEFILEMENT-LOT2 : le pied flottant mesure sa hauteur, la fin du défilement la laisse libre ;
+  // le retrait est celui que le cadre gardait (barre du téléphone, plus les 24 de la page).
+  const retraitBas = useRetraitBasDuDefilement();
+  const [hauteurDuPied, setHauteurDuPied] = useState(0);
 
   const demandes = useMyManagerRequests();
   const villes = useMyCollectivites();
@@ -323,10 +329,19 @@ function CollectiviteSignupStatus() {
       </View>
     );
     piedDePage = (
-      <View
-        style={{
-          alignSelf: 'center', maxWidth: 640, paddingTop: 12, width: '100%',
+      <PiedFlottant
+        flottant={Platform.OS !== 'web'}
+        onLayout={Platform.OS === 'web' ? undefined : (evenement) => {
+          setHauteurDuPied(evenement.nativeEvent.layout.height);
         }}
+        style={[
+          {
+            alignSelf: 'center', maxWidth: 640, paddingTop: 12, width: '100%',
+          },
+          Platform.OS === 'web' ? null : {
+            bottom: 0, paddingBottom: retraitBas + 24, position: 'absolute',
+          },
+        ]}
         testID="collectivite-demande-envoyee-pied"
       >
         <Button
@@ -334,7 +349,7 @@ function CollectiviteSignupStatus() {
           title={t('collectiviteAccueil.demande.envoyee.compris', 'Compris')}
           variant="Primary"
         />
-      </View>
+      </PiedFlottant>
     );
   } else if (villeGeree?.documentId) {
     // Acceptée : l'espace est ouvert.
@@ -508,15 +523,35 @@ function CollectiviteSignupStatus() {
     );
   }
 
+  // DEFILEMENT-LOT2 (11/11, « 244- A », relevé D03b ligne 4) — sur iPhone, le logo et le profil
+  // restaient figés en haut, et « Compris » + 24 + la barre du téléphone en bas (~160 px). Règle
+  // C : le haut défile avec le contenu. Règle B : « Compris » reste visible, dans un pied
+  // flottant, hors de la zone qui défile (planche FIN14). Règle A : le cadre ne garde rien en
+  // bas, la fin du défilement garde le retrait. Le site, sans logo ni profil ici, garde sa page
+  // (le cadre du site ignore `scroll-edge`) : ses 24 px du bas et son pied, comme la planche.
+  // Témoin : __tests__/CollectiviteSignupStatus.DEFILEMENT-LOT2.test.js.
+  const surLeSite = Platform.OS === 'web';
+  let finDuDefilement = surLeSite ? 0 : 24 + retraitBas;
+  // Avant la mesure, la place d'un bouton (48) et de ses marges.
+  if (!surLeSite && piedDePage) finDuDefilement = (hauteurDuPied || 48 + 36 + retraitBas) + 12;
+
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Spaces.paddingBottom[24], Alignments.fill]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={surLeSite
+        ? [Spaces.paddingBottom[24], Alignments.fill]
+        : [Alignments.fill]}
     >
-      {enTete}
       <ScrollView
         contentContainerStyle={{
-          alignSelf: 'center', gap: 24, maxWidth: 640, paddingTop: 16, width: '100%',
+          alignSelf: 'center',
+          gap: 24,
+          maxWidth: 640,
+          paddingBottom: finDuDefilement,
+          // L'en-tête porte sa marge du haut (16), comme avant hors du défilement.
+          paddingTop: enTete ? 0 : 16,
+          width: '100%',
         }}
         refreshControl={(
           <RefreshControl
@@ -530,7 +565,12 @@ function CollectiviteSignupStatus() {
           />
         )}
       >
-        {contenu}
+        {enTete ? (
+          <View style={{ gap: 16 }}>
+            {enTete}
+            {contenu}
+          </View>
+        ) : contenu}
       </ScrollView>
       {piedDePage}
     </ScreenContainer>

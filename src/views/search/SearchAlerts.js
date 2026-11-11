@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, FlatList, Image, RefreshControl, Switch, Text, TouchableOpacity, View,
+  Alert, FlatList, Image, Platform, RefreshControl, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -12,9 +12,11 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Loader from '@/components/atoms/loader/Loader';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import { GuideAlertes } from '@/components/organisms/alerteEvenements/AlerteEvenements';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -50,6 +52,9 @@ function SearchAlerts({ navigation }) {
   // ALERTES (audit V1, A20.3) — le guide « Comment créer une alerte ? » est aussi
   // ici : c'est là qu'on vient quand on ne sait pas encore où elles se créent.
   const [isGuideVisible, setIsGuideVisible] = useState(false);
+  // DEFILEMENT-LOT2 : le pied flottant mesure sa hauteur, la fin de la liste la laisse libre.
+  const retraitBas = useRetraitBasDuDefilement();
+  const [hauteurDuPied, setHauteurDuPied] = useState(0);
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -247,39 +252,88 @@ function SearchAlerts({ navigation }) {
     fetchAlerts();
   }, []);
 
+  // DEFILEMENT-LOT2 (11/11, « 244- A », relevé D03b ligne 2) — sur iPhone, le titre et le lien du
+  // guide restaient figés en haut (~130 px). Règle C : ils passent en tête de liste. Règle B :
+  // « Créer une alerte », l'action de l'écran, reste visible dans un pied flottant ; le cadre ne
+  // garde plus rien en bas, la fin de la liste laisse la place du pied. Sur le site, le pied
+  // vient au bout de la liste (REPRISE-PLACE, 01/11).
+  // Témoin : __tests__/SearchAlerts.DEFILEMENT-LOT2.test.js.
+  const surLeSite = Platform.OS === 'web';
+  const pied = (
+    <PiedFlottant
+      flottant={!surLeSite}
+      onLayout={surLeSite ? undefined : (evenement) => {
+        setHauteurDuPied(evenement.nativeEvent.layout.height);
+      }}
+      style={surLeSite ? Spaces.paddingTop[8] : [
+        Spaces.paddingHorizontal[16],
+        Spaces.paddingTop[16],
+        {
+          bottom: 0,
+          left: 0,
+          paddingBottom: retraitBas + 16,
+          position: 'absolute',
+          right: 0,
+        },
+      ]}
+      testID="search-alerts-pied"
+    >
+      <Button
+        onPress={handleCreateAlertPress}
+        title={t('searchAlerts.actions.create', 'Créer une alerte')}
+        variant="Primary"
+      />
+    </PiedFlottant>
+  );
+  // Avant la mesure, la place d'un bouton (48) et de ses marges.
+  const finDuDefilement = surLeSite ? 24 : (hauteurDuPied || 48 + 32 + retraitBas) + 12;
+
+  const enTete = (
+    <View style={[Spaces.paddingTop[24], Spaces.marginBottom[8]]}>
+      <Text style={[Fonts.h1, Fonts.neutral00]}>{t('searchAlerts.title', 'Mes Alertes')}</Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => setIsGuideVisible(true)}
+        style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
+      >
+        <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+          {t('searchAlerts.guide.linkLong', 'Comment créer une alerte ?')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Alignments.fill]}
     >
-      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
-        <Text style={[Fonts.h1, Fonts.neutral00]}>{t('searchAlerts.title', 'Mes Alertes')}</Text>
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={() => setIsGuideVisible(true)}
-          style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
-        >
-          <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
-            {t('searchAlerts.guide.linkLong', 'Comment créer une alerte ?')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {loading && !refreshing ? (
-        <Loader />
+        <View style={[Alignments.fill, Spaces.paddingHorizontal[16]]}>
+          {enTete}
+          <Loader />
+        </View>
       ) : (
         <FlatList
           contentContainerStyle={[
             Spaces.gap[16],
             Spaces.paddingHorizontal[16],
-            Spaces.paddingBottom[80],
-            alerts.length === 0 && Alignments.fill,
-            alerts.length === 0 && Alignments.mainCenter,
+            { paddingBottom: finDuDefilement },
+            // Liste vide : le message reste centré dans la place sous le titre.
+            alerts.length === 0 && { flexGrow: 1 },
           ]}
           data={alerts}
           keyExtractor={(item) => (item.documentId || item.id?.toString() || Math.random().toString())}
           ListEmptyComponent={(
-            <View style={[Alignments.alignCenter, Spaces.gap[16]]}>
+            <View
+              style={[
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
+                Alignments.fill,
+                Spaces.gap[16],
+              ]}
+            >
               <Image
                 source={Images.search}
                 style={{
@@ -291,6 +345,8 @@ function SearchAlerts({ navigation }) {
               </Text>
             </View>
                     )}
+          ListFooterComponent={surLeSite ? pied : null}
+          ListHeaderComponent={enTete}
           refreshControl={(
             <RefreshControl
               colors={[Colors.primary500]}
@@ -391,22 +447,7 @@ function SearchAlerts({ navigation }) {
         />
       )}
 
-      <View style={[
-        Spaces.padding[16],
-        {
-          bottom: 0,
-          left: 0,
-          position: 'absolute',
-          right: 0,
-        },
-      ]}
-      >
-        <Button
-          onPress={handleCreateAlertPress}
-          title={t('searchAlerts.actions.create', 'Créer une alerte')}
-          variant="Primary"
-        />
-      </View>
+      {surLeSite ? null : pied}
 
       <GuideAlertes isVisible={isGuideVisible} onClose={() => setIsGuideVisible(false)} />
 

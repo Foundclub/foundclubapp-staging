@@ -47,21 +47,24 @@ const FAITS = [
   'complexe/ComplexeCanal.js', 'complexe/ComplexeClients.js',
 ];
 
-// Ces deux fiches portent déjà leur retrait, dans une variable à elles (essai vu par Adel).
+// Ces fiches portent leur retrait dans une variable à elles (essai vu par Adel), le plus souvent
+// parce qu'un pied flottant s'y ajoute.
 const FICHES = {
   'club/ClubDetails.js': 'floatingClubActionsScrollPaddingBottom',
   'profile/UserDetails.js': 'scrollBottomPadding',
+  // DEFILEMENT-LOT2 (11/11, « 244- A ») : règles B et C ; la fin du défilement garde le pied.
+  'club/AssignCoachTeams.js': 'finDuDefilement',
+  'collectivite/CollectiviteSignupStatus.js': 'finDuDefilement',
+  'league/match/PastMatchDetails.js': 'scrollBottomPadding',
+  'reserverTerrain/ReserverVeille.js': 'finDuDefilement',
+  'search/SearchAlerts.js': 'finDuDefilement',
 };
 
 // Relus et laissés : leur cadre garde sa marge. Ils sortent de cette liste un par un, sur décision.
 const LAISSES = {
-  'club/AssignCoachTeams.js': 'bouton fixe sous la liste',
-  'collectivite/CollectiviteSignupStatus.js': 'pied fixe sous la liste',
   'event/ParticipantEventList.js': 'onglet et bouton flottant',
-  'league/match/PastMatchDetails.js': 'SafeAreaView : le retrait reviendrait sur iPhone',
-  'league/ranking/RankingScreen.js': 'liste dans une carte',
-  'reserverTerrain/ReserverVeille.js': 'pied fixe sous la liste',
-  'search/SearchAlerts.js': 'bouton fixe posé sur la liste',
+  // DEFILEMENT-LOT2 : le haut défile (règle C) ; le bas, sur la barre d'onglets, est juste.
+  'league/ranking/RankingScreen.js': 'onglet League : la barre d onglets garde le bas',
 };
 
 /**

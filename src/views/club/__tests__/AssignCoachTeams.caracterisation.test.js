@@ -35,9 +35,11 @@ jest.mock('@shopify/flash-list', () => {
 
   return {
     FlashList: function FlashListMock(/** @type {any} */ props) {
+      // DEFILEMENT-LOT2 (11/11) : comme la vraie liste, l'en-tête et le pied de liste sont rendus.
       return reactActuel.createElement(
         VueRN,
         null,
+        props.ListHeaderComponent || null,
         (props.data || []).map((/** @type {any} */ element, /** @type {number} */ index) => (
           reactActuel.createElement(
             VueRN,
@@ -48,6 +50,7 @@ jest.mock('@shopify/flash-list', () => {
         (props.data || []).length === 0 && props.ListEmptyComponent
           ? props.ListEmptyComponent
           : null,
+        props.ListFooterComponent || null,
       );
     },
   };
