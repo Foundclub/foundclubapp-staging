@@ -8134,6 +8134,7 @@ export default {
       fermer: 'Fermer',
       garde: 'Tu gardes tes équipes, tes réservations et tes messages de joueur.',
       heures: '{{heures}} h',
+      lireRegles: 'Lire les règles',
       manqueAdresse: 'Choisis l’adresse dans la liste.',
       manqueNom: 'Donne un nom au complexe.',
       manqueSports: 'Choisis au moins un sport.',
@@ -8338,6 +8339,7 @@ export default {
       erreur: 'Impossible de charger tes réglages.',
       heuresAvant: '{{heures}} h avant le créneau',
       jamais: 'Jamais',
+      lireRegles: 'Lire les règles d’utilisation des complexes',
       message: 'Ton message aux joueurs',
       // eslint-disable-next-line max-len
       messageAide: 'Les joueurs le lisent sur ta page, avant de réserver et en rejoignant une partie.',

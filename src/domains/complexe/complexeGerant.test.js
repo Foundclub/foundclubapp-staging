@@ -90,7 +90,7 @@ describe('RESA-L5A1 E-G01 — ce que « Créer mon complexe » envoie', () => {
       minAge: 16,
       name: 'Le Five de Montrivage',
       phoneNumber: '+33639981234',
-      rulesVersion: '2026-10-14',
+      rulesVersion: '2026-11-10',
       siret: '12345678900012',
       sports: ['a-five', 'a-padel'],
     });
@@ -99,8 +99,9 @@ describe('RESA-L5A1 E-G01 — ce que « Créer mon complexe » envoie', () => {
   // RESA-INSCRIPTION (19/10/2026) — LA VERSION DES RÈGLES ACCEPTÉE : celles validées le 14/10
   // (docs/RESERVATION_REGLES_COMPLEXES_2026-10-14.md). Champ neuf du lot serveur RESA-L2C ; le
   // serveur actuel l'ignore sans erreur (liste blanche, banc RESAINSCR-20261019/serveur).
-  it('rulesVersion « 2026-10-14 » part avec la case cochée, jamais sans elle', () => {
-    expect(VERSION_DES_REGLES).toBe('2026-10-14');
+  // REGLES-COMPLEXES (10/11/2026, chef « 2 B ») : la version du texte PUBLIÉ, 2026-11-10.
+  it('rulesVersion « 2026-11-10 » part avec la case cochée, jamais sans elle', () => {
+    expect(VERSION_DES_REGLES).toBe('2026-11-10');
     const fiche = {
       adresse: ADRESSE,
       ageMinimum: 18,
@@ -109,7 +110,7 @@ describe('RESA-L5A1 E-G01 — ce que « Créer mon complexe » envoie', () => {
       sports: [],
       telephone: '+33639981234',
     };
-    expect(payloadDeCreation({ ...fiche, accepte: true }).rulesVersion).toBe('2026-10-14');
+    expect(payloadDeCreation({ ...fiche, accepte: true }).rulesVersion).toBe('2026-11-10');
     const sansCase = payloadDeCreation({ ...fiche, accepte: false });
     expect(sansCase.acceptRules).toBe(false);
     expect(sansCase).not.toHaveProperty('rulesVersion');

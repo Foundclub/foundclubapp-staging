@@ -1,3 +1,5 @@
+import { VERSION_DES_REGLES } from '@/domains/complexe/reglesDesComplexes';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 import { getErrorStatus, getServerErrorCode } from '@/utils/errors/displayError';
@@ -110,12 +112,13 @@ export const ficheComplete = (fiche) => {
 
 /**
  * RESA-INSCRIPTION (19/10/2026) — la version des « règles d'utilisation des complexes » que la case
- * fait accepter : celles validées le 14/10 (`docs/RESERVATION_REGLES_COMPLEXES_2026-10-14.md`).
- * Champ neuf du lot serveur RESA-L2C ; le serveur actuel l'ignore sans erreur (sa liste blanche,
- * mesuré sur `readComplexePayload` et `selfOnboard` : banc `RESAINSCR-20261019/serveur`).
- * Une nouvelle version des règles = une nouvelle date ici.
+ * fait accepter (`rulesVersion`, lot serveur RESA-L2C).
+ * REGLES-COMPLEXES (10/11/2026) : c'est la version du texte PUBLIÉ, 2026-11-10, qui vit avec
+ * lui dans `reglesDesComplexes.js` (la page du site l'affiche). Le serveur doit la connaître
+ * AVANT que cette app parte (admin `COMPLEXE_RULES_VERSIONS`), sinon « Créer mon complexe » est
+ * refusé.
  */
-export const VERSION_DES_REGLES = '2026-10-14';
+export { VERSION_DES_REGLES };
 
 /**
  * Le corps de « Créer mon complexe » (`POST /complexes/self-onboard`) : la liste blanche du

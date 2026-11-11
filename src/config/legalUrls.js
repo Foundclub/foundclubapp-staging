@@ -32,3 +32,17 @@ export const SUPPORT_CONTACT_EMAIL = 'contact@foundclubpro.com';
 
 /** @see SUPPORT_CONTACT_EMAIL */
 export const SUPPORT_CONTACT_MAILTO = `mailto:${SUPPORT_CONTACT_EMAIL}`;
+
+/**
+ * REGLES-COMPLEXES (10/11/2026, « 225- A », M0855) — les « Règles d’utilisation des
+ * complexes », que la case de « Créer mon complexe » fait accepter. Une page du SITE
+ * (`web/src/pages/seo`), pas de la vitrine `foundclubpro.com` (chef, 10/11 : « 4 web ») :
+ * elle part avec le site, train par train. Le texte vit dans
+ * `domains/complexe/reglesDesComplexes.js`.
+ * Les écrans l’ouvrent par `buildPublicWebUrl` (le site de la recette sur la recette) ;
+ * l’adresse complète ci-dessous est celle de la production.
+ */
+export const LEGAL_COMPLEXE_RULES_PATH = '/regles-complexes';
+
+/** @see LEGAL_COMPLEXE_RULES_PATH */
+export const LEGAL_COMPLEXE_RULES_URL = `https://foundclub.app${LEGAL_COMPLEXE_RULES_PATH}`;
