@@ -15,6 +15,7 @@ import {
   annulerMaReservation,
   apercuDeReservation,
   chercherDesTerrains,
+  construireLaReservation,
   ecrireAuComplexe,
   fermerUneAnnonce,
   lienDInvitation,
@@ -30,6 +31,7 @@ import {
   lireMesReservations,
   lireTerrainsPublics,
   lireUneAnnonce,
+  listerLesAnnonces,
   ouvrirLaDiscussion,
   publierUneAnnonce,
   quitterLeCanal,
@@ -365,6 +367,31 @@ const useGesteDuGroupe = (geste) => {
 export const useRepondreALaPartie = () => useGesteDuGroupe(
   ({ reponse, reservationId }) => repondreALaPartie(reservationId, reponse),
 );
+
+/**
+ * RESA-JOUEUR — E-P07 : « On a assez de joueurs » / « J'ai trouvé des joueurs » (le réserveur).
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ geste, nombre?, reservationId })` rend le groupe.
+ */
+export const useConstruireLaReservation = () => useGesteDuGroupe(
+  ({ geste, nombre, reservationId }) => construireLaReservation(reservationId, { geste, nombre }),
+);
+
+/**
+ * RESA-JOUEUR, D51 — la liste « Recherche de joueurs » (autour d'un point ou d'un complexe).
+ * @param {{ complexe?: string, lat?: number, lng?: number, rayon?: number } | null} lieu - Où.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[], any>} Les cartes.
+ */
+export const useAnnoncesOuvertes = (lieu) => useQuery({
+  enabled: Boolean(lieu?.complexe || (Number.isFinite(Number(lieu?.lat))
+    && Number.isFinite(Number(lieu?.lng)))),
+  queryFn: async () => {
+    const lues = donnees(await listerLesAnnonces(lieu || {}));
+    return Array.isArray(lues) ? lues : [];
+  },
+  queryKey: [...ANNONCES_CLEF, 'liste', lieu?.complexe || null, lieu?.lat ?? null,
+    lieu?.lng ?? null, lieu?.rayon ?? null],
+});
 
 /**
  * E-P08 — répondre par le lien (avec un compte).

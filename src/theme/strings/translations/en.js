@@ -19610,6 +19610,15 @@ export default {
       voirLesCreneaux: 'See the slots',
       voirLesCreneauxA11y: '{{nom}}: see the slots',
     },
+    construction: {
+      assezQuestion: 'Do you have enough players?',
+      combienEnPlus: 'How many more, found outside the app?',
+      jaiTrouve: 'I found players',
+      mettreAJour: 'Update the ad',
+      ouiAssez: 'Yes, we have enough players',
+      pasEncore: 'Not yet',
+      presents: '{{presents}} of {{requis}} present',
+    },
     creneau: {
       ageMinimumIci: 'Each venue sets a minimum age. Here: {{age}}.',
       agrandirPhotos: 'Enlarge the photos',

@@ -45,11 +45,13 @@ const mockRepondre = jest.fn();
 const mockFil = jest.fn();
 const mockLien = jest.fn();
 const mockPublier = jest.fn();
+const mockConstruire = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useAnnulerMaReservation: () => ({ isPending: false, mutateAsync: mockAnnuler }),
   useComplexePublic: () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
+  useConstruireLaReservation: () => ({ isPending: false, mutateAsync: mockConstruire }),
   useGroupeDeLaReservation: () => mockGroupe,
   useLienDInvitation: () => ({ isPending: false, mutateAsync: mockLien }),
   useMaRelationAuComplexe: () => mockRelation,
@@ -261,6 +263,38 @@ describe('E-P07 — en collecte (état 2)', () => {
     await toucher(pressable(arbre, 'Arrêter la collecte'));
     await toucher(pressable(arbre, 'Oui, arrêter'));
     expect(mockAnnuler).toHaveBeenCalledWith('r-1');
+  });
+
+  // RESA-JOUEUR (11/11, maquette « 232- ok ») : la réservation en construction du réserveur.
+  it('RESA-JOUEUR · « 7 sur 10 présents », ce qui manque, le créneau ouvert', async () => {
+    const vus = lisibles(await monter());
+    expect(vus).toEqual(expect.arrayContaining([
+      '7 sur 10 présents',
+      'Il manque 3 joueurs.',
+      'Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau.',
+    ]));
+  });
+
+  it('RESA-JOUEUR · « On a assez de joueurs » : la question, puis le geste part', async () => {
+    mockConstruire.mockResolvedValue({});
+    const arbre = await monter();
+    await toucher(pressable(arbre, 'On a assez de joueurs'));
+    expect(lisibles(arbre)).toContain('Vous avez assez de joueurs ?');
+    await toucher(pressable(arbre, 'Oui, on a assez de joueurs'));
+    expect(mockConstruire).toHaveBeenCalledWith({
+      geste: 'assez', nombre: 1, reservationId: 'r-1',
+    });
+  });
+
+  it('RESA-JOUEUR · « J’ai trouvé des joueurs » : combien, puis l’annonce', async () => {
+    mockConstruire.mockResolvedValue({});
+    const arbre = await monter();
+    await toucher(pressable(arbre, 'J’ai trouvé des joueurs'));
+    await toucher(pressable(arbre, 'Un joueur de plus'));
+    await toucher(pressable(arbre, 'Mettre à jour l’annonce'));
+    expect(mockConstruire).toHaveBeenCalledWith({
+      geste: 'trouves', nombre: 2, reservationId: 'r-1',
+    });
   });
 });
 

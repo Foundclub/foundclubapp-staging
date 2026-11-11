@@ -189,6 +189,38 @@ export const repondreALaPartie = async (reservationId, reponse) => corps(
 );
 
 /**
+ * RESA-JOUEUR — E-P07, la réservation EN CONSTRUCTION du réserveur : « On a assez de joueurs »
+ * (`geste: 'assez'`) ou « J'ai trouvé des joueurs » (`geste: 'trouves'`, `nombre`).
+ * @param {string} reservationId - documentId de la réservation.
+ * @param {{ geste: 'assez' | 'trouves', nombre?: number }} geste - Le geste.
+ * @returns {Promise<any>} `{ data: groupe }` ; 404 (pas le réserveur), 409 `_STATE`.
+ */
+export const construireLaReservation = async (reservationId, geste) => corps(
+  client.post(`/reservations-terrain/${enc(reservationId)}/construction`, {
+    data: geste?.geste === 'trouves'
+      ? { geste: 'trouves', nombre: Number(geste.nombre) }
+      : { geste: 'assez' },
+  }),
+);
+
+/**
+ * RESA-JOUEUR, D51 — la liste « Recherche de joueurs » : les annonces ouvertes autour d'un point
+ * (`lat`, `lng`, `rayon` en km) ou d'un complexe (`complexe` : son slug).
+ * @param {{ complexe?: string, lat?: number, lng?: number, rayon?: number }} lieu - Où chercher.
+ * @returns {Promise<any>} `{ data: cartes[] }`.
+ */
+export const listerLesAnnonces = async (lieu) => corps(
+  client.get('/annonces-reservation', {
+    params: {
+      ...(lieu?.complexe ? { complexe: lieu.complexe } : {}),
+      ...(Number.isFinite(Number(lieu?.lat)) && Number.isFinite(Number(lieu?.lng))
+        ? { lat: Number(lieu.lat), lng: Number(lieu.lng), rayon: Number(lieu?.rayon) || 10 }
+        : {}),
+    },
+  }),
+);
+
+/**
  * E-P05 / E-P07 — le lien d'invitation du réserveur : l'activer (le relire), ou le désactiver
  * (le code est effacé).
  * @param {string} reservationId - documentId de la réservation.

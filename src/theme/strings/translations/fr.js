@@ -20344,6 +20344,15 @@ export default {
       voirLesCreneaux: 'Voir les créneaux',
       voirLesCreneauxA11y: '{{nom}} : voir les créneaux',
     },
+    construction: {
+      assezQuestion: 'Vous avez assez de joueurs ?',
+      combienEnPlus: 'Combien en plus, trouvés en dehors de l’app ?',
+      jaiTrouve: 'J’ai trouvé des joueurs',
+      mettreAJour: 'Mettre à jour l’annonce',
+      ouiAssez: 'Oui, on a assez de joueurs',
+      pasEncore: 'Pas encore',
+      presents: '{{presents}} sur {{requis}} présents',
+    },
     creneau: {
       ageMinimumIci: 'Chaque complexe fixe un âge minimum. Ici : {{age}} ans.',
       agrandirPhotos: 'Agrandir les photos',

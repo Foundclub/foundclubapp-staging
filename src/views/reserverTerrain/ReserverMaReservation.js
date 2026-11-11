@@ -19,6 +19,7 @@ import {
   momentLisible,
   numeroLisible,
   parametresDEchec,
+  texteCeQuePaieLeGroupe,
   texteCreneau,
   texteJourLong,
   varianteDEchec,
@@ -32,6 +33,7 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
+import BlocConstruction from '@/views/reserverTerrain/components/BlocConstruction';
 import BlocDEchec from '@/views/reserverTerrain/components/BlocDEchec';
 import BlocParticipants from '@/views/reserverTerrain/components/BlocParticipants';
 import CarteDAction from '@/views/reserverTerrain/components/CarteDAction';
@@ -638,6 +640,15 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   } else if (!varianteDEnTete && enCollecte && !commence) {
     annulation = (
       <View style={carte}>
+        {/* RESA-JOUEUR (maquette « 232- ok ») : la réservation en construction du réserveur —
+            « On a assez de joueurs », « J'ai trouvé des joueurs ». */}
+        {collecte ? (
+          <BlocConstruction
+            collecte={collecte}
+            paie={texteCeQuePaieLeGroupe(t, reservation?.price, Number(collecte.quorum) || 0)}
+            reservationId={String(reservation.documentId)}
+          />
+        ) : null}
         <Button
           onPress={() => setConfirmation(true)}
           title={t('reserverTerrain.maReservation.arreterLaCollecte', 'Arrêter la collecte')}
