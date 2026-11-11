@@ -231,20 +231,20 @@ export const formatDurationLabel = (duration) => {
   }
   if (!isInt(duration.periods) || !isInt(duration.minutes)) return '';
   if (isInt(duration.points)) {
-    return i18next.t(
+    return String(i18next.t(
       'friendlyMatch.format.duration.points',
       '{{minutes}} min ou {{points}} points',
       duration,
-    );
+    ));
   }
   if (duration.periods === 1) {
-    return i18next.t('friendlyMatch.format.duration.single', '{{minutes}} min', duration);
+    return String(i18next.t('friendlyMatch.format.duration.single', '{{minutes}} min', duration));
   }
-  return i18next.t(
+  return String(i18next.t(
     'friendlyMatch.format.duration.periods',
     '{{periods}} × {{minutes}} min',
     duration,
-  );
+  ));
 };
 
 /**

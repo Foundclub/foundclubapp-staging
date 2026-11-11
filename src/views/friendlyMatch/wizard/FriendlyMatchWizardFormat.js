@@ -140,8 +140,11 @@ function FriendlyMatchWizardFormat({ navigation }) {
    * @returns {void}
    */
   const stepDuration = (key, delta) => {
+    /** @type {Record<string, number>} */
     const base = duration || DEFAULT_MINUTES_DURATION;
-    const current = Number(base[key] ?? DEFAULT_MINUTES_DURATION[key] ?? 1);
+    /** @type {Record<string, number>} */
+    const defaults = DEFAULT_MINUTES_DURATION;
+    const current = Number(base[key] ?? defaults[key] ?? 1);
     setDuration({ ...base, [key]: clamp(current + delta, CUSTOM_LIMITS[key]) });
   };
 
@@ -166,6 +169,11 @@ function FriendlyMatchWizardFormat({ navigation }) {
     dispatch({ payload: { code, duration: nextDuration }, type: 'SET_FORMAT' });
   };
 
+  /**
+   * Une carte de format (ou « Personnalisé »).
+   * @param {{ code: string, label: string, picto: any, subLabel: string }} option
+   * @returns {import('react').ReactElement}
+   */
   const renderCard = ({
     code, label, picto, subLabel,
   }) => {
@@ -219,7 +227,12 @@ function FriendlyMatchWizardFormat({ navigation }) {
     );
   };
 
-  const renderStepper = (/** @type {string} */ label, value, onDecrement, onIncrement) => (
+  const renderStepper = (
+    /** @type {string} */ label,
+    /** @type {number} */ value,
+    /** @type {() => void} */ onDecrement,
+    /** @type {() => void} */ onIncrement,
+  ) => (
     <View style={[Alignments.grow1]}>
       <InputStepper
         label={label}
