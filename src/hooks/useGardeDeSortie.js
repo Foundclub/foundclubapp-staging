@@ -148,8 +148,16 @@ export default function useGardeDeSortie(navigation, {
   // même question. Seulement en mode « enregistrer », et seulement pour l'écran au premier plan.
   useEffect(() => {
     if (!enregistrer) return undefined;
+    // RECOLTE-TRAIN9 (11/11) : sur le site, l'adaptateur se rend LUI-MÊME comme parent
+    // (webNavigationAdapter.js) ; sans ce registre la remontée tournait sans fin (même garde que
+    // navigationAvailability.js).
+    const dejaVus = new Set();
     let onglets = navigation?.getParent?.();
-    while (onglets && onglets.getState?.()?.type !== 'tab') onglets = onglets.getParent?.();
+    while (onglets && !dejaVus.has(onglets) && onglets.getState?.()?.type !== 'tab') {
+      dejaVus.add(onglets);
+      onglets = onglets.getParent?.();
+    }
+    if (onglets?.getState?.()?.type !== 'tab') return undefined;
     return onglets?.addListener?.('tabPress', (/** @type {any} */ evenement) => {
       if (!actif || sortieLibre.current || !navigation.isFocused?.()) return;
       const cible = onglets.getState().routes

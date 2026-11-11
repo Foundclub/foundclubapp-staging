@@ -355,3 +355,39 @@ describe('useGardeDeSortie — le site (REPRISE-RESA 81)', () => {
     });
   });
 });
+
+// RECOLTE-TRAIN9 (11/11/2026) — « Créneaux et tarifs » (COMPLEXE-TERRAINS) passe `enregistrer` :
+// la garde remonte alors jusqu'aux onglets. Sur le site, l'adaptateur se rend LUI-MÊME comme
+// parent (webNavigationAdapter.js, getParent) : la remontée tournait sans fin et figeait la page
+// (témoins RESA-L7-1 et RESA-FIN-APP 4 du site). Même piège que RECHERCHE-UNIQUE
+// (navigationAvailability.js).
+describe('useGardeDeSortie — la remontée vers les onglets s’arrête', () => {
+  it('une navigation qui se rend elle-même comme parent : sans boucle', async () => {
+    let remontees = 0;
+    const navigation = {
+      ...fausseNavigation(),
+      getParent: () => {
+        remontees += 1;
+        if (remontees > 50) throw new Error('remontée sans fin');
+        return navigation;
+      },
+      getState: () => ({ type: 'stack' }),
+    };
+    /**
+     * L'écran du témoin, en mode « enregistrer ».
+     * @returns {null} Rien.
+     */
+    function Ecran() {
+      useGardeDeSortie(navigation, {
+        actif: true,
+        enregistrer: async () => true,
+        textes: { ...TEXTES, enregistrer: 'Enregistrer' },
+      });
+      return null;
+    }
+    await act(async () => {
+      renderer.create(<Ecran />);
+    });
+    expect(remontees).toBeLessThanOrEqual(2);
+  });
+});
