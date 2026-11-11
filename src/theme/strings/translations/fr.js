@@ -20787,22 +20787,35 @@ export default {
       paiement: 'Paiement sur place',
     },
     resultat: {
+      // eslint-disable-next-line max-len
+      annonceEnLigne_one: 'Ton annonce « Il manque {{count}} joueur » est en ligne dans « Recherche de joueurs ».',
+      // eslint-disable-next-line max-len
+      annonceEnLigne_other: 'Ton annonce « Il manque {{count}} joueurs » est en ligne dans « Recherche de joueurs ».',
       auNomDe: 'au nom de {{nom}}',
       canalRejoint: 'Tu as rejoint le canal de {{complexe}}.',
       collecteLancee: 'Collecte lancée : {{presents}}/{{quorum}}',
       collecteTexte: 'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. '
         + 'Le créneau reste libre : quelqu’un peut le prendre avant toi.',
       // eslint-disable-next-line max-len
+      creneauOuvert: 'Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau. Dis « On a assez de joueurs » dès que ton groupe est prêt.',
+      // eslint-disable-next-line max-len
       demandeEcheance: '{{complexe}} te répond avant le {{date}} à {{heure}}. Le créneau t’est gardé jusque-là.',
       demandeEnvoyee: 'Demande envoyée',
       demandeSansEcheance: '{{complexe}} te répond bientôt. Le créneau t’est gardé jusque-là.',
+      enConstruction: 'Réservation en construction',
       equipePrevenue_one: 'Le joueur de {{equipe}} est prévenu.',
       equipePrevenue_other: 'Les {{count}} joueurs de {{equipe}} sont prévenus.',
+      ilManque_one: 'Il manque {{count}} joueur',
+      ilManque_other: 'Il manque {{count}} joueurs',
       jauge: '{{presents}} sur {{quorum}} · date limite {{echeance}}',
+      jourEtCreneau: '{{jour}} · {{creneau}}',
+      pastilleConstruction: 'En construction',
+      prixDuGroupe: '{{total}} pour {{nombre}} joueurs, à régler sur place',
       reserve: 'C’est réservé !',
       reservePourEquipe: 'C’est réservé pour {{equipe}} !',
       resume: '{{jour}} · {{creneau}} · {{terrain}}',
       retourAccueil: 'Retour à l’accueil',
+      surRequis: '{{presents}} sur {{quorum}}',
       voirMaCollecte: 'Voir ma collecte',
       voirMaDemande: 'Voir ma demande',
       voirMaReservation: 'Voir ma réservation',

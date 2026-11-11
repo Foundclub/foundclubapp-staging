@@ -2,12 +2,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, ScrollView, Text, TouchableOpacity, View,
+  Image, ScrollView, Text, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { formatEuros, texteHeure } from '@/domains/complexe/complexeTerrain';
-import { texteEcheance } from '@/domains/complexe/partieDuJoueur';
+import {
+  formatEuros, minutesDe, texteDuree, texteHeure,
+} from '@/domains/complexe/complexeTerrain';
 import {
   dateEtHeureDeParis,
   etatAffiche,
@@ -28,7 +29,7 @@ import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useMaReservation } from '@/services/complexe/complexeJoueurQueries';
+import { useMaReservation, useTerrainsPublics } from '@/services/complexe/complexeJoueurQueries';
 
 import { useIsDesktop } from '@/responsive';
 
@@ -54,6 +55,12 @@ const PICTO = 72;
  * (`{ name, membres }`), que E-P04 connaît et que la réservation du serveur ne porte pas.
  * ⛔ « Tu as rejoint le canal » (1re réservation, RG-CANAL) : la réponse du serveur ne le dit pas
  * (le serveur y fait entrer sans le rendre) ; rien n'est affiché plutôt qu'une phrase devinée.
+ * RESA-JOUEUR-2 (11/11/2026, maquette « 232- ok ») : la carte résumé reprend la photo du terrain
+ * (la page publique du complexe la donne), la durée et ce que paie le groupe (« 150 € pour 10
+ * joueurs ») ; la collecte devient la « Réservation en construction » : jauge « 6 sur 10 », ce qui
+ * manque, et deux bandeaux (le créneau peut encore être pris ; l'annonce est en ligne, si elle est
+ * vraiment partie : `collecte.annonce`). Retirés par la maquette : « Collecte lancée : 1/10 », la
+ * date limite, « Il me manque des joueurs » (l'annonce part toute seule) et « Voir ma collecte ».
  * Caché par `COMPLEXES_JOUEUR`.
  * @returns {import('react').ReactElement} L'écran.
  */
@@ -101,9 +108,22 @@ function ReserverResultat() {
   const demande = etat === 'enAttente';
   const enCollecte = etat === 'enCollecte';
   const echeance = dateEtHeureDeParis(reservation?.expiresAt);
-  // À la création, le seul présent d'une collecte est son réserveur (D3).
-  const presents = 1;
+  // RESA-JOUEUR : les présents annoncés au récapitulatif (« On est combien, toi compris ? ») ; sans
+  // eux (page relue), le réserveur seul (D3).
+  const presents = Math.max(1, Number(collecte?.presents) || 1);
   const quorum = Number(collecte?.quorum) || Number(reservation?.players) || 0;
+  const manque = Math.max(0, quorum - presents);
+  // RESA-JOUEUR-2 : la photo du terrain, lue sur la page publique du complexe (la réservation ne
+  // la porte pas) ; sans photo, rien.
+  const terrainsDuComplexe = useTerrainsPublics(reservation?.complexe?.slug || null)?.data;
+  const terrainPublic = Array.isArray(terrainsDuComplexe)
+    ? terrainsDuComplexe.find((/** @type {any} */ unTerrain) => (
+      unTerrain?.documentId === reservation?.terrain?.documentId
+    ))
+    : null;
+  const photo = Array.isArray(terrainPublic?.photos) && terrainPublic.photos[0]
+    ? String(terrainPublic.photos[0])
+    : null;
   const nomDuCompte = [userData?.firstname, userData?.lastname]
     .map((morceau) => String(morceau || '').trim())
     .filter(Boolean)
@@ -134,15 +154,30 @@ function ReserverResultat() {
         ...SANS_ECHAPPEMENT,
       })
       : '';
+    // RESA-JOUEUR-2 : un prix par joueur se dit pour tout le groupe (« 60 € pour 10 joueurs »).
+    const prixDuGroupe = reservation?.price?.unit === 'joueur'
+      && Number.isFinite(Number(reservation?.price?.amount))
+      && quorum > 0
+      ? t(
+        'reserverTerrain.resultat.prixDuGroupe',
+        '{{total}} pour {{nombre}} joueurs, à régler sur place',
+        {
+          nombre: quorum,
+          total: formatEuros(Number(reservation.price.amount) * quorum),
+          ...SANS_ECHAPPEMENT,
+        },
+      )
+      : prix;
+    const debut = minutesDe(reservation?.from);
+    const fin = minutesDe(reservation?.to);
+    let duree = '';
+    if (debut !== null && fin !== null) {
+      // Un créneau qui finit à minuit (« 0 h ») finit le lendemain.
+      duree = texteDuree(fin > debut ? fin - debut : fin + 24 * 60 - debut);
+    }
+    const terrain = String(reservation?.terrain?.name || '');
     let phrase = null;
-    if (enCollecte && quorum) {
-      phrase = t(
-        'reserverTerrain.resultat.collecteTexte',
-        'Rien n’est réservé tant que {{quorum}} joueurs n’ont pas répondu présent. Le créneau '
-          + 'reste libre : quelqu’un peut le prendre avant toi.',
-        { quorum },
-      );
-    } else if (demande && echeance) {
+    if (demande && echeance) {
       const [, mois, jour] = echeance.date.split('-');
       phrase = t(
         'reserverTerrain.resultat.demandeEcheance',
@@ -174,13 +209,9 @@ function ReserverResultat() {
       picto = <GlyphIcon color={Colors.warning500} name="hourglass" size={32} />;
       titre = t('reserverTerrain.resultat.demandeEnvoyee', 'Demande envoyée');
     } else if (enCollecte) {
-      couleur = Colors.primary500;
-      picto = <Image source={Images.users} style={{ height: 32, tintColor: couleur, width: 32 }} />;
-      titre = t(
-        'reserverTerrain.resultat.collecteLancee',
-        'Collecte lancée : {{presents}}/{{quorum}}',
-        { presents, quorum },
-      );
+      couleur = Colors.warning500;
+      picto = <GlyphIcon color={Colors.warning500} name="hourglass" size={32} />;
+      titre = t('reserverTerrain.resultat.enConstruction', 'Réservation en construction');
     } else if (equipe?.name) {
       titre = t('reserverTerrain.resultat.reservePourEquipe', 'C’est réservé pour {{equipe}} !', {
         equipe: String(equipe.name),
@@ -188,12 +219,32 @@ function ReserverResultat() {
       });
     }
     const membres = Number(equipe?.membres);
-    const deuxiemeLigne = equipe?.name && nomDuCompte
+    const pourLEquipe = Boolean(equipe?.name && nomDuCompte);
+    const deuxiemeLigne = pourLEquipe
       ? [complexe, t('reserverTerrain.resultat.auNomDe', 'au nom de {{nom}}', {
         nom: nomDuCompte,
         ...SANS_ECHAPPEMENT,
       })]
-      : [complexe, prix];
+      : [terrain, duree, complexe];
+    const jourEtCreneau = t('reserverTerrain.resultat.jourEtCreneau', '{{jour}} · {{creneau}}', {
+      creneau: texteCreneau(reservation.from, reservation.to),
+      jour: texteJourCourt(t, reservation.date),
+      ...SANS_ECHAPPEMENT,
+    });
+    const bandeau = (/** @type {string} */ texte, /** @type {string} */ teinte) => (
+      <View
+        style={{
+          alignSelf: 'stretch',
+          backgroundColor: withAlpha(teinte, 0.1),
+          borderColor: withAlpha(teinte, 0.45),
+          borderRadius: 16,
+          borderWidth: 1,
+          padding: 12,
+        }}
+      >
+        <Text style={[Fonts.p2, Fonts.neutral00]}>{texte}</Text>
+      </View>
+    );
     corps = (
       <View style={{ alignItems: 'center', gap: 16 }}>
         <View
@@ -242,16 +293,47 @@ function ReserverResultat() {
             padding: 16,
           }}
         >
+          {photo ? (
+            <Image
+              accessibilityIgnoresInvertColors
+              resizeMode="cover"
+              source={{ uri: photo }}
+              style={{ borderRadius: 12, height: 120, width: '100%' }}
+              testID="resultat-photo"
+            />
+          ) : null}
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-            {t('reserverTerrain.resultat.resume', '{{jour}} · {{creneau}} · {{terrain}}', {
-              creneau: texteCreneau(reservation.from, reservation.to),
-              jour: texteJourCourt(t, reservation.date),
-              terrain: String(reservation?.terrain?.name || ''),
-              ...SANS_ECHAPPEMENT,
-            })}
+            {enCollecte || pourLEquipe
+              ? t('reserverTerrain.resultat.resume', '{{jour}} · {{creneau}} · {{terrain}}', {
+                creneau: texteCreneau(reservation.from, reservation.to),
+                jour: texteJourCourt(t, reservation.date),
+                terrain,
+                ...SANS_ECHAPPEMENT,
+              })
+              : jourEtCreneau}
           </Text>
           {enCollecte ? (
             <View style={{ gap: 6 }}>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {[complexe, duree].filter(Boolean).join(' · ')}
+              </Text>
+              <View style={[Alignments.row, Alignments.alignCenter, { flexWrap: 'wrap', gap: 8 }]}>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('reserverTerrain.resultat.surRequis', '{{presents}} sur {{quorum}}', {
+                    presents,
+                    quorum,
+                  })}
+                </Text>
+                {manque ? (
+                  <Text style={[Fonts.p2Bold, Fonts.warning500]}>
+                    {t('reserverTerrain.resultat.ilManque', {
+                      count: manque,
+                      defaultValue_one: 'Il manque {{count}} joueur',
+                      defaultValue_other: 'Il manque {{count}} joueurs',
+                    })}
+                  </Text>
+                ) : null}
+              </View>
               <View
                 style={{
                   backgroundColor: withAlpha(Colors.primary500, 0.18),
@@ -269,28 +351,48 @@ function ReserverResultat() {
                   }}
                 />
               </View>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t(
-                  'reserverTerrain.resultat.jauge',
-                  '{{presents}} sur {{quorum}} · date limite {{echeance}}',
-                  {
-                    echeance: texteEcheance(t, collecte?.collectDeadline).toLocaleLowerCase(),
-                    presents,
-                    quorum,
-                    ...SANS_ECHAPPEMENT,
-                  },
-                )}
-              </Text>
+              <View
+                style={{
+                  alignSelf: 'flex-start',
+                  backgroundColor: withAlpha(Colors.warning500, 0.16),
+                  borderRadius: 999,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.warning500]}>
+                  {t('reserverTerrain.resultat.pastilleConstruction', 'En construction')}
+                </Text>
+              </View>
             </View>
           ) : (
             <>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {deuxiemeLigne.filter(Boolean).join(' · ')}
               </Text>
+              {!pourLEquipe && prixDuGroupe ? (
+                <Text style={[Fonts.p2, Fonts.neutral100]}>{prixDuGroupe}</Text>
+              ) : null}
               <PastilleEtat etat={etat} />
             </>
           )}
         </View>
+        {enCollecte ? bandeau(t(
+          'reserverTerrain.resultat.creneauOuvert',
+          'Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau. '
+            + 'Dis « On a assez de joueurs » dès que ton groupe est prêt.',
+        ), Colors.warning500) : null}
+        {enCollecte && collecte?.annonce === true && manque ? bandeau(t(
+          'reserverTerrain.resultat.annonceEnLigne',
+          {
+            count: manque,
+            defaultValue_one: 'Ton annonce « Il manque {{count}} joueur » est en ligne dans '
+              + '« Recherche de joueurs ».',
+            defaultValue_other: 'Ton annonce « Il manque {{count}} joueurs » est en ligne dans '
+              + '« Recherche de joueurs ».',
+            ...SANS_ECHAPPEMENT,
+          },
+        ), Colors.primary500) : null}
         {equipe?.name && Number.isFinite(membres) && membres > 0 ? (
           <View
             style={{
@@ -345,25 +447,7 @@ function ReserverResultat() {
               variant="Primary"
             />
           ) : null}
-          {reservation?.documentId && enCollecte ? (
-            <>
-              <Button
-                onPress={() => versLaFiche({ ouvrir: 'annonce' })}
-                title={t('reserverTerrain.annonce.titre', 'Il me manque des joueurs')}
-                variant="Secondary"
-              />
-              <TouchableOpacity
-                accessibilityRole="link"
-                onPress={() => versLaFiche()}
-                style={{ alignItems: 'center', justifyContent: 'center', minHeight: 44 }}
-              >
-                <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  {t('reserverTerrain.resultat.voirMaCollecte', 'Voir ma collecte')}
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
-          {reservation?.documentId && !enCollecte ? (
+          {reservation?.documentId ? (
             <Button
               onPress={() => versLaFiche()}
               title={

@@ -50,6 +50,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   // RESA-FIN-SITE : la relecture par identifiant (site rechargé) ; ici la réservation arrive en
   // paramètre.
   useMaReservation: () => ({ data: null, isLoading: false }),
+  // RESA-JOUEUR-2 : la photo du terrain, lue sur la page publique ; aucune ici.
+  useTerrainsPublics: () => ({ data: [] }),
 }));
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
   function FausseFeuille(/** @type {any} */ { children, isVisible }) {
@@ -95,10 +97,13 @@ afterEach(() => {
 describe('E-P05 — le résultat', () => {
   it('confirmée : « C’est réservé ! », la carte résumé, la pastille', async () => {
     const arbre = await monter();
+    // RESA-JOUEUR-2 (maquette E-P05) : la carte dit le créneau, puis terrain · durée · complexe,
+    // puis le prix (EP05.RESAJOUEUR2).
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'C’est réservé !',
-      'Vendredi 16/10 · 18 h – 19 h · Terrain 1',
-      'Le Five de Montrivage · 60 €, à régler sur place',
+      'Vendredi 16/10 · 18 h – 19 h',
+      'Terrain 1 · 1 h · Le Five de Montrivage',
+      '60 €, à régler sur place',
       'Confirmée',
     ]));
     expect(parRepere(arbre, 'pastille-etat-confirmee')).not.toBeNull();
@@ -183,6 +188,15 @@ describe('RESA-FIN-APP — « Tu as rejoint le canal »', () => {
 describe('BH16 P13-20 — un prix par joueur', () => {
   it('se dit « par joueur » sur la confirmation', async () => {
     mockParams = { reservation: maReservation({ price: { amount: 6, unit: 'joueur' } }) };
+    const arbre = await monter();
+    // RESA-JOUEUR-2 (maquette E-P05) : le prix par joueur se dit pour le groupe (6 € × 10).
+    expect(lisibles(arbre).join(' ')).toContain('60 € pour 10 joueurs, à régler sur place');
+  });
+
+  it('sans nombre de joueurs connu : « 6 € par joueur » reste', async () => {
+    mockParams = {
+      reservation: maReservation({ players: null, price: { amount: 6, unit: 'joueur' } }),
+    };
     const arbre = await monter();
     expect(lisibles(arbre).join(' ')).toContain('6 € par joueur, à régler sur place');
   });

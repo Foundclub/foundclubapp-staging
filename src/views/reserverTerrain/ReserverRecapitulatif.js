@@ -243,16 +243,19 @@ function ReserverRecapitulatif() {
           terrainId: String(apercu?.terrain?.documentId || params.terrainId),
         }),
       );
+      // RESA-JOUEUR-2 (E-P05) : le résultat ne dit « Ton annonce est en ligne » que si elle l'est.
+      let annoncePartie = false;
       if (collecte && reservation?.documentId) {
-        await publierLAnnonce.mutateAsync({
+        annoncePartie = Boolean(await publierLAnnonce.mutateAsync({
           annonce: { notifyFavorites: true, places: capacite - combien },
           reservationId: reservation.documentId,
-        }).catch(() => null);
+        }).catch(() => null));
       }
       // E-P05 lit le nombre requis et l'équipe ajoutée : la réservation du serveur ne les dit pas.
       navigation.replace(RouteNames.ReserverResultat, {
         ...(collecte ? {
           collecte: {
+            annonce: annoncePartie,
             collectDeadline: collecte.collectDeadline,
             presents: combien,
             quorum: collecte.quorum,

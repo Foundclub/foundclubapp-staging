@@ -187,8 +187,30 @@ describe('RESA-JOUEUR — « Ton groupe »', () => {
       annonce: { notifyFavorites: true, places: 4 }, reservationId: 'r-construction',
     });
     expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverResultat, expect.objectContaining({
-      collecte: { collectDeadline: '2099-10-15T16:00:00.000Z', presents: 6, quorum: 10 },
+      // RESA-JOUEUR-2 : l'annonce est partie (E-P05 peut le dire).
+      collecte: {
+        annonce: true, collectDeadline: '2099-10-15T16:00:00.000Z', presents: 6, quorum: 10,
+      },
       reservationId: 'r-construction',
+    }));
+  });
+
+  // RESA-JOUEUR-2 (E-P05) : l'annonce qui échoue ne défait pas la réservation, mais le résultat
+  // ne doit pas dire qu'elle est en ligne.
+  it('l’annonce refusée : la réservation tient, le résultat le sait (annonce: false)', async () => {
+    mockApercu.mockResolvedValue(recapitulatif({
+      collecte: { collectDeadline: 'x', latestDeadline: '2099-10-15T16:00:00.000Z', quorum: 10 },
+      willBe: 'en_collecte',
+    }));
+    mockReserver.mockResolvedValue(
+      maReservation({ documentId: 'r-construction', status: 'en_collecte' }),
+    );
+    mockPublier.mockRejectedValue(new Error('refus'));
+    const arbre = await monter();
+    await toucher(parRepere(arbre, 'groupe-manque'));
+    await toucher(bouton(arbre, 'Réserver et publier l’annonce'));
+    expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverResultat, expect.objectContaining({
+      collecte: expect.objectContaining({ annonce: false, presents: 1, quorum: 10 }),
     }));
   });
 });
