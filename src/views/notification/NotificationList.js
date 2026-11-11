@@ -27,7 +27,8 @@ import useTheme from '@/theme/themeContext';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
-import ActionsInvitationDeStaff from '@/components/organisms/invitationDeStaff/ActionsInvitationDeStaff';
+import ActionsInvitationDeStaff from
+  '@/components/organisms/invitationDeStaff/ActionsInvitationDeStaff';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';

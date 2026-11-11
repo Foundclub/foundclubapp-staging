@@ -25644,7 +25644,8 @@ export default {
         + 'cette étape ».',
       'm4-am7': 'Tout est bon ? Publie : les équipes de ta zone pourront te proposer un match.',
       // AMICAUX-FORMAT (10/11/2026) : la bulle de l'étape « Quel format ? ».
-      'm4-amf': 'Choisis le format : combien contre combien. La durée habituelle est déjà cochée, change-la si besoin.',
+      'm4-amf': 'Choisis le format : combien contre combien. La durée habituelle est déjà cochée, '
+        + 'change-la si besoin.',
       'm4-back': 'Ta séance est en ligne. Dernière mission : retourne à l’accueil.',
       'm4-card': 'Propose un match amical : ouvre « Matchs amicaux ».',
       'm4-frc': 'À toi : crée ton annonce de match amical.',
