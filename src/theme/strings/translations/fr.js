@@ -8199,6 +8199,7 @@ export default {
       moinsUneHeure: 'Retirer 1 heure',
       nCreneaux: '{{nombre}} créneaux',
       nCreneauxDe: '{{nombre}} créneaux de {{duree}}',
+      nonEnregistre: 'Pas encore enregistré : appuie sur « {{bouton}} » en bas de la page.',
       nouveauTarif: 'Nouveau tarif',
       nouvellePlage: 'Nouvelle plage',
       ouverts: '{{nombre}} créneaux ouverts.',
@@ -8216,9 +8217,10 @@ export default {
       prixDeBase: 'Prix de base',
       prixDeBaseDit: 'tous les créneaux sans autre tarif',
       prolonger: 'Prolonger la période',
-      quitter: 'Quitter',
-      quitterMessage: 'Tu as des changements non enregistrés : ils seront perdus.',
-      quitterTitre: 'Quitter sans enregistrer ?',
+      quitter: 'Quitter sans enregistrer',
+      // eslint-disable-next-line max-len
+      quitterMessage: 'Tes plages et tes tarifs ne sont pas encore enregistrés : les joueurs ne les voient pas.',
+      quitterTitre: 'Enregistrer tes créneaux ?',
       reste: 'De {{de}} à {{a}}, il reste {{duree}} sans créneau.',
       rester: 'Rester',
       resumePlage: '{{de}} – {{a}} · créneaux de {{duree}} · {{creneaux}}',
@@ -8228,6 +8230,7 @@ export default {
       semaine: 'Les prix de la semaine',
       soitParJoueur: 'Soit {{prix}} par joueur à {{joueurs}}.',
       tarifs: 'Tarifs',
+      tarifSansPlage: 'Aucune plage ouverte {{jours}} : ce tarif ne s’applique pas encore.',
       // eslint-disable-next-line max-len
       telephone: 'Ce terrain se réserve par téléphone : tes créneaux s’affichent, et un joueur qui en touche un t’appelle.',
       terrainAjoute: '{{nom}} est ajouté. Ouvre maintenant ses créneaux.',
@@ -8325,16 +8328,23 @@ export default {
       // eslint-disable-next-line max-len
       ageAide: 'Un joueur plus jeune ne peut ni réserver, ni rejoindre une partie, ni recevoir tes annonces. Un joueur qui a cet âge peut t’écrire dans sa réservation.',
       ageMinimum: 'Âge minimum',
+      aide: 'Aide : {{reglage}}',
       annulation: 'Annulation gratuite jusqu’à',
       annulerReserver: 'Annuler et réserver',
       auPlusTard: 'Réserver au plus tard',
+      // eslint-disable-next-line max-len
+      auPlusTardAide: 'Un joueur ne peut plus réserver un créneau qui commence dans moins de ce délai.',
       aVenir: 'Réservations à venir par personne',
       aVenirAide: 'Les demandes et les collectes en cours comptent.',
       bannir: 'Bannir automatiquement après',
       bannirAide: 'Le bannissement ne vaut que chez toi. Tu peux le lever à tout moment.',
+      // eslint-disable-next-line max-len
+      bannirExplication: 'Une réservation non honorée : le joueur n’est pas venu. À ce nombre, il ne peut plus réserver chez toi.',
       collectes: 'Collectes',
       compte: '{{nombre}} / {{max}}',
       dateLimite: 'Date limite de collecte au plus tard',
+      // eslint-disable-next-line max-len
+      dateLimiteAide: 'Une collecte attend que ses joueurs la rejoignent. Elle doit être complète au plus tard ce délai avant le créneau ; sinon elle s’arrête et le créneau reste libre.',
       echec: 'Les réglages ne sont pas partis. Réessaie.',
       enregistres: 'Réglages enregistrés. Ils valent pour les prochaines réservations.',
       erreur: 'Impossible de charger tes réglages.',
@@ -8365,7 +8375,7 @@ export default {
       precision: 'Foot à 5, padel, tennis…',
     },
     terrain: {
-      ajouterPhoto: 'Ajouter une photo',
+      ajouterPhoto: 'Ajouter des photos de l’installation',
       aucunCreneau: 'Aucun créneau ouvert',
       automatiqueDit: 'La réservation est confirmée tout de suite.',
       ceQueVoient: 'Ce que voient les joueurs',

@@ -18,6 +18,9 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
  * nomme ce qui ne va pas. Mêmes règles que lui, pour que l'aperçu ne dise jamais autre chose :
  * le tarif le plus précis l'emporte (jour et heure, puis jour, puis prix de base), le prix par
  * joueur s'arrondit au centime.
+ * COMPLEXE-TERRAINS (10/11/2026, « nuit 1A 2A 3A 4A ») : une fin AVANT l'ouverture finit le
+ * lendemain (17:00 → 01:00) ; le créneau d'après minuit appartient au jour civil où il commence, et
+ * son prix vient du tarif de la veille qui passe minuit, sinon du jour, puis du prix de base.
  *
  * Témoin : `complexeTerrain.test.js`.
  */
@@ -227,6 +230,28 @@ export const minutesDe = (heure) => {
 };
 
 /**
+ * Le début et la fin d'une plage (ou d'un tarif) en minutes ; une fin avant le début passe minuit
+ * (17:00 → 01:00 : 1020 → 1500).
+ * @param {{ from?: unknown, to?: unknown }} heures - Les heures.
+ * @returns {{ debut: number | null, fin: number | null }} Les minutes, null si illisibles.
+ */
+export const etendue = ({ from, to }) => {
+  const debut = minutesDe(from);
+  const fin = minutesDe(to);
+  if (debut === null || fin === null) return { debut, fin };
+  // Une fin ÉGALE au début ne donne rien (le serveur la refuse) ; avant le début, le lendemain.
+  return { debut, fin: fin >= debut ? fin : fin + JOUR_MINUTES };
+};
+
+/**
+ * Une heure du jour pour l'écran : au-delà de minuit, celle du lendemain (1500 ⇒ « 01:00 ») ;
+ * minuit pile en fin reste « 24:00 ».
+ * @param {number} minutes - Les minutes, éventuellement au-delà de 24 h.
+ * @returns {string} L'heure « HH:MM ».
+ */
+const heureDuJour = (minutes) => heureDe(minutes > JOUR_MINUTES ? minutes - JOUR_MINUTES : minutes);
+
+/**
  * 1095 minutes en « 18:15 » ; 1440 en « 24:00 ».
  * @param {number} minutes - Les minutes depuis minuit.
  * @returns {string} L'heure « HH:MM ».
@@ -309,20 +334,25 @@ const joursEnSeries = (jours) => {
  *   reste: { from: string, minutes: number, to: string } | null }} Le découpage.
  */
 export const decoupagePlage = ({ durationMinutes, from, to }) => {
-  const debut = minutesDe(from);
-  const fin = minutesDe(to);
+  const { debut, fin } = etendue({ from, to });
   const duree = Number(durationMinutes);
-  if (debut === null || fin === null || fin <= debut || !(duree > 0)) {
+  if (debut === null || fin === null || fin === debut || !(duree > 0)) {
     return { debuts: [], nombre: 0, reste: null };
   }
   const nombre = Math.floor((fin - debut) / duree);
-  const debuts = Array.from({ length: nombre }, (_valeur, index) => heureDe(debut + index * duree));
+  const debuts = Array.from({ length: nombre }, (_valeur, index) => (
+    heureDe((debut + index * duree) % JOUR_MINUTES)
+  ));
   const minutesRestantes = (fin - debut) % duree;
   return {
     debuts,
     nombre,
     reste: minutesRestantes
-      ? { from: heureDe(debut + nombre * duree), minutes: minutesRestantes, to: heureDe(fin) }
+      ? {
+        from: heureDe((debut + nombre * duree) % JOUR_MINUTES),
+        minutes: minutesRestantes,
+        to: heureDuJour(fin),
+      }
       : null,
   };
 };
@@ -385,14 +415,21 @@ const listeDe = (valeur) => (Array.isArray(valeur) ? valeur : []);
  * @returns {number | null} Le prix.
  */
 export const prixDuCreneau = (plan, prixDeBase, jour, minutes) => {
+  // Une heure au-delà de minuit (la grille de la semaine) est celle du lendemain.
+  const leJour = minutes >= JOUR_MINUTES ? (jour % 7) + 1 : jour;
+  const aLHeure = minutes >= JOUR_MINUTES ? minutes - JOUR_MINUTES : minutes;
+  const veille = leJour === 1 ? 7 : leJour - 1;
   const tarifs = listeDe(plan?.rates);
-  const parHeure = tarifs.find((tarif) => tarif.from !== undefined && tarif.from !== null
-    && tarif.days.includes(jour)
-    && minutes >= /** @type {number} */ (minutesDe(tarif.from))
-    && minutes < /** @type {number} */ (minutesDe(tarif.to)));
+  const parHeure = tarifs.find((tarif) => {
+    if (tarif.from === undefined || tarif.from === null) return false;
+    const { debut, fin } = /** @type {{ debut: number, fin: number }} */ (etendue(tarif));
+    if (tarif.days.includes(leJour) && aLHeure >= debut && aLHeure < fin) return true;
+    return tarif.days.includes(veille) && aLHeure + JOUR_MINUTES >= debut
+      && aLHeure + JOUR_MINUTES < fin;
+  });
   if (parHeure) return parHeure.price;
   const parJour = tarifs.find((tarif) => (tarif.from === undefined || tarif.from === null)
-    && tarif.days.includes(jour));
+    && tarif.days.includes(leJour));
   if (parJour) return parJour.price;
   return typeof prixDeBase === 'number' && Number.isFinite(prixDeBase) ? prixDeBase : null;
 };
@@ -410,35 +447,36 @@ export const prixDeLaSemaine = (plan, prixDeBase) => {
   if (!plages.length) return [];
   const tarifs = listeDe(plan?.rates);
   const bornes = new Set();
-  plages.forEach((plage) => {
-    bornes.add(minutesDe(plage.from));
-    bornes.add(minutesDe(plage.to));
-  });
-  tarifs.filter((tarif) => tarif.from !== undefined && tarif.from !== null).forEach((tarif) => {
-    bornes.add(minutesDe(tarif.from));
-    bornes.add(minutesDe(tarif.to));
-  });
+  // Les heures d'après minuit restent sur la ligne du jour de la plage (« 23 h – 1 h » le samedi).
+  [...plages, ...tarifs.filter((tarif) => tarif.from !== undefined && tarif.from !== null)]
+    .forEach((heures) => {
+      const { debut, fin } = etendue(heures);
+      bornes.add(debut);
+      bornes.add(fin);
+    });
   const triees = [...bornes].filter((borne) => typeof borne === 'number').sort((a, b) => a - b);
-  /** @type {Array<{ a: string, de: string, prix: Array<number | null> }>} */
+  /** @type {Array<{ a: number, de: number, prix: Array<number | null> }>} */
   const lignes = [];
   for (let index = 0; index < triees.length - 1; index += 1) {
     const debut = triees[index];
     const fin = triees[index + 1];
     const prix = [1, 2, 3, 4, 5, 6, 7].map((jour) => {
-      const ouvert = plages.some((plage) => plage.days.includes(jour)
-        && /** @type {number} */ (minutesDe(plage.from)) <= debut
-        && /** @type {number} */ (minutesDe(plage.to)) >= fin);
+      const ouvert = plages.some((plage) => {
+        const heures = etendue(plage);
+        return plage.days.includes(jour) && /** @type {number} */ (heures.debut) <= debut
+          && /** @type {number} */ (heures.fin) >= fin;
+      });
       return ouvert ? prixDuCreneau(plan, prixDeBase, jour, debut) : null;
     });
     const precedente = lignes[lignes.length - 1];
-    if (precedente && precedente.a === heureDe(debut)
+    if (precedente && precedente.a === debut
       && precedente.prix.every((valeur, jour) => valeur === prix[jour])) {
-      precedente.a = heureDe(fin);
+      precedente.a = fin;
     } else if (prix.some((valeur) => valeur !== null)) {
-      lignes.push({ a: heureDe(fin), de: heureDe(debut), prix });
+      lignes.push({ a: fin, de: debut, prix });
     }
   }
-  return lignes;
+  return lignes.map((ligne) => ({ ...ligne, a: heureDuJour(ligne.a), de: heureDuJour(ligne.de) }));
 };
 
 /**
@@ -450,6 +488,16 @@ const jourDeLaSemaine = (date) => {
   const [annee, mois, jour] = date.split('-').map(Number);
   const dimancheZero = new Date(Date.UTC(annee, mois - 1, jour)).getUTCDay();
   return dimancheZero === 0 ? 7 : dimancheZero;
+};
+
+/**
+ * La veille d'une date civile « AAAA-MM-JJ ».
+ * @param {string} date - La date.
+ * @returns {string} La veille.
+ */
+const laVeille = (date) => {
+  const [annee, mois, jour] = date.split('-').map(Number);
+  return new Date(Date.UTC(annee, mois - 1, jour - 1)).toISOString().slice(0, 10);
 };
 
 /**
@@ -469,17 +517,30 @@ export const creneauxDuJour = (plan, date) => {
   const dansLaPeriode = periode
     ? date >= periode.from && (!periode.until || date <= periode.until)
     : false;
-  if (dansLaPeriode) {
-    const jour = jourDeLaSemaine(date);
-    (plan.ranges || []).filter((plage) => plage.days.includes(jour)).forEach((plage) => {
-      const fin = /** @type {number} */ (minutesDe(plage.to));
-      const duree = Number(plage.durationMinutes);
-      const premier = Number(minutesDe(plage.from));
-      for (let debut = premier; duree > 0 && debut + duree <= fin; debut += duree) {
-        creneaux.push({ debut, from: heureDe(debut), to: heureDe(debut + duree) });
+  // Comme le serveur (`slotsOfRange`) : les créneaux qui commencent ce jour-là, et ceux d'après
+  // minuit d'une plage de la VEILLE (le jour de la plage doit être dans la période).
+  const veille = laVeille(date);
+  const veilleDansLaPeriode = periode
+    ? veille >= periode.from && (!periode.until || veille <= periode.until)
+    : false;
+  (plan.ranges || []).forEach((plage) => {
+    const { debut: premier, fin } = etendue(plage);
+    const duree = Number(plage.durationMinutes);
+    if (premier === null || fin === null || !(duree > 0)) return;
+    const duJour = dansLaPeriode && plage.days.includes(jourDeLaSemaine(date));
+    const deLaVeille = veilleDansLaPeriode && fin > JOUR_MINUTES
+      && plage.days.includes(jourDeLaSemaine(veille));
+    for (let debut = premier; debut + duree <= fin; debut += duree) {
+      if (duJour && debut < JOUR_MINUTES) {
+        creneaux.push({ debut, from: heureDe(debut), to: heureDuJour(debut + duree) });
+      } else if (deLaVeille && debut >= JOUR_MINUTES) {
+        const debutDuJour = debut - JOUR_MINUTES;
+        creneaux.push({
+          debut: debutDuJour, from: heureDe(debutDuJour), to: heureDe(debutDuJour + duree),
+        });
       }
-    });
-  }
+    }
+  });
   (plan.extraSlots || []).filter((ponctuel) => ponctuel.date === date).forEach((ponctuel) => {
     creneaux.push({
       debut: /** @type {number} */ (minutesDe(ponctuel.from)),

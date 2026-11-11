@@ -39,7 +39,10 @@ const MOT_MAX = 500;
  * E-G16 — LES RÉGLAGES DU COMPLEXE — RESA-L5A1 (13/10/2026), planches EG16 et RA6 (retour d'Adel
  * du 13/10 13h03 : « le mot aux joueurs », un champ libre juste après « Annuler et réserver »).
  *   · « Qui peut réserver » : l'âge minimum (13 à 18 ans, R2).
- *   · « Annuler et réserver » : annulation gratuite, réserver au plus tard, réservations à venir.
+ *   · « Annuler et réserver » : annulation gratuite, réserver au plus tard.
+ *     COMPLEXE-TERRAINS (10/11/2026, point 9, décision d'Adel) : « Réservations à venir par
+ *     personne » est SUPPRIMÉ (le serveur ne lit plus `maxUpcomingPerUser`) ; un « ? » ouvre
+ *     l'explication des réglages qui ne s'expliquent pas d'eux-mêmes, dans une même petite bulle.
  *   · « Ton message aux joueurs » : 500 caractères au plus ; vide, il n'apparaît nulle part.
  *   · « Collectes » : la date limite au plus tard (Q3) ; « Non honorées » : le x du
  *     bannissement automatique (Q1, « Jamais » = 0) ; « Notifications » : résumé du matin,
@@ -70,6 +73,8 @@ function ComplexeReglages() {
   const [mot, setMot] = useState('');
   const [enregistre, setEnregistre] = useState(false);
   const [refus, setRefus] = useState('');
+  // COMPLEXE-TERRAINS (9) : le réglage dont l'explication est ouverte (une à la fois).
+  const [aideOuverte, setAideOuverte] = useState('');
   // RESA-L5B-1, partie B — l'âge enregistré, et l'aperçu SEULEMENT quand on le relève.
   const ageEnregistre = Number(complexe.data?.rules?.minAge ?? REGLES_DU_SERVEUR.defauts.minAge);
   const ageChoisi = Number(regles?.minAge ?? ageEnregistre);
@@ -156,13 +161,72 @@ function ComplexeReglages() {
       <Text style={[Fonts.h4Black, Fonts.primary500]}>{signe}</Text>
     </TouchableOpacity>
   );
+  // COMPLEXE-TERRAINS (9) : le titre d'un réglage, et son « ? » qui ouvre (ou referme) une petite
+  // bulle d'explication juste dessous ; sans explication, le titre seul.
+  const titreDuReglage = (
+    /** @type {string} */ cle,
+    /** @type {string} */ libelle,
+    /** @type {string | undefined} */ explication,
+  ) => {
+    const ouverte = Boolean(explication) && aideOuverte === cle;
+    return (
+      <View style={{ gap: 6 }}>
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 4 }]}>
+          <Text style={[Fonts.p2Bold, Fonts.neutral100, { flexShrink: 1 }]}>{libelle}</Text>
+          {explication ? (
+            <TouchableOpacity
+              accessibilityLabel={t('complexeGerant.reglages.aide', 'Aide : {{reglage}}', {
+                reglage: libelle,
+                ...SANS_ECHAPPEMENT,
+              })}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: ouverte }}
+              onPress={() => setAideOuverte(ouverte ? '' : cle)}
+              style={[Alignments.alignCenter, Alignments.justifyCenter, { height: 44, width: 44 }]}
+              testID={`complexe-reglages-aide-${cle}`}
+            >
+              <View
+                style={[
+                  Alignments.alignCenter,
+                  Alignments.justifyCenter,
+                  {
+                    borderColor: Colors.primary500,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    height: 22,
+                    width: 22,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>?</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        {ouverte ? (
+          <View
+            style={{
+              backgroundColor: withAlpha(Colors.primary500, 0.12),
+              borderColor: withAlpha(Colors.primary500, 0.4),
+              borderRadius: 12,
+              borderWidth: 1,
+              padding: 12,
+            }}
+          >
+            <Text style={[Fonts.p3, Fonts.neutral100]}>{explication}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
   const compteur = (
     /** @type {string} */ cle,
     /** @type {string} */ libelle,
     /** @type {(valeur: number) => string} */ ecrire,
+    /** @type {string} [explication] */ explication = undefined,
   ) => (
     <View style={{ gap: 8 }}>
-      <Text style={[Fonts.p2Bold, Fonts.neutral100]}>{libelle}</Text>
+      {titreDuReglage(cle, libelle, explication)}
       <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
         {boutonDuCompteur(
           t('complexeGerant.reglages.moins', 'Moins : {{reglage}}', {
@@ -353,16 +417,11 @@ function ComplexeReglages() {
                 'minLeadTimeHours',
                 t('complexeGerant.reglages.auPlusTard', 'Réserver au plus tard'),
                 heuresAvant,
+                t(
+                  'complexeGerant.reglages.auPlusTardAide',
+                  'Un joueur ne peut plus réserver un créneau qui commence dans moins de ce délai.',
+                ),
               )}
-              {compteur(
-                'maxUpcomingPerUser',
-                t('complexeGerant.reglages.aVenir', 'Réservations à venir par personne'),
-                (valeur) => String(valeur),
-              )}
-              {aide(t(
-                'complexeGerant.reglages.aVenirAide',
-                'Les demandes et les collectes en cours comptent.',
-              ))}
             </>
           ),
         )}
@@ -402,6 +461,11 @@ function ComplexeReglages() {
           'collectDeadlineHours',
           t('complexeGerant.reglages.dateLimite', 'Date limite de collecte au plus tard'),
           heuresAvant,
+          t(
+            'complexeGerant.reglages.dateLimiteAide',
+            // eslint-disable-next-line max-len
+            'Une collecte attend que ses joueurs la rejoignent. Elle doit être complète au plus tard ce délai avant le créneau ; sinon elle s’arrête et le créneau reste libre.',
+          ),
         ))}
 
         {groupe(
@@ -417,6 +481,11 @@ function ComplexeReglages() {
                     '{{nombre}} réservations non honorées',
                     { nombre: valeur, ...SANS_ECHAPPEMENT },
                   )),
+                t(
+                  'complexeGerant.reglages.bannirExplication',
+                  // eslint-disable-next-line max-len
+                  'Une réservation non honorée : le joueur n’est pas venu. À ce nombre, il ne peut plus réserver chez toi.',
+                ),
               )}
               {aide(t(
                 'complexeGerant.reglages.bannirAide',

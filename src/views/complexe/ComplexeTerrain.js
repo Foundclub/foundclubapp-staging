@@ -146,6 +146,25 @@ function ComplexeTerrain() {
 
   const liste = Array.isArray(activites.data) ? activites.data : [];
   const populaires = sportsPopulaires(liste);
+
+  // COMPLEXE-TERRAINS (6, règle d'Adel) : un NOUVEAU terrain d'un complexe à un seul sport part
+  // avec ce sport (et son nombre de joueurs) ; plusieurs sports : rien n'est choisi. Une seule
+  // fois, et jamais par-dessus un choix du gérant ni en modification.
+  const sportsDuComplexe = Array.isArray(complexe.data?.sports) ? complexe.data.sports : [];
+  const seulSport = !terrainId && sportsDuComplexe.length === 1
+    ? String(sportsDuComplexe[0]?.documentId || '')
+    : '';
+  const sportPropose = useRef(false);
+  useEffect(() => {
+    // Après la liste des sports de l'app : le nombre de joueurs du sport en dépend.
+    if (sportPropose.current || !seulSport || !liste.length) return;
+    sportPropose.current = true;
+    setSport((avant) => avant || seulSport);
+    if (!joueursTouches) {
+      const capacite = populaires.find((p) => p.documentId === seulSport)?.capacite;
+      setJoueurs(capacite || CAPACITE_PAR_DEFAUT);
+    }
+  }, [joueursTouches, liste.length, populaires, seulSport]);
   const autre = sport && !populaires.some((p) => p.documentId === sport)
     ? liste.find((activite) => String(activite?.documentId) === sport)
     : null;
@@ -172,25 +191,33 @@ function ComplexeTerrain() {
     }
   };
 
-  const ajouterUnePhoto = async () => {
+  // COMPLEXE-TERRAINS (7) : plusieurs photos d'un coup, autant qu'il reste de places ; une photo
+  // trop lourde ou ratée n'empêche pas les autres (le refus est dit).
+  const ajouterDesPhotos = async () => {
     setPhotoRefus('');
-    const choisie = await MediaPlatform.pickImage();
+    const places = PHOTOS_MAX - photos.length;
+    if (places <= 0) return;
+    const choisie = await MediaPlatform.pickImage({ selectionLimit: places });
     if (!choisie || choisie?.didCancel) return;
-    const fichier = choisie?.assets?.[0] || choisie;
-    const octets = Number(fichier?.fileSize ?? fichier?.size ?? 0);
-    if (octets > PHOTO_OCTETS_MAX) {
-      setPhotoRefus(t('complexeGerant.terrain.photoTropLourde', 'Cette photo dépasse 10 Mo.'));
-      return;
-    }
+    const fichiers = (Array.isArray(choisie?.assets) ? choisie.assets : [choisie]).slice(0, places);
     setEnvoiPhoto(true);
-    try {
-      const envoyee = await televerserPhoto(choisie);
-      if (envoyee?.id) setPhotos((avant) => [...avant, { id: envoyee.id, url: envoyee.url }]);
-    } catch {
-      setPhotoRefus(t('complexeGerant.terrain.photoEchec', 'La photo n’est pas partie. Réessaie.'));
-    } finally {
-      setEnvoiPhoto(false);
-    }
+    // Une à une, dans l'ordre du choix ; un fichier du navigateur part tel quel (il y est réduit).
+    const refusDesPhotos = await fichiers.reduce(async (precedent, /** @type {any} */ fichier) => {
+      const dejaDit = await precedent;
+      const octets = Number(fichier?.fileSize ?? fichier?.size ?? 0);
+      if (octets > PHOTO_OCTETS_MAX) {
+        return t('complexeGerant.terrain.photoTropLourde', 'Cette photo dépasse 10 Mo.');
+      }
+      try {
+        const envoyee = await televerserPhoto(fichier?.uri ? { assets: [fichier] } : fichier);
+        if (envoyee?.id) setPhotos((avant) => [...avant, { id: envoyee.id, url: envoyee.url }]);
+        return dejaDit;
+      } catch {
+        return t('complexeGerant.terrain.photoEchec', 'La photo n’est pas partie. Réessaie.');
+      }
+    }, Promise.resolve(''));
+    setPhotoRefus(refusDesPhotos);
+    setEnvoiPhoto(false);
   };
 
   const erreurs = erreursDuTerrain({
@@ -518,13 +545,19 @@ function ComplexeTerrain() {
           {photos.length < PHOTOS_MAX ? (
             <View style={{ alignSelf: 'flex-start' }}>
               <Button
-                accessibilityLabel={t('complexeGerant.terrain.ajouterPhoto', 'Ajouter une photo')}
+                accessibilityLabel={t(
+                  'complexeGerant.terrain.ajouterPhoto',
+                  'Ajouter des photos de l’installation',
+                )}
                 disabled={envoiPhoto}
                 icon="camera"
                 isLoading={envoiPhoto}
-                onPress={ajouterUnePhoto}
+                onPress={ajouterDesPhotos}
                 size="sm"
-                title={texteInsecable(t('complexeGerant.terrain.ajouterPhoto', 'Ajouter une photo'))}
+                title={texteInsecable(t(
+                  'complexeGerant.terrain.ajouterPhoto',
+                  'Ajouter des photos de l’installation',
+                ))}
                 variant="Secondary"
               />
             </View>
