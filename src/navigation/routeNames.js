@@ -13,11 +13,13 @@
  *   - views/league/standings/LeagueStandings.js       (orphelin depuis la suppression de
  *     l'onglet classement — cf. `LeagueStandingsTab` retire ci-dessus)
  *   - views/profile/PlayerCardGallery.js
- *   - views/search/SearchClubsScreen.js               (les routes SearchClubs/SearchEvents/
- *   - views/search/SearchEventsScreen.js               SearchReservations/SearchRecruitment
- *   - views/search/SearchRecruitmentScreen.js          montent toutes SearchHubRouteAlias,
- *   - views/search/SearchReservationsScreen.js         jamais ces 4 ecrans dedies)
  *   - views/TestScreen.js                             (ecran de test, a supprimer ?)
+ *   (ORPHELINS-RECHERCHE, 10/11/2026 : `SearchClubsScreen.js` supprime, 0 appelant dans
+ *   `app` comme dans `web` — le site renvoie /search/clubs vers l'annuaire. Dans l'APP,
+ *   SearchEvents/SearchReservations/SearchRecruitment montent SearchHubRouteAlias, mais
+ *   le SITE monte encore leurs ecrans dedies : `SearchEventsScreen` (/search, /search/events),
+ *   `SearchRecruitmentScreen` (/search/recruitment), `SearchReservationsScreen`
+ *   (/search/reservations) — web/src/routes/screenRegistry.tsx. Ils ne sont PAS morts.)
  *
  * TODO(nav-sans-porte) ECRANS SANS PORTE D'ENTREE — enregistres dans un navigateur, donc
  * atteignables par URL/lien profond, mais aucun bouton de l'app n'y mene (aucun navigate()
