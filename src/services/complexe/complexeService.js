@@ -30,7 +30,7 @@
  * Témoin : `__tests__/complexeService.test.js`.
  */
 import { uploadActualiteFile } from '../collectivite/collectiviteActualiteService';
-import { client, fermetures } from './complexeChargeurs';
+import { client, fermetures, messages } from './complexeChargeurs';
 
 /**
  * Le corps d'une réponse.
@@ -483,6 +483,37 @@ export const ecrireAuReserveur = async (complexeId, reservationId) => corps(
     {},
   ),
 );
+
+/**
+ * MESSAGERIE-COMPLEXE (10/11, M1137) — « Écrire au client » : LE fil complexe ↔ client, RETROUVÉ
+ * sans être créé (un seul fil par complexe et par client, décision du chef).
+ * @param {string} complexeId - documentId du complexe.
+ * @param {string} reservationId - documentId de la réservation.
+ * @returns {Promise<any>} `{ data: { chat } }`, `chat: null` s'il n'existe pas encore.
+ */
+export const trouverConversationDuClient = async (complexeId, reservationId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/conversation`),
+);
+
+/**
+ * MESSAGERIE-COMPLEXE — le premier message du gérant à son client : le fil naît (POST), puis le
+ * message y part par le chemin de tous les messages (POST /chat-messages).
+ * ponytail: deux appels, pas une transaction (même choix que la Ville, collectiviteCanauxService) :
+ * si le second échoue, le fil existe vide et l'appui suivant le retrouve et l'ouvre. Sortie : un
+ * POST de la conversation qui porte le message, si le cas se voit.
+ * @param {{ complexeId: string, message: string, reservationId: string }} args - Le complexe, la
+ *   réservation (documentId) et le texte.
+ * @returns {Promise<any>} `{ data: { chat } }`.
+ */
+export const ecrireLePremierMessageAuClient = async ({ complexeId, message, reservationId }) => {
+  const ouvert = await ecrireAuReserveur(complexeId, reservationId);
+  const chatId = ouvert?.data?.chat;
+  if (!chatId) return ouvert;
+  // Par `complexeChargeurs`, comme le client HTTP (en-tête du fichier) : le service des messages
+  // charge le client, et le site n'a pas `require`.
+  await messages().createChatMessage({ chatId, message });
+  return ouvert;
+};
 
 // ---------------------------------------------------------------------------------------------
 // RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des

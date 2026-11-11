@@ -31,18 +31,16 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import EcrireAuClient from '@/views/complexe/components/EcrireAuClient';
 import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
 import FeuilleNonHonoree from '@/views/complexe/components/FeuilleNonHonoree';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
-
-import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useAnnulerNonHonoree,
   useAnnulerReservation,
   useComplexeGere,
   useDeciderDemande,
-  useEcrireAuReserveur,
   useFideliteDuComplexe,
   useMarquerNonHonoree,
   useModifierExterieur,
@@ -91,8 +89,6 @@ function FicheReservation({
   } = useTheme();
   const navigation = useNavigation();
   const lecture = useReservationGeree(complexeId, reservationId);
-  const ecrire = useEcrireAuReserveur();
-  const [erreurEcrire, setErreurEcrire] = useState('');
   const decider = useDeciderDemande();
   const annuler = useAnnulerReservation();
   const modifier = useModifierExterieur();
@@ -423,20 +419,6 @@ function FicheReservation({
       </View>
     );
   } else if (confirmeeAVenir) {
-    const ecrireAuReserveur = async () => {
-      setErreurEcrire('');
-      try {
-        const reponse = await ecrire.mutateAsync({ complexeId, reservationId });
-        const chatId = reponse?.data?.chat;
-        if (chatId) {
-          /** @type {any} */ (navigation).navigate(RouteNames.Conversation, {
-            chatId, espace: 'complexe',
-          });
-        }
-      } catch (erreur) {
-        setErreurEcrire(messageDeRefusResa(t, erreur, repli));
-      }
-    };
     // RESA-PARTAGER (A-G32) — l'annonce ouverte de la réservation, en carte dans SON canal ; le
     // résultat (partagée, déjà partagée) ou le refus du serveur en haut de la fiche.
     const partagerDansLeCanal = async () => {
@@ -462,23 +444,15 @@ function FicheReservation({
             />
           </View>
         ) : null}
-        <View testID="fiche-ecrire">
-          <Button
-            isLoading={Boolean(ecrire.isPending)}
-            onPress={ecrireAuReserveur}
-            title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au réserveur')}
-            variant="Secondary"
-          />
-        </View>
-        {erreurEcrire ? (
-          <Text
-            accessibilityRole="alert"
-            style={[Fonts.p2Bold, Fonts.error300]}
-            testID="fiche-ecrire-erreur"
-          >
-            {erreurEcrire}
-          </Text>
-        ) : null}
+        {/* MESSAGERIE-COMPLEXE (10/11, M1137) : « Écrire au client », le fil naît au 1er
+            message. */}
+        <EcrireAuClient
+          complexeId={complexeId}
+          navigation={/** @type {any} */ (navigation)}
+          reservationId={reservationId}
+          testID="fiche-ecrire"
+          title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
+        />
         <View testID="fiche-annuler">
           <Button
             onPress={() => ouvrir('annuler')}

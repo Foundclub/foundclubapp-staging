@@ -28,6 +28,9 @@ import DatePickerInput from '@/components/molecules/datePickerInput/DatePickerIn
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import {
+  BoutonEcrire, SaisiePremierMessage, useEcrireAuClient,
+} from '@/views/complexe/components/EcrireAuClient';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -39,7 +42,6 @@ import {
   useComplexeChoisi,
   useComplexeGere,
   useDebannir,
-  useEcrireAuReserveur,
   useHistoriqueClient,
   useReservationGeree,
 } from '@/services/complexe/complexeQueries';
@@ -131,8 +133,13 @@ function ComplexeClient({
   );
   const fidelite = lignesDesPages(parSonNom.data)
     .find((/** @type {any} */ ligne) => ligne?.documentId === joueurId)?.fidelite || null;
-  const ecrire = useEcrireAuReserveur();
-  const [erreurEcrire, setErreurEcrire] = useState('');
+  // AT-04 : « Écrire » passe par sa réservation à venir (le fil complexe ↔ client s'y rattache).
+  const aEcrire = prochaineReservation(
+    Array.isArray(historique.data?.reservations) ? historique.data.reservations : [],
+  );
+  const ecriture = useEcrireAuClient({
+    complexeId, navigation, reservationId: aEcrire?.documentId || '',
+  });
 
   /** @typedef {'' | 'bannir' | 'debannir'} FeuilleDuClient */
   const [feuille, setFeuille] = useState(/** @type {FeuilleDuClient} */ (''));
@@ -232,22 +239,6 @@ function ComplexeClient({
     const parties = historique.data ? nombre(historique.data.parties) : null;
     const seuilFidelite = Number(fidelite?.threshold);
     const depuis = clientDepuisLaFiche(client, reservationsIci);
-    const aEcrire = prochaineReservation(reservationsIci);
-    const ecrireAuClient = async () => {
-      if (!aEcrire) return;
-      setErreurEcrire('');
-      try {
-        const reponse = await ecrire.mutateAsync({
-          complexeId, reservationId: aEcrire.documentId,
-        });
-        const chatId = reponse?.data?.chat;
-        // RESA-FIN-APP-3 : `espace: 'complexe'` — sur le site, la conversation garde la barre du
-        // gérant (comme le canal, ComplexeCanal), au lieu des onglets du joueur (tournée 3).
-        if (chatId) navigation.navigate(RouteNames.Conversation, { chatId, espace: 'complexe' });
-      } catch (erreur) {
-        setErreurEcrire(messageDeRefusResa(t, erreur, repli));
-      }
-    };
     // RESA-FIN-APP-3 — `noShowsSinceLift` (RESA-FIN-SERVEUR 9/11) : moins que le total = un ban
     // levé.
     const depuisLaLevee = Number.isInteger(client.noShowsSinceLift)
@@ -356,22 +347,17 @@ function ComplexeClient({
             ) : null}
           </View>
           {aEcrire ? (
-            <View testID="client-ecrire">
-              <Button
-                isLoading={Boolean(ecrire.isPending)}
-                onPress={ecrireAuClient}
-                size="sm"
-                title={t('complexeClients.fiche.ecrire', 'Écrire')}
-                variant="Secondary"
-              />
-            </View>
+            <BoutonEcrire
+              ecriture={ecriture}
+              size="sm"
+              testID="client-ecrire"
+              title={t('complexeClients.fiche.ecrire', 'Écrire')}
+            />
           ) : null}
         </View>
-        {erreurEcrire ? (
-          <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error300]}>
-            {erreurEcrire}
-          </Text>
-        ) : null}
+        {/* MESSAGERIE-COMPLEXE (10/11, M1137) : sans fil, la saisie du 1er message, sous
+            l'en-tête. */}
+        <SaisiePremierMessage ecriture={ecriture} testID="client-ecrire" />
         {message ? (
           <BandeauComplexe testID="client-message" texte={message.texte} ton={message.ton} />
         ) : null}

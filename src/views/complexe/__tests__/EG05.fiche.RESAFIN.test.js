@@ -233,12 +233,13 @@ describe('RESA-FIN-APP (5) E-G05 — une demande expirée ne propose plus de ges
 // venir propose « Écrire au réserveur » + « Annuler la réservation ». « Écrire » ouvre la
 // conversation de la réservation par le même chemin que la fiche client (E-G15), dans l'espace du
 // complexe.
-describe('RESA-FIN-APP-3 E-G05 — « Écrire au réserveur »', () => {
-  it('confirmée à venir, de l’app : « Écrire au réserveur », espace complexe', async () => {
+// MESSAGERIE-COMPLEXE (10/11, M1137) : le libellé devient « Écrire au client » (Adel).
+describe('RESA-FIN-APP-3 E-G05 — « Écrire au client »', () => {
+  it('confirmée à venir, de l’app : « Écrire au client », espace complexe', async () => {
     mockEcrire.mockResolvedValue({ data: { chat: 'chat-r-1' } });
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'Écrire au réserveur', 'Annuler la réservation',
+      'Écrire au client', 'Annuler la réservation',
     ]));
     await appuyerDans(arbre, 'fiche-ecrire');
     expect(mockEcrire).toHaveBeenCalledWith({ complexeId: 'cx-five', reservationId: 'r-1' });
@@ -247,7 +248,7 @@ describe('RESA-FIN-APP-3 E-G05 — « Écrire au réserveur »', () => {
     });
   });
 
-  it('extérieure, en attente ou passée : pas de « Écrire au réserveur »', async () => {
+  it('extérieure, en attente ou passée : pas de « Écrire au client »', async () => {
     const cas = [
       { booker: null, externalName: 'M. Dupont', source: 'exterieur' },
       { status: 'en_attente' },
@@ -258,7 +259,7 @@ describe('RESA-FIN-APP-3 E-G05 — « Écrire au réserveur »', () => {
       mockFiche = { data: fiche(autres), isLoading: false, refetch: jest.fn() };
       return [...deja, lisibles(await monter())];
     }, Promise.resolve(/** @type {string[][]} */ ([])));
-    lus.forEach((vus) => expect(vus).not.toContain('Écrire au réserveur'));
+    lus.forEach((vus) => expect(vus).not.toContain('Écrire au client'));
   });
 
   it('un refus du serveur se dit, sans ouvrir de conversation', async () => {
