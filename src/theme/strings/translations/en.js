@@ -18056,6 +18056,7 @@ export default {
       waitingAll: 'Your children are waiting for you in parent mode.',
     },
     parentAccount: {
+      enter: 'I play too',
       offer: 'Do you play a sport too?',
     },
     player: {

@@ -14,6 +14,43 @@ import PlayerModeBanner from '../PlayerModeBanner';
 // témoins du lot RÔLES sont gardés, réécrits dans cette forme (`true` → `'player'`, `false` →
 // `null`). Il s'affiche pour tout parent : le compte Parent, et un sportif qui a des enfants.
 
+// BANDEAU-PARENT (10/11) : le bandeau du parent monte le contrôle de « Ton mode »
+// (SegmentedControl) ; ses doublures, comme dans SegmentedControl.RESABASCULE.test.js.
+jest.mock('react-native-reanimated', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: {
+      View: function AnimatedViewMock(/** @type {any} */ props) {
+        return reactActuel.createElement(VueRN, props);
+      },
+    },
+    useAnimatedStyle: (/** @type {any} */ fabrique) => fabrique(),
+    useSharedValue: (/** @type {any} */ valeur) => ({ value: valeur }),
+  };
+});
+
+jest.mock('react-native-gesture-handler', () => {
+  const reactActuel = jest.requireActual('react');
+  const { ScrollView: DefilementRN, View: VueRN } = jest.requireActual('react-native');
+  const enchainable = () => {
+    /** @type {any} */
+    const geste = {};
+    ['activeOffsetX', 'failOffsetY', 'onStart', 'onUpdate', 'onEnd'].forEach((nom) => {
+      geste[nom] = () => geste;
+    });
+    return geste;
+  };
+  return {
+    Gesture: { Pan: enchainable },
+    GestureDetector: function GestureDetectorMock(/** @type {any} */ { children }) {
+      return reactActuel.createElement(VueRN, null, children);
+    },
+    ScrollView: DefilementRN,
+  };
+});
+
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
@@ -117,6 +154,15 @@ describe('RÔLES — le bandeau du mode joueur', () => {
   });
 });
 
+// BANDEAU-PARENT (10/11/2026, maquette A validée par Adel) — les états du PARENT sont réécrits
+// dans la forme validée (une ligne « Ton mode : Parent | Joueur ») ; leur intention est gardée.
+// Le détail de la nouvelle forme : `PlayerModeBanner.BANDEAUPARENT.test.js`.
+const positionNommee = (/** @type {any} */ arbre, /** @type {string} */ debut) => arbre.root
+  .findAll((/** @type {any} */ n) => (
+    n.props?.accessibilityRole === 'radio' && typeof n.props?.onPress === 'function'
+    && String(n.props.accessibilityLabel).startsWith(debut)
+  ))[0];
+
 describe('PAR-L12 — le mode parent (E25)', () => {
   it('compte PARENT : « Tu pratiques aussi un sport ? », le 1er appui ouvre la feuille', () => {
     const onChange = jest.fn();
@@ -125,7 +171,7 @@ describe('PAR-L12 — le mode parent (E25)', () => {
 
     expect(textes(arbre)).toContain('Tu pratiques aussi un sport ?');
     const entrer = bouton(arbre, 'player-mode-enter');
-    expect(entrer.props.accessibilityLabel).toBe('Basculer en mode joueur');
+    expect(entrer.props.accessibilityLabel).toBe('Je pratique');
     act(() => entrer.props.onPress());
     expect(onPratiqueAussi).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalled();
@@ -137,26 +183,20 @@ describe('PAR-L12 — le mode parent (E25)', () => {
       accountRoleKey: 'player', canUseParentMode: true, onChange, prenoms: ['Anissa', 'Martin'],
     });
 
-    expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Mode joueur',
-      'Tu vois l’app comme un joueur. Anissa et Martin t’attendent dans le mode parent.',
-    ]));
-    const retour = bouton(arbre, 'parent-mode-enter');
-    expect(retour.props.accessibilityLabel).toBe('Revenir en mode parent');
+    const retour = positionNommee(arbre, 'Parent');
+    expect(retour.props.accessibilityLabel)
+      .toBe('Parent, 1 sur 2. Anissa et Martin t’attendent dans le mode parent.');
     act(() => retour.props.onPress());
     expect(onChange).toHaveBeenCalledWith('parent');
   });
 
-  it('JOUEUR en mode parent : « Tu joues aussi dans une équipe. » et la bascule immédiate', () => {
+  it('JOUEUR en mode parent : la bascule immédiate vers le mode joueur', () => {
     const onChange = jest.fn();
     const arbre = monter({
       accountRoleKey: 'player', canUseParentMode: true, displayMode: 'parent', onChange,
     });
 
-    expect(textes(arbre)).toContain('Tu joues aussi dans une équipe.');
-    const entrer = bouton(arbre, 'player-mode-enter');
-    expect(entrer.props.accessibilityLabel).toBe('Basculer en mode joueur');
-    act(() => entrer.props.onPress());
+    act(() => positionNommee(arbre, 'Joueur').props.onPress());
     expect(onChange).toHaveBeenCalledWith(null);
   });
 
@@ -166,12 +206,10 @@ describe('PAR-L12 — le mode parent (E25)', () => {
       accountRoleKey: 'player', canUseParentMode: true, prenoms: ['Anissa', 'Martin', 'Léa'],
     });
 
-    expect(textes(un)).toContain(
-      'Tu vois l’app comme un joueur. Anissa t’attend dans le mode parent.',
-    );
-    expect(textes(trois)).toContain(
-      'Tu vois l’app comme un joueur. Tes enfants t’attendent dans le mode parent.',
-    );
+    expect(positionNommee(un, 'Parent').props.accessibilityLabel)
+      .toBe('Parent, 1 sur 2. Anissa t’attend dans le mode parent.');
+    expect(positionNommee(trois, 'Parent').props.accessibilityLabel)
+      .toBe('Parent, 1 sur 2. Tes enfants t’attendent dans le mode parent.');
   });
 
   it('DIRIGEANT qui joue et a des enfants : « Mode joueur » et « Mode parent »', () => {
@@ -242,10 +280,6 @@ describe('FINITIONS3 — aucun libellé du bandeau n épouse sa largeur mesurée
     ['les deux portes', {
       accountRoleKey: 'president', canUseParentMode: true, canUsePlayerMode: true,
     }, 'Mode parent'],
-    ['le compte parent', { accountRoleKey: 'parent' }, 'Basculer en mode joueur'],
-    ['le joueur parent', {
-      accountRoleKey: 'player', canUseParentMode: true,
-    }, 'Revenir en mode parent'],
   ])('%s : chaque texte s étire, et le libellé du bouton reste centré', (_, props, libelle) => {
     const arbre = monter(props);
     const noeuds = arbre.root.findAllByType(Text);
@@ -254,6 +288,17 @@ describe('FINITIONS3 — aucun libellé du bandeau n épouse sa largeur mesurée
     expect(noeuds.filter((noeud) => !boiteEtiree(noeud)).map(texte)).toEqual([]);
     const libelleDuBouton = noeuds.find((noeud) => texte(noeud) === libelle);
     expect(StyleSheet.flatten(libelleDuBouton.props.style).textAlign).toBe('center');
+  });
+
+  // BANDEAU-PARENT : le compte Parent n'a plus qu'un bouton gras de deux mots, « Je pratique », à
+  // côté de la question (sur la même ligne) ; le joueur parent n'a plus de bouton (les positions
+  // « Parent | Joueur » sont des mots seuls, tenus par `SegmentedControl`).
+  it('le compte parent : le libellé « Je pratique » s étire et reste centré', () => {
+    const arbre = monter({ accountRoleKey: 'parent' });
+    const libelle = arbre.root.findAllByType(Text)
+      .find((/** @type {any} */ n) => [].concat(n.props.children).join('') === 'Je pratique');
+    expect(boiteEtiree(libelle)).toBe(true);
+    expect(StyleSheet.flatten(libelle.props.style).textAlign).toBe('center');
   });
 });
 

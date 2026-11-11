@@ -18755,6 +18755,8 @@ export default {
       waitingAll: 'Tes enfants t’attendent dans le mode parent.',
     },
     parentAccount: {
+      // BANDEAU-PARENT (10/11/2026) : le bouton de l'offre, sur la même ligne.
+      enter: 'Je pratique',
       offer: 'Tu pratiques aussi un sport ?',
     },
     player: {
