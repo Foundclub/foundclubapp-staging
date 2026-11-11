@@ -413,6 +413,17 @@ export const openEventChat = async (eventId) => {
 };
 
 /**
+ * CONVERSATION-EVENEMENT-2 — l'etat du chat d'evenement lu depuis son fil : date, lieu,
+ * rendez-vous, bandeau des parents, et les membres nommes (pour un membre seulement).
+ * @param {string} chatId - Le chat.
+ * @returns {Promise<object>} L'etat.
+ */
+export const getEventChatOfChat = async (chatId) => {
+  const response = await client.get(`/chats/event-chat/${encodeURIComponent(chatId)}`);
+  return response.data?.data;
+};
+
+/**
  * Create a new group chat
  * MSG1BA (§3.15) — `permissions` (contrat 1B §5.3) : les autorisations reglees a la creation,
  * partielles ; n'est envoye que s'il est fourni (un serveur d'avant 1B l'ignore).

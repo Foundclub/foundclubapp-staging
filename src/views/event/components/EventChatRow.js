@@ -32,7 +32,8 @@ const service = () => require('@/services/chat/chatService');
 /**
  * Ce que `GET /chats/event/:id` renvoie.
  * @typedef {object} EtatChatEvenement
- * @property {{ documentId: string, title?: string } | null} chat - Le chat ouvert, s'il existe.
+ * @property {{ documentId: string, title?: string, nonLus?: number, ouvertPar?: string | null }
+ *   | null} chat - Le chat ouvert, s'il existe (CONVERSATION-EVENEMENT-2 : non-lus, ouvert par).
  * @property {boolean} estMembre - Le lecteur est dans le chat.
  * @property {boolean} estUnMatch - L'evenement est un match.
  * @property {{ membres: number, staff: number }} nombre - Combien ils sont.
@@ -43,7 +44,10 @@ const service = () => require('@/services/chat/chatService');
  * La rangee du chat de l'evenement, sous la carte de la fiche.
  * @param {object} props
  * @param {string} props.eventDocumentId - L'evenement.
- * @param {{ navigate: (route: string, params?: object) => void }} props.navigation - La navigation.
+ * @param {{
+ *   navigate: (route: string, params?: object) => void,
+ *   addListener?: (evenement: string, rappel: () => void) => (() => void) | void,
+ * }} props.navigation - La navigation (`focus` relit la rangee au retour du chat).
  * @returns {import('react').ReactElement | null}
  */
 function EventChatRow({ eventDocumentId, navigation }) {
@@ -58,13 +62,19 @@ function EventChatRow({ eventDocumentId, navigation }) {
   useEffect(() => {
     if (!eventDocumentId) return undefined;
     let vivant = true;
-    Promise.resolve()
+    const lire = () => Promise.resolve()
       .then(() => service().getEventChatState(eventDocumentId))
       .then((lu) => { if (vivant) setEtat(lu || null); })
       // Pas de reponse (hors ligne, droit absent) : la rangee reste vide.
       .catch(() => {});
-    return () => { vivant = false; };
-  }, [eventDocumentId]);
+    lire();
+    // CONVERSATION-EVENEMENT-2 (G) — au retour du chat, les non-lus se relisent.
+    const quitter = navigation?.addListener?.('focus', lire);
+    return () => {
+      vivant = false;
+      if (typeof quitter === 'function') quitter();
+    };
+  }, [eventDocumentId, navigation]);
 
   /**
    * Ouvre la conversation du chat.
@@ -106,11 +116,20 @@ function EventChatRow({ eventDocumentId, navigation }) {
     ? t('eventDetails.eventChat.opened', 'Chat de l’événement')
     : t('eventDetails.eventChat.open', 'Ouvrir le chat de l’événement');
   let sousTitre;
+  const nonLus = chat ? Number(chat.nonLus) || 0 : 0;
   if (chat) {
-    sousTitre = t('eventDetails.eventChat.members', '{{count}} membres', {
-      count: membres + (Number(etat?.nombre?.staff) || 0),
-      ...SANS_ECHAPPEMENT,
-    });
+    const nombre = membres + (Number(etat?.nombre?.staff) || 0);
+    // CONVERSATION-EVENEMENT-2 (G) — « Ouvert par Karim · 17 membres ».
+    sousTitre = chat.ouvertPar
+      ? t('eventDetails.eventChat.openedBy', 'Ouvert par {{name}} · {{count}} membres', {
+        count: nombre,
+        name: chat.ouvertPar,
+        ...SANS_ECHAPPEMENT,
+      })
+      : t('eventDetails.eventChat.members', '{{count}} membres', {
+        count: nombre,
+        ...SANS_ECHAPPEMENT,
+      });
   } else if (etat.estUnMatch && membres === 0) {
     sousTitre = t(
       'eventDetails.eventChat.staffOnly',
@@ -166,6 +185,28 @@ function EventChatRow({ eventDocumentId, navigation }) {
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{titre}</Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>{sousTitre}</Text>
       </View>
+      {nonLus > 0 ? (
+        <View
+          accessibilityLabel={t('eventDetails.eventChat.unread', '{{count}} messages non lus', {
+            count: nonLus,
+            ...SANS_ECHAPPEMENT,
+          })}
+          style={{
+            alignItems: 'center',
+            backgroundColor: Colors.primary500,
+            borderRadius: 11,
+            height: 22,
+            justifyContent: 'center',
+            minWidth: 22,
+            paddingHorizontal: 6,
+          }}
+          testID="event-chat-row-unread"
+        >
+          <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>
+            {nonLus > 99 ? '99+' : String(nonLus)}
+          </Text>
+        </View>
+      ) : null}
       <SvgIcon color={Colors.primary500} height={14} name="arrow-right" width={14} />
     </TouchableOpacity>
   );

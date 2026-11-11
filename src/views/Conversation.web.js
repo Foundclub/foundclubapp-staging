@@ -133,6 +133,12 @@ import {
   canConvokeFromChat,
   getTeamIdOfChat,
 } from '@/views/conversationConvocation/convocationWizardUtils';
+import {
+  BandeauDuChatDEvenement,
+  InfosDuChatDEvenement,
+  sousTitreDuChatDEvenement,
+  useChatDeLEvenement,
+} from '@/views/event/components/EventChatInfos';
 import { RouteNames } from '@/navigation/routeNames'
 import links from '@/platform/links'
 // MSG1W (1-A) — les liens des applis de cartes, ceux du telephone (FeuilleDAdresse de MSG1A).
@@ -2052,6 +2058,16 @@ function Conversation({ navigation, route }) {
   // fils est la requête de la messagerie : la socket la réécrit, la colonne suit sans recharger.
   // Le type `Chat` ne connaît pas encore la Ville d'un fil (COLL-C4A2) : lue telle quelle.
   const villeDuFil = String(/** @type {any} */ (chatData)?.collectivite?.documentId || '');
+  // CONVERSATION-EVENEMENT-2 (maquette « 193 », E et F) — le chat d'un evenement, comme sur le
+  // telephone : la date et le nombre de membres, le bandeau lieu + « Voir l'événement », les infos.
+  const estUnChatDEvenement = (chatData?.type || route?.params?.chatType) === 'event';
+  const [chatDeLEvenement, relireLeChatDeLEvenement] = useChatDeLEvenement(
+    chatId,
+    estUnChatDEvenement,
+  );
+  const seulsLesParentsDuChatDEvenementLisent = !filLuParDesParents(chatData)
+    && estUnChatDEvenement && chatDeLEvenement?.aDesParents === true;
+  const [infosDuChatDEvenementVisibles, setInfosDuChatDEvenementVisibles] = useState(false);
   // MSG1W §3.13 — sur ordinateur, hors de l espace de la Ville, la liste « Messages » a gauche.
   const avecColonneDesMessages = isDesktop && route?.params?.espace !== 'ville';
   const avecColonneDeLaVille = Boolean(
@@ -3885,6 +3901,14 @@ function Conversation({ navigation, route }) {
       cle: 'infos',
       libelle: t('conversation.web.fil.infosDuGroupe', 'Infos du groupe'),
     }] : []),
+    ...(estUnChatDEvenement ? [{
+      action: () => {
+        relireLeChatDeLEvenement();
+        setInfosDuChatDEvenementVisibles(true);
+      },
+      cle: 'infos-du-chat-evenement',
+      libelle: t('eventDetails.eventChat.infos.title', 'Infos'),
+    }] : []),
     {
       action: () => setAnnonce(texteDuSignalement),
       cle: 'signaler',
@@ -4909,6 +4933,9 @@ function Conversation({ navigation, route }) {
           )
           : null}
         {!libelleQuiEcrit && !isChatLoading ? sousTitreDuFil : null}
+        {!libelleQuiEcrit && !isChatLoading && estUnChatDEvenement && chatDeLEvenement
+          ? sousTitreDuChatDEvenement(chatDeLEvenement, t)
+          : null}
       </span>
     </>
   );
@@ -5276,6 +5303,14 @@ function Conversation({ navigation, route }) {
               </div>
             )}
           </header>
+          {estUnChatDEvenement ? (
+            <BandeauDuChatDEvenement
+              info={chatDeLEvenement}
+              onVoirLEvenement={(eventId) => (
+                navigation.navigate(RouteNames.EventDetails, { eventId })
+              )}
+            />
+          ) : null}
 
           <div
             style={{
@@ -5323,6 +5358,14 @@ function Conversation({ navigation, route }) {
                   </NoticeDeTeteDuFil>
                 ) : null}
                 {filLuParDesParents(chatData) ? (
+                  <NoticeDeTeteDuFil testId="conversation-parents-read-notice">
+                    {t(
+                      'conversation.parentsReadNotice',
+                      'Les parents des enfants de moins de 13 ans peuvent lire cette conversation.',
+                    )}
+                  </NoticeDeTeteDuFil>
+                ) : null}
+                {seulsLesParentsDuChatDEvenementLisent ? (
                   <NoticeDeTeteDuFil testId="conversation-parents-read-notice">
                     {t(
                       'conversation.parentsReadNotice',
@@ -6245,6 +6288,12 @@ function Conversation({ navigation, route }) {
           </div>
         </FenetreDuSite>
       ) : null}
+      <InfosDuChatDEvenement
+        info={chatDeLEvenement}
+        onClose={() => setInfosDuChatDEvenementVisibles(false)}
+        titre={conversationName}
+        visible={infosDuChatDEvenementVisibles && estUnChatDEvenement}
+      />
       {infosOuvertes ? (
         <FenetreDuSite
           compacte={!isDesktop}

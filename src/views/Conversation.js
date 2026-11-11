@@ -172,6 +172,12 @@ import {
   canConvokeFromChat,
   getTeamIdOfChat,
 } from '@/views/conversationConvocation/convocationWizardUtils';
+import {
+  BandeauDuChatDEvenement,
+  InfosDuChatDEvenement,
+  sousTitreDuChatDEvenement,
+  useChatDeLEvenement,
+} from '@/views/event/components/EventChatInfos';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -1173,6 +1179,19 @@ function Conversation({ navigation, route }) {
     userData?.team?.documentId,
   ]);
   const isGroupChat = chatData?.type === 'group';
+  // CONVERSATION-EVENEMENT-2 (maquette « 193 », E et F) — le chat d'un evenement : la date
+  // et le nombre de membres sous le nom, le bandeau lieu + « Voir l'événement », l'ecran « Infos ».
+  const estUnChatDEvenement = (chatData?.type || route?.params?.chatType) === 'event';
+  const [chatDeLEvenement, relireLeChatDeLEvenement] = useChatDeLEvenement(
+    chatId,
+    estUnChatDEvenement,
+  );
+  const [infosDuChatDEvenementVisibles, setInfosDuChatDEvenementVisibles] = useState(false);
+  const ouvrirLesInfosDuChatDEvenement = () => {
+    setIsMenuVisible(false);
+    relireLeChatDeLEvenement();
+    setInfosDuChatDEvenementVisibles(true);
+  };
 
   // MESSAGERIE-1C — LA CONVOCATION DEPUIS LE GROUPE D'EQUIPE : qui peut convoquer (entraineur de
   // l'equipe du fil, super-admin), et l'assistant, monte seulement quand on l'ouvre.
@@ -3409,6 +3428,10 @@ function Conversation({ navigation, route }) {
   // 👥 MSG1A (§3.16) — les « Infos du groupe » s'ouvrent pour TOUT membre du groupe (le pack :
   // toucher le titre, ou ⋮ > « Infos du groupe ») ; les gestes d'admin restent aux admins.
   const handleOpenGroupManagement = () => {
+    if (estUnChatDEvenement) {
+      ouvrirLesInfosDuChatDEvenement();
+      return;
+    }
     if (!isGroupChat) return;
     // Q4-24 — le menu se ferme d'abord, aussi quand on part vers la page du complexe.
     setIsMenuVisible(false);
@@ -7283,7 +7306,10 @@ function Conversation({ navigation, route }) {
     ),
   ) : null;
   // T3-PARENT-LIGNE (« 24- A », 04/11) — au même endroit, et seulement si un tel parent peut lire.
-  const noticeDesParents = filLuParDesParents(chatData) ? renderNoticeDeTete(
+  // CONVERSATION-EVENEMENT-2 (E) — le meme bandeau dans le chat d'un evenement, memes conditions.
+  const lesParentsLisent = filLuParDesParents(chatData)
+    || (estUnChatDEvenement && chatDeLEvenement?.aDesParents === true);
+  const noticeDesParents = lesParentsLisent ? renderNoticeDeTete(
     'conversation-parents-read-notice',
     t(
       'conversation.parentsReadNotice',
@@ -7412,7 +7438,10 @@ function Conversation({ navigation, route }) {
       vous: t('conversation.header.you', 'Vous'),
     });
   }
-  const peutOuvrirLaGestionDuGroupe = isGroupChat;
+  if (!quelquUnEcrit && estUnChatDEvenement && chatDeLEvenement) {
+    sousTitreDeLEnTete = sousTitreDuChatDEvenement(chatDeLEvenement, t);
+  }
+  const peutOuvrirLaGestionDuGroupe = isGroupChat || estUnChatDEvenement;
 
   return (
     <ImageBackground
@@ -7526,6 +7555,16 @@ function Conversation({ navigation, route }) {
           </TouchableOpacity>
         )}
       </View>
+
+      {estUnChatDEvenement ? (
+        <BandeauDuChatDEvenement
+          info={chatDeLEvenement}
+          onVoirLEvenement={(eventId) => navigation.navigate(RouteNames.EventStack, {
+            params: { eventId },
+            screen: RouteNames.EventDetails,
+          })}
+        />
+      ) : null}
 
       <View style={[Alignments.fill, { paddingBottom: hauteurDuClavierAndroid }]}>
         {/* MSG1A (§3.1) — le motif sportif en filigrane (cyan a 8 %, tuile de 240), derriere
@@ -7686,6 +7725,12 @@ function Conversation({ navigation, route }) {
               libelle: t('conversation.groupInfo.title', 'Infos du groupe'),
               onPress: handleOpenGroupInfoFromMenu,
             }] : []),
+            ...(estUnChatDEvenement ? [{
+              cle: 'infos-du-chat-evenement',
+              icone: 'users',
+              libelle: t('eventDetails.eventChat.infos.title', 'Infos'),
+              onPress: ouvrirLesInfosDuChatDEvenement,
+            }] : []),
             ...(showCancelButton ? [{
               cle: 'annuler-le-match',
               danger: true,
@@ -7757,6 +7802,13 @@ function Conversation({ navigation, route }) {
           resolveAvatar={(personne) => resolveMediaUri(personne?.avatar?.url) || ''}
           roles={rolesDesMembres}
           visible={isGroupManagementVisible && isGroupChat}
+        />
+
+        <InfosDuChatDEvenement
+          info={chatDeLEvenement}
+          onClose={() => setInfosDuChatDEvenementVisibles(false)}
+          titre={title}
+          visible={infosDuChatDEvenementVisibles && estUnChatDEvenement}
         />
 
         <BottomModal
