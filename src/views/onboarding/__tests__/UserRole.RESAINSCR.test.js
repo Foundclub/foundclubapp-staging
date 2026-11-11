@@ -298,10 +298,10 @@ describe('RESA-INSCRIPTION · interrupteur ALLUMÉ : « Pour un complexe » (E-G
     expect(complexe.props.accessibilityState).toEqual({ checked: false });
   });
 
-  // GERANT-INSCRIPTION (10/11, décision 3 A) : l'identité d'abord, comme les autres rôles. Le
-  // choix est gardé par le mode complexe (stockage local, par compte) : « Qui es-tu ? » mène ensuite
-  // à la fiche du complexe.
-  test('compte sans identité : « Qui es-tu ? » d’abord, le choix gardé en mode complexe', async () => {
+  // GERANT-INSCRIPTION (10/11, décision 3 A) : l'identité d'abord, comme les autres rôles.
+  // Le choix est gardé par le mode complexe (stockage local, par compte) : « Qui es-tu ? »
+  // mène ensuite à la fiche du complexe.
+  test('sans identité : « Qui es-tu ? » d’abord, le choix gardé en mode complexe', async () => {
     const { storage } = jest.requireMock('@/store/appContext');
     const arbre = await monter();
     await appuyer(rangee(arbre, 'Je gère un complexe'));

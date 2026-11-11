@@ -830,7 +830,7 @@ describe('UserName — le gérant d’un complexe donne son identité (GERANT-IN
 
   // Remplacé par la décision d'Adel « 224- B » (18 ans pour gérer un complexe) : un gérant de
   // 14 ans (compte 982 qui taperait une date de mineur) est refusé, son complexe reste en place.
-  it('14 ans, gère déjà un complexe : refusé (18 ans), rien ne part, pas de complexe ouvert', async () => {
+  it('14 ans, gère un complexe : refusé (18 ans), rien ne part, aucun complexe', async () => {
     mockLireMesComplexes.mockResolvedValue({ data: [{ documentId: 'cx-5' }] });
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const arbre = rendre('Authenticated');
@@ -888,7 +888,7 @@ describe('UserName — 18 ans pour gérer un complexe (GERANT-INSCRIPTION, 224 B
     jest.requireMock('@/store/appContext').storage.getString.mockReset();
   });
 
-  it('17 ans (18 ans moins un jour) : refus clair, rien ne part, retour au choix du statut', async () => {
+  it('17 ans (18 ans moins un jour) : refus, rien ne part, retour au choix du statut', async () => {
     mockLireMesComplexes.mockResolvedValue({ data: [] });
     const storage = modeComplexeAllume();
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
