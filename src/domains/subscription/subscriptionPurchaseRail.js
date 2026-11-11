@@ -111,6 +111,23 @@ export const isSubscriptionPurchaseAvailable = () => {
 const getStoreProvider = () => (Platform.OS === 'ios' ? 'apple' : 'google');
 
 /**
+ * STRIPE-OUVERTURE / L1 (10/11) — LE SITE DIT D'OU IL VIENT.
+ *
+ * Stripe renvoie l'acheteur a une adresse que le SERVEUR choisit. Il la prenait
+ * dans un seul reglage : la recette renvoyait donc sur `localhost:8081` (constat du
+ * 10/11). Le site envoie desormais son origine ; le serveur ne la prend que si elle
+ * est autorisee (subscription-stripe.ts, getReturnOrigin). Sur le telephone il n'y
+ * a pas d'origine : on n'envoie rien, le serveur garde son adresse par defaut.
+ * @returns {{ returnOrigin?: string }} - A etaler dans la charge utile.
+ */
+const getReturnOriginPayload = () => {
+  const origin = Platform.OS === 'web' && typeof window !== 'undefined'
+    ? String(window.location?.origin || '').trim()
+    : '';
+  return origin ? { returnOrigin: origin } : {};
+};
+
+/**
  * LA CAISSE WEB, ET LE SEUL ENDROIT QUI SACHE L'OUVRIR.
  *
  * Elle avait UN appelant (le rail web) ; elle en a deux depuis S12-B, parce que
@@ -149,6 +166,7 @@ const openSubscriptionWebCheckout = async ({
     ...(normalizedLicenseeCount === null ? {} : { licenseeCount: normalizedLicenseeCount }),
     planCode: String(catalogEntry?.planCode || '').trim(),
     teamDocumentIds,
+    ...getReturnOriginPayload(),
   });
   const checkoutUrl = String(session?.url || '').trim();
   if (!checkoutUrl) {
@@ -651,11 +669,20 @@ export const restoreAllSubscriptionPurchases = async () => {
  * @returns {Promise<{opened: boolean, reason: string}>} Ce qui s est passe.
  */
 export const openSubscriptionManagementPortal = async () => {
-  const portal = await openSubscriptionBillingPortal();
+  const portal = await openSubscriptionBillingPortal(getReturnOriginPayload());
   const url = String(portal?.url || '').trim();
   if (!portal?.available || !url) {
     return { opened: false, reason: String(portal?.reason || 'unavailable') };
   }
-  await Linking.openURL(url);
+  // STRIPE-OUVERTURE / L4 — sur le site, le portail REMPLACE la page, comme la
+  // caisse : un nouvel onglet ouvert apres un appel au serveur est bloque par les
+  // navigateurs, et le portail ramene de lui-meme sur « Mon abonnement ».
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.assign(url);
+    }
+  } else {
+    await Linking.openURL(url);
+  }
   return { opened: true, reason: 'ok' };
 };

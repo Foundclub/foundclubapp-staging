@@ -21736,6 +21736,8 @@ export default {
       teamCoveredByClubPlan: "This team is already covered by its club's Club plan: you already have these rights, no need to pay for a Team plan for it.",
       teamSlotCountExceeded: 'This plan does not have enough places to cover that many teams. Adjust your selection before continuing.',
       teamSlotDuplicate: 'The same team cannot be assigned twice to the same Team plan.',
+      webPaymentActivationDelayed: 'Your payment has been received, but activating your plan is taking longer than expected. We are finishing it on our side: if it does not appear within an hour, write to us at {{email}}.',
+      webPaymentNotOpen: 'Card payment is not open on the website yet. Try again a little later, or subscribe from the mobile app.',
       webPlanChangeClosed: 'Public web plan changes are not open yet in this environment.',
     },
     monthlyEquivalent: 'i.e. {{amount}} {{currency}}/month',

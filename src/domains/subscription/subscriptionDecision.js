@@ -1294,6 +1294,16 @@ export const formatSubscriptionPlanLabel = (planCode) => {
     return i18next.t('subscriptionDecision.planLabel.foundclub', 'Club · offert par FoundClub');
   }
 
+  // STRIPE-OUVERTURE (10/11) — l'essai gratuit, que le site ecrivait « Fc Trial Club »
+  // (rapport STRIPE-WEB). Memes clefs que l'ecran « Mon abonnement » du telephone
+  // (TRIAL_PLAN_LABELS, SubscriptionOverview.js) : un seul nom pour la meme chose.
+  if (normalizedPlanCode === 'fc_trial_club') {
+    return i18next.t('subscriptionOverview.trialPlans.club', 'Essai Club');
+  }
+  if (normalizedPlanCode === 'fc_trial_team') {
+    return i18next.t('subscriptionOverview.trialPlans.team', 'Essai Équipe');
+  }
+
   // T09 — c'est le SEUL nom que connaisse l'ecran « Mon abonnement » : il ne
   // recoit qu'un planCode (SubscriptionOverview.js:239), jamais le displayName du
   // catalogue. Il doit donc reconstruire mot pour mot le nom sous lequel l'offre

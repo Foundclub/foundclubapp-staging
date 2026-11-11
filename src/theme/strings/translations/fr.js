@@ -22587,6 +22587,10 @@ export default {
       // eslint-disable-next-line max-len
       teamSlotDuplicate: 'Une même équipe ne peut pas être attribuée deux fois à la même offre Équipe.',
       // eslint-disable-next-line max-len
+      webPaymentActivationDelayed: 'Ton paiement est bien reçu, mais l’activation de ton offre prend du retard. Nous la terminons de notre côté : si elle n’apparaît pas d’ici une heure, écris-nous à {{email}}.',
+      // eslint-disable-next-line max-len
+      webPaymentNotOpen: 'Le paiement par carte n’est pas encore ouvert sur le site. Réessaie un peu plus tard, ou abonne-toi depuis l’app mobile.',
+      // eslint-disable-next-line max-len
       webPlanChangeClosed: 'Le changement d’offre web public n’est pas encore ouvert sur cet environnement.',
     },
     monthlyEquivalent: 'soit {{amount}} {{currency}}/mois',

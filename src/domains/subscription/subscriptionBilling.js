@@ -1530,6 +1530,43 @@ export const getSubscriptionBillingErrorMessage = (error) => {
     );
   }
 
+  // STRIPE-OUVERTURE / L0 (10/11) — LES REFUS DE LA CAISSE WEB, EN PHRASES.
+  //
+  // Le site les affichait TELS QUELS (rapport STRIPE-WEB du 10/11) : « Le checkout
+  // web n est pas configure (STRIPE_SECRET_KEY absente). », « Produit Stripe absent
+  // pour fc_club_tier_4_yearly — lancer scripts/stripe-create-products.js --apply. ».
+  // Ce sont des messages pour nous (ils restent dans les journaux du serveur), pas
+  // pour un client. Prefixes = debut exact des messages de
+  // admin/src/api/subscription/services/subscription-stripe.ts ; un message qui
+  // porte un detail variable (planCode, reponse de Stripe) se reconnait au debut.
+  // Avant paiement : rien n'est encaisse, on le dit et on donne la sortie (l'app).
+  if ([
+    'Le checkout web n est pas configure',
+    'Produit Stripe absent pour ',
+    'Paiement web indisponible:',
+  ].some((prefixe) => message.startsWith(prefixe))) {
+    return i18next.t(
+      'subscriptionBilling.errors.webPaymentNotOpen',
+      'Le paiement par carte n’est pas encore ouvert sur le site. Réessaie un peu plus tard, ou '
+        + 'abonne-toi depuis l’app mobile.',
+    );
+  }
+  // Apres paiement (retour de la page Stripe) : l'argent est encaisse, c'est la
+  // transmission qui a echoue. Le client doit lire que son paiement est recu.
+  if ([
+    'REVENUECAT_API_KEY absente',
+    'Achat web transmis a Stripe mais pas a RevenueCat',
+    'Abonnement Stripe introuvable sur la session payee',
+  ].some((prefixe) => message.startsWith(prefixe))) {
+    return i18next.t(
+      'subscriptionBilling.errors.webPaymentActivationDelayed',
+      'Ton paiement est bien reçu, mais l’activation de ton offre prend du retard. Nous la '
+        + 'terminons de notre côté : si elle n’apparaît pas d’ici une heure, écris-nous à '
+        + '{{email}}.',
+      { email: SUPPORT_CONTACT_EMAIL, ...SANS_ECHAPPEMENT },
+    );
+  }
+
   if (message) {
     return message;
   }
