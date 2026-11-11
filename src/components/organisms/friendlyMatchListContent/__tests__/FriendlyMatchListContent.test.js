@@ -359,3 +359,23 @@ describe('FriendlyMatchListContent — CORR-RECHERCHE point 2 : tout defile', ()
     expect(reclamer).toHaveBeenCalled();
   });
 });
+
+// GUIDE-RECHERCHER (M1101) : la 1ʳᵉ bulle des matchs amicaux désigne les 3 sous-onglets du staff.
+describe('FriendlyMatchListContent — l ancre du guide sur les sous-onglets', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetFriendlyMatchAds.mockResolvedValue({ data: [AD], meta: {} });
+    mockGetMyFriendlyMatchAds.mockResolvedValue([]);
+    mockGetMyFriendlyMatchApplications.mockResolvedValue([]);
+  });
+
+  it('🔴 un Dirigeant : l ancre « friendly.tabs » tient les 3 sous-onglets', async () => {
+    const tree = await renderFor({ documentId: 'u-2', role: { name: 'Dirigeant' } });
+    const ancre = tree.root.findAll((/** @type {any} */ n) => n.props?.id === 'friendly.tabs'
+      && typeof n.type !== 'string')[0];
+    expect(ancre).toBeDefined();
+    const onglets = ancre.findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'tab'
+      && typeof n.type !== 'string').map((/** @type {any} */ n) => n.props.accessibilityLabel);
+    expect([...new Set(onglets)]).toEqual(['Annonces', 'Mes annonces', 'Mes propositions']);
+  });
+});

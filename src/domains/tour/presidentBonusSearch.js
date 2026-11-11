@@ -68,6 +68,40 @@ const pageStep = (id, navTarget, text, extras = {}) => Object.defineProperties({
   when: () => false,
 }, Object.getOwnPropertyDescriptors(extras));
 
+/**
+ * GUIDE-RECHERCHER (M1101, TestFlight 2.6.98 ; « 216- A », liste validée par le chef le 10/11) :
+ * la page d'une case s'explique en quelques bulles courtes (les dates, les filtres, les onglets),
+ * une seule zone désignée par bulle, montrée sans être touchée (`lookOnly`) : la flèche de
+ * l'en-tête reste libre. « Suivant » passe à la bulle suivante de la même page (`nextGoto`, sans
+ * navigation) ; de n'importe quelle bulle, la flèche mène à la case suivante (`pageStep`).
+ * La première bulle garde l'id `<case>-page`, celui où la case aiguille.
+ * @param {string} id - Id de l'étape de la case.
+ * @param {any} navTarget - La page, pour « Reprendre » (`pageTarget`).
+ * @param {Array<[string, string, () => string]>} bubbles - Suffixe d'id, zone désignée, texte.
+ * @param {any} [extras] - Propriétés en plus, sur chaque bulle de la page.
+ * @param {any} [lastExtras] - Propriétés de la dernière bulle (« Compris » de la fin du bonus).
+ * @returns {any[]} Étapes.
+ */
+const pageBubbles = (id, navTarget, bubbles, extras = {}, lastExtras = {}) => bubbles.map((
+  [suffix, target, text],
+  index,
+) => {
+  const next = bubbles[index + 1];
+  const own = next
+    ? Object.defineProperties({ nextGoto: `${id}-${next[0]}` }, {
+      nextLabel: { enumerable: true, get: () => t('next', 'Suivant') },
+    })
+    : lastExtras;
+  return pageStep(id, navTarget, text, Object.defineProperties({
+    id: `${id}-${suffix}`,
+    lookOnly: true,
+    targets: [target],
+  }, {
+    ...Object.getOwnPropertyDescriptors(extras),
+    ...Object.getOwnPropertyDescriptors(own),
+  }));
+});
+
 export const B5_MISSION = {
   estimatedSeconds: 10,
   gaugeStep: 0,
@@ -90,18 +124,31 @@ export const B5_STEPS = [
     'b5-ev',
     'Événement : tournois, stages et détections autour de toi.',
   )),
-  pageStep('b5-ev', pageTarget(RouteNames.SearchEvents), () => t(
-    'b5-ev-page',
-    'Voici les événements près de toi, jour par jour. La flèche te ramène à l’accueil.',
-  )),
+  ...pageBubbles('b5-ev', pageTarget(RouteNames.SearchEvents), [
+    ['page', 'search.events.dates', () => t(
+      'b5-ev-page',
+      'Touche un jour pour voir ses événements, ou le mois pour changer de mois.',
+    )],
+    ['filters', 'search.filters', () => t(
+      'b5-ev-filters',
+      'Les filtres : sport, ville et rayon, catégorie, niveau, type d’événement. La flèche te '
+        + 'ramène à l’accueil.',
+    )],
+  ]),
   cardStep('b5-cl', 'search-clubs', RouteNames.SearchClubs, () => t(
     'b5-cl',
     'Club : les autres clubs, pour un partenariat ou un amical.',
   )),
-  pageStep('b5-cl', pageTarget(RouteNames.SearchClubs), () => t(
-    'b5-cl-page',
-    'Voici les clubs : ouvre une fiche pour les contacter. La flèche te ramène à l’accueil.',
-  )),
+  ...pageBubbles('b5-cl', pageTarget(RouteNames.SearchClubs), [
+    ['page', 'search.clubs.chips', () => t(
+      'b5-cl-page',
+      'Choisis un sport et une ville ici, en un geste.',
+    )],
+    ['filters', 'search.filters', () => t(
+      'b5-cl-filters',
+      'D’autres filtres ici : sport, lieu et rayon. La flèche te ramène à l’accueil.',
+    )],
+  ]),
   cardStep('b5-re', 'search-reservations', RouteNames.SearchReservations, () => t(
     'b5-re',
     'Réservations : les créneaux de terrains à réserver près de toi.',
@@ -114,12 +161,19 @@ export const B5_STEPS = [
     'b5-pr',
     'Profils : les joueur·se·s et coachs ouverts au recrutement.',
   )),
-  pageStep('b5-pr', pageTarget(RouteNames.SearchRecruitment, {
+  ...pageBubbles('b5-pr', pageTarget(RouteNames.SearchRecruitment, {
     initialRecruitmentTab: 'profils',
-  }), () => t(
-    'b5-pr-page',
-    'Voici les profils ouverts au recrutement. La flèche te ramène à l’accueil.',
-  )),
+  }), [
+    ['page', 'search.recruitment.tabs', () => t(
+      'b5-pr-page',
+      'Profils : les joueur·se·s à recruter. Opportunités : les annonces. Candidatures : les '
+        + 'réponses reçues.',
+    )],
+    ['filters', 'search.filters', () => t(
+      'b5-pr-filters',
+      'Filtre par sport, ville et rayon, catégorie, poste. La flèche te ramène à l’accueil.',
+    )],
+  ]),
   cardStep('b5-fr', 'search-amicaux', RouteNames.SearchHub, () => t(
     'b5-fr',
     'Matchs amicaux : trouve un adversaire, ou publie ton annonce.',
@@ -127,11 +181,18 @@ export const B5_STEPS = [
     completesMission: true,
     get nextLabel() { return t('understood', 'Compris'); },
   }),
-  pageStep('b5-fr', pageTarget(RouteNames.SearchHub, { activeType: 'amicaux' }), () => t(
-    'b5-fr-page',
-    'Voici les équipes qui cherchent un adversaire. Tu peux aussi publier ton annonce.',
-  ), {
-    completesMission: true,
+  // Dernière page : la flèche finit le bonus à toute bulle (`completesMission`), « Suivant » non.
+  ...pageBubbles('b5-fr', pageTarget(RouteNames.SearchHub, { activeType: 'amicaux' }), [
+    ['page', 'friendly.tabs', () => t(
+      'b5-fr-page',
+      'Annonces : celles des autres équipes. Mes annonces et Mes propositions : les tiennes.',
+    )],
+    ['filters', 'search.filters', () => t(
+      'b5-fr-filters',
+      'Filtres : recevoir ou se déplacer, quand, distance, catégorie, niveau, format.',
+    )],
+    ['create', 'friendly.create', () => t('b5-fr-create', 'Ou publie ton annonce ici.')],
+  ], { completesMission: true }, {
     get nextLabel() { return t('understood', 'Compris'); },
   }),
 ];

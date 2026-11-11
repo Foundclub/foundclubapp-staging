@@ -50,7 +50,10 @@ describe('B5 : toucher la case visée fait avancer, ce n est pas une sortie', ()
       return;
     }
     expect(idAt(back.index)).toBe(next);
-    expect(step(`${id}-page`).targets).toEqual(['header.back']);
+    // GUIDE-RECHERCHER (M1101) : les pages d'Événement, Club et Profils désignent leurs dates,
+    // pastilles ou onglets (presidentBonusSearch.GUIDERECHERCHER) ; Réservations garde la flèche.
+    if (id === 'b5-re') expect(step(`${id}-page`).targets).toEqual(['header.back']);
+    else expect(step(`${id}-page`).targets).toHaveLength(1);
   });
 
   it.each(CARDS)('%s : l alias se remplace par SearchHub, ce qui compte aussi', (id) => {

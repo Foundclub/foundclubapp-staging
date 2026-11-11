@@ -241,3 +241,13 @@ describe('EventListContent — CORR-RECHERCHE point 2 : l en-tete de la recherch
     expect(reclamer).toHaveBeenCalled();
   });
 });
+
+// GUIDE-RECHERCHER (M1101) : la bulle des dates du guide Dirigeant désigne le mois et les jours.
+describe('EventListContent — l ancre du guide sur les dates', () => {
+  test('🔴 l ancre « search.events.dates » tient le sélecteur de dates', () => {
+    monter(undefined);
+    const ancre = monte.root.find((/** @type {any} */ n) => n.props?.id === 'search.events.dates'
+      && typeof n.type !== 'string');
+    expect(ancre.findAll((/** @type {any} */ n) => n.type === 'DateSlider')).toHaveLength(1);
+  });
+});

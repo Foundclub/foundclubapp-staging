@@ -624,9 +624,14 @@ export function TourProvider({ children }) {
         return;
       }
       // Bouton de la bulle (« Compris », « C'est parti », « Continuer »).
+      // GUIDE-RECHERCHER (M1101) : une bulle qui passe la main à la suivante de la même page
+      // (`nextGoto`) n'emmène nulle part et ne valide pas la mission ; sa flèche peut la valider.
+      const handOff = step.nextGoto ? indexOfStep(profile, step.nextGoto) : -1;
       applyGuideMatch(current, {
-        completes: Boolean(step.completesMission),
-        index: nextAvailableIndex(profile, current.stepIndex, guideContext(current)),
+        completes: Boolean(step.completesMission) && handOff === -1,
+        index: handOff === -1
+          ? nextAvailableIndex(profile, current.stepIndex, guideContext(current))
+          : handOff,
       });
       return;
     }

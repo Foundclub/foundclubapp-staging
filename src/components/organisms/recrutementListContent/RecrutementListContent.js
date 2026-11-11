@@ -36,6 +36,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
 import RecruitmentAdCard from '@/components/molecules/recruitmentAdCard/RecruitmentAdCard';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import {
   CarteMePrevenir,
   GuideAlertes,
@@ -73,6 +74,11 @@ import texteInsecable from '@/utils/texteInsecable';
 // (`getProfileMatchInfo`, `sortPlayerAds`) comparait DANS LE TELEPHONE les 10
 // annonces chargees. Il est remplace par la recherche du serveur, avec les
 // criteres du profil : `domains/search/pourMoiAnnonces.js`.
+
+// GUIDE-RECHERCHER (M1101) : l'ancre du guide reprend la rangée des onglets du staff.
+const TOUR_TABS_STYLE = /** @type {const} */ ({
+  flex: 1, flexDirection: 'row', gap: 8, justifyContent: 'center',
+});
 
 /**
  * Une rubrique de la liste : son titre et son compte, deja ecrit.
@@ -801,15 +807,19 @@ function RecrutementListContent({
       },
     ]}
     >
-      {renderSegmentedTab('profils', t('recrutementListContent.tabs.profiles', 'Profils'))}
-      {renderSegmentedTab('opportunites', t(
-        'recrutementListContent.tabs.opportunities',
-        'Opportunités',
-      ))}
-      {renderSegmentedTab('candidatures', t(
-        'recrutementListContent.tabs.applications',
-        'Candidatures',
-      ))}
+      {/* GUIDE-RECHERCHER (M1101) : l'ancre du guide tient les seuls onglets, sans la marge du */}
+      {/* bas ; elle reprend la rangée de la barre, que l'ancre absente laisse telle quelle. */}
+      <TourTarget id="search.recruitment.tabs" style={TOUR_TABS_STYLE}>
+        {renderSegmentedTab('profils', t('recrutementListContent.tabs.profiles', 'Profils'))}
+        {renderSegmentedTab('opportunites', t(
+          'recrutementListContent.tabs.opportunities',
+          'Opportunités',
+        ))}
+        {renderSegmentedTab('candidatures', t(
+          'recrutementListContent.tabs.applications',
+          'Candidatures',
+        ))}
+      </TourTarget>
     </View>
   );
 
