@@ -494,8 +494,8 @@ describe('ANDROIDBAR-6 — les assistants rendent le gabarit en racine, sans év
 
   // EVT-AUTRE-NOM (07/11) : 53 → 54, l'étape « Quel est le nom de votre événement ? »
   // (`EventWizardName.js`), qui rend le gabarit en racine comme les autres.
-  // AMICAUX-FORMAT (10/11) : +1, l etape « Format » du match amical (FriendlyMatchWizardFormat.js) ;
-  // reporte a la recolte du train 9.
+  // AMICAUX-FORMAT (10/11) : +1, l etape « Format » du match amical
+  // (FriendlyMatchWizardFormat.js) ; reporte a la recolte du train 9.
   it('55 assistants, dont un d événement, un d équipe et un de club', () => {
     expect(fichiers).toHaveLength(55);
     expect(fichiers).toEqual(expect.arrayContaining(ASSISTANTS_NOMMES));
