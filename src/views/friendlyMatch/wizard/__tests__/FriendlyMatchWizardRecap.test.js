@@ -82,8 +82,9 @@ const brouillonPublicable = () => ({
   category: null,
   description: 'On cherche un adversaire.',
   entryOrigin: '',
-  format: '',
-  formatOther: '',
+  // AMICAUX-FORMAT (« 3 A ») : le format est obligatoire, avec sa duree.
+  format: '11v11',
+  formatDuration: { minutes: 45, periods: 2 },
   hostingPreference: 'BOTH',
   installation: null,
   level: null,
@@ -145,8 +146,8 @@ beforeEach(() => {
 describe('Etape 7/7 — publier', () => {
   it('est la 7e etape sur 7 et son bouton dit ce qu il fait', () => {
     rendre();
-    expect(dernierGabarit().stepIndex).toBe(7);
-    expect(dernierGabarit().stepCount).toBe(7);
+    expect(dernierGabarit().stepIndex).toBe(8);
+    expect(dernierGabarit().stepCount).toBe(8); // AMICAUX-FORMAT : 8 etapes
     expect(dernierGabarit().nextLabel).toBe('Publier l’annonce');
     expect(dernierGabarit().isNextDisabled).toBe(false);
   });

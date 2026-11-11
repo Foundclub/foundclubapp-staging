@@ -289,8 +289,8 @@ beforeEach(() => {
 describe('Etape 4/7 « Où ça se passe ? » — CE QUI NE DOIT PAS BOUGER', () => {
   it('est bien la 4e etape sur 7', () => {
     rendre();
-    expect(dernierGabarit().stepIndex).toBe(4);
-    expect(dernierGabarit().stepCount).toBe(7);
+    expect(dernierGabarit().stepIndex).toBe(5);
+    expect(dernierGabarit().stepCount).toBe(8); // AMICAUX-FORMAT : 8 etapes
   });
 
   it('pose la question et son enjeu, sans jargon', () => {

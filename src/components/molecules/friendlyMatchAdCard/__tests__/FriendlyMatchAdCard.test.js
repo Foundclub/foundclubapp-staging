@@ -538,7 +538,8 @@ describe('Carte d annonce amicale — CE QUE D07 CHANGE', () => {
     const arbre = rendre();
     expect(style(noeudDuTexte(arbre, 'AS Endoume Basket')).fontSize)
       .toBe(polices.p2Black.fontSize);
-    expect(style(noeudDuTexte(arbre, 'Seniors B · Basketball · Sénior +18 · 5v5')).fontSize)
+    // AMICAUX-FORMAT : le format a quitté la sous-ligne pour son bandeau.
+    expect(style(noeudDuTexte(arbre, 'Seniors B · Basketball · Sénior +18')).fontSize)
       .toBe(polices.small.fontSize);
   });
 });
@@ -549,7 +550,7 @@ describe('Carte d annonce amicale — CE QUE D07 CHANGE', () => {
 // copy EXISTE dans `fr.js`, au caractere pres. `toEqual` sur le sous-arbre
 // entier attrape aussi bien une clef oubliee qu'une clef reformulee.
 describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
-  it('porte les 28 textes de la carte, sans en reformuler un seul', () => {
+  it('porte les 31 textes de la carte, sans en reformuler un seul', () => {
     expect(catalogueFr.friendlyMatch.adCard).toEqual({
       accessibilityHint: 'Ouvrir le détail de l\'annonce',
       accessibilityLabelPrefix: 'Match amical',
@@ -567,6 +568,7 @@ describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
         staffOnly: 'Réservé aux entraîneurs et dirigeants',
       },
       distance: 'à {{km}} km',
+      durationCaption: 'Durée',
       edit: 'Modifier',
       editAd: 'Modifier l’annonce',
       fallback: {
@@ -579,6 +581,7 @@ describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
         sport: 'Football',
         time: 'Heure à convenir',
       },
+      formatCaption: 'Format',
       seeApplications: 'Voir les {{total}} proposition{{plural}}',
       status: {
         closed: 'Clôturée',
@@ -586,6 +589,7 @@ describe('D41 ② — la copy de la carte vit dans fr.js, mot pour mot', () => {
         online: 'En ligne',
       },
       timeFrom: 'dès {{start}}',
+      toBeAgreed: 'À convenir',
       view: 'Voir',
     });
   });
@@ -688,5 +692,42 @@ describe('REPRISE-CHEMINS 45 — « Lien copié » sur la carte', () => {
     const arbre = rendre({ canApply: false, lienCopie: true, onShare: jest.fn() });
     expect(textesVisibles(arbre)).toContain('Lien copié');
     expect(textesVisibles(arbre)).not.toContain('Partager l’annonce');
+  });
+});
+
+/* eslint-disable max-len -- intitulés de témoins AMICAUX-FORMAT, lus en entier. */
+// AMICAUX-FORMAT (10/11/2026, maquette validée par Adel) — le bandeau « Format | Durée ».
+describe('AMICAUX-FORMAT — le format et la durée bien visibles', () => {
+  it('sport à formats connus : « 11 contre 11 » et « 2 × 45 min » dans le bandeau, plus dans la sous-ligne', () => {
+    const arbre = rendre({
+      ad: annonce({
+        activity: { name: 'Football' },
+        format: '11v11',
+        formatDetails: { duration: { minutes: 45, periods: 2 } },
+      }),
+    });
+    const textes = textesVisibles(arbre);
+    expect(textes).toEqual(expect.arrayContaining(['Format', '11 contre 11', 'Durée', '2 × 45 min']));
+    expect(textes).toContain('Seniors B · Football · Sénior +18');
+    expect(textes.join(' ')).not.toContain('11v11');
+  });
+
+  it('personnalisé : « 10 contre 11 » et des sets', () => {
+    const textes = textesVisibles(rendre({
+      ad: annonce({ format: '10v11', formatDetails: { duration: { sets: 3, setsMode: 'win' } } }),
+    }));
+    expect(textes).toEqual(expect.arrayContaining(['10 contre 11', '3 sets gagnants']));
+  });
+
+  it('annonce ancienne sans format ni durée : elle reste lisible, « À convenir » deux fois', () => {
+    const textes = textesVisibles(rendre({ ad: annonce({ format: undefined, formatDetails: undefined }) }));
+    expect(textes.filter((texte) => texte === 'À convenir')).toHaveLength(2);
+    expect(textes).toContain('AS Endoume Basket');
+    expect(textes).toContain('Proposer un match');
+  });
+
+  it('annonce ancienne au format en texte libre : le texte tel quel, la durée à convenir', () => {
+    const textes = textesVisibles(rendre({ ad: annonce({ format: 'beach 3v3' }) }));
+    expect(textes).toEqual(expect.arrayContaining(['beach 3v3', 'À convenir']));
   });
 });

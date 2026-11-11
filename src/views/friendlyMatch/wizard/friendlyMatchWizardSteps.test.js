@@ -27,7 +27,7 @@ const makeDraft = (overrides = {}) => ({
   categories: [{ documentId: 'cat-1', name: 'U15' }],
   description: 'On cherche un match sympa.',
   format: '7v7',
-  formatOther: '',
+  formatDuration: { minutes: 30, periods: 2 },
   hostingPreference: 'HOST',
   installation: { documentId: 'inst-1', name: 'Stade Nord' },
   levels: [{ documentId: 'lvl-1', name: 'Departemental' }],
@@ -39,10 +39,12 @@ const makeDraft = (overrides = {}) => ({
   ...overrides,
 });
 
-describe('friendlyMatchWizardSteps — la carte des 7 etapes (§4.1)', () => {
-  test('les 7 etapes de la spec sont la, dans l ordre', () => {
+// AMICAUX-FORMAT (« 1 A », 10/11/2026) : l etape « format » s insere en 2/8.
+describe('friendlyMatchWizardSteps — la carte des 8 etapes (§4.1)', () => {
+  test('les 8 etapes sont la, dans l ordre', () => {
     expect(FRIENDLY_MATCH_WIZARD_STEPS).toEqual([
       'team',
+      'format',
       'hosting',
       'dates',
       'location',
@@ -50,12 +52,12 @@ describe('friendlyMatchWizardSteps — la carte des 7 etapes (§4.1)', () => {
       'description',
       'recap',
     ]);
-    expect(getFriendlyMatchWizardStepCount()).toBe(7);
+    expect(getFriendlyMatchWizardStepCount()).toBe(8);
   });
 
   test('l index affiche commence a 1, pas a 0', () => {
     expect(getFriendlyMatchWizardStepIndex('team')).toBe(1);
-    expect(getFriendlyMatchWizardStepIndex('recap')).toBe(7);
+    expect(getFriendlyMatchWizardStepIndex('recap')).toBe(8);
   });
 
   test('une etape inconnue ne casse pas le compteur du gabarit', () => {
@@ -109,20 +111,11 @@ describe('friendlyMatchWizardSteps — ce qui bloque « Suivant »', () => {
     expect(getFriendlyMatchWizardStepIssue('location', makeDraft())).toBeNull();
   });
 
-  test('categorie, niveau et format restent facultatifs — sauf « Autre » sans texte', () => {
+  // AMICAUX-FORMAT : le format a son etape (temoin : __tests__/AMICAUXFORMAT-etapeFormat.test.js).
+  test('categorie et niveau restent facultatifs', () => {
     expect(getFriendlyMatchWizardStepIssue(
       'opponent',
       makeDraft({ category: null, format: '', level: null }),
-    )).toBeNull();
-
-    expect(getFriendlyMatchWizardStepIssue(
-      'opponent',
-      makeDraft({ format: 'Autre', formatOther: '   ' }),
-    )).not.toBeNull();
-
-    expect(getFriendlyMatchWizardStepIssue(
-      'opponent',
-      makeDraft({ format: 'Autre', formatOther: 'Beach 3v3' }),
     )).toBeNull();
   });
 
@@ -181,12 +174,12 @@ describe('friendlyMatchWizardSteps — le corps envoye au serveur', () => {
     ]);
   });
 
-  test('« Autre » est remplace par le texte libre, jamais envoye tel quel (§3.4)', () => {
+  test('le personnalise part en « XvY », jamais en « custom » (AMICAUX-FORMAT)', () => {
     const payload = buildFriendlyMatchAdPayload(makeDraft({
-      format: 'Autre',
-      formatOther: '  Beach 3v3  ',
+      format: 'custom',
+      formatCustom: { them: 9, us: 9 },
     }));
-    expect(payload.format).toBe('Beach 3v3');
+    expect(payload.format).toBe('9v9');
   });
 
   test('« je me deplace » n emporte AUCUN terrain : il n y en a pas a proposer', () => {

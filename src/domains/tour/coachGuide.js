@@ -868,9 +868,15 @@ const STEPS = [
     get text() { return t('m4-frc', 'À toi : crée ton annonce de match amical.'); },
   },
   ...(/** @type {Array<[string, string, () => string]>} */ ([
-    ['m4-am1', RouteNames.FriendlyMatchWizardHosting, () => t(
+    // AMICAUX-FORMAT (10/11/2026) : apres l equipe vient le format (etape 2/8), sa bulle a lui.
+    ['m4-am1', RouteNames.FriendlyMatchWizardFormat, () => t(
       'm4-am1',
       'Touche l’équipe qui cherche un adversaire.',
+    )],
+    ['m4-amf', RouteNames.FriendlyMatchWizardHosting, () => t(
+      'm4-amf',
+      'Choisis le format : combien contre combien. La durée habituelle est déjà cochée, '
+        + 'change-la si besoin.',
     )],
     ['m4-am2', RouteNames.FriendlyMatchWizardDates, () => t(
       'm4-am2',

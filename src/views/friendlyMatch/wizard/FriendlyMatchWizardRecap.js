@@ -9,6 +9,7 @@ import {
   getHostingSummary,
   getReferenceNames,
 } from '@/domains/search/friendlyMatchFlow';
+import { formatDurationLabel, getFormatLabel } from '@/domains/search/friendlyMatchFormats';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -22,9 +23,7 @@ import { createLogger } from '@/utils/logger/logger';
 
 /* eslint-disable perfectionist/sort-imports */
 import { useAppFeedback } from '@/context/AppFeedbackContext';
-
 import { toShortDay } from '../friendlyMatchDateLabels';
-
 import { useFriendlyMatchWizard } from './FriendlyMatchWizardContext';
 import {
   buildFriendlyMatchAdPayload,
@@ -57,6 +56,7 @@ const ENTRY_ORIGINS = new Set([RouteNames.EventStack]);
 const STEP_ROUTES = {
   dates: RouteNames.FriendlyMatchWizardDates,
   description: RouteNames.FriendlyMatchWizardDescription,
+  format: RouteNames.FriendlyMatchWizardFormat,
   hosting: RouteNames.FriendlyMatchWizardHosting,
   location: RouteNames.FriendlyMatchWizardLocation,
   opponent: RouteNames.FriendlyMatchWizardOpponent,
@@ -111,7 +111,14 @@ function FriendlyMatchWizardRecap({ navigation }) {
     both: t('friendlyMatchWizardRecap.iCanBoth', 'Recevoir ou me déplacer'),
     host: t('friendlyMatchWizardRecap.iCanHost', 'Recevoir'),
   })[hostingSummary.tone] || hostingSummary.label;
-  const formatLabel = state.format === 'Autre' ? state.formatOther : state.format;
+  // AMICAUX-FORMAT : « 11 contre 11 · 2 × 45 min · mi-terrain », comme les autres clubs le liront.
+  const payload = buildFriendlyMatchAdPayload(state);
+  const sportName = typeof state.activity === 'string' ? state.activity : state.activity?.name;
+  const matchLabel = [
+    getFormatLabel(payload.format, sportName),
+    formatDurationLabel(payload.formatDetails?.duration),
+    payload.formatDetails?.precision,
+  ].filter(Boolean).join(' · ');
 
   const handlePublish = async () => {
     if (blockingStep) {
@@ -251,6 +258,7 @@ function FriendlyMatchWizardRecap({ navigation }) {
     >
       <View style={[Spaces.gap[12]]}>
         {renderRow(t('friendlyMatchWizardRecap.team', 'Équipe'), state.team?.name || '', 'team')}
+        {renderRow(t('friendlyMatchWizardRecap.match', 'Le match'), matchLabel, 'format')}
         {renderRow(t('friendlyMatchWizardRecap.iCan', 'Je peux'), iCanLabel, 'hosting')}
         {renderRow(
           slots.length > 1
@@ -270,7 +278,6 @@ function FriendlyMatchWizardRecap({ navigation }) {
           [
             getReferenceNames(getAdCategories(state)),
             getReferenceNames(getAdLevels(state)),
-            formatLabel,
           ].filter(Boolean).join(' · ') || t('friendlyMatchWizardRecap.any', 'Peu importe'),
           'opponent',
         )}

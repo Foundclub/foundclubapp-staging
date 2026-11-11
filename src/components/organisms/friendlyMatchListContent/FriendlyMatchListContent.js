@@ -116,6 +116,14 @@ function FriendlyMatchListContent({
     () => getManagedTeams(userData).map(getTeamKey).filter(Boolean),
     [userData],
   );
+  // AMICAUX-FORMAT — la ligne « Sport » du filtre : les sports des equipes que je gere.
+  const managedSportNames = useMemo(
+    () => getManagedTeams(userData).map((/** @type {any} */ team) => {
+      const activity = team?.activities?.[0] || team?.sport;
+      return typeof activity === 'string' ? activity : activity?.name;
+    }),
+    [userData],
+  );
 
   const [activeTab, setActiveTab] = useState(
     () => sanitizeFriendlyMatchTabForRole(initialTab, userData),
@@ -161,9 +169,12 @@ function FriendlyMatchListContent({
 
     try {
       const response = await getFriendlyMatchAds({
+        // AMICAUX-FORMAT (« 4 A ») : sport et format se trient au serveur.
+        format: filters.format,
         page: nextPage,
         pageSize: PAGE_SIZE,
         search: searchValue.trim(),
+        sport: filters.sport,
       });
       if (requestId !== adsRequestRef.current) return;
       const received = response.data || [];
@@ -183,7 +194,7 @@ function FriendlyMatchListContent({
       if (nextPage > 1) setLoadingMore(false);
       else if (!isRefresh && requestId === adsRequestRef.current) setLoading(false);
     }
-  }, [searchValue]);
+  }, [filters.format, filters.sport, searchValue]);
 
   const fetchMyAds = useCallback(async (isRefresh = false) => {
     if (!isStaff) return;
@@ -580,6 +591,7 @@ function FriendlyMatchListContent({
           setIsFiltersVisible(false);
         }}
         onClose={() => setIsFiltersVisible(false)}
+        sportNames={managedSportNames}
         visible={isFiltersVisible}
       />
     </View>

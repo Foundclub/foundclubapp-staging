@@ -184,8 +184,8 @@ beforeEach(() => {
 describe('Etape 5/7 « Quel adversaire ? » — CE QUI NE DOIT PAS BOUGER', () => {
   it('est bien la 5e etape sur 7, et on peut la sauter', () => {
     rendre();
-    expect(dernierGabarit().stepIndex).toBe(5);
-    expect(dernierGabarit().stepCount).toBe(7);
+    expect(dernierGabarit().stepIndex).toBe(6);
+    expect(dernierGabarit().stepCount).toBe(8); // AMICAUX-FORMAT : 8 etapes
     expect(dernierGabarit().showSkip).toBe(true);
     expect(dernierGabarit().skipLabel).toBe('Peu importe, je prends tout');
   });
@@ -195,10 +195,11 @@ describe('Etape 5/7 « Quel adversaire ? » — CE QUI NE DOIT PAS BOUGER', () =
     expect(dernierGabarit().isNextDisabled).toBe(false);
   });
 
-  it('propose le catalogue de formats du sport de l equipe, plus « Autre »', () => {
+  // AMICAUX-FORMAT (10/11/2026) : le format a quitte cette etape pour la sienne, en 2/8.
+  it('ne propose plus de format : il a son etape a lui, juste apres l equipe', () => {
     const affiches = textesVisibles(rendre());
-    ['11v11', '8v8', '7v7', '5v5', 'Autre'].forEach((format) => {
-      expect(affiches).toContain(format);
+    ['Format', '11v11', '8v8', 'Autre'].forEach((format) => {
+      expect(affiches).not.toContain(format);
     });
   });
 });

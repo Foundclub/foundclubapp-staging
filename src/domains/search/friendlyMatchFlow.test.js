@@ -11,7 +11,6 @@ import {
   getAllowedFriendlyMatchTabs,
   getDefaultFriendlyMatchTab,
   getDistanceKm,
-  getFormatsForSport,
   getHostingSummary,
   getHostingTag,
   getNextCandidateDate,
@@ -188,8 +187,8 @@ describe('friendlyMatchFlow — le filtre masque, il n affiche pas d erreur (§3
       .toEqual(['b', 'c']);
     expect(filterFriendlyMatchAds(ads, { category: 'cat-u15' }).map((ad) => ad.id))
       .toEqual(['a', 'b']);
-    expect(filterFriendlyMatchAds(ads, { format: '11v11' }).map((ad) => ad.id))
-      .toEqual(['a', 'c']);
+    // AMICAUX-FORMAT (« 4 A ») : le format se filtre au serveur, plus ici.
+    expect(filterFriendlyMatchAds(ads, { format: '11v11' })).toHaveLength(3);
     expect(filterFriendlyMatchAds(ads, { level: 'lvl-d2' })).toHaveLength(3);
     expect(filterFriendlyMatchAds(ads, { category: 'cat-u15', hostingIntent: 'host' })
       .map((ad) => ad.id)).toEqual(['b']);
@@ -348,14 +347,6 @@ describe('friendlyMatchFlow — dates candidates et catalogue de formats', () =>
 
     expect(getNextCandidateDate(ad, now)).toEqual({ date: '2027-05-16' });
     expect(getNextCandidateDate(buildAd({ candidateDates: [] }), now)).toBeNull();
-  });
-
-  it('propose un catalogue par sport, toujours complete par « Autre »', () => {
-    expect(getFormatsForSport('Football')).toEqual(['11v11', '8v8', '7v7', '5v5', 'Autre']);
-    expect(getFormatsForSport('Football à 5')).toEqual(['5v5', 'Autre']);
-    expect(getFormatsForSport('BASKETBALL')).toEqual(['5v5', '3x3', 'Autre']);
-    expect(getFormatsForSport('Ultimate frisbee')).toEqual(['Autre']);
-    expect(getFormatsForSport(undefined)).toEqual(['Autre']);
   });
 
   it('rend null quand une distance ne peut pas etre calculee', () => {

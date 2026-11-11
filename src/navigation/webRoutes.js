@@ -179,6 +179,7 @@ const WEB_ROUTE_PATTERNS = {
   // pose par FriendlyMatchWizardContext.
   [RouteNames.FriendlyMatchAdDetails]: '/friendly-matches/:adId',
   [RouteNames.FriendlyMatchWizardTeam]: '/friendly-matches/wizard/team',
+  [RouteNames.FriendlyMatchWizardFormat]: '/friendly-matches/wizard/format',
   [RouteNames.FriendlyMatchWizardHosting]: '/friendly-matches/wizard/hosting',
   [RouteNames.FriendlyMatchWizardDates]: '/friendly-matches/wizard/dates',
   [RouteNames.FriendlyMatchWizardLocation]: '/friendly-matches/wizard/location',

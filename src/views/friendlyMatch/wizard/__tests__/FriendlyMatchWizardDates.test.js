@@ -233,8 +233,8 @@ beforeEach(() => {
 describe('Etape 3/7 « Quand veux-tu jouer ? » — le tunnel doit se TRAVERSER', () => {
   it('est bien la 3e etape sur 7 et bloque tant qu aucune date n est posee', () => {
     const { arbre } = rendre();
-    expect(dernierGabarit().stepIndex).toBe(3);
-    expect(dernierGabarit().stepCount).toBe(7);
+    expect(dernierGabarit().stepIndex).toBe(4);
+    expect(dernierGabarit().stepCount).toBe(8); // AMICAUX-FORMAT : 8 etapes
     expect(dernierGabarit().isNextDisabled).toBe(true);
     expect(textesVisibles(arbre)).toContain('Propose au moins une date.');
   });
