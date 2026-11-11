@@ -43,7 +43,11 @@ import { useCreerMonComplexe } from '@/services/complexe/complexeQueries';
 
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
-import { LEGAL_COMPLEXE_RULES_PATH, SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
+import {
+  LEGAL_COMPLEXE_RULES_PATH,
+  LEGAL_COMPLEXE_RULES_URL,
+  SUPPORT_CONTACT_MAILTO,
+} from '@/config/legalUrls';
 
 const ETAPES = 3;
 const SIRET_RE = /^\d{14}$/;
@@ -195,8 +199,10 @@ function ComplexeDevenirGerant() {
   // REGLES-COMPLEXES (10/11, « 225- A ») : la page publique, hors du tunnel (un nouvel onglet
   // sur le site, le navigateur sur le téléphone) ; rien n'est perdu de ce qui est rempli.
   const lireLesRegles = () => {
-    Promise.resolve(Linking.openURL(buildPublicWebUrl({ path: LEGAL_COMPLEXE_RULES_PATH })))
-      .catch(() => {});
+    const adresseDesRegles = buildPublicWebUrl(
+      /** @type {any} */ ({ path: LEGAL_COMPLEXE_RULES_PATH }),
+    ) || LEGAL_COMPLEXE_RULES_URL;
+    Promise.resolve(Linking.openURL(adresseDesRegles)).catch(() => {});
   };
 
   const aide = (/** @type {string} */ texte) => (

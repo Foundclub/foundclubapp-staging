@@ -31,7 +31,7 @@ import {
 
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
-import { LEGAL_COMPLEXE_RULES_PATH } from '@/config/legalUrls';
+import { LEGAL_COMPLEXE_RULES_PATH, LEGAL_COMPLEXE_RULES_URL } from '@/config/legalUrls';
 
 const MOT_MAX = 500;
 
@@ -467,8 +467,10 @@ function ComplexeReglages() {
           accessibilityLabel={texteLireRegles}
           accessibilityRole="link"
           onPress={() => {
-            Promise.resolve(Linking.openURL(buildPublicWebUrl({ path: LEGAL_COMPLEXE_RULES_PATH })))
-              .catch(() => {});
+            const adresse = buildPublicWebUrl(
+              /** @type {any} */ ({ path: LEGAL_COMPLEXE_RULES_PATH }),
+            ) || LEGAL_COMPLEXE_RULES_URL;
+            Promise.resolve(Linking.openURL(adresse)).catch(() => {});
           }}
           style={{ alignSelf: 'center', justifyContent: 'center', minHeight: 44 }}
           testID="complexe-reglages-lire-regles"
