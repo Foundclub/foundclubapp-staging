@@ -471,3 +471,32 @@ test.each(['Joueur', 'Entraineur', 'Dirigeant'])(
     expect(mockNavigate).toHaveBeenCalledWith('UserAddress');
   },
 );
+
+// GERANT-INSCRIPTION (10/11/2026, décision 4 A) — un gérant de complexe de 13-14 ans (compte sans
+// rôle sportif) coche la déclaration comme tout le monde, puis va à SON complexe, pas aux
+// questions de sport du parcours `new`.
+jest.mock('@/services/complexe/complexeService', () => ({
+  lireMesComplexes: (...args) => mockLireMesComplexes(...args),
+}));
+const mockLireMesComplexes = jest.fn();
+
+test('GERANT-INSCRIPTION : après la case, le gérant sans rôle va à son complexe', async () => {
+  mockUserData = {
+    birthdate: '2012-03-01', documentId: 'ado-14', role: { type: 'authenticated' },
+  };
+  mockOnboardingViews = {
+    totalViews: 13,
+    views: [
+      { canShow: false, index: 1, route: 'UserRole' },
+      { canShow: true, index: 4, route: 'UserSection' },
+      { canShow: true, index: 5, route: 'UserAddress' },
+    ],
+  };
+  mockLireMesComplexes.mockResolvedValue({ data: [{ documentId: 'cx-5' }] });
+  const arbre = await rendre();
+  await cocherEtContinuer(arbre);
+  await act(async () => { await new Promise((resoudre) => { setTimeout(resoudre, 0); }); });
+
+  expect(mockNavigate).toHaveBeenCalledWith('ComplexeEspace', { complexeId: 'cx-5' });
+  expect(mockNavigate).not.toHaveBeenCalledWith('UserAddress');
+});

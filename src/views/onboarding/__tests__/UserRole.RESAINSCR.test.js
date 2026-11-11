@@ -179,16 +179,21 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => ({
 
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
 
+// GERANT-INSCRIPTION (10/11) : le compte lu à chaque rendu (sans ou avec identité).
+/** @type {any} */
+let mockUserData = null;
+const COMPTE_NEUF = {
+  documentId: 'u-neuf',
+  role: { documentId: 'role-authenticated', type: 'authenticated' },
+};
+
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => ({
     refetchUserData: jest.fn(async () => {}),
     USER_ROLES: jest.requireActual('@/domains/auth/authUseCases').USER_ROLES,
     // Un compte NEUF : son rôle est le rôle provisoire.
-    userData: {
-      documentId: 'u-neuf',
-      role: { documentId: 'role-authenticated', type: 'authenticated' },
-    },
+    userData: mockUserData,
     userDataError: null,
     userDataLoading: false,
   }),
@@ -237,6 +242,7 @@ const CONTINUER = 'Continuer';
 beforeEach(() => {
   jest.clearAllMocks();
   mockComplexesGerant = false;
+  mockUserData = COMPTE_NEUF;
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
@@ -292,7 +298,25 @@ describe('RESA-INSCRIPTION · interrupteur ALLUMÉ : « Pour un complexe » (E-G
     expect(complexe.props.accessibilityState).toEqual({ checked: false });
   });
 
+  // GERANT-INSCRIPTION (10/11, décision 3 A) : l'identité d'abord, comme les autres rôles.
+  // Le choix est gardé par le mode complexe (stockage local, par compte) : « Qui es-tu ? »
+  // mène ensuite à la fiche du complexe.
+  test('sans identité : « Qui es-tu ? » d’abord, le choix gardé en mode complexe', async () => {
+    const { storage } = jest.requireMock('@/store/appContext');
+    const arbre = await monter();
+    await appuyer(rangee(arbre, 'Je gère un complexe'));
+    await appuyer(bouton(arbre, CONTINUER));
+
+    expect(updateMe).not.toHaveBeenCalled();
+    expect(storage.set).toHaveBeenCalledWith('user.complexe_mode.u-neuf', 'on');
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('UserName');
+  });
+
   test('le choisir mène au tunnel du complexe, sans rôle posé ni question de sport', async () => {
+    mockUserData = {
+      ...COMPTE_NEUF, birthdate: '1990-05-12', firstname: 'Gérant', lastname: 'Recette',
+    };
     const arbre = await monter();
 
     expect(bouton(arbre, CONTINUER).props.disabled).toBe(true);

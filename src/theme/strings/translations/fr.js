@@ -8314,6 +8314,7 @@ export default {
       complexeIntrouvable: 'Ce complexe est introuvable, ou tu ne le gères plus.',
       dejaGere: 'Tu gères déjà un complexe.',
       horsConnexion: 'Pas de connexion : tes informations sont gardées.',
+      majeurRequis: 'Il faut avoir 18 ans pour gérer un complexe.',
       photoDejaUtilisee: 'Cette photo est déjà utilisée ailleurs : choisis-en une autre.',
       reglesNonAcceptees: 'Accepte les règles d’utilisation des complexes pour continuer.',
       retire: 'Ce complexe a été retiré de FoundClub.',
@@ -27839,6 +27840,11 @@ export default {
       dayPlaceholder: 'JJ',
       monthPlaceholder: 'MM',
       yearPlaceholder: 'AAAA',
+    },
+    gerantMineur: {
+      message: 'Il faut avoir 18 ans pour gérer un complexe sur FoundClub.',
+      retour: 'Revenir au choix du statut',
+      titre: 'Réservé aux 18 ans et plus',
     },
     loadError: {
       message: 'Impossible de charger ton profil.',

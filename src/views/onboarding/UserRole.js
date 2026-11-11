@@ -11,6 +11,8 @@ import { getRoleDocumentIdByKey, markOnboardingStarted } from '@/domains/auth/au
 import useAuth from '@/domains/auth/useAuth';
 import { aUneDemandeDeGestion } from '@/domains/collectivite/collectiviteAccueil';
 import { lienDeLaVilleRetenu } from '@/domains/collectivite/lienDeLaVille';
+import { identiteComplete } from '@/domains/complexe/arriveeSansRole';
+import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -204,8 +206,14 @@ function UserRole({ navigation }) {
       return;
     }
     // RESA-INSCRIPTION — le complexe : aucun rôle à poser, le tunnel EXISTANT (RESA-L5A1).
+    // GERANT-INSCRIPTION (10/11/2026, décision 3 A) : l'identité d'abord, comme les autres rôles,
+    // et le contrôle d'âge avant qu'un complexe existe. Le mode complexe garde le choix (stockage
+    // local, tient un rechargement du site) : « Qui es-tu ? » mène ensuite à la fiche.
     if (gereUnComplexe) {
-      navigation.navigate(RouteNames.ComplexeDevenirGerant);
+      ecrireModeComplexe(userData?.documentId, true);
+      navigation.navigate(identiteComplete(userData)
+        ? RouteNames.ComplexeDevenirGerant
+        : RouteNames.UserName);
       return;
     }
     if (!hasChosenRole) return;

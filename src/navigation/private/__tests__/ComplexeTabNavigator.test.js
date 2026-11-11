@@ -82,14 +82,16 @@ describe('RESA-INSCRIPTION — un compte « complexe seul » arrive sur son comp
 
   it('ses complexes ne sont lus que pour un compte sans rôle sportif, interrupteur allumé', () => {
     expect(source).toContain('useMesComplexes({ enabled: COMPLEXES_GERANT && sansRoleSportif })');
+    // GERANT-INSCRIPTION (10/11) : la règle partagée avec le site décide (arriveeSansRole.js).
+    expect(source).toContain('complexesGeres: COMPLEXES_GERANT ? complexesGeres.length : 0,');
     expect(source).toContain(
-      'const complexeSeul = COMPLEXES_GERANT && sansRoleSportif && complexesGeres.length > 0;',
+      "const complexeSeul = arrivee === 'complexe' || arrivee === 'identite';",
     );
   });
 
   it('la règle passe APRÈS la Ville seule et AVANT le parcours d’inscription', () => {
     const ville = source.indexOf('if (villeSeule) {');
-    const complexe = source.indexOf('if (complexeSeul) return RouteNames.ComplexeEspace;');
+    const complexe = source.indexOf('if (complexeSeul) return arrivee');
     const onboarding = source.indexOf('if (route) return route;');
     expect(ville).toBeGreaterThan(-1);
     expect(complexe).toBeGreaterThan(ville);

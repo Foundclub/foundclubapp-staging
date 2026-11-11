@@ -7798,6 +7798,7 @@ export default {
       complexeIntrouvable: 'This venue cannot be found, or you no longer manage it.',
       dejaGere: 'You already manage a venue.',
       horsConnexion: 'No connection: your details are kept.',
+      majeurRequis: 'You must be 18 or older to manage a venue.',
       photoDejaUtilisee: 'This photo is already used elsewhere: choose another one.',
       reglesNonAcceptees: 'Accept the venue terms of use to continue.',
       retire: 'This venue has been removed from FoundClub.',
@@ -26160,6 +26161,11 @@ export default {
       dayPlaceholder: 'DD',
       monthPlaceholder: 'MM',
       yearPlaceholder: 'YYYY',
+    },
+    gerantMineur: {
+      message: 'You must be 18 or older to manage a venue on FoundClub.',
+      retour: 'Back to status choice',
+      titre: '18 and over only',
     },
     loadError: {
       message: 'Unable to load your profile.',

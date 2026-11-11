@@ -7,6 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import suiteDuGerant from '@/domains/complexe/suiteDuGerant';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -91,7 +92,7 @@ function UserParentalDeclaration({ navigation, route }) {
         'Impossible d’enregistrer ta réponse.',
       ));
     },
-    onSuccess: (updatedUser) => {
+    onSuccess: async (updatedUser) => {
       queryClient.setQueriesData({ queryKey: ['get-me'] }, updatedUser);
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
       if (updatedUser?.documentId) {
@@ -110,7 +111,15 @@ function UserParentalDeclaration({ navigation, route }) {
         // laissait l'ado sur la case cochee, sans suite.
         navigation.navigate(getPostOnboardingHomeRoute());
       } else {
-        navigation.navigate(resolveRouteApresLaCase());
+        // GERANT-INSCRIPTION (10/11/2026) — le gérant d'un complexe (compte sans rôle sportif) va à
+        // son complexe, ou à la fiche : jamais aux questions de sport du parcours `new`.
+        // ponytail: filet INATTEIGNABLE depuis les 18 ans (Adel « 224- B », 10/11) :
+        // « Qui es-tu ? » refuse un gérant de moins de 18 ans avant la déclaration.
+        // Gardé si l'âge minimum redescend. À retirer, avec son témoin
+        // (UserParentalDeclaration.test.js), au premier train en prod qui porte GERANT-INSCRIPTION.
+        const suite = await suiteDuGerant(userData);
+        if (suite?.params) navigation.navigate(suite.name, suite.params);
+        else navigation.navigate(suite?.name || resolveRouteApresLaCase());
       }
     },
   });

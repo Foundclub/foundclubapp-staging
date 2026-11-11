@@ -10,6 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey, onboardingCollectsBirthdate } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { AGE_MINIMUM_GERANT } from '@/domains/complexe/arriveeSansRole';
+import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
+import suiteDuGerant from '@/domains/complexe/suiteDuGerant';
 import { Joi } from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -31,6 +34,7 @@ import { getFieldError } from '@/utils/form/formUtils';
 import { proposerPreDemandeNotifications } from '@/utils/notifications/preDemandeNotifications';
 
 import {
+  isBirthdateUnderAge,
   isBirthdateUnderParentalAge,
   isMinorParentAccountRequiredError,
   isMinorParentalDeclarationError,
@@ -245,7 +249,7 @@ function UserName({ navigation }) {
         'Impossible de mettre à jour ton profil.',
       ));
     },
-    onSuccess: (updatedUser, submitted) => {
+    onSuccess: async (updatedUser, submitted) => {
       saisieAvantCompteParent.valeurs = null;
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
 
@@ -284,6 +288,23 @@ function UserName({ navigation }) {
       // pre-demande des notifications s'ouvre par-dessus l'etape suivante : juste apres
       // « Qui es-tu ? », jamais au point de controle d'un ancien compte (retour plus haut).
       proposerPreDemandeNotifications('inscription');
+      // GERANT-INSCRIPTION (10/11/2026) — le gérant d'un complexe (compte sans rôle sportif) va à
+      // son complexe, ou à la fiche du complexe : jamais aux questions de sport du parcours `new`.
+      // Le profil en mémoire porte l'identité AVANT le départ (l'accueil du site le relit).
+      const suite = await suiteDuGerant(userData);
+      if (suite) {
+        queryClient.setQueriesData(
+          { queryKey: ['get-me'] },
+          (/** @type {any} */ ancien) => (
+            ancien?.documentId && ancien.documentId === updatedUser?.documentId
+              ? { ...ancien, ...updatedUser }
+              : ancien
+          ),
+        );
+        if (suite.params) navigation.navigate(suite.name, suite.params);
+        else navigation.navigate(suite.name);
+        return;
+      }
       const nextRoute = resolveAvailableRoute(
         navigation,
         getNextOnboardingRoute(RouteNames.UserName),
@@ -369,7 +390,7 @@ function UserName({ navigation }) {
    * @param {{firstname: string, lastname: string, day?: string,
    *   month?: string, year?: string}} data - Les valeurs du formulaire.
    */
-  const handleFormSubmit = (data) => {
+  const handleFormSubmit = async (data) => {
     if (!userData) return;
 
     // FINITIONS16 · POINT 2 — sur le site, Joi ne bloque rien (`dateDeNaissanceSaisie`) :
@@ -386,6 +407,31 @@ function UserName({ navigation }) {
     ];
     if (champsManquants.length > 0) {
       champsManquants.forEach((champ) => setError(champ, { type: 'required' }));
+      return;
+    }
+
+    // GERANT-INSCRIPTION (10/11/2026, Adel « 224- B ») — 18 ans pour gérer un complexe : dans le
+    // parcours gérant (compte sans rôle sportif qui gère ou veut gérer un complexe), un compte plus
+    // jeune revient au choix du statut. Rien ne part ; le serveur refuse aussi la création.
+    if (
+      birthdate
+      && isBirthdateUnderAge(birthdate, AGE_MINIMUM_GERANT)
+      && await suiteDuGerant(userData)
+    ) {
+      Alert.alert(
+        t('userName.gerantMineur.titre', 'Réservé aux 18 ans et plus'),
+        t(
+          'userName.gerantMineur.message',
+          'Il faut avoir 18 ans pour gérer un complexe sur FoundClub.',
+        ),
+        [{
+          onPress: () => {
+            ecrireModeComplexe(userData?.documentId, false);
+            navigation.navigate(RouteNames.UserRole);
+          },
+          text: t('userName.gerantMineur.retour', 'Revenir au choix du statut'),
+        }],
+      );
       return;
     }
 
