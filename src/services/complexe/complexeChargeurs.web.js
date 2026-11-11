@@ -1,5 +1,5 @@
 /**
- * LES DEUX DÉPENDANCES DE complexeService.js — pour le SITE. RESA-L7-1 (20/10/2026).
+ * LES TROIS DÉPENDANCES DE complexeService.js — pour le SITE. RESA-L7-1 (20/10/2026).
  *
  * Jumeau de `complexeChargeurs.js` (mêmes exports, même forme : une fonction qui rend le module)
  * que Vite prend à sa place (web/vite.config.ts, `resolve.extensions`). Le serveur de dev du site
@@ -8,6 +8,7 @@
  * l'adresse de son serveur, la raison du chargement à l'appel (les témoins sans `.env`) ne le
  * concerne pas.
  */
+import * as servicesDesMessages from '../chat/chatService';
 import clientDuSite from '../client';
 import * as servicesDesFermetures from '../facilityClosure/facilityClosureService';
 
@@ -22,3 +23,9 @@ export const client = () => clientDuSite;
  * @returns {any} Le module.
  */
 export const fermetures = () => servicesDesFermetures;
+
+/**
+ * Le service des messages — MESSAGERIE-COMPLEXE (10/11), le premier message du gérant à son client.
+ * @returns {any} Le module.
+ */
+export const messages = () => servicesDesMessages;

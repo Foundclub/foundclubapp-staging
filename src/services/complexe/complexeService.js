@@ -30,7 +30,7 @@
  * Témoin : `__tests__/complexeService.test.js`.
  */
 import { uploadActualiteFile } from '../collectivite/collectiviteActualiteService';
-import { client, fermetures } from './complexeChargeurs';
+import { client, fermetures, messages } from './complexeChargeurs';
 
 /**
  * Le corps d'une réponse.
@@ -509,10 +509,9 @@ export const ecrireLePremierMessageAuClient = async ({ complexeId, message, rese
   const ouvert = await ecrireAuReserveur(complexeId, reservationId);
   const chatId = ouvert?.data?.chat;
   if (!chatId) return ouvert;
-  // À l'appel, comme le client HTTP (en-tête du fichier) : le service des messages charge le
-  // client.
-  // eslint-disable-next-line global-require
-  await require('../chat/chatService').createChatMessage({ chatId, message });
+  // Par `complexeChargeurs`, comme le client HTTP (en-tête du fichier) : le service des messages
+  // charge le client, et le site n'a pas `require`.
+  await messages().createChatMessage({ chatId, message });
   return ouvert;
 };
 

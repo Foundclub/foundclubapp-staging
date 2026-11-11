@@ -1,5 +1,5 @@
 /**
- * LES DEUX DÉPENDANCES DE complexeService.js CHARGÉES À L'APPEL — pour l'app et jest.
+ * LES TROIS DÉPENDANCES DE complexeService.js CHARGÉES À L'APPEL — pour l'app et jest.
  * RESA-L7-1 (20/10/2026), chantier Réservation.
  *
  * Le client HTTP exige l'adresse du serveur dès son chargement : importé en tête, il fait échouer
@@ -26,3 +26,11 @@ export const client = () => require('../client').default;
  */
 // eslint-disable-next-line global-require
 export const fermetures = () => require('../facilityClosure/facilityClosureService');
+
+/**
+ * Le service des messages (il importe le client), chargé à l'appel — MESSAGERIE-COMPLEXE (10/11),
+ * le premier message du gérant à son client.
+ * @returns {any} Le module.
+ */
+// eslint-disable-next-line global-require
+export const messages = () => require('../chat/chatService');
