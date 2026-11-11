@@ -190,8 +190,12 @@ function TeamDetails({ navigation, route }) {
   }, [currentUser?.myTeams, currentUser?.trainedTeams, teamId]);
 
   const {
-    data: rawTeam, error, isFetching, isLoading, refetch,
+    data: rawTeam, dataUpdatedAt: teamUpdatedAt, error, isFetching, isLoading, refetch,
   } = useGetTeam(teamId || '');
+  // PERF-EQUIPE (10/11) — l'age de la fiche, lu par reference au retour sur l'ecran (comme les
+  // portes plus bas) : le retour ne se relance pas quand la relecture se termine.
+  const teamUpdatedAtRef = useRef(teamUpdatedAt);
+  teamUpdatedAtRef.current = teamUpdatedAt;
   const team = /** @type {any} */ (rawTeam);
   // D25 ① — cette decision se lisait UNIQUEMENT dans le profil du compte, que
   // le serveur sert depuis un cache de 60 s a 4 min qu'aucune ecriture d'equipe
@@ -2080,7 +2084,13 @@ function TeamDetails({ navigation, route }) {
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
+      // PERF-EQUIPE (10/11) — une fiche relue il y a moins de 5 s (retour de « Modifier », qui la
+      // relit avant de revenir) ne repart pas : c'etait un 2e GET /teams/:id pour rien.
+      // ponytail: fenetre fixe de 5 s ; un ecran qui change l'equipe SANS l'invalider et revient
+      // en moins de 5 s montrerait l'ancienne fiche jusqu'au retour suivant. Sortie : invalider.
+      // Temoin : TeamDetails.FINITIONS2.requetesImpossibles.test.js « PERF-EQUIPE ».
+      const ageDeLaFiche = Date.now() - Number(teamUpdatedAtRef.current || 0);
+      if (!teamUpdatedAtRef.current || ageDeLaFiche >= 5000) refetch();
       // FINITIONS2 — les portes du moment, lues par reference : le retour ne se
       // relance pas quand l'equipe finit de charger (la requete qui s'ouvre alors
       // part toute seule).

@@ -199,10 +199,12 @@ function TeamEdit({ navigation, route }) {
       // pas dans cette liste : au retour, elle montrait l'ancienne categorie jusqu'a sa
       // propre relecture (partie 14 s apres l'enregistrement en recette). Montee sous ce
       // formulaire, elle se relit ici, pendant que le bouton tourne encore.
+      // PERF-EQUIPE (10/11) — seule la fiche est ATTENDUE : les trois autres familles partent
+      // ensemble, sans retenir le bouton (il attendait les quatre allers-retours en serie).
+      // Temoin : TeamEdit.retraitNiveau.test.js « PERF-EQUIPE ».
+      [['teams'], ['get-me'], ['app-bootstrap']]
+        .forEach((queryKey) => queryClient.invalidateQueries({ queryKey }));
       if (teamId) await queryClient.invalidateQueries({ queryKey: ['team', teamId] });
-      await queryClient.invalidateQueries({ queryKey: ['teams'] });
-      await queryClient.invalidateQueries({ queryKey: ['get-me'] });
-      await queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
       navigation.goBack();
     },
   });

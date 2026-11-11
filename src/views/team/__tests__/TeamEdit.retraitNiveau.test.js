@@ -484,3 +484,45 @@ describe('FINITIONS14 · « Enregistrer » relit la fiche de l equipe AVANT d y 
     act(() => arbre.unmount());
   });
 });
+
+// PERF-EQUIPE (10/11, demande d'Adel « l equipe rame apres une modification ») — LE RETOUR
+// N'ATTEND QUE LA FICHE OU L'ON REVIENT. « Enregistrer » attendait QUATRE relectures l'une apres
+// l'autre (`team`, `teams`, `get-me`, `app-bootstrap`) avant `goBack` : le bouton tournait la somme
+// des quatre allers-retours (prod 06-10/11, medianes : `/teams/:id` 1,94 s, et les trois autres
+// derriere). La fiche reste relue AVANT le retour (FINITIONS14) ; les trois autres partent en meme
+// temps, sans retenir l'ecran. Temoin : les trois autres ne repondent JAMAIS, le retour a lieu.
+describe('PERF-EQUIPE · « Enregistrer » n attend qu une relecture avant le retour', () => {
+  it('🚨 goBack ne depend que de la relecture de la fiche `[team, id]`', async () => {
+    const { updateTeam } = jest.requireMock('@/services/team/teamService');
+    mockOptionsMutations.length = 0;
+    mockInvalidateQueries.mockReset();
+    navigation.goBack.mockClear();
+    mockInvalidateQueries.mockImplementation((/** @type {any} */ parametres) => (
+      JSON.stringify(parametres?.queryKey) === JSON.stringify(['team', 'equipe-1'])
+        ? Promise.resolve()
+        : new Promise(() => {})
+    ));
+    const arbre = monter();
+    const options = [...mockOptionsMutations].reverse()
+      .find((/** @type {any} */ entree) => entree?.mutationFn === updateTeam);
+
+    await act(async () => {
+      options.onSuccess();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    // Les trois autres familles sont toujours rafraichies, seulement plus attendues.
+    const cles = mockInvalidateQueries.mock.calls
+      .map(([parametres]) => JSON.stringify(parametres?.queryKey));
+    expect(cles).toEqual(expect.arrayContaining([
+      JSON.stringify(['team', 'equipe-1']),
+      JSON.stringify(['teams']),
+      JSON.stringify(['get-me']),
+      JSON.stringify(['app-bootstrap']),
+    ]));
+    mockInvalidateQueries.mockReset();
+    act(() => arbre.unmount());
+  });
+});

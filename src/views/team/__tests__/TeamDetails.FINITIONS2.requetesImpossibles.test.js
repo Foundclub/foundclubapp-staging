@@ -485,3 +485,36 @@ describe('STATS-ENQUETE 3 — le dirigeant du club voit l onglet Stats de ses eq
     expect(mockRefetchPerformances).not.toHaveBeenCalled();
   });
 });
+
+// PERF-EQUIPE (10/11, demande d'Adel « l equipe rame apres une modification ») — LE RETOUR SUR LA
+// FICHE NE RELIT PAS UNE EQUIPE QUI VIENT D'ETRE RELUE. « Enregistrer » (TeamEdit) relit la fiche
+// `[team, id]` AVANT de revenir (FINITIONS14) ; au retour, `useFocusEffect` relancait `refetch()` :
+// un 2e `GET /api/teams/:id` (prod : mediane 1,94 s) pour une reponse vieille de quelques
+// millisecondes. Une fiche plus vieille que quelques secondes se relit toujours au retour.
+const mockRefetchFiche = jest.fn();
+const mockReponseFicheFraiche = { ...enveloppe(EQUIPE_FOOT, mockRefetchFiche), dataUpdatedAt: 0 };
+const mockReponseFicheAncienne = { ...enveloppe(EQUIPE_FOOT, mockRefetchFiche), dataUpdatedAt: 0 };
+
+describe('PERF-EQUIPE — le retour sur la fiche ne relit pas une equipe a peine relue', () => {
+  beforeEach(() => {
+    mockRefetchFiche.mockClear();
+  });
+
+  test('🚨 equipe relue a l instant (retour de « Modifier ») : 0 GET /teams/:id de plus', () => {
+    mockReponseFicheFraiche.dataUpdatedAt = Date.now();
+    mockReponseEquipeCourante = mockReponseFicheFraiche;
+    monterPuisRevenirSurLaFiche();
+
+    expect(mockRefetchFiche).not.toHaveBeenCalled();
+    // Les statistiques gardent leur propre relecture au retour.
+    expect(mockRefetchPresences).toHaveBeenCalledTimes(1);
+  });
+
+  test('🔒 equipe relue il y a une minute : la fiche se relit au retour, comme avant', () => {
+    mockReponseFicheAncienne.dataUpdatedAt = Date.now() - 60000;
+    mockReponseEquipeCourante = mockReponseFicheAncienne;
+    monterPuisRevenirSurLaFiche();
+
+    expect(mockRefetchFiche).toHaveBeenCalledTimes(1);
+  });
+});
