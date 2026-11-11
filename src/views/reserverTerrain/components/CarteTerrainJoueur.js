@@ -3,7 +3,7 @@ import {
   Image, Text, View,
 } from 'react-native';
 
-import { ligneTerrain, texteHeure } from '@/domains/complexe/complexeTerrain';
+import { formatEuros, ligneTerrain, texteHeure } from '@/domains/complexe/complexeTerrain';
 import { lignesDuTerrainPublic } from '@/domains/complexe/reserverTerrain';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -17,8 +17,24 @@ import { useCreneauxDuJour } from '@/services/complexe/complexeJoueurQueries';
 
 import texteInsecable from '@/utils/texteInsecable';
 
-const PUCES_MAX = 6;
-const PHOTO = 120;
+// RESA-JOUEUR-2 (E-P02, maquette « 232- ok ») : 3 raccourcis au plus (avant : 6 puces) et la
+// photo à 150 px (avant : 120).
+const PUCES_MAX = 3;
+const PHOTO = 150;
+
+/**
+ * Le prix d'un créneau tel que la carte l'écrit : par joueur pour un terrain au joueur, sinon
+ * celui du créneau.
+ * @param {any} creneau - Le créneau lu.
+ * @returns {number | null} Le montant, ou null.
+ */
+const prixDuRaccourci = (creneau) => {
+  const prix = creneau?.price;
+  const montant = prix?.unit === 'joueur' && Number.isFinite(Number(prix?.perPlayer))
+    ? Number(prix.perPlayer)
+    : Number(prix?.amount);
+  return prix && Number.isFinite(montant) ? montant : null;
+};
 
 /**
  * LA CARTE D'UN TERRAIN, CÔTÉ JOUEUR — RESA-L6A (14/10/2026), planches EP02 (segment « Réserver »),
@@ -27,6 +43,8 @@ const PHOTO = 120;
  * joueur (A-G28, jamais un total à payer), les créneaux LIBRES du jour en puces, et « Voir les
  * créneaux ». Un terrain « par téléphone » montre aussi ses créneaux (A-G24) : en toucher un
  * ouvre la feuille d'appel ; « Réserver par téléphone » aussi.
+ * RESA-JOUEUR-2 (11/11/2026, E-P02) : la photo à 150 px avec « N photos », « Dès … » en tête de
+ * ligne, et « Libres aujourd'hui » : 3 raccourcis au plus, l'heure de départ et son prix.
  * @param {object} props - Les propriétés.
  * @param {string} props.date - Le jour des puces (aujourd'hui, à Paris).
  * @param {(creneau: any) => void} props.onCreneau - Toucher un créneau libre.
@@ -47,7 +65,8 @@ function CarteTerrainJoueur({
   const nom = String(terrain?.name || '');
   const parTelephone = terrain?.bookingMode === 'telephone';
   const prix = lignesDuTerrainPublic(t, terrain);
-  const photo = Array.isArray(terrain?.photos) ? terrain.photos.find(Boolean) : null;
+  const toutesLesPhotos = Array.isArray(terrain?.photos) ? terrain.photos.filter(Boolean) : [];
+  const photo = toutesLesPhotos[0] || null;
   const libres = (Array.isArray(creneaux?.data?.slots) ? creneaux.data.slots : [])
     .filter((/** @type {any} */ creneau) => creneau?.state === 'libre')
     .slice(0, PUCES_MAX);
@@ -68,12 +87,34 @@ function CarteTerrainJoueur({
       testID={`carte-terrain-joueur-${terrain?.documentId}`}
     >
       {photo ? (
-        <Image
-          accessibilityIgnoresInvertColors
-          resizeMode="cover"
-          source={{ uri: String(photo) }}
-          style={{ borderRadius: 16, height: PHOTO, width: '100%' }}
-        />
+        <View>
+          <Image
+            accessibilityIgnoresInvertColors
+            resizeMode="cover"
+            source={{ uri: String(photo) }}
+            style={{ borderRadius: 16, height: PHOTO, width: '100%' }}
+            testID={`carte-terrain-photo-${terrain?.documentId}`}
+          />
+          {toutesLesPhotos.length > 1 ? (
+            <View
+              style={{
+                backgroundColor: withAlpha(Colors.neutral900, 0.6),
+                borderRadius: 999,
+                bottom: 8,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                position: 'absolute',
+                right: 8,
+              }}
+            >
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t('reserverTerrain.complexe.nombreDePhotos', '{{nombre}} photos', {
+                  nombre: toutesLesPhotos.length,
+                })}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       ) : null}
       <View style={{ gap: 4 }}>
         <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
@@ -89,10 +130,18 @@ function CarteTerrainJoueur({
             style={[{ height: 14, marginTop: 3, width: 14 }, ApplicationStyle.tintColor.primary200]}
           />
           <View style={{ flex: 1 }}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{prix.principal}</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {/* « Dès 6 € par joueur » : en tête de ligne, la majuscule. */}
+              {prix.principal.charAt(0).toLocaleUpperCase('fr-FR') + prix.principal.slice(1)}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>{prix.secondaire}</Text>
           </View>
         </View>
+      ) : null}
+      {libres.length ? (
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+          {t('reserverTerrain.complexe.libresAujourdhui', 'Libres aujourd’hui')}
+        </Text>
       ) : null}
       {libres.length ? (
         <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
@@ -108,7 +157,13 @@ function CarteTerrainJoueur({
                 },
               )}
               key={creneau.from}
-              libelle={texteHeure(creneau.from)}
+              libelle={prixDuRaccourci(creneau) === null
+                ? texteHeure(creneau.from)
+                : t('reserverTerrain.complexe.raccourci', '{{heure}} · {{prix}}', {
+                  heure: texteHeure(creneau.from),
+                  prix: formatEuros(Number(prixDuRaccourci(creneau))),
+                  ...SANS_ECHAPPEMENT,
+                })}
               onPress={() => onCreneau(creneau)}
               testID={`terrain-${terrain?.documentId}-creneau-${creneau.from}`}
             />
