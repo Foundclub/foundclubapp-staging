@@ -6,19 +6,23 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { libelleSport } from '@/domains/complexe/complexeTerrain';
+import { libelleLieu, libelleSport } from '@/domains/complexe/complexeTerrain';
 import {
   ajouterJours,
   contenuDEchec,
   jourDeParis,
   libelleEtatDuCreneau,
+  momentsDesCreneaux,
   numeroLisible,
   parametresDEchec,
   prixDuCreneau,
+  prixDUneLigne,
   quatorzeJours,
   texteCreneau,
   texteJourCourt,
+  texteJourFerme,
   texteJourLong,
+  texteLibres,
   varianteDEchec,
 } from '@/domains/complexe/reserverTerrain';
 import { withAlpha } from '@/theme/colors';
@@ -28,7 +32,9 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import PastilleMode from '@/views/complexe/components/PastilleMode';
 import FeuilleTelephone from '@/views/reserverTerrain/components/FeuilleTelephone';
+import GaleriePhotos from '@/views/reserverTerrain/components/GaleriePhotos';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -228,6 +234,41 @@ function ReserverCreneau() {
     </View>
   );
 
+  // RESA-JOUEUR (D48, maquette « 232- ok ») : les photos du terrain en tête — la page publique
+  // les donne déjà (`photos`) ; sans photo, la galerie n'est pas dessinée.
+  const photos = Array.isArray(terrainPublic?.photos) ? terrainPublic.photos : [];
+  const galerie = (
+    <GaleriePhotos
+      legende={[terrain?.name, complexe?.name].filter(Boolean).join(' · ')}
+      photos={photos}
+      testID="creneau"
+    />
+  );
+  // La ligne d'infos en pastilles, en haut (la maquette y remonte le mode, rappelé en bas avant).
+  const capacite = Number(terrain?.capacity) > 0 ? Number(terrain.capacity) : null;
+  const infos = [
+    libelleLieu(t, terrain?.setting),
+    capacite ? t('complexeGerant.terrain.joueurs', '{{nombre}} joueurs', { nombre: capacite }) : '',
+  ].filter(Boolean);
+  const pastille = {
+    backgroundColor: withAlpha(Colors.primary500, 0.1),
+    borderColor: withAlpha(Colors.primary500, 0.35),
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  };
+  const ligneDInfos = (
+    <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 8 }]}>
+      {infos.map((info) => (
+        <View key={info} style={pastille}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{info}</Text>
+        </View>
+      ))}
+      <PastilleMode joueur mode={terrain?.bookingMode} />
+    </View>
+  );
+
   const bandeDesJours = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={[Alignments.row, { gap: 8 }]}>
@@ -345,12 +386,7 @@ function ReserverCreneau() {
             padding: 16,
           }}
         >
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t(
-              'reserverTerrain.creneau.jourFerme',
-              'Fermé ce jour-là : le complexe a fermé ce terrain.',
-            )}
-          </Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{texteJourFerme(t, creneaux)}</Text>
         </View>
       );
     }
@@ -372,60 +408,86 @@ function ReserverCreneau() {
         </View>
       );
     }
+    // RESA-JOUEUR — piste B (choisie par Adel le 10/11 : « c'est plus clair ») : une LIGNE par
+    // créneau, pleine largeur — début et fin, prix, état —, rangées par moment de la journée.
+    // Rien ne se coupe : le texte agrandi fait passer l'état sous l'heure. Un état ne se lit jamais
+    // à sa seule couleur : il est écrit.
     return (
-      <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-        {creneaux.map((/** @type {any} */ creneau) => {
-          const estChoisi = creneau.from === choisi && creneau.state === 'libre';
-          const touchable = creneau.state === 'libre' || creneau.state === 'trop-tard';
-          const pris = creneau.state === 'pris';
-          const ferme = creneau.state === 'ferme';
-          let etat = libelleEtatDuCreneau(t, creneau.state);
-          if (estChoisi) etat = t('reserverTerrain.creneau.choisi', 'Choisi');
-          let couleurDuBord = withAlpha(Colors.primary500, 0.6);
-          if (ferme || creneau.state === 'trop-tard') {
-            couleurDuBord = withAlpha(Colors.warning500, 0.6);
-          }
-          if (pris) couleurDuBord = withAlpha(Colors.primary200, 0.35);
-          return (
-            <TouchableOpacity
-              accessibilityLabel={`${texteCreneau(creneau.from, creneau.to)}, ${etat}`}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !touchable, selected: estChoisi }}
-              disabled={!touchable}
-              key={creneau.from}
-              onPress={() => toucherUnCreneau(creneau)}
-              style={{
-                backgroundColor: estChoisi
-                  ? Colors.primary500
-                  : withAlpha(Colors.primary500, pris ? 0.03 : 0.08),
-                borderColor: estChoisi ? Colors.primary500 : couleurDuBord,
-                borderRadius: 12,
-                borderStyle: pris ? 'dashed' : 'solid',
-                borderWidth: 1,
-                flexBasis: surOrdinateur ? '15%' : '31%',
-                flexGrow: 1,
-                gap: 2,
-                justifyContent: 'center',
-                minHeight: 56,
-                paddingHorizontal: 8,
-              }}
-              testID={`creneau-${creneau.from}`}
-            >
-              <Text
-                style={[
-                  Fonts.p2Bold,
-                  estChoisi ? Fonts.primary900 : Fonts.neutral00,
-                  pris ? { textDecorationLine: 'line-through' } : null,
-                ]}
-              >
-                {texteCreneau(creneau.from, creneau.to)}
+      <View style={{ gap: 16 }}>
+        {momentsDesCreneaux(t, creneaux).map((moment) => (
+          <View key={moment.cle} style={{ gap: 8 }} testID={`moment-${moment.cle}`}>
+            <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+              <Text accessibilityRole="header" style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {moment.titre}
               </Text>
-              <Text style={[Fonts.p3, estChoisi ? Fonts.primary900 : Fonts.primary200]}>
-                {etat}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+              <Text style={[Fonts.p3, Fonts.primary200]}>{texteLibres(t, moment.libres)}</Text>
+            </View>
+            {moment.creneaux.map((/** @type {any} */ creneau) => {
+              const estChoisi = creneau.from === choisi && creneau.state === 'libre';
+              const touchable = creneau.state === 'libre' || creneau.state === 'trop-tard';
+              const pris = creneau.state === 'pris';
+              const ferme = creneau.state === 'ferme';
+              const tard = creneau.state === 'trop-tard';
+              let etat = libelleEtatDuCreneau(t, creneau.state);
+              if (estChoisi) etat = t('reserverTerrain.creneau.choisi', 'Choisi');
+              let couleurDuBord = withAlpha(Colors.primary500, 0.6);
+              if (ferme || tard) couleurDuBord = withAlpha(Colors.warning500, 0.6);
+              if (pris) couleurDuBord = withAlpha(Colors.primary200, 0.35);
+              let styleDeLEtat = Fonts.primary200;
+              if (tard || ferme) styleDeLEtat = Fonts.warning500;
+              if (estChoisi) styleDeLEtat = Fonts.primary900;
+              const prix = prixDUneLigne(creneau.price);
+              const texteDuCreneau = texteCreneau(creneau.from, creneau.to);
+              return (
+                <TouchableOpacity
+                  accessibilityLabel={[texteDuCreneau, prix, etat].filter(Boolean).join(', ')}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !touchable, selected: estChoisi }}
+                  disabled={!touchable}
+                  key={creneau.from}
+                  onPress={() => toucherUnCreneau(creneau)}
+                  style={[
+                    Alignments.row,
+                    Alignments.wrap,
+                    Alignments.alignCenter,
+                    {
+                      backgroundColor: estChoisi
+                        ? Colors.primary500
+                        : withAlpha(Colors.primary500, pris ? 0.03 : 0.08),
+                      borderColor: estChoisi ? Colors.primary500 : couleurDuBord,
+                      borderRadius: 12,
+                      borderStyle: pris ? 'dashed' : 'solid',
+                      borderWidth: 1,
+                      columnGap: 12,
+                      minHeight: 52,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      rowGap: 2,
+                    },
+                  ]}
+                  testID={`creneau-${creneau.from}`}
+                >
+                  <Text
+                    style={[
+                      Fonts.p1Bold,
+                      estChoisi ? Fonts.primary900 : Fonts.neutral00,
+                      pris ? { textDecorationLine: 'line-through' } : null,
+                      { flexGrow: 1 },
+                    ]}
+                  >
+                    {texteDuCreneau}
+                  </Text>
+                  {prix ? (
+                    <Text style={[Fonts.p2Bold, estChoisi ? Fonts.primary900 : Fonts.neutral100]}>
+                      {prix}
+                    </Text>
+                  ) : null}
+                  <Text style={[Fonts.p3Bold, styleDeLEtat]}>{etat}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </View>
     );
   };
@@ -435,7 +497,8 @@ function ReserverCreneau() {
     (creneauChoisi || libres[0] || creneaux[0])?.price,
     terrain?.capacity,
   );
-  let rappelDuMode = t('reserverTerrain.mode.automatique', 'Confirmation immédiate');
+  // Le mode est en pastille en haut (maquette) ; en bas, seulement ce qu'il demande de faire.
+  let rappelDuMode = '';
   if (terrain?.bookingMode === 'manuel') {
     rappelDuMode = t('reserverTerrain.creneau.surDemande', 'Sur demande : le complexe te répond');
   } else if (parTelephone) {
@@ -454,13 +517,19 @@ function ReserverCreneau() {
         paddingTop: 12,
       }}
     >
-      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-        {t('reserverTerrain.creneau.choix', '{{jour}} · {{creneau}}', {
-          creneau: texteCreneau(creneauChoisi.from, creneauChoisi.to),
-          jour: texteJourCourt(t, date),
-          ...SANS_ECHAPPEMENT,
-        })}
-      </Text>
+      {/* RESA-JOUEUR : le pied redit le créneau entier ET son prix, près du bouton. */}
+      <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { columnGap: 12 }]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00, { flexGrow: 1 }]}>
+          {t('reserverTerrain.creneau.choix', '{{jour}} · {{creneau}}', {
+            creneau: texteCreneau(creneauChoisi.from, creneauChoisi.to),
+            jour: texteJourCourt(t, date),
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+        {prixMontre ? (
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>{prixMontre.principal}</Text>
+        ) : null}
+      </View>
       <Button
         isLoading={Boolean(apercu?.isPending)}
         onPress={continuer}
@@ -488,7 +557,9 @@ function ReserverCreneau() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {galerie}
         {enTete}
+        {ligneDInfos}
         {bandeDesJours}
         <Text style={[Fonts.p2Bold, Fonts.primary200]}>{texteJourLong(t, date)}</Text>
         {bandeau ? (
@@ -533,7 +604,9 @@ function ReserverCreneau() {
             })}
           </Text>
         ) : null}
-        <Text style={[Fonts.p3Bold, Fonts.primary200]}>{rappelDuMode}</Text>
+        {rappelDuMode ? (
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>{rappelDuMode}</Text>
+        ) : null}
         {pied}
       </ScrollView>
       <BottomModal

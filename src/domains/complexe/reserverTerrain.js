@@ -231,6 +231,89 @@ export const libelleEtatDuCreneau = (t, etat) => {
   }
 };
 
+// RESA-JOUEUR (11/11/2026, maquette « 232- ok », piste B) : les créneaux d'un jour rangés par
+// moment de la journée. Un créneau appartient au moment où il COMMENCE.
+const MOMENTS = Object.freeze([
+  { cle: 'nuit', defaut: 'Nuit', jusqua: 6 * 60 },
+  { cle: 'matin', defaut: 'Matin', jusqua: 12 * 60 },
+  { cle: 'apresMidi', defaut: 'Après-midi', jusqua: 18 * 60 },
+  { cle: 'soir', defaut: 'Soir', jusqua: 24 * 60 },
+]);
+
+/**
+ * Les minutes d'une heure « HH:MM » (0 si illisible).
+ * @param {unknown} heure - « HH:MM ».
+ * @returns {number} Les minutes depuis minuit.
+ */
+const minutesDe = (heure) => {
+  const lu = /^(\d{1,2}):(\d{2})/.exec(String(heure || ''));
+  return lu ? Number(lu[1]) * 60 + Number(lu[2]) : 0;
+};
+
+/**
+ * « 1 libre », « 2 libres », « 0 libre » (E-P03, piste B).
+ * @param {Traduire} t - Traduction.
+ * @param {number} nombre - Le nombre de créneaux libres.
+ * @returns {string} Le texte.
+ */
+export const texteLibres = (t, nombre) => (nombre > 1
+  ? t('reserverTerrain.creneau.nLibres', '{{nombre}} libres', { nombre })
+  : t('reserverTerrain.creneau.unLibre', '{{nombre}} libre', { nombre }));
+
+/**
+ * E-P03, piste B : les créneaux du jour par moment (nuit, matin, après-midi, soir), dans l'ordre
+ * du jour ; un moment sans créneau n'apparaît pas. Chaque groupe dit combien sont libres.
+ * @param {Traduire} t - Traduction.
+ * @param {Array<{ from?: string, state?: string }>} creneaux - Les créneaux du jour.
+ * @returns {Array<{ cle: string, creneaux: any[], libres: number, titre: string }>} Les groupes.
+ */
+export const momentsDesCreneaux = (t, creneaux) => MOMENTS
+  .map((moment, rang) => {
+    const debut = rang ? MOMENTS[rang - 1].jusqua : 0;
+    const dedans = (Array.isArray(creneaux) ? creneaux : []).filter((creneau) => {
+      const minutes = minutesDe(creneau?.from);
+      return minutes >= debut && minutes < moment.jusqua;
+    });
+    return {
+      cle: moment.cle,
+      creneaux: dedans,
+      libres: dedans.filter((creneau) => creneau?.state === 'libre').length,
+      titre: t(`reserverTerrain.creneau.moment.${moment.cle}`, moment.defaut),
+    };
+  })
+  .filter((groupe) => groupe.creneaux.length);
+
+/**
+ * Un jour tout fermé : « Fermé ce jour-là : Travaux » avec le motif PUBLIC du complexe
+ * (`closureLabel`, RESA-L2C) ; sans motif, la phrase d'avant.
+ * @param {Traduire} t - Traduction.
+ * @param {Array<{ closureLabel?: string | null }>} creneaux - Les créneaux (tous fermés).
+ * @returns {string} La phrase.
+ */
+export const texteJourFerme = (t, creneaux) => {
+  const motif = (Array.isArray(creneaux) ? creneaux : [])
+    .map((creneau) => String(creneau?.closureLabel || '').trim())
+    .find(Boolean);
+  return motif
+    ? t('reserverTerrain.creneau.jourFermeMotif', 'Fermé ce jour-là : {{motif}}', {
+      motif,
+      ...SANS_ECHAPPEMENT,
+    })
+    : t('reserverTerrain.creneau.jourFerme', 'Fermé ce jour-là : le complexe a fermé ce terrain.');
+};
+
+/**
+ * Le prix d'une ligne de créneau (piste B) : le montant du serveur, « 60 € » (au créneau ou par
+ * joueur selon le terrain ; la ligne sous la liste dit lequel).
+ * @param {{ amount?: number | null } | null | undefined} prix - Le prix du créneau.
+ * @returns {string} « 60 € », ou ''.
+ */
+export const prixDUneLigne = (prix) => (
+  prix && prix.amount !== null && prix.amount !== undefined && Number.isFinite(Number(prix.amount))
+    ? formatEuros(Number(prix.amount))
+    : ''
+);
+
 /**
  * Le mode d'un terrain, côté JOUEUR (P00 bloc 5) : une configuration, pas un état.
  * @param {Traduire} t - Traduction.
