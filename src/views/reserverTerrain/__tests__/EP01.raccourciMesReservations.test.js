@@ -74,6 +74,8 @@ jest.mock('@/services/activity/activityQueries', () => ({
 const mockVilles = /** @type {any[]} */ ([]);
 jest.mock('@/services/places/placesQueries', () => ({
   useGetPlaces: () => ({ data: mockVilles }),
+  // RESA-JOUEUR-2 (D54) : le nom du lieu de la position (la zone écrite) ; rien ici.
+  useGetPlacesFromCoordinates: () => ({ data: null }),
 }));
 
 let mockPositionAccordee = /** @type {any} */ (null);

@@ -41,7 +41,7 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
 import { useRechercheDeTerrains } from '@/services/complexe/complexeJoueurQueries';
-import { useGetPlaces } from '@/services/places/placesQueries';
+import { useGetPlaces, useGetPlacesFromCoordinates } from '@/services/places/placesQueries';
 
 import { getZonedDateParts } from '@/utils/parisTime';
 
@@ -51,8 +51,9 @@ import {
 } from '@/platform/maps/searchMapGeolocation';
 import { useIsDesktop } from '@/responsive';
 
-/** @typedef {{ lat: number, lng: number }} Lieu */
+/** @typedef {{ accuracy?: number, lat: number, lng: number, lueA?: number }} Lieu */
 /** @typedef {{ label: string, lat: number, lng: number }} Ville */
+/** @typedef {{ km: number, mode: 'position' | 'ville', villeChoisie: any }} BrouillonDeZone */
 
 const ATTENTE_DE_FRAPPE_MS = 300;
 const TEXTE_MIN = 2;
@@ -60,10 +61,26 @@ const DISTANCE_PAR_DEFAUT = 10;
 const DISTANCE_MAX = 50;
 const VILLES_MAX = 3;
 const SPORTS_MAX = 3;
+// RESA-JOUEUR-2 (E-P01, feuille « Changer de zone ») : les rayons de la maquette ; 50 km est déjà
+// le rayon le plus large de « Élargir ».
+const RAYONS_DE_LA_ZONE = Object.freeze([...DISTANCES_DE_RECHERCHE, DISTANCE_MAX]);
 // RESA-CARTE : la carte du téléphone prend la place libre sous l'en-tête, jamais moins ; celle
 // de l'ordinateur, à droite de la liste, a une hauteur fixe (planche OR2).
 const HAUTEUR_CARTE_MIN = 320;
 const HAUTEUR_CARTE_ORDINATEUR = 600;
+
+/**
+ * RESA-JOUEUR-2 (D54) — le nom du lieu d'une position, lu à l'envers par la Géoplateforme : son
+ * arrondissement s'il en a un (« Marseille 13e Arrondissement » se dit « Marseille 13e »), sinon sa
+ * commune ; rien si la réponse n'en dit rien.
+ * @param {any} adresse - La réponse de `/reverse` (`{ properties }`), ou rien.
+ * @returns {string | null} Le nom, ou null.
+ */
+export const nomDuLieuDeLaPosition = (adresse) => {
+  const { city, district } = adresse?.properties || {};
+  const quartier = String(district || '').replace(/\s+arrondissement$/i, '').trim();
+  return quartier || String(city || '').trim() || null;
+};
 
 /**
  * Un nom comparable : sans accents, minuscules.
@@ -175,6 +192,8 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
   // `lecture` (on regarde si elle est déjà accordée) · `accordee` · `aDemander` · `refusee`.
   const [etatPosition, setEtatPosition] = useState('lecture');
   const [feuillePosition, setFeuillePosition] = useState(false);
+  // RESA-JOUEUR-2 (E-P01) : le brouillon de la feuille « Changer de zone ».
+  const [zone, setZone] = useState(/** @type {BrouillonDeZone | null} */ (null));
   const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
   const [vue, setVue] = useState(/** @type {'liste' | 'carte'} */ ('liste'));
   // RESA-JOUEUR (D51) : la liste « Recherche de joueurs », ouverte depuis l'entrée du panneau.
@@ -194,7 +213,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     readCurrentSearchMapLocationIfGranted().then((lue) => {
       if (!vivant) return;
       if (lue) {
-        setPosition(lue);
+        setPosition({ ...lue, lueA: Date.now() });
         setEtatPosition('accordee');
       } else {
         setEtatPosition('aDemander');
@@ -217,7 +236,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     setFeuillePosition(false);
     const lue = await requestCurrentSearchMapLocation();
     if (lue) {
-      setPosition(lue);
+      setPosition({ ...lue, lueA: Date.now() });
       setVille(null);
       retenirVille(null);
       setEtatPosition('accordee');
@@ -227,6 +246,14 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
   }, []);
 
   const centre = position || ville;
+  // RESA-JOUEUR-2 (D54) : où l'on cherche, écrit en toutes lettres.
+  const adresseDeLaPosition = useGetPlacesFromCoordinates({
+    lat: Number(position?.lat),
+    lon: Number(position?.lng),
+    options: { enabled: Boolean(position), gcTime: 60 * 60 * 1000, staleTime: 60 * 60 * 1000 },
+  });
+  const nomDeLaPosition = position ? nomDuLieuDeLaPosition(adresseDeLaPosition?.data) : null;
+  const lieuDeLaZone = position ? nomDeLaPosition : (ville?.label || null);
   const texteValide = texteCherche.replace(/\s+/g, ' ').trim().length >= TEXTE_MIN;
   const filtres = useMemo(() => filtresDeRecherche({
     cadre,
@@ -350,6 +377,35 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     setTexteCherche('');
   };
 
+  // RESA-JOUEUR-2 (E-P01, D54, D59) : la feuille « Changer de zone » — autour de moi ou une ville
+  // (le sélecteur de lieu habituel), puis le rayon ; rien ne change avant « Voir les terrains ».
+  const ouvrirLaZone = (/** @type {'position' | 'ville' | undefined} */ mode) => setZone({
+    km: distanceKm,
+    mode: mode || (position ? 'position' : 'ville'),
+    villeChoisie: null,
+  });
+  const appliquerLaZone = () => {
+    const choix = zone;
+    setZone(null);
+    if (!choix) return;
+    setDistanceKm(choix.km);
+    if (choix.mode === 'ville') {
+      if (choix.villeChoisie) choisirUneVille(choix.villeChoisie);
+    } else if (!position) {
+      demanderLaPosition();
+    }
+  };
+  const metresDePrecision = Number.isFinite(position?.accuracy)
+    ? Math.max(10, Math.round(Number(position?.accuracy) / 10) * 10)
+    : null;
+  let heureDeLecture = '';
+  if (Number.isFinite(position?.lueA)) {
+    const lue = getZonedDateParts(new Date(Number(position?.lueA)), 'Europe/Paris');
+    heureDeLecture = texteHeure(
+      `${String(lue.hour).padStart(2, '0')}:${String(lue.minute).padStart(2, '0')}`,
+    );
+  }
+
   // -------------------------------------------------------------------------------------------
   // Les feuilles (en tête de l'arbre : elles se superposent à l'écran)
   // -------------------------------------------------------------------------------------------
@@ -410,6 +466,82 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
             onPress={() => setFeuillePosition(false)}
             title={t('reserverTerrain.recherche.choisirUneVille', 'Choisir une ville')}
             variant="Ghost"
+          />
+        </View>
+      </BottomModal>
+      <BottomModal
+        close={() => setZone(null)}
+        isVisible={Boolean(zone)}
+        webPresentation="dialog"
+      >
+        <View style={{ gap: 16 }} testID="reserver-recherche-feuille-zone">
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('reserverTerrain.recherche.zone.ouCherches', 'Où cherches-tu ?')}
+          </Text>
+          <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+            <PuceChoix
+              choisie={zone?.mode === 'position'}
+              libelle={nomDeLaPosition
+                ? t('reserverTerrain.recherche.zone.autourDeMoiA', 'Autour de moi · {{lieu}}', {
+                  lieu: nomDeLaPosition,
+                  ...SANS_ECHAPPEMENT,
+                })
+                : t('reserverTerrain.recherche.autourDeMoi', 'Autour de moi')}
+              onPress={() => setZone((/** @type {any} */ avant) => ({
+                ...avant, mode: 'position',
+              }))}
+            />
+            <PuceChoix
+              choisie={zone?.mode === 'ville'}
+              libelle={t('reserverTerrain.recherche.zone.uneAutreVille', 'Une autre ville')}
+              onPress={() => setZone((/** @type {any} */ avant) => ({ ...avant, mode: 'ville' }))}
+            />
+          </View>
+          {zone?.mode === 'ville' ? (
+            <AutocompleteAddressInput
+              label={t('reserverTerrain.recherche.taVille', 'Ta ville')}
+              placeholder={t('reserverTerrain.recherche.tapeUneVille', 'Tape une ville')}
+              setAddress={(/** @type {any} */ choix) => setZone((/** @type {any} */ avant) => ({
+                ...avant, villeChoisie: choix,
+              }))}
+              type="municipality"
+            />
+          ) : null}
+          <View style={{ gap: 8 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('reserverTerrain.recherche.zone.rayon', 'Rayon')}
+            </Text>
+            <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+              {RAYONS_DE_LA_ZONE.map((km) => (
+                <PuceChoix
+                  choisie={zone?.km === km}
+                  key={km}
+                  libelle={t('reserverTerrain.recherche.km', '{{nombre}} km', { nombre: km })}
+                  onPress={() => setZone((/** @type {any} */ avant) => ({ ...avant, km }))}
+                />
+              ))}
+            </View>
+          </View>
+          {position && heureDeLecture ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {metresDePrecision
+                ? t(
+                  'reserverTerrain.recherche.zone.lueAPrecision',
+                  'Ta position a été lue à {{heure}}, à {{metres}} m près. '
+                    + 'Si elle est fausse, choisis une ville.',
+                  { heure: heureDeLecture, metres: metresDePrecision, ...SANS_ECHAPPEMENT },
+                )
+                : t(
+                  'reserverTerrain.recherche.zone.lueA',
+                  'Ta position a été lue à {{heure}}. Si elle est fausse, choisis une ville.',
+                  { heure: heureDeLecture, ...SANS_ECHAPPEMENT },
+                )}
+            </Text>
+          ) : null}
+          <Button
+            onPress={appliquerLaZone}
+            title={t('reserverTerrain.recherche.voirLesTerrains', 'Voir les terrains')}
+            variant="Primary"
           />
         </View>
       </BottomModal>
@@ -557,7 +689,11 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     String(activite?.documentId) === sport
   ));
   let puceDuLieu = null;
-  if (position) {
+  // RESA-JOUEUR-2 (D54) : hors de la vue carte, la zone écrite remplace les puces du lieu et du
+  // rayon (maquette E-P01) ; la vue carte les garde (« Q3 A », resa-carte.spec à 390 px).
+  if (!enCarte) {
+    puceDuLieu = null;
+  } else if (position) {
     puceDuLieu = (
       <PuceChoix
         choisie
@@ -602,7 +738,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
         />
       ) : null}
       <PuceChoix libelle={libelleDuJour(jour)} onPress={ouvrirLesFiltres} />
-      {centre ? (
+      {centre && enCarte ? (
         <PuceChoix
           libelle={t('reserverTerrain.recherche.km', '{{nombre}} km', { nombre: distanceKm })}
           onPress={ouvrirLesFiltres}
@@ -621,6 +757,65 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
       />
     </View>
   );
+
+  let titreDeLaZone = t(
+    'reserverTerrain.recherche.zone.autourDeTaPosition',
+    'Autour de ta position · {{km}} km',
+    { km: distanceKm },
+  );
+  if (lieuDeLaZone) {
+    titreDeLaZone = t('reserverTerrain.recherche.zone.autourDe', 'Autour de {{lieu}} · {{km}} km', {
+      km: distanceKm,
+      lieu: lieuDeLaZone,
+      ...SANS_ECHAPPEMENT,
+    });
+  }
+  let sousTitreDeLaZone = t('reserverTerrain.recherche.zone.villeChoisie', 'Ville choisie');
+  if (position) {
+    sousTitreDeLaZone = metresDePrecision
+      ? t('reserverTerrain.recherche.zone.precision', 'Ta position, à {{metres}} m près', {
+        metres: metresDePrecision,
+      })
+      : t('reserverTerrain.recherche.zone.taPositionLue', 'Ta position');
+  }
+  // ponytail: sans nom de lieu, la maquette ajoute une mini-carte avec l'épingle ; la Géoplateforme
+  // nomme presque toute la France, la phrase « Autour de ta position » suffit ici (sortie : poser
+  // CarteDesComplexes en petit si une tournée trouve des positions sans nom).
+  const ligneDeLaZone = centre && !enCarte ? (
+    <TouchableOpacity
+      accessibilityLabel={t(
+        'reserverTerrain.recherche.zone.changerA11y',
+        '{{zone}} : changer de zone',
+        { zone: titreDeLaZone, ...SANS_ECHAPPEMENT },
+      )}
+      accessibilityRole="button"
+      onPress={() => ouvrirLaZone()}
+      style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        {
+          backgroundColor: withAlpha(Colors.primary500, 0.08),
+          borderColor: withAlpha(Colors.primary500, 0.3),
+          borderRadius: 16,
+          borderWidth: 1,
+          gap: 12,
+          minHeight: 44,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+        },
+      ]}
+      testID="reserver-recherche-zone"
+    >
+      <SvgIcon color={Colors.primary200} height={18} name="location-pin-alt-1" width={18} />
+      <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{titreDeLaZone}</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>{sousTitreDeLaZone}</Text>
+      </View>
+      <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+        {t('reserverTerrain.recherche.zone.changer', 'Changer')}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
 
   // RESA-CARTE — sur ordinateur, les deux vues sont côte à côte : la bascule disparaît (OR2).
   const bascule = surOrdinateur ? null : (
@@ -658,13 +853,46 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     corps = (
       <View style={carteDeBloc} testID="reserver-recherche-ville">
         {etatPosition === 'refusee' ? (
-          <Text accessibilityRole="alert" style={[Fonts.p2, Fonts.neutral00]}>
-            {t(
-              'reserverTerrain.recherche.positionRefusee',
-              'Localisation refusée : choisis une ville pour voir les terrains. '
-                + 'Tu peux l’autoriser dans les réglages de ton téléphone.',
-            )}
-          </Text>
+          // RESA-JOUEUR-2 (E-P01) : sans position, on le dit, puis on fait choisir une ville.
+          <>
+            <View
+              accessibilityRole="alert"
+              style={{
+                backgroundColor: withAlpha(Colors.warning500, 0.1),
+                borderColor: withAlpha(Colors.warning500, 0.45),
+                borderRadius: 12,
+                borderWidth: 1,
+                gap: 6,
+                padding: 12,
+              }}
+            >
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t(
+                  'reserverTerrain.recherche.zone.positionInconnue',
+                  'Ta position n’est pas connue',
+                )}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral00]}>
+                {t(
+                  'reserverTerrain.recherche.positionRefusee',
+                  'Localisation refusée : choisis une ville pour voir les terrains. '
+                    + 'Tu peux l’autoriser dans les réglages de ton téléphone.',
+                )}
+              </Text>
+              <View style={{ alignSelf: 'flex-start' }}>
+                <Button
+                  onPress={() => {
+                    Linking.openSettings?.();
+                  }}
+                  title={t('reserverTerrain.recherche.ouvrirLesReglages', 'Ouvrir les réglages')}
+                  variant="Ghost"
+                />
+              </View>
+            </View>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {t('reserverTerrain.recherche.choisisUneVille', 'Choisis une ville')}
+            </Text>
+          </>
         ) : (
           <>
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -685,13 +913,13 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
           type="municipality"
         />
         {etatPosition === 'refusee' ? (
-          <Button
-            onPress={() => {
-              Linking.openSettings?.();
-            }}
-            title={t('reserverTerrain.recherche.ouvrirLesReglages', 'Ouvrir les réglages')}
-            variant="Ghost"
-          />
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'reserverTerrain.recherche.zone.villeGardee',
+              'Ta ville sert à calculer les distances. '
+                + 'Elle est gardée pour ta prochaine recherche.',
+            )}
+          </Text>
         ) : (
           <Button
             onPress={demanderLaPosition}
@@ -768,6 +996,31 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
         'Aucun terrain disponible pour l’instant dans cette zone.',
       );
     }
+    // RESA-JOUEUR-2 (E-P01) : hors de la vue carte et sans filtre, le vide rappelle la zone (le
+    // jour, le rayon, le lieu) pour qu'on voie si la position est fausse ; la vue carte garde sa
+    // phrase (« Q3 A »).
+    const videDeLaZone = Boolean(!enCarte && centre && !sport && !heure && !cadre);
+    let quand = t('reserverTerrain.recherche.zone.quandLe', 'le {{jour}}', {
+      jour: texteJourCourt(t, jour || aujourdhui),
+      ...SANS_ECHAPPEMENT,
+    });
+    if (!jour || jour === aujourdhui) {
+      quand = t('reserverTerrain.recherche.zone.quandAujourdhui', 'aujourd’hui');
+    } else if (jour === ajouterJours(aujourdhui, 1)) {
+      quand = t('reserverTerrain.recherche.zone.quandDemain', 'demain');
+    }
+    if (videDeLaZone) {
+      titreDuVide = t(
+        'reserverTerrain.recherche.zone.vide',
+        'Aucun terrain libre {{quand}} à moins de {{km}} km de {{lieu}}.',
+        {
+          km: distanceKm,
+          lieu: lieuDeLaZone || t('reserverTerrain.recherche.zone.taPosition', 'ta position'),
+          quand,
+          ...SANS_ECHAPPEMENT,
+        },
+      );
+    }
     corps = texteValide ? (
       <View style={carteDeBloc}>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -792,6 +1045,13 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
       <View style={carteDeBloc}>
         <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{titreDuVide}</Text>
         {elargir}
+        {videDeLaZone ? (
+          <Button
+            onPress={() => ouvrirLaZone('ville')}
+            title={t('reserverTerrain.recherche.zone.changerDeVille', 'Changer de ville')}
+            variant="Secondary"
+          />
+        ) : null}
         <Button
           onPress={() => setJour(ajouterJours(jour || aujourdhui, 1))}
           title={t('reserverTerrain.recherche.voirDemain', 'Voir demain')}
@@ -1011,6 +1271,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
           value={texte}
         />
         {propositions}
+        {ligneDeLaZone}
         {puces}
         {bascule}
         {horsConnexion}
