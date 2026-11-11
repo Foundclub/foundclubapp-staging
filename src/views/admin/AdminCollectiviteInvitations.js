@@ -18,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import CollectiviteTargetSearch from '@/views/admin/components/CollectiviteTargetSearch';
 
@@ -62,6 +63,7 @@ const lireOnglet = (valeur) => (
  */
 function AdminCollectiviteInvitations() {
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
   const params = /** @type {{ collectiviteId?: string, onglet?: string } | undefined} */ (
@@ -403,11 +405,13 @@ function AdminCollectiviteInvitations() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
-      contentContainerStyle={[Spaces.paddingTop[0], Spaces.paddingBottom[24], Alignments.fill]}
+      // DEFILEMENT-LOT1 (règle A) : le cadre ne garde rien en bas ; la fin de la liste laisse
+      // ses 24, les 24 que gardait le cadre et le retrait commun.
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
-        contentContainerStyle={{ gap: 12, paddingBottom: 24, paddingTop: 12 }}
+        contentContainerStyle={{ gap: 12, paddingBottom: 48 + retraitBas, paddingTop: 12 }}
         keyboardShouldPersistTaps="handled"
         refreshControl={(
           <RefreshControl

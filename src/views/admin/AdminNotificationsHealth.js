@@ -17,6 +17,7 @@ import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import {
@@ -55,6 +56,7 @@ function AdminNotificationsHealth() {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const [{ authSessions }] = useAppContext();
   const [feedback, setFeedback] = useState('');
   const {
@@ -212,11 +214,16 @@ function AdminNotificationsHealth() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+    <ScreenContainer
+      bgImage="bg2"
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
+    >
       <ScrollView
         contentContainerStyle={[
           Spaces.paddingHorizontal[20],
-          Spaces.paddingBottom[48],
+          { paddingBottom: 48 + retraitBas },
           styles.content,
         ]}
         refreshControl={(

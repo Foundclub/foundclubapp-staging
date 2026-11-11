@@ -11,6 +11,7 @@ import Button from '@/components/atoms/button/Button';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -120,6 +121,7 @@ function RejectPaymentModal({
  */
 function ClubLicensePayments({ navigation, route }) {
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { Fonts, Spaces } = useTheme();
   const clubId = route?.params?.clubId;
   const routeCampaignId = route?.params?.campaignId;
@@ -280,7 +282,12 @@ function ClubLicensePayments({ navigation, route }) {
   };
 
   return (
-    <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
+    <ScreenContainer
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
+      withHeaderPadding
+    >
       <View style={[Spaces.gap[licenseSpacing.sectionGap], { flex: 1 }]}>
         <View style={Spaces.gap[licenseSpacing.titleGap]}>
           <Text style={[Fonts.h2, Fonts.neutral00]}>
@@ -361,7 +368,10 @@ function ClubLicensePayments({ navigation, route }) {
             </LicenseCard>
             <LicenseSectionHeader title={t('clubLicensePayments.list.title', 'A traiter')} />
             <FlatList
-              contentContainerStyle={{ gap: licenseSpacing.listGap, paddingBottom: 40 }}
+              contentContainerStyle={{
+                gap: licenseSpacing.listGap,
+                paddingBottom: 40 + retraitBas,
+              }}
               data={assignments}
               keyExtractor={(item) => String(item.documentId || item.id)}
               ListEmptyComponent={(

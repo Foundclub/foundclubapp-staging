@@ -20,6 +20,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -136,6 +137,7 @@ const getOriginLabel = (origin) => {
  */
 function TournamentTeamDetails({ navigation, route }) {
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { eventId, teamId } = route?.params || {};
   const queryClient = useQueryClient();
   const { accountRoleKey, userData } = useAuth();
@@ -590,7 +592,9 @@ function TournamentTeamDetails({ navigation, route }) {
 
   return (
     <ScreenContainer
-      bottomInsetMode="tab-scene"
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
@@ -602,7 +606,10 @@ function TournamentTeamDetails({ navigation, route }) {
         wrapperStyle={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={tournamentDs.styles.screenContent}
+          contentContainerStyle={[
+            tournamentDs.styles.screenContent,
+            { paddingBottom: 40 + retraitBas },
+          ]}
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         >

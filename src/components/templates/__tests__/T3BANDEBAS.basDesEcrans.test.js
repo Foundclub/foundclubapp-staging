@@ -42,6 +42,9 @@ const FAITS = [
   'reserverTerrain/ReserverMaReservation.js', 'reserverTerrain/ReserverResultat.js',
   'search/MyActivitiesScreen.js', 'team/TeamMembershipRequestList.js',
   'training/TrainingEnrolled.js', 'training/TrainingVideoQueue.js',
+  // DEFILEMENT-LOT1 (11/11, « D03b A » d'Adel) : les quatre écrans de saisie passent en règle A.
+  'admin/AdminCollectiviteInvitations.js', 'club/ClubMemberRoles.js',
+  'complexe/ComplexeCanal.js', 'complexe/ComplexeClients.js',
 ];
 
 // Ces deux fiches portent déjà leur retrait, dans une variable à elles (essai vu par Adel).
@@ -52,12 +55,8 @@ const FICHES = {
 
 // Relus et laissés : leur cadre garde sa marge. Ils sortent de cette liste un par un, sur décision.
 const LAISSES = {
-  'admin/AdminCollectiviteInvitations.js': 'saisie dans la liste',
   'club/AssignCoachTeams.js': 'bouton fixe sous la liste',
-  'club/ClubMemberRoles.js': 'saisie dans la liste',
   'collectivite/CollectiviteSignupStatus.js': 'pied fixe sous la liste',
-  'complexe/ComplexeCanal.js': 'saisie dans la liste',
-  'complexe/ComplexeClients.js': 'saisie dans la liste',
   'event/ParticipantEventList.js': 'onglet et bouton flottant',
   'league/match/PastMatchDetails.js': 'SafeAreaView : le retrait reviendrait sur iPhone',
   'league/ranking/RankingScreen.js': 'liste dans une carte',

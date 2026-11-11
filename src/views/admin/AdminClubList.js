@@ -25,6 +25,7 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import superAdminLayout from '@/components/molecules/superAdmin/superAdminLayout';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -143,6 +144,7 @@ function AdminClubList() {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const navigation = useNavigation();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -470,7 +472,12 @@ function AdminClubList() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+    <ScreenContainer
+      bgImage="bg2"
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
+    >
       <View style={[Spaces.paddingHorizontal[24], Spaces.marginTop[18], Spaces.marginBottom[16]]}>
         <Text style={[Fonts.label, Fonts.uppercase, { color: Colors.primary500 }]}>
           Superadmin
@@ -662,7 +669,7 @@ function AdminClubList() {
       <FlatList
         contentContainerStyle={[
           Spaces.paddingHorizontal[superAdminLayout.pageHorizontal],
-          Spaces.paddingBottom[superAdminLayout.pageBottom],
+          { paddingBottom: superAdminLayout.pageBottom + retraitBas },
         ]}
         data={clubs}
         keyExtractor={(item) => getDocumentId(item)}

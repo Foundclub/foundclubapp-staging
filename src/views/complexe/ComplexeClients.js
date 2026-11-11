@@ -17,6 +17,7 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ComplexeClient from '@/views/complexe/ComplexeClient';
 import DeuxVolets from '@/views/complexe/components/DeuxVolets';
 
@@ -43,6 +44,7 @@ import { useIsDesktop } from '@/responsive';
  */
 function ComplexeClients() {
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -228,7 +230,9 @@ function ComplexeClients() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      // DEFILEMENT-LOT1 (règle A) : le cadre ne garde rien en bas, la fin du défilement laisse
+      // ses 24 et le retrait commun.
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <DeuxVolets actif={surOrdinateur} droite={volet}>
@@ -238,7 +242,7 @@ function ComplexeClients() {
             alignSelf: 'center',
             gap: 16,
             maxWidth: 720,
-            paddingBottom: 24,
+            paddingBottom: 24 + retraitBas,
             paddingTop: 12,
             width: '100%',
           }}

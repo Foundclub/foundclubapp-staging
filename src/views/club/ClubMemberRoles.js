@@ -22,6 +22,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ClubStateView from '@/views/club/components/ClubStateView';
 
 import {
@@ -81,6 +82,7 @@ const getMemberName = (member) => [member?.firstname, member?.lastname]
 function ClubMemberRoles({ route }) {
   const clubId = sanitizeRouteParam(route?.params?.clubId);
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement();
   const {
     Alignments,
     ApplicationStyle,
@@ -500,7 +502,10 @@ function ClubMemberRoles({ route }) {
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[Alignments.fill, Spaces.paddingBottom[24]]}
+      // DEFILEMENT-LOT1 (règle A) : le cadre ne garde rien en bas ; la fin de la liste laisse
+      // les 24 que gardait le cadre et le retrait commun.
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Alignments.fill]}
     >
       <WithDataWrapper
         error={error?.message}
@@ -509,6 +514,7 @@ function ClubMemberRoles({ route }) {
         wrapperStyle={[Alignments.fill]}
       >
         <FlatList
+          contentContainerStyle={{ paddingBottom: 24 + retraitBas }}
           data={members}
           keyExtractor={(item) => item.documentId}
           ListEmptyComponent={(

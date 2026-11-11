@@ -22,6 +22,7 @@ import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile'
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 import OffreFoundclubClub from '@/views/admin/components/OffreFoundclubClub';
 
@@ -163,6 +164,7 @@ function AdminClubDetail() {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { width: screenWidth } = useWindowDimensions();
   const route = useRoute();
   const navigation = useNavigation();
@@ -540,10 +542,15 @@ function AdminClubDetail() {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+    <ScreenContainer
+      bgImage="bg2"
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
+    >
       <ScrollView
         contentContainerStyle={[
-          Spaces.paddingBottom[32],
+          { paddingBottom: 32 + retraitBas },
           {
             gap: 18,
             paddingHorizontal: contentHorizontalPadding,

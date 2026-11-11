@@ -18,6 +18,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { useGetSubscriptionOps } from '@/services/admin/adminQueries';
@@ -85,6 +86,7 @@ function AdminRevenue() {
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const queryClient = useQueryClient();
   const {
     data: subscriptionOpsData,
@@ -669,14 +671,16 @@ function AdminRevenue() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="tab-scene"
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
       // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
       <ScrollView
         contentContainerStyle={[
           Spaces.padding[24],
-          Spaces.paddingBottom[40],
+          { paddingBottom: 40 + retraitBas },
           Spaces.gap[16],
         ]}
         showsVerticalScrollIndicator={false}

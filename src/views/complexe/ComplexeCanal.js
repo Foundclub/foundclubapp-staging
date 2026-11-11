@@ -13,6 +13,7 @@ import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import FeuillePartagerAnnonce from '@/views/complexe/components/FeuillePartagerAnnonce';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
@@ -60,6 +61,7 @@ const comparable = (texte) => String(texte || '').normalize('NFD').replace(/[\u0
  */
 function ComplexeCanal() {
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -244,7 +246,9 @@ function ComplexeCanal() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="screen"
+      // DEFILEMENT-LOT1 (règle A) : le cadre ne garde rien en bas, la fin du défilement laisse
+      // ses 24 et le retrait commun.
+      bottomInsetMode="scroll-edge"
       contentContainerStyle={[Spaces.paddingTop[0], Alignments.fill]}
     >
       <ScrollView
@@ -252,7 +256,7 @@ function ComplexeCanal() {
           alignSelf: 'center',
           gap: 16,
           maxWidth: 720,
-          paddingBottom: 24,
+          paddingBottom: 24 + retraitBas,
           paddingTop: 12,
           width: '100%',
         }}

@@ -1,15 +1,17 @@
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import i18next from 'i18next';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -107,7 +109,13 @@ function PastMatchDetails() {
   const navigation = /** @type {any} */ (useNavigation());
   const { sceneBottomInset } = useBottomDockLayout();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
-  const scrollBottomPadding = Math.max(sceneBottomInset, 44);
+  // DEFILEMENT-LOT1 : la barre d'onglets n'est là que sous l'onglet League ; depuis la pile
+  // racine, sa place (134 sur iPhone) restait vide en fin de défilement. Même règle que
+  // PlayerMatchResponseScreen. Le site garde sa marge (sa coque décide du dock). Le cadre et le
+  // SafeAreaView (le haut) : lot 2.
+  const hauteurDeLaBarre = useContext(BottomTabBarHeightContext) || 0;
+  const gardeLaPlaceDuDock = Platform.OS === 'web' || hauteurDeLaBarre > 0;
+  const scrollBottomPadding = gardeLaPlaceDuDock ? sceneBottomInset : 44;
 
   const routeParams = /** @type {{ matchId?: string | number, myTeamId?: string | number } | undefined } */ (
     route.params

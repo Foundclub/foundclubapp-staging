@@ -22,6 +22,7 @@ import Tag from '@/components/atoms/tag/Tag';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -129,6 +130,7 @@ const TEAM_FILTER_OPTIONS = [
  */
 function TournamentManagement({ navigation, route }) {
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const { width: largeurDeLaFenetre } = useWindowDimensions();
   const { eventId } = route?.params || {};
   const queryClient = useQueryClient();
@@ -744,14 +746,19 @@ function TournamentManagement({ navigation, route }) {
   // un compte sans lien y demande à participer.
   if (isAccessRefusalError(error)) {
     return (
-      <ScreenContainer bottomInsetMode="tab-scene">
+      // DEFILEMENT-LOT1 : rien ne défile ici ; le plancher du cadre, plus la place des onglets.
+      <ScreenContainer>
         <TournamentInvitationRequest eventId={eventId} />
       </ScreenContainer>
     );
   }
 
   return (
-    <ScreenContainer bottomInsetMode="tab-scene">
+    <ScreenContainer
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
+    >
       <WithDataWrapper
         data={dashboard}
         error={error}
@@ -762,7 +769,7 @@ function TournamentManagement({ navigation, route }) {
         <ScrollView
           contentContainerStyle={[
             Spaces.paddingTop[24],
-            Spaces.paddingBottom[40],
+            { paddingBottom: 40 + retraitBas },
             Spaces.gap[24],
           ]}
           showsVerticalScrollIndicator={false}

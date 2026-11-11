@@ -19,6 +19,7 @@ import useTheme from '@/theme/themeContext';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -342,6 +343,7 @@ function ReviewCard({
  */
 function CMLicensesDashboard({ navigation, route }) {
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -549,12 +551,14 @@ function CMLicensesDashboard({ navigation, route }) {
 
   return (
     <ScreenContainer
-      bottomInsetMode="tab-scene"
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
       withHeaderPadding
     >
-      <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 + retraitBas }]} showsVerticalScrollIndicator={false}>
         <View style={Spaces.gap[licenseSpacing.titleGap]}>
           <Text style={[Fonts.h2, Fonts.neutral00]}>
             {t('cmLicensesDashboard.header.title', 'Cotisations multisport')}

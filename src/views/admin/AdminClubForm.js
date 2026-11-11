@@ -21,6 +21,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import AdminStateView from '@/views/admin/components/AdminStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -83,6 +84,7 @@ function AdminClubForm() {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const retraitBas = useRetraitBasDuDefilement(12);
   const navigation = useNavigation();
   const route = useRoute();
   const { clubId, duplicateFrom } = route.params || {};
@@ -432,11 +434,13 @@ function AdminClubForm() {
   return (
     <ScreenContainer
       bgImage="bg2"
-      bottomInsetMode="tab-scene"
+      // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
+      // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
+      bottomInsetMode="scroll-edge"
       // 🤖 ANDROIDBAR-5 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
-      <ScrollView contentContainerStyle={[Spaces.padding[16], Spaces.paddingBottom[32], Spaces.gap[14]]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[Spaces.padding[16], { paddingBottom: 32 + retraitBas }, Spaces.gap[14]]} showsVerticalScrollIndicator={false}>
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>
