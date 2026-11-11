@@ -69,7 +69,8 @@ export const libelleStatut = (t, statut) => {
     case ETATS_LUS.nonHonoree:
       return t('complexeReservations.statut.nonHonoree', 'Non honorée');
     case STATUTS_COLLECTE.enCollecte:
-      return t('complexeReservations.statut.enCollecte', 'En collecte');
+      // GERANT-CONSTRUCTION (12/11, « Q3 : A ») : « En construction », comme la maquette.
+      return t('complexeReservations.statut.enCollecte', 'En construction');
     case STATUTS_COLLECTE.nonAboutie:
       return t('complexeReservations.statut.nonAboutie', 'Non aboutie');
     case STATUTS.annulee:

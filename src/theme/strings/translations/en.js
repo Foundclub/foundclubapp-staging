@@ -8258,7 +8258,7 @@ export default {
       annulee: 'Cancelled',
       confirmee: 'Confirmed',
       enAttente: 'Pending',
-      enCollecte: 'Collecting players',
+      enCollecte: 'Under construction',
       jouee: 'Played',
       nonAboutie: 'Not completed',
       nonHonoree: 'No-show',

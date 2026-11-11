@@ -8784,7 +8784,7 @@ export default {
       annulee: 'Annulée',
       confirmee: 'Confirmée',
       enAttente: 'En attente',
-      enCollecte: 'En collecte',
+      enCollecte: 'En construction',
       jouee: 'Jouée',
       nonAboutie: 'Non aboutie',
       nonHonoree: 'Non honorée',

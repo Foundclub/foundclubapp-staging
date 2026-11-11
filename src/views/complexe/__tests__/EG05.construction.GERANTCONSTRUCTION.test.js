@@ -141,7 +141,7 @@ describe('GERANT-CONSTRUCTION — la fiche « en construction »', () => {
     ].forEach((texte) => expect(lus).toContain(texte));
   });
 
-  it('« Partager l’annonce » la pose dans son canal ; « Écrire au client » ouvre la conversation', async () => {
+  it('« Partager l’annonce » la pose dans son canal ; « Écrire au client » est là', async () => {
     const arbre = await monter();
     await act(async () => { pressable(arbre, 'Partager l’annonce').props.onPress(); });
     expect(mockPartager).toHaveBeenCalledWith({ complexeId: 'cx-five', reservationId: 'r-c1' });
@@ -149,11 +149,18 @@ describe('GERANT-CONSTRUCTION — la fiche « en construction »', () => {
     expect(() => pressable(arbre, 'Écrire au client')).not.toThrow();
   });
 
-  it('sans annonce ouverte : pas de « Partager l’annonce », « Écrire au client » reste', async () => {
+  it('sans annonce ouverte : pas de « Partager l’annonce », « Écrire au client » oui', async () => {
     mockFiche = { ...mockFiche, data: fiche({ annonce: null }) };
     const arbre = await monter();
     expect(() => pressable(arbre, 'Partager l’annonce')).toThrow();
     expect(() => pressable(arbre, 'Écrire au client')).not.toThrow();
+  });
+
+  it('la pastille d’en-tête dit « En construction », plus « En collecte »', async () => {
+    const arbre = await monter();
+    const pastille = parRepere(arbre, 'pastille-etat-en_collecte');
+    expect(lisibles({ root: pastille })).toContain('En construction');
+    expect(lisibles(arbre)).not.toContain('En collecte');
   });
 
   it('une réservation confirmée ne montre pas le bloc', async () => {
