@@ -22,12 +22,6 @@ import canWriteInChat from '@/domains/messaging/canWriteInChat';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
 import { filLuParDesParents, libelleDuRole, mentionDuFil } from '@/domains/messaging/roleDuMembre';
-import {
-  BandeauDuChatDEvenement,
-  InfosDuChatDEvenement,
-  sousTitreDuChatDEvenement,
-  useChatDeLEvenement,
-} from '@/views/event/components/EventChatInfos';
 // MSG1W §3.2 — les regles du menu d un message, les MEMES que le telephone (WHATSAPP2).
 import { getMessageActions } from '@/domains/messaging/messageActions';
 // MSG1W — la couleur d un nom, la MEME que sur le telephone (MSG1A).
@@ -139,6 +133,12 @@ import {
   canConvokeFromChat,
   getTeamIdOfChat,
 } from '@/views/conversationConvocation/convocationWizardUtils';
+import {
+  BandeauDuChatDEvenement,
+  InfosDuChatDEvenement,
+  sousTitreDuChatDEvenement,
+  useChatDeLEvenement,
+} from '@/views/event/components/EventChatInfos';
 import { RouteNames } from '@/navigation/routeNames'
 import links from '@/platform/links'
 // MSG1W (1-A) — les liens des applis de cartes, ceux du telephone (FeuilleDAdresse de MSG1A).
@@ -2060,7 +2060,12 @@ function Conversation({ navigation, route }) {
   // CONVERSATION-EVENEMENT-2 (maquette « 193 », E et F) — le chat d'un evenement, comme sur le
   // telephone : la date et le nombre de membres, le bandeau lieu + « Voir l'événement », les infos.
   const estUnChatDEvenement = (chatData?.type || route?.params?.chatType) === 'event';
-  const [chatDeLEvenement, relireLeChatDeLEvenement] = useChatDeLEvenement(chatId, estUnChatDEvenement);
+  const [chatDeLEvenement, relireLeChatDeLEvenement] = useChatDeLEvenement(
+    chatId,
+    estUnChatDEvenement,
+  );
+  const seulsLesParentsDuChatDEvenementLisent = !filLuParDesParents(chatData)
+    && estUnChatDEvenement && chatDeLEvenement?.aDesParents === true;
   const [infosDuChatDEvenementVisibles, setInfosDuChatDEvenementVisibles] = useState(false);
   // MSG1W §3.13 — sur ordinateur, hors de l espace de la Ville, la liste « Messages » a gauche.
   const avecColonneDesMessages = isDesktop && route?.params?.espace !== 'ville';
@@ -5299,7 +5304,9 @@ function Conversation({ navigation, route }) {
           {estUnChatDEvenement ? (
             <BandeauDuChatDEvenement
               info={chatDeLEvenement}
-              onVoirLEvenement={(eventId) => navigation.navigate(RouteNames.EventDetails, { eventId })}
+              onVoirLEvenement={(eventId) => (
+                navigation.navigate(RouteNames.EventDetails, { eventId })
+              )}
             />
           ) : null}
 
@@ -5356,7 +5363,7 @@ function Conversation({ navigation, route }) {
                     )}
                   </NoticeDeTeteDuFil>
                 ) : null}
-                {!filLuParDesParents(chatData) && estUnChatDEvenement && chatDeLEvenement?.aDesParents === true ? (
+                {seulsLesParentsDuChatDEvenementLisent ? (
                   <NoticeDeTeteDuFil testId="conversation-parents-read-notice">
                     {t(
                       'conversation.parentsReadNotice',

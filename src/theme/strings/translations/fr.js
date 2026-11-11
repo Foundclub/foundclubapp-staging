@@ -10647,8 +10647,10 @@ export default {
         leader: 'Dirigeant',
         parentOf: 'parent : {{children}}',
         parents: 'Parents · {{count}}',
-        ruleMatch: 'La liste suit la convocation. Un joueur ajouté à la convocation rejoint le chat ; un joueur retiré le quitte. Personne ne s’ajoute à la main.',
-        ruleOther: 'La liste suit les invités de l’événement. Un invité ajouté rejoint le chat ; un invité retiré le quitte. Personne ne s’ajoute à la main.',
+        ruleMatch: 'La liste suit la convocation. Un joueur ajouté à la convocation rejoint le chat ; '
+          + 'un joueur retiré le quitte. Personne ne s’ajoute à la main.',
+        ruleOther: 'La liste suit les invités de l’événement. Un invité ajouté rejoint le chat ; '
+          + 'un invité retiré le quitte. Personne ne s’ajoute à la main.',
         seeMore: 'Voir les {{count}} autres',
         staff: 'Staff · {{count}}',
         starter: 'Titulaire',

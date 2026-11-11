@@ -81,12 +81,6 @@ import {
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
 import { filLuParDesParents, libelleDuRole, mentionDuFil } from '@/domains/messaging/roleDuMembre';
-import {
-  BandeauDuChatDEvenement,
-  InfosDuChatDEvenement,
-  sousTitreDuChatDEvenement,
-  useChatDeLEvenement,
-} from '@/views/event/components/EventChatInfos';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useRolesDesMembres from '@/domains/messaging/useRolesDesMembres';
 import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
@@ -178,6 +172,12 @@ import {
   canConvokeFromChat,
   getTeamIdOfChat,
 } from '@/views/conversationConvocation/convocationWizardUtils';
+import {
+  BandeauDuChatDEvenement,
+  InfosDuChatDEvenement,
+  sousTitreDuChatDEvenement,
+  useChatDeLEvenement,
+} from '@/views/event/components/EventChatInfos';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -1179,10 +1179,13 @@ function Conversation({ navigation, route }) {
     userData?.team?.documentId,
   ]);
   const isGroupChat = chatData?.type === 'group';
-  // CONVERSATION-EVENEMENT-2 (maquette « 193 », E et F) — le chat d'un evenement : la date et le
-  // nombre de membres sous le nom, le bandeau lieu + « Voir l'événement », l'ecran « Infos ».
+  // CONVERSATION-EVENEMENT-2 (maquette « 193 », E et F) — le chat d'un evenement : la date
+  // et le nombre de membres sous le nom, le bandeau lieu + « Voir l'événement », l'ecran « Infos ».
   const estUnChatDEvenement = (chatData?.type || route?.params?.chatType) === 'event';
-  const [chatDeLEvenement, relireLeChatDeLEvenement] = useChatDeLEvenement(chatId, estUnChatDEvenement);
+  const [chatDeLEvenement, relireLeChatDeLEvenement] = useChatDeLEvenement(
+    chatId,
+    estUnChatDEvenement,
+  );
   const [infosDuChatDEvenementVisibles, setInfosDuChatDEvenementVisibles] = useState(false);
   const ouvrirLesInfosDuChatDEvenement = () => {
     setIsMenuVisible(false);
@@ -7302,8 +7305,9 @@ function Conversation({ navigation, route }) {
     ),
   ) : null;
   // T3-PARENT-LIGNE (« 24- A », 04/11) — au même endroit, et seulement si un tel parent peut lire.
-  // CONVERSATION-EVENEMENT-2 (E) — le meme bandeau dans le chat d'un evenement, aux memes conditions.
-  const lesParentsLisent = filLuParDesParents(chatData) || (estUnChatDEvenement && chatDeLEvenement?.aDesParents === true);
+  // CONVERSATION-EVENEMENT-2 (E) — le meme bandeau dans le chat d'un evenement, memes conditions.
+  const lesParentsLisent = filLuParDesParents(chatData)
+    || (estUnChatDEvenement && chatDeLEvenement?.aDesParents === true);
   const noticeDesParents = lesParentsLisent ? renderNoticeDeTete(
     'conversation-parents-read-notice',
     t(

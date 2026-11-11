@@ -34,7 +34,7 @@ const TITRE_DE_GROUPE = { letterSpacing: 0.6, textTransform: 'uppercase' };
  * L'etat du chat d'evenement vu depuis son fil. Rien pour un autre type de chat.
  * @param {string | null | undefined} chatId - Le chat.
  * @param {boolean} estUnChatDEvenement - Le fil est-il celui d'un evenement ?
- * @returns {[object | null, () => void]} L'etat, et de quoi le relire.
+ * @returns {[any, () => void]} L'etat, et de quoi le relire.
  */
 export const useChatDeLEvenement = (chatId, estUnChatDEvenement) => {
   const [info, setInfo] = useState(/** @type {any} */ (null));
@@ -53,7 +53,9 @@ export const useChatDeLEvenement = (chatId, estUnChatDEvenement) => {
   return [info, relire];
 };
 
-const premiereMajuscule = (/** @type {string} */ texte) => (texte ? texte.charAt(0).toUpperCase() + texte.slice(1) : '');
+const premiereMajuscule = (/** @type {string} */ texte) => (
+  texte ? texte.charAt(0).toUpperCase() + texte.slice(1) : ''
+);
 
 /**
  * « Sam. 15 nov. » et « 14:00 », a l'heure de Paris (l'heure saisie, `startTime`, d'abord).
@@ -80,7 +82,7 @@ export const quandDeLEvenement = (evenement) => {
 
 /**
  * Le nombre de membres, staff compris.
- * @param {object | null | undefined} info - L'etat du serveur.
+ * @param {any} info - L'etat du serveur.
  * @returns {number} Le nombre.
  */
 export const nombreDeMembres = (info) => (
@@ -89,8 +91,8 @@ export const nombreDeMembres = (info) => (
 
 /**
  * E — la ligne sous le nom du fil : « Sam. 15 nov. · 14:00 · 17 membres ».
- * @param {object | null | undefined} info - L'etat du serveur.
- * @param {(cle: string, repli: string, valeurs?: object) => string} t - La traduction.
+ * @param {any} info - L'etat du serveur.
+ * @param {any} t - La traduction.
  * @returns {string} La ligne, vide sans etat.
  */
 export const sousTitreDuChatDEvenement = (info, t) => {
@@ -106,7 +108,7 @@ export const sousTitreDuChatDEvenement = (info, t) => {
 /**
  * E — le bandeau sous l'en-tete : le lieu, le rendez-vous, et le retour a la fiche.
  * @param {object} props
- * @param {object | null} props.info - L'etat du serveur.
+ * @param {any} props.info - L'etat du serveur.
  * @param {(eventId: string) => void} props.onVoirLEvenement - Ouvre la fiche.
  * @returns {import('react').ReactElement | null}
  */
@@ -243,11 +245,14 @@ function Groupe({ lignes, testID, titre }) {
   );
 }
 
+/** @typedef {{ documentId: string, nom: string, precision: string }} LigneDuGroupe */
+
 /**
  * F — les groupes de l'ecran Infos, prets a afficher.
- * @param {object | null | undefined} info - L'etat du serveur (avec `membres`).
- * @param {(cle: string, repli: string, valeurs?: object) => string} t - La traduction.
- * @returns {{ staff: object[], comptes: object[], parents: object[] }} Les lignes de chaque groupe.
+ * @param {any} info - L'etat du serveur (avec `membres`).
+ * @param {any} t - La traduction.
+ * @returns {{ staff: LigneDuGroupe[], comptes: LigneDuGroupe[], parents: LigneDuGroupe[] }}
+ *   Les lignes de chaque groupe.
  */
 export const groupesDesInfos = (info, t) => {
   const membres = info?.membres || {};
@@ -267,7 +272,10 @@ export const groupesDesInfos = (info, t) => {
     })
     : String(e?.prenom || ''));
   return {
-    comptes: (membres.comptes || []).map((/** @type {any} */ m) => ({ ...m, precision: statut(m.statut) })),
+    comptes: (membres.comptes || []).map((/** @type {any} */ m) => ({
+      ...m,
+      precision: statut(m.statut),
+    })),
     parents: (membres.parents || []).map((/** @type {any} */ m) => ({
       ...m,
       precision: t('eventDetails.eventChat.infos.parentOf', 'parent : {{children}}', {
@@ -282,7 +290,7 @@ export const groupesDesInfos = (info, t) => {
 /**
  * F — l'ecran « Infos » du chat de l'evenement.
  * @param {object} props
- * @param {object | null} props.info - L'etat du serveur.
+ * @param {any} props.info - L'etat du serveur.
  * @param {string} props.titre - Le nom du chat (celui de l'evenement).
  * @param {boolean} props.visible - Ouvert ?
  * @param {() => void} props.onClose - Le referme.
@@ -306,7 +314,10 @@ export function InfosDuChatDEvenement({
       'La liste suit les invités de l’événement. Un invité ajouté rejoint le chat ; '
         + 'un invité retiré le quitte. Personne ne s’ajoute à la main.',
     );
-  /** @type {(cle: string, repli: string, liste: unknown[]) => string} */
+  /**
+   * Le titre d'un groupe suivi de son nombre de membres.
+   * @type {(cle: string, repli: string, liste: unknown[]) => string}
+   */
   const compte = (cle, repli, liste) => t(cle, repli, { count: liste.length, ...SANS_ECHAPPEMENT });
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent={false} visible={visible}>
