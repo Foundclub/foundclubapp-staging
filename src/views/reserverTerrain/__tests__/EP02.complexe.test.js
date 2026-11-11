@@ -20,6 +20,7 @@ import { complexePublic, creneau, terrainPublic } from '@/testSupport/temoinRese
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 let mockParams = /** @type {any} */ ({ slug: 'le-five-de-montrivage' });
+let mockAnnonces = /** @type {any[]} */ ([]);
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ canGoBack: () => true, goBack: mockGoBack, navigate: mockNavigate }),
   useRoute: () => ({ params: mockParams }),
@@ -31,6 +32,10 @@ let mockCreneaux = /** @type {Record<string, any>} */ ({});
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   // RESA-L6B-2 : la communauté du complexe (favori, relation, partenaires, signalement), vide.
   useAjouterAuxFavoris: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  // RESA-JOUEUR (D51) : les annonces « Il manque des joueurs » de CE complexe.
+  useAnnoncesOuvertes: (/** @type {any} */ lieu) => ({
+    data: lieu?.complexe ? mockAnnonces : [],
+  }),
   useComplexePublic: () => mockComplexe,
   useCreneauxDuJour: (/** @type {any} */ _slug, /** @type {string} */ terrainId) => (
     mockCreneaux[terrainId] || { data: { slots: [] } }
@@ -139,6 +144,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
   mockParams = { slug: 'le-five-de-montrivage' };
+  mockAnnonces = [];
   mockOrdinateur = false;
   mockNaissance = '1990-05-02';
   mockComplexe = {
@@ -356,5 +362,45 @@ describe('E-P02 — les états', () => {
       'Le complexe', 'Règles', 'Terrain 1', 'Réserver · aujourd’hui',
     ]));
     expect(vus).not.toContain('Infos');
+  });
+});
+
+// RESA-JOUEUR (11/11, maquette « 232- ok », D51 « A+B ») : sur la page du complexe, sous les
+// terrains, « Ils cherchent des joueurs » — les annonces de CE complexe, 3 au plus.
+describe('RESA-JOUEUR — « Ils cherchent des joueurs »', () => {
+  const annonce = (/** @type {string} */ id, /** @type {number} */ manque) => ({
+    annonce: id,
+    complexe: { name: 'Le Five de Montrivage', slug: 'le-five-de-montrivage' },
+    date: '2026-11-11',
+    distanceKm: null,
+    from: '19:30',
+    manque,
+    places: 10,
+    presents: 10 - manque,
+    price: { amount: 150, perPlayer: 15, unit: 'creneau' },
+    terrain: { name: 'Terrain 1', sport: 'Football à 5' },
+    to: '21:00',
+  });
+
+  it('aucune annonce : pas de bloc', async () => {
+    expect(lisibles(await monter())).not.toContain('Ils cherchent des joueurs');
+  });
+
+  it('les annonces du complexe, 3 au plus ; une carte ouvre l’annonce', async () => {
+    mockAnnonces = [annonce('a-1', 4), annonce('a-2', 1), annonce('a-3', 2), annonce('a-4', 3)];
+    const arbre = await monter();
+    const vus = lisibles(arbre);
+    expect(vus).toEqual(expect.arrayContaining([
+      'Ils cherchent des joueurs',
+      'Il manque 4 joueurs',
+      'Il manque 1 joueur',
+      'Mercredi 11/11 · 19 h 30 – 21 h',
+      'Le Five de Montrivage · Terrain 1 · Foot à 5',
+    ]));
+    expect(vus).not.toContain('Il manque 3 joueurs');
+    await act(async () => {
+      parRepere(arbre, 'annonce-a-1').props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverAnnonce, { annonceId: 'a-1' });
   });
 });

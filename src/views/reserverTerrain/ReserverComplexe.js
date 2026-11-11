@@ -26,6 +26,7 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BadgeComplexe from '@/views/complexe/components/BadgeComplexe';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
+import BlocRechercheDeJoueurs from '@/views/reserverTerrain/components/BlocRechercheDeJoueurs';
 import CarteTerrainJoueur from '@/views/reserverTerrain/components/CarteTerrainJoueur';
 import FeuilleRetirerFavori from '@/views/reserverTerrain/components/FeuilleRetirerFavori';
 import FeuilleSignaler from '@/views/reserverTerrain/components/FeuilleSignaler';
@@ -662,6 +663,15 @@ function ReserverComplexe() {
           terrain={terrain}
         />
       ))}
+      {/* RESA-JOUEUR (D51, maquette « 232- ok ») : les annonces de ce complexe, 3 au plus. */}
+      {slug ? (
+        <BlocRechercheDeJoueurs
+          lieu={{ complexe: String(slug) }}
+          max={3}
+          testID="complexe-ils-cherchent"
+          titre={t('reserverTerrain.recherche.joueurs.ilsCherchent', 'Ils cherchent des joueurs')}
+        />
+      ) : null}
     </View>
   );
 

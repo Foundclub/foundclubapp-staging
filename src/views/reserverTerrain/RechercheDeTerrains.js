@@ -31,6 +31,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import AutocompleteAddressInput
   from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
+import BlocRechercheDeJoueurs from '@/views/reserverTerrain/components/BlocRechercheDeJoueurs';
 import CarteComplexeRecherche from '@/views/reserverTerrain/components/CarteComplexeRecherche';
 import CarteDesComplexes from '@/views/reserverTerrain/components/CarteDesComplexes';
 import PuceChoix from '@/views/reserverTerrain/components/PuceChoix';
@@ -176,6 +177,8 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
   const [feuillePosition, setFeuillePosition] = useState(false);
   const [brouillon, setBrouillon] = useState(/** @type {any} */ (null));
   const [vue, setVue] = useState(/** @type {'liste' | 'carte'} */ ('liste'));
+  // RESA-JOUEUR (D51) : la liste « Recherche de joueurs », ouverte depuis l'entrée du panneau.
+  const [voirLesAnnonces, setVoirLesAnnonces] = useState(false);
   const [epingleChoisie, setEpingleChoisie] = useState(/** @type {string | null} */ (null));
   const [hauteurCarte, setHauteurCarte] = useState(HAUTEUR_CARTE_MIN);
   const [hauteurChoisie, setHauteurChoisie] = useState(0);
@@ -952,6 +955,50 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
                 {t('reserverTerrain.favoris.raccourci', 'Mes favoris')}
               </Text>
             </TouchableOpacity>
+          </View>
+        )}
+        {/* RESA-JOUEUR (D51, maquette « 232- ok ») : l'entrée « Recherche de joueurs » — en vue
+            LISTE seulement : la vue carte garde sa hauteur (la carte du complexe choisi ne doit
+            pas passer sous la barre flottante du site, 390 px). */}
+        {visiteur || vue !== 'liste' ? null : (
+          <View style={{ gap: 10 }}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityState={{ expanded: voirLesAnnonces }}
+              onPress={() => setVoirLesAnnonces((avant) => !avant)}
+              style={{
+                backgroundColor: withAlpha(Colors.warning500, 0.1),
+                borderColor: withAlpha(Colors.warning500, 0.45),
+                borderRadius: 16,
+                borderWidth: 1,
+                gap: 2,
+                minHeight: 44,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+              }}
+              testID="reserver-recherche-de-joueurs"
+            >
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('reserverTerrain.recherche.joueurs.titre', 'Recherche de joueurs')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral100]}>
+                {t(
+                  'reserverTerrain.recherche.joueurs.sousTitre',
+                  'Les parties autour de toi qui cherchent des joueurs',
+                )}
+              </Text>
+            </TouchableOpacity>
+            {voirLesAnnonces ? (
+              <BlocRechercheDeJoueurs
+                lieu={(position || ville) ? {
+                  lat: (position || ville)?.lat,
+                  lng: (position || ville)?.lng,
+                  rayon: distanceKm,
+                } : null}
+                testID="reserver-liste-des-annonces"
+                vide
+              />
+            ) : null}
           </View>
         )}
         <Input

@@ -41,6 +41,8 @@ const mockRetirer = jest.fn();
 const mockSignaler = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useAjouterAuxFavoris: () => ({ isPending: false, mutateAsync: mockAjouter }),
+  // RESA-JOUEUR (D51) : les annonces du complexe (aucune ici).
+  useAnnoncesOuvertes: () => ({ data: [] }),
   useComplexePublic: () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),

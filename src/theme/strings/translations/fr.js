@@ -20716,6 +20716,15 @@ export default {
       // eslint-disable-next-line max-len
       horsConnexion: 'Hors connexion : les créneaux affichés datent de {{heure}} et peuvent être pris.',
       interieur: 'Intérieur',
+      joueurs: {
+        aucune: 'Aucune partie ne cherche de joueurs ici pour l’instant.',
+        chargement: 'Lecture des annonces…',
+        ilsCherchent: 'Ils cherchent des joueurs',
+        manqueN: 'Il manque {{nombre}} joueurs',
+        manqueUn: 'Il manque {{nombre}} joueur',
+        sousTitre: 'Les parties autour de toi qui cherchent des joueurs',
+        titre: 'Recherche de joueurs',
+      },
       jour: 'Jour',
       km: '{{nombre}} km',
       liste: 'Liste',
