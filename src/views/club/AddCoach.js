@@ -99,7 +99,8 @@ function AddCoach({ navigation, route }) {
   }, [isTourOnSend]);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [createdTrainer, setCreatedTrainer] = useState(
-    /** @type {{ expiresAt?: string, firstname?: string, lastname?: string, phoneHint?: string, phoneNumber?: string } | null} */
+    // expiresAt, firstname, lastname, phoneHint, phoneNumber : ce que la feuille « envoyée » lit.
+    /** @type {Record<string, string | undefined> | null} */
     (null),
   );
   // `club.roles.manage` exige l'offre Club : ces deux mutations sont les seules de l'ecran
@@ -181,7 +182,11 @@ function AddCoach({ navigation, route }) {
     meta: { preventToastError: true },
     onSuccess: (data, variables) => {
       emitGuidanceAction('staff.invited', { firstName: variables?.firstname || '' });
-      setCreatedTrainer({ ...variables, ...(data?.invitation || {}) });
+      setCreatedTrainer({
+        ...variables,
+        teamId: variables?.teamId || undefined,
+        ...(data?.invitation || {}),
+      });
       // PETITSBUGS-3 (R4-34) : la feuille ne s'ouvre pas sur le clavier numérique.
       Keyboard.dismiss();
       setIsSuccessModalVisible(true);
@@ -194,7 +199,7 @@ function AddCoach({ navigation, route }) {
    */
   const handleFormSubmit = (data) => {
     createTrainerMutation.mutate({
-      clubId: routeClubId || clubData?.documentId,
+      clubId: routeClubId || clubData?.documentId || '',
       firstname: data.firstname,
       phoneNumber: data.phoneNumber,
       role: isManagerMode ? 'dirigeant' : 'coach',
@@ -203,7 +208,10 @@ function AddCoach({ navigation, route }) {
   };
 
   const expiresOn = createdTrainer?.expiresAt
-    ? new Date(createdTrainer.expiresAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+    ? new Date(createdTrainer.expiresAt).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+    })
     : '';
   const sentTitle = t('staffInvitation.sent.title', {
     name: createdTrainer?.firstname || t('staffInvitation.sent.fallbackName'),

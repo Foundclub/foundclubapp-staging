@@ -23,21 +23,21 @@ import { useIsDesktop } from '@/responsive/useIsDesktop';
  *   compte ; personne n'est ajouté, la feuille dit pourquoi et comment il rejoindra le club.
  * @param {string} [props.messageDInvitation] - RETOURS-TESTEUR-2 (M0077) : le texte du SMS, lien
  *   compris. Sur le site, sur ordinateur, il se copie ou part par e-mail au lieu du SMS.
- * @param {string} [props.titre] - INVITE-STAFF (10/11) : titre fourni par l'appelant (« Invitation envoyée à … »).
+ * @param {string} [props.titre] - INVITE-STAFF (10/11) : titre fourni par l'appelant.
  * @param {string} [props.texte] - INVITE-STAFF : texte fourni par l'appelant.
- * @param {string} [props.libelleInviter] - INVITE-STAFF : libellé du bouton SMS (« Prévenir par SMS »).
+ * @param {string} [props.libelleInviter] - INVITE-STAFF : libellé du bouton SMS.
  * @returns {import('react').ReactElement} La feuille.
  */
 function TrainerInvitedModal({
   dejaInscrit = false,
-  libelleInviter = '',
-  texte: texteFourni = '',
-  titre: titreFourni = '',
   isManager = false,
   isVisible,
+  libelleInviter = '',
   messageDInvitation = '',
   onClose,
   onInvite,
+  texte: texteFourni = '',
+  titre: titreFourni = '',
   trainerName,
 }) {
   const { t } = useTranslation();
@@ -110,7 +110,10 @@ function TrainerInvitedModal({
   // dans la hauteur de la feuille et sortait par le bas de l'écran.
   return (
     <FeuilleDeSucces
-      actionPrincipale={{ onPress: () => onInvite(), title: libelleInviter || t('addCoach.actions.invite') }}
+      actionPrincipale={{
+        onPress: () => onInvite(),
+        title: libelleInviter || t('addCoach.actions.invite'),
+      }}
       actionSecondaire={{ onPress: () => onClose(), title: t('common.actions.askLater') }}
       close={onClose}
       isVisible={isVisible}

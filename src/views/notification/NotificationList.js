@@ -27,10 +27,10 @@ import useTheme from '@/theme/themeContext';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
+import ActionsInvitationDeStaff from '@/components/organisms/invitationDeStaff/ActionsInvitationDeStaff';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';
-import ActionsInvitationDeStaff from '@/components/organisms/invitationDeStaff/ActionsInvitationDeStaff';
 import PastilleModeComplexe from '@/views/complexe/components/PastilleModeComplexe';
 
 import { navigate as navigateFromRoot } from '@/navigation/navigationService';
@@ -575,7 +575,7 @@ function NotificationList() {
         </Swipeable>
       </Animated.View>
     );
-  }, [Colors, Fonts, Spaces, etiquettesDeCasquette, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
+  }, [Colors, Fonts, Spaces, etiquettesDeCasquette, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, nav, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

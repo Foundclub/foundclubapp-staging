@@ -56,7 +56,6 @@ import Checkable from '@/components/atoms/checkable/Checkable';
 import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
-import InvitationsDeStaffEnAttente from '@/components/organisms/invitationDeStaff/InvitationsDeStaffEnAttente';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -70,6 +69,7 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import InvitationsDeStaffEnAttente from '@/components/organisms/invitationDeStaff/InvitationsDeStaffEnAttente';
 import { lireOngletDOrigine, useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
@@ -4412,7 +4412,7 @@ function ClubDetails({ navigation, route }) {
                       ))
                     }
                     </View>
-                    {/* INVITE-STAFF (10/11, maquette C) : les invitations en attente, pour qui gère. */}
+                    {/* INVITE-STAFF (10/11, maquette C) : les invitations en attente. */}
                     {canEdit && club?.documentId ? (
                       <InvitationsDeStaffEnAttente clubId={club.documentId} clubName={club?.name} />
                     ) : null}

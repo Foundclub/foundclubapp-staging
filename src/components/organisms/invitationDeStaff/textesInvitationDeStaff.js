@@ -29,7 +29,11 @@ export const dateCourte = (iso) => {
  * @returns {string} la phrase.
  */
 export const phraseDInvitation = (t, invitation) => {
-  const valeurs = { club: invitation?.clubName || '', team: invitation?.teamName || '', ...SANS_ECHAPPEMENT };
+  const valeurs = {
+    club: invitation?.clubName || '',
+    team: invitation?.teamName || '',
+    ...SANS_ECHAPPEMENT,
+  };
   if (invitation?.role === 'dirigeant') return t('staffInvitation.received.dirigeant', valeurs);
   return invitation?.teamName
     ? t('staffInvitation.received.coachOf', valeurs)
@@ -43,15 +47,15 @@ export const phraseDInvitation = (t, invitation) => {
  * @returns {string[]} les lignes.
  */
 export const effetsDeLAcceptation = (t, invitation) => {
-  const valeurs = { club: invitation?.clubName || '', team: invitation?.teamName || '', ...SANS_ECHAPPEMENT };
+  const valeurs = {
+    club: invitation?.clubName || '',
+    team: invitation?.teamName || '',
+    ...SANS_ECHAPPEMENT,
+  };
   let role = t('staffInvitation.sheet.becomeCoach', valeurs);
   if (invitation?.role === 'dirigeant') role = t('staffInvitation.sheet.becomeDirigeant', valeurs);
   else if (invitation?.teamName) role = t('staffInvitation.sheet.becomeCoachOf', valeurs);
-  return [
-    t('staffInvitation.sheet.joinClub', valeurs),
-    role,
-    t('staffInvitation.sheet.teamsStay'),
-  ];
+  return [t('staffInvitation.sheet.joinClub', valeurs), role, t('staffInvitation.sheet.teamsStay')];
 };
 
 /**
@@ -62,13 +66,25 @@ export const effetsDeLAcceptation = (t, invitation) => {
  */
 export const messageDeRefusServeur = (t, code) => {
   if (code === 'STAFF_INVITE_MINOR') {
-    return { texte: t('staffInvitation.errors.minorText'), titre: t('staffInvitation.errors.minorTitle') };
+    return {
+      texte: t('staffInvitation.errors.minorText'),
+      titre: t('staffInvitation.errors.minorTitle'),
+    };
   }
   if (code === 'STAFF_INVITE_CLUB_FULL') {
-    return { texte: t('staffInvitation.errors.fullText'), titre: t('staffInvitation.errors.fullTitle') };
+    return {
+      texte: t('staffInvitation.errors.fullText'),
+      titre: t('staffInvitation.errors.fullTitle'),
+    };
   }
   if (code === 'STAFF_INVITE_PROTECTED_ACCOUNT') {
-    return { texte: t('staffInvitation.errors.protectedText'), titre: t('staffInvitation.errors.protectedTitle') };
+    return {
+      texte: t('staffInvitation.errors.protectedText'),
+      titre: t('staffInvitation.errors.protectedTitle'),
+    };
   }
-  return { texte: t('staffInvitation.errors.expiredText'), titre: t('staffInvitation.errors.expiredTitle') };
+  return {
+    texte: t('staffInvitation.errors.expiredText'),
+    titre: t('staffInvitation.errors.expiredTitle'),
+  };
 };

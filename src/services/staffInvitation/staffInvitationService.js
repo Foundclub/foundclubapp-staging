@@ -21,7 +21,8 @@ const toReadableError = (error, fallbackMessage) => {
   const nextError = /** @type {any} */ (new Error(fallbackMessage));
   nextError.status = Number(error?.response?.status || error?.status || 0) || null;
   nextError.code = String(responseError?.details?.code || responseError?.message || '').trim();
-  // La décision d'abonnement (offre manquante) reste lisible par `extractSubscriptionDecisionFromError`.
+  // La décision d'abonnement (offre manquante) reste lisible par
+  // `extractSubscriptionDecisionFromError`.
   nextError.details = responseError?.details || null;
   return nextError;
 };
@@ -43,14 +44,31 @@ const unwrap = async (call, fallbackMessage) => {
 
 /**
  * Envoyer une invitation de staff.
- * @param {{ clubId: string, firstname?: string, phoneCountry?: string, phoneNumber: string, role: 'coach'|'dirigeant', teamId?: string|null }} params - la saisie.
- * @returns {Promise<{ sent: true, invitation: object }>} l'invitation (même forme dans tous les cas).
+ * @param {{
+ *   clubId: string, firstname?: string, phoneCountry?: string, phoneNumber: string,
+ *   role: 'coach'|'dirigeant', teamId?: string|null,
+ * }} params - la saisie.
+ * @returns {Promise<{ sent: true, invitation: object }>} l'invitation (même forme partout).
  */
-export const sendStaffInvitation = ({ clubId, firstname, phoneCountry, phoneNumber, role, teamId }) => unwrap(
+export const sendStaffInvitation = ({
+  clubId,
+  firstname,
+  phoneCountry,
+  phoneNumber,
+  role,
+  teamId,
+}) => unwrap(
   () => client.post('/staff-invitations', {
-    data: { clubId, firstname: firstname || undefined, phoneCountry, phoneNumber, role, teamId: teamId || undefined },
+    data: {
+      clubId,
+      firstname: firstname || undefined,
+      phoneCountry,
+      phoneNumber,
+      role,
+      teamId: teamId || undefined,
+    },
   }),
-  i18next.t('staffInvitation.errors.send', 'Impossible d\'envoyer l\'invitation pour le moment.'),
+  i18next.t('staffInvitation.errors.send', "Impossible d'envoyer l'invitation pour le moment."),
 );
 
 /**
@@ -73,7 +91,7 @@ export const getSentStaffInvitations = async (clubId) => {
  */
 export const cancelStaffInvitation = (documentId) => unwrap(
   () => client.post(`/staff-invitations/${encodeURIComponent(documentId)}/cancel`),
-  i18next.t('staffInvitation.errors.cancel', 'Impossible d\'annuler cette invitation.'),
+  i18next.t('staffInvitation.errors.cancel', "Impossible d'annuler cette invitation."),
 );
 
 /**
@@ -91,11 +109,14 @@ export const getMyStaffInvitations = async () => {
 /**
  * Accepter une invitation reçue.
  * @param {string} documentId - l'invitation.
- * @returns {Promise<{ accepted: true, club: object, role: string, team: object|null }>} le résultat.
+ * @returns {Promise<{ accepted: true, club: object, role: string, team: object|null }>} réponse.
  */
 export const acceptStaffInvitation = (documentId) => unwrap(
   () => client.post(`/staff-invitations/${encodeURIComponent(documentId)}/accept`),
-  i18next.t('staffInvitation.errors.accept', 'Impossible d\'accepter cette invitation pour le moment.'),
+  i18next.t(
+    'staffInvitation.errors.accept',
+    "Impossible d'accepter cette invitation pour le moment.",
+  ),
 );
 
 /**
@@ -105,5 +126,8 @@ export const acceptStaffInvitation = (documentId) => unwrap(
  */
 export const refuseStaffInvitation = (documentId) => unwrap(
   () => client.post(`/staff-invitations/${encodeURIComponent(documentId)}/refuse`),
-  i18next.t('staffInvitation.errors.refuse', 'Impossible de refuser cette invitation pour le moment.'),
+  i18next.t(
+    'staffInvitation.errors.refuse',
+    'Impossible de refuser cette invitation pour le moment.',
+  ),
 );

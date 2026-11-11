@@ -60,7 +60,7 @@ describe('M2 : inviter un coach', () => {
   });
 
   // INVITE-STAFF (10/11/2026, « 1A ») : on invite, le compte n'est plus créé d'office.
-  it('la phrase dit la vérité : une invitation à accepter, et le SMS est à envoyer soi-même', () => {
+  it('la phrase dit la vérité : une invitation à accepter, le SMS à envoyer soi-même', () => {
     expect(step('m2-fields').text).toMatch(/invitation/);
     expect(step('m2-fields').text).toMatch(/accepter/);
     expect(step('m2-fields').text).toMatch(/SMS/);

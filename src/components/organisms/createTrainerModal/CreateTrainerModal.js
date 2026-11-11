@@ -57,7 +57,8 @@ function CreateTrainerModal({
   const { t } = useTranslation();
   const { invitationDuStaff, inviteTrainer, userData } = useAuth();
   const [invitationEnvoyee, setInvitationEnvoyee] = useState(
-    /** @type {{ expiresAt?: string, firstname?: string, phoneHint?: string, phoneNumber?: string } | null} */
+    // expiresAt, firstname, phoneHint, phoneNumber : ce que la feuille « envoyée » lit.
+    /** @type {Record<string, string | undefined> | null} */
     (null),
   );
   // Le nom du club, pour le SMS : en cache le plus souvent (l'écran d'équipe l'a lu).
@@ -112,7 +113,8 @@ function CreateTrainerModal({
   }, [inviteMutation.isPending, onClose, reset]);
 
   const clubName = club?.name || userData?.club?.name || t('addCoach.fallbacks.clubName', 'Club');
-  const prenom = invitationEnvoyee?.firstname || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof');
+  const prenom = invitationEnvoyee?.firstname
+    || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof');
 
   return (
     <>

@@ -385,7 +385,7 @@ describe('GUIDE-D-CORR-3 M1078 — Ajouter un coach, clavier et cadre du guide',
     // La zone qui defile elle-meme : elle ne sort jamais de l'ecran, le guide ne la poursuit pas.
     expect(zone.props.clipChildren).toBe(true);
     const texte = texteDe(zone);
-    // INVITE-STAFF (« 1A ») : plus de nom ni de date de naissance, la personne les remplit elle-même.
+    // INVITE-STAFF (« 1A ») : plus de nom ni de date de naissance ; la personne les remplit.
     ['phoneNumber', 'firstname'].forEach((champ) => {
       const libelle = jest.requireActual('@/theme/strings/translations/fr').default
         .addCoach.fields[champ].label;

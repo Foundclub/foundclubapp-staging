@@ -8,10 +8,9 @@ import {
   createTrainer,
   linkTrainerToClub,
 } from '@/services/auth/authService';
+import { sendStaffInvitation } from '@/services/staffInvitation/staffInvitationService';
 
 import { buildPreservedApiError } from '@/utils/errors/apiError';
-
-import { sendStaffInvitation } from '@/services/staffInvitation/staffInvitationService';
 
 import AddCoach from '../AddCoach';
 
@@ -398,7 +397,9 @@ describe('PETITSBUGS-3 — un refus du serveur : une seule alerte, en français'
   it('le filet global se tait sur la création : l’écran parle seul', async () => {
     await monterEcran();
     // INVITE-STAFF : la mutation de l'écran est désormais l'envoi de l'invitation.
-    const creation = mockMutationOptions.find((options) => options.mutationFn === sendStaffInvitation);
+    const creation = mockMutationOptions.find(
+      (options) => options.mutationFn === sendStaffInvitation,
+    );
     expect(creation?.meta?.preventToastError).toBe(true);
   });
 });
@@ -426,7 +427,7 @@ describe('PETITSBUGS-3 — « Ajout réussi ! » sans le clavier numérique', ()
 describe.each([
   ['coach', RouteNames.AddCoach, createTrainer],
   ['dirigeant', RouteNames.AddClubManager, createManager],
-])('INVITE-STAFF — %s : une seule réponse, aucun nom avant que la personne accepte', (_role, routeName, creer) => {
+])('INVITE-STAFF — %s : une seule réponse, aucun nom avant l accord', (_role, routeName, creer) => {
   // Le serveur répond PAREIL que le numéro ait un compte ou non (pas d'oracle) : l'écran
   // n'affiche que ce qui a été tapé.
   it('l invitation part : la feuille s ouvre, sans alerte ni nom', async () => {

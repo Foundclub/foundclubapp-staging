@@ -34,6 +34,7 @@ import {
 } from './textesInvitationDeStaff';
 
 /**
+ * Les boutons « Refuser » / « Voir et accepter » sous une invitation de staff de la cloche.
  * @param {object} props
  * @param {Record<string, any>} props.data - `notification.data` (invitationId, clubName, role…).
  * @param {any} [props.navigation] - pour « Ouvrir le club ».
@@ -46,7 +47,9 @@ function ActionsInvitationDeStaff({
 }) {
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
-  const [phase, setPhase] = useState(/** @type {'' | 'question' | 'bienvenue' | 'refusee' | 'bloquee'} */ (''));
+  const [phase, setPhase] = useState(
+    /** @type {'' | 'question' | 'bienvenue' | 'refusee' | 'bloquee'} */ (''),
+  );
   const [enCours, setEnCours] = useState(false);
   const [refusServeur, setRefusServeur] = useState({ texte: '', titre: '' });
   const [echeance, setEcheance] = useState('');
@@ -55,7 +58,11 @@ function ActionsInvitationDeStaff({
   if (!documentId) return null;
 
   const invitation = {
-    clubName: data?.clubName, documentId, inviterName: data?.inviterName, role: data?.role, teamName: data?.teamName,
+    clubName: data?.clubName,
+    documentId,
+    inviterName: data?.inviterName,
+    role: data?.role,
+    teamName: data?.teamName,
   };
 
   const fermer = () => setPhase('');
@@ -97,37 +104,50 @@ function ActionsInvitationDeStaff({
     }
   };
 
-  const effets = effetsDeLAcceptation(t, invitation).map((ligne) => `· ${ligne}`).join('\n');
+  const effets = effetsDeLAcceptation(t, invitation)
+    .map((ligne) => `· ${ligne}`)
+    .join('\n');
   const texteQuestion = [
-    invitation.inviterName ? t('staffInvitation.received.by', { name: invitation.inviterName }) : '',
+    invitation.inviterName
+      ? t('staffInvitation.received.by', { name: invitation.inviterName })
+      : '',
     t('staffInvitation.sheet.ifAccept'),
     effets,
     '',
     echeance
       ? t('staffInvitation.sheet.ifRefuseUntil', { date: echeance })
       : t('staffInvitation.sheet.ifRefuse'),
-  ].filter((ligne, index) => index > 0 || ligne).join('\n');
+  ]
+    .filter((ligne, index) => index > 0 || ligne)
+    .join('\n');
 
   return (
-    <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12]]}>
+    <View
+      style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12]]}
+      testID={testID || undefined}
+    >
       <Button
         onPress={() => repondre('refuse')}
         style={{ flex: 1 }}
-        testID={`${testID}-staff-invite-refuse`}
         title={t('staffInvitation.received.refuse')}
         variant="Secondary"
       />
       <Button
         onPress={ouvrir}
         style={{ flex: 1 }}
-        testID={`${testID}-staff-invite-open`}
         title={t('staffInvitation.received.open')}
         variant="Primary"
       />
 
       <FeuilleDeSucces
-        actionPrincipale={{ onPress: () => repondre('accept'), title: t('staffInvitation.sheet.accept') }}
-        actionSecondaire={{ onPress: () => repondre('refuse'), title: t('staffInvitation.sheet.refuse') }}
+        actionPrincipale={{
+          onPress: () => repondre('accept'),
+          title: t('staffInvitation.sheet.accept'),
+        }}
+        actionSecondaire={{
+          onPress: () => repondre('refuse'),
+          title: t('staffInvitation.sheet.refuse'),
+        }}
         close={fermer}
         isVisible={phase === 'question'}
         texte={texteQuestion}
@@ -138,16 +158,20 @@ function ActionsInvitationDeStaff({
         actionPrincipale={{
           onPress: () => {
             fermer();
-            if (data?.clubId && navigation?.navigate) navigation.navigate(RouteNames.Club, { clubId: data.clubId });
+            if (data?.clubId && navigation?.navigate) {
+              navigation.navigate(RouteNames.Club, { clubId: data.clubId });
+            }
           },
           title: t('staffInvitation.welcome.openClub'),
         }}
         actionSecondaire={{ onPress: fermer, title: t('staffInvitation.welcome.later') }}
         close={fermer}
         isVisible={phase === 'bienvenue'}
-        texte={invitation.role === 'dirigeant'
-          ? t('staffInvitation.welcome.dirigeant')
-          : t('staffInvitation.welcome.coach')}
+        texte={
+          invitation.role === 'dirigeant'
+            ? t('staffInvitation.welcome.dirigeant')
+            : t('staffInvitation.welcome.coach')
+        }
         titre={t('staffInvitation.welcome.title', { club: invitation.clubName || '' })}
       />
 

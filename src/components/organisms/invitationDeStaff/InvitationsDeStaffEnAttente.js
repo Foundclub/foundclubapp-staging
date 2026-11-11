@@ -8,11 +8,11 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 
-import useAuth from '@/domains/auth/useAuth';
 import {
   cancelStaffInvitation,
   getSentStaffInvitations,
@@ -23,6 +23,7 @@ import { dateCourte } from './textesInvitationDeStaff';
 export const STAFF_INVITATIONS_SENT_KEY = 'staffInvitationsSent';
 
 /**
+ * La rubrique « Invitations en attente » de la fiche du club (dirigeant ou coach qui invite).
  * @param {object} props
  * @param {string} props.clubId - le club.
  * @param {string} [props.clubName] - pour le SMS de relance.
@@ -44,7 +45,9 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '' }) {
   const annuler = useMutation({
     meta: { preventToastError: true },
     mutationFn: cancelStaffInvitation,
-    onSettled: () => { refetch(); },
+    onSettled: () => {
+      refetch();
+    },
   });
 
   if (!invitations.length) return null;
@@ -58,9 +61,15 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '' }) {
         const role = invitation.role === 'dirigeant'
           ? t('staffInvitation.roles.dirigeant')
           : t('staffInvitation.roles.coach');
-        const details = [role, invitation.team?.name, t('staffInvitation.pending.sentOn', {
-          date: dateCourte(invitation.createdAt),
-        })].filter(Boolean).join(' · ');
+        const details = [
+          role,
+          invitation.team?.name,
+          t('staffInvitation.pending.sentOn', {
+            date: dateCourte(invitation.createdAt),
+          }),
+        ]
+          .filter(Boolean)
+          .join(' · ');
         return (
           <View
             key={invitation.documentId}
@@ -72,22 +81,32 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '' }) {
             ]}
             testID={`staff-invite-pending-${invitation.documentId}`}
           >
-            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
+            <View
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                Alignments.justifySpaceBetween,
+                Spaces.gap[8],
+              ]}
+            >
               <View style={[Alignments.fill]}>
                 <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                  {[invitation.firstname || t('staffInvitation.pending.someone'), `•• ${invitation.phoneHint || ''}`]
-                    .join(' · ')}
+                  {[
+                    invitation.firstname || t('staffInvitation.pending.someone'),
+                    `•• ${invitation.phoneHint || ''}`,
+                  ].join(' · ')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>{details}</Text>
               </View>
-              <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{t('staffInvitation.pending.state')}</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                {t('staffInvitation.pending.state')}
+              </Text>
             </View>
             <View style={[Alignments.row, Spaces.gap[8]]}>
               <Button
                 isLoading={annuler.isPending && annuler.variables === invitation.documentId}
                 onPress={() => annuler.mutate(invitation.documentId)}
                 style={{ flex: 1 }}
-                testID={`staff-invite-cancel-${invitation.documentId}`}
                 title={t('staffInvitation.pending.cancel')}
                 variant="Secondary"
               />
@@ -95,8 +114,12 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '' }) {
                 onPress={() => inviteTrainer({
                   clubId,
                   clubName,
-                  firstname: invitation.firstname || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof'),
+                  firstname:
+                      invitation.firstname
+                      || t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof'),
                   isManager: invitation.role === 'dirigeant',
+                  // Le numéro n'est jamais renvoyé à l'inviteur : il choisit le destinataire.
+                  phoneNumber: undefined,
                 })}
                 style={{ flex: 1 }}
                 title={t('staffInvitation.pending.resend')}
