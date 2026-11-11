@@ -129,6 +129,18 @@ jest.mock('@/services/auth/authService', () => ({
   linkTrainerToClub: jest.fn(),
 }));
 
+// INVITE-STAFF (10/11/2026, « 1A ») : l'écran n'appelle plus createTrainer / createManager, il
+// ENVOIE UNE INVITATION. Adaptateur : l'invitation « coach » passe par la doublure `createTrainer`,
+// l'invitation « dirigeant » par `createManager` ; les assertions de rôle gardent leur sens.
+jest.mock('@/services/staffInvitation/staffInvitationService', () => {
+  const auth = jest.requireMock('@/services/auth/authService');
+  return {
+    sendStaffInvitation: jest.fn((/** @type {any} */ v) => (
+      v.role === 'dirigeant' ? auth.createManager(v) : auth.createTrainer(v)
+    )),
+  };
+});
+
 jest.mock('@/services/club/clubQueries', () => ({
   useGetClub: () => mockClubQuery,
 }));
@@ -536,16 +548,19 @@ describe('AddCoach — fusion D51 ecran 10 : ce que les champs annoncent', () =>
     expect(texteDe(arbre.root)).toContain('Numéro de téléphone — requis');
   });
 
-  it('la date de naissance dit qu elle est optionnelle, sans detour', async () => {
+  // INVITE-STAFF (« 1A ») : on invite, on ne crée plus le compte ; la personne remplit
+  // elle-même son nom et sa date de naissance.
+  it('ni nom ni date de naissance : la personne les remplit elle-même', async () => {
     const arbre = await monterEcran();
 
-    expect(texteDe(arbre.root)).toContain('Date de naissance — optionnelle');
+    expect(texteDe(arbre.root)).not.toContain('Date de naissance');
+    expect(texteDe(arbre.root)).not.toContain('Nom —');
   });
 
-  it('l ecran dit que c est lui qui enverra le SMS', async () => {
+  it('l ecran dit que rien ne change sans l accord de la personne', async () => {
     const arbre = await monterEcran();
 
-    expect(texteDe(arbre.root)).toContain('SMS juste après');
+    expect(texteDe(arbre.root)).toContain('Rien ne change sans son accord');
   });
 
   it('le bouton dit ce qu il envoie', async () => {
@@ -696,50 +711,22 @@ describe('Guide Dirigeant·e, M2 : ce que l écran dit au guide', () => {
     expect(cles()).toContain('staff.invite.later');
   });
 
-  // INVITE-COACH-EXISTANT (10/11/2026, tournée des guides sur le site) — « Envoyer l'invitation »
-  // vers un numéro déjà inscrit émettait `staff.linked` : M2 comptée faite (25 % → 50 %) alors
-  // que personne n'était ajouté au club. Depuis SECU-RATTACHEMENT, un compte existant ne rejoint
-  // le club que sur son accord : on l'invite, le guide ne compte rien.
+  // INVITE-STAFF (10/11/2026) : plus de « numéro déjà inscrit » côté écran. Le serveur répond
+  // PAREIL que le numéro ait un compte ou non : une seule feuille, « Invitation envoyée ».
   const STAFF = ['staff.linked', 'staff.invited', 'staff.sms.opened', 'staff.invite.later'];
 
-  it('numéro déjà inscrit : la feuille d invitation s ouvre, sans alerte', async () => {
-    createTrainer.mockRejectedValueOnce({ details: { code: 'PHONE_NUMBER_TAKEN' } });
-    const spy = jest.spyOn(Alert, 'alert');
+  it('une seule feuille, « Invitation envoyée à … », et M2 comptée à l envoi', async () => {
+    createTrainer.mockResolvedValueOnce({ invitation: { phoneHint: '00' }, sent: true });
     const arbre = await monterEcran();
     await saisirTelephone('+33 6 00 00 00 00');
     await appuyerSur(arbre, LIBELLE_CTA);
-    expect(spy).not.toHaveBeenCalled();
     expect(dernieresProps(mockInvitedModalProps)).toEqual(expect.objectContaining({
-      dejaInscrit: true,
       isVisible: true,
+      libelleInviter: 'Prévenir par SMS',
     }));
-    spy.mockRestore();
-  });
-
-  it('numéro déjà inscrit, « Inviter » : l invitation part, M2 n est pas comptée', async () => {
-    createTrainer.mockRejectedValueOnce({ details: { code: 'PHONE_NUMBER_TAKEN' } });
-    const arbre = await monterEcran();
-    await saisirTelephone('+33 6 00 00 00 00');
-    await appuyerSur(arbre, LIBELLE_CTA);
-    await act(async () => dernieresProps(mockInvitedModalProps).onInvite());
-    expect(mockInviteTrainer).toHaveBeenCalledWith(expect.objectContaining({
-      clubId: 'club-1',
-      phoneNumber: '+33 6 00 00 00 00',
-    }));
-    expect(mockNavigation.goBack).toHaveBeenCalled();
-    expect(cles().filter((cle) => STAFF.includes(cle))).toEqual([]);
-  });
-
-  it('numéro déjà inscrit, « Plus tard » : on reste sur le formulaire, rien n est compté', async () => {
-    createTrainer.mockRejectedValueOnce({ details: { code: 'PHONE_NUMBER_TAKEN' } });
-    const arbre = await monterEcran();
-    await saisirTelephone('+33 6 00 00 00 00');
-    await appuyerSur(arbre, LIBELLE_CTA);
-    await act(async () => dernieresProps(mockInvitedModalProps).onClose());
-    expect(dernieresProps(mockInvitedModalProps).isVisible).toBe(false);
-    expect(mockNavigation.goBack).not.toHaveBeenCalled();
-    expect(mockInviteTrainer).not.toHaveBeenCalled();
-    expect(cles().filter((cle) => STAFF.includes(cle))).toEqual([]);
+    expect(dernieresProps(mockInvitedModalProps).titre).toContain('Invitation envoyée à');
+    expect(dernieresProps(mockInvitedModalProps).texte).toContain('se terminant par');
+    expect(cles().filter((cle) => STAFF.includes(cle))).toEqual(['staff.invited']);
   });
 
   it('erreur du serveur : un message à l écran, le guide ne compte rien', async () => {

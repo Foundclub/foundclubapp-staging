@@ -5260,6 +5260,7 @@ function TeamDetails({ navigation, route }) {
         isVisible={isCreateTrainerModalVisible}
         onClose={() => setIsCreateTrainerModalVisible(false)}
         onTrainerCreated={handleTrainerCreated}
+        teamId={team?.documentId || null}
       />
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}

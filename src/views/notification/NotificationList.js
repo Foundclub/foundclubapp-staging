@@ -27,6 +27,7 @@ import useTheme from '@/theme/themeContext';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
+import ActionsInvitationDeStaff from '@/components/organisms/invitationDeStaff/ActionsInvitationDeStaff';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ActionsDeDemandeDansLaCloche from '@/views/complexe/components/ActionsDeDemandeDansLaCloche';
@@ -523,6 +524,15 @@ function NotificationList() {
                 testID={String(notification.documentId || notification.id)}
               />
             ) : null}
+            {/* INVITE-STAFF (10/11, maquette E) : « Refuser » / « Voir et accepter ». */}
+            {notification.type === 'staffInvitation' && !notification.data?.answered ? (
+              <ActionsInvitationDeStaff
+                data={/** @type {Record<string, any>} */ (notification.data)}
+                navigation={nav}
+                relire={refreshNotifications}
+                testID={String(notification.documentId || notification.id)}
+              />
+            ) : null}
             {isRsvpReminder ? (
               <View
                 style={{
@@ -565,7 +575,7 @@ function NotificationList() {
         </Swipeable>
       </Animated.View>
     );
-  }, [Colors, Fonts, Spaces, etiquettesDeCasquette, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
+  }, [Colors, Fonts, Spaces, etiquettesDeCasquette, handlePressNotification, isDeclinedParticipationNotification, isRsvpReminderNotification, nav, refreshNotifications, renderRightActions, renderLeftActions, sendRsvpFromNotification, t]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

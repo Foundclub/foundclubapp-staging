@@ -8,6 +8,7 @@ import {
   createTrainer,
   linkTrainerToClub,
 } from '@/services/auth/authService';
+import { sendStaffInvitation } from '@/services/staffInvitation/staffInvitationService';
 
 import { buildPreservedApiError } from '@/utils/errors/apiError';
 
@@ -130,6 +131,18 @@ jest.mock('@/services/auth/authService', () => ({
   linkManagerToClub: jest.fn(),
   linkTrainerToClub: jest.fn(),
 }));
+
+// INVITE-STAFF (10/11/2026, « 1A ») : l'écran n'appelle plus createTrainer / createManager, il
+// ENVOIE UNE INVITATION. Adaptateur : l'invitation « coach » passe par la doublure `createTrainer`,
+// l'invitation « dirigeant » par `createManager` ; les assertions de rôle gardent leur sens.
+jest.mock('@/services/staffInvitation/staffInvitationService', () => {
+  const auth = jest.requireMock('@/services/auth/authService');
+  return {
+    sendStaffInvitation: jest.fn((/** @type {any} */ v) => (
+      v.role === 'dirigeant' ? auth.createManager(v) : auth.createTrainer(v)
+    )),
+  };
+});
 
 jest.mock('@/services/club/clubQueries', () => ({
   useGetClub: () => mockClubQuery,
@@ -366,20 +379,8 @@ const refusUnicite = (details) => buildPreservedApiError({
 const textesDesAlertes = () => /** @type {any} */ (Alert.alert).mock.calls
   .map((/** @type {any[]} */ appel) => `${appel[0]} ${appel[1]}`);
 
-describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français', () => {
+describe('PETITSBUGS-3 — un refus du serveur : une seule alerte, en français', () => {
   beforeEach(() => { mockMutationOptions.length = 0; });
-
-  it('numéro d’un compte existant : la feuille d’invitation, aucune alerte brute', async () => {
-    /** @type {any} */ (createTrainer)
-      .mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
-    const arbre = await monterEcran();
-    await saisirTelephone('+33639980001');
-    await appuyerSur(arbre, LIBELLE_CTA);
-
-    // INVITE-COACH-EXISTANT (10/11) : l'alerte à 2 boutons devient la feuille d'invitation.
-    expect(Alert.alert).not.toHaveBeenCalled();
-    expect(dernieresProps(mockInvitedModalProps).dejaInscrit).toBe(true);
-  });
 
   it('autre refus d’unicité : l’alerte traduite, seule', async () => {
     /** @type {any} */ (createTrainer)
@@ -395,7 +396,10 @@ describe('PETITSBUGS-3 — numéro déjà pris : une seule alerte, en français'
 
   it('le filet global se tait sur la création : l’écran parle seul', async () => {
     await monterEcran();
-    const creation = mockMutationOptions.find((options) => options.mutationFn === createTrainer);
+    // INVITE-STAFF : la mutation de l'écran est désormais l'envoi de l'invitation.
+    const creation = mockMutationOptions.find(
+      (options) => options.mutationFn === sendStaffInvitation,
+    );
     expect(creation?.meta?.preventToastError).toBe(true);
   });
 });
@@ -423,30 +427,23 @@ describe('PETITSBUGS-3 — « Ajout réussi ! » sans le clavier numérique', ()
 describe.each([
   ['coach', RouteNames.AddCoach, createTrainer],
   ['dirigeant', RouteNames.AddClubManager, createManager],
-])('SECU-NOM-NUMERO — %s : aucun nom avant que la personne accepte', (_role, routeName, creer) => {
-  it('numéro déjà inscrit : message neutre, sans nom ni club', async () => {
-    // Même si un ancien serveur joint encore la fiche, l'écran ne la lit plus.
-    /** @type {any} */ (creer).mockRejectedValue(refusUnicite({
-      code: 'PHONE_NUMBER_TAKEN',
-      user: {
-        club: { name: 'Club Ailleurs' },
-        documentId: 'u-9',
-        firstname: 'Audit',
-        lastname: 'Rejeu',
-      },
-    }));
+])('INVITE-STAFF — %s : une seule réponse, aucun nom avant l accord', (_role, routeName, creer) => {
+  // Le serveur répond PAREIL que le numéro ait un compte ou non (pas d'oracle) : l'écran
+  // n'affiche que ce qui a été tapé.
+  it('l invitation part : la feuille s ouvre, sans alerte ni nom', async () => {
+    /** @type {any} */ (creer).mockResolvedValue({ invitation: { phoneHint: '98' }, sent: true });
     const arbre = await monterEcran({ name: routeName });
     await saisirTelephone('+33600000098');
     await appuyerSur(arbre, LIBELLE_CTA);
 
     expect(Alert.alert).not.toHaveBeenCalled();
     const feuille = dernieresProps(mockInvitedModalProps);
-    expect(feuille).toEqual(expect.objectContaining({ dejaInscrit: true, isVisible: true }));
+    expect(feuille.isVisible).toBe(true);
     expect(JSON.stringify(feuille)).not.toMatch(/Audit|Rejeu|autre club|Club Ailleurs/);
   });
 
-  it('« Inviter » ouvre le SMS vers le numéro tapé, sans rattacher', async () => {
-    /** @type {any} */ (creer).mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN' }));
+  it('« Prévenir par SMS » ouvre le SMS vers le numéro tapé, sans rattacher', async () => {
+    /** @type {any} */ (creer).mockResolvedValue({ invitation: { phoneHint: '98' }, sent: true });
     const arbre = await monterEcran({ name: routeName });
     await saisirTelephone('+33600000098');
     await appuyerSur(arbre, LIBELLE_CTA);
@@ -458,17 +455,5 @@ describe.each([
     }));
     expect(linkTrainerToClub).not.toHaveBeenCalled();
     expect(mockNavigation.goBack).toHaveBeenCalled();
-  });
-
-  it('déjà dans CE club : dit sans nom', async () => {
-    /** @type {any} */ (creer)
-      .mockRejectedValue(refusUnicite({ code: 'PHONE_NUMBER_TAKEN', sameClub: true }));
-    const arbre = await monterEcran({ name: routeName });
-    await saisirTelephone('+33600000098');
-    await appuyerSur(arbre, LIBELLE_CTA);
-
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    expect(textesDesAlertes().join(' ')).toContain('Ce numéro est déjà membre de ce club.');
-    expect(/** @type {any} */ (Alert.alert).mock.calls[0][2]).toBeUndefined();
   });
 });

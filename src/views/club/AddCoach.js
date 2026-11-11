@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Keyboard, Platform, ScrollView,
+  Keyboard, Platform, ScrollView,
   Text, View,
 } from 'react-native';
 
@@ -13,11 +13,11 @@ import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { reportTourField } from '@/domains/tour/tourTargetRegistry';
 import { Joi } from '@/theme/strings';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
-import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourBubbleSlot from '@/components/molecules/tour/TourBubbleSlot';
 import TourTarget from '@/components/molecules/tour/TourTarget';
@@ -29,8 +29,8 @@ import ClubStateView from '@/views/club/components/ClubStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { createManager, createTrainer } from '@/services/auth/authService';
 import { useGetClub } from '@/services/club/clubQueries';
+import { sendStaffInvitation } from '@/services/staffInvitation/staffInvitationService';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
 import { getFieldError } from '@/utils/form/formUtils';
@@ -38,10 +38,10 @@ import { getFieldError } from '@/utils/form/formUtils';
 import { useTour } from '@/context/useTour';
 import useKeyboardFrame from '@/hooks/useKeyboardFrame';
 
+// INVITE-STAFF (10/11, « 1A ») : on invite, on ne crée plus le compte. La personne remplit
+// elle-même son nom et sa date de naissance ; le prénom ne sert qu'au message.
 const defaultValues = {
-  birthdate: '',
   firstname: '',
-  lastname: '',
   phoneNumber: '',
 };
 
@@ -62,9 +62,7 @@ const ROLE_PILL_STYLE = {
 };
 
 const addCoachSchema = Joi.object({
-  birthdate: Joi.string().pattern(/^(\d{2}\/\d{2}\/\d{4})?$/).allow('').optional(),
   firstname: Joi.string().allow('').optional(),
-  lastname: Joi.string().allow('').optional(),
   phoneNumber: Joi.string().required(),
 }).unknown(true);
 
@@ -99,15 +97,10 @@ function AddCoach({ navigation, route }) {
   useEffect(() => {
     if (isTourOnSend) Keyboard.dismiss();
   }, [isTourOnSend]);
-  const [avatar, setAvatar] = useState(
-    /** @type {Avatar | undefined} */
-    (undefined),
-  );
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
-  // INVITE-COACH-EXISTANT : la feuille s'ouvre pour un numéro déjà inscrit, sans ajout.
-  const [isDejaInscrit, setIsDejaInscrit] = useState(false);
   const [createdTrainer, setCreatedTrainer] = useState(
-    /** @type {{ firstname?: string, lastname?: string, phoneNumber?: string } | null} */
+    // expiresAt, firstname, lastname, phoneHint, phoneNumber : ce que la feuille « envoyée » lit.
+    /** @type {Record<string, string | undefined> | null} */
     (null),
   );
   // `club.roles.manage` exige l'offre Club : ces deux mutations sont les seules de l'ecran
@@ -116,7 +109,7 @@ function AddCoach({ navigation, route }) {
 
   const { t } = useTranslation();
   const { Alignments, Fonts, Spaces } = useTheme();
-  const { formatBirthdateToDisplay, userData } = useAuth();
+  const { userData } = useAuth();
   const openedAsManager = route?.name === RouteNames.AddClubManager
     || route?.params?.staffType === STAFF_ROLES.MANAGER;
   const [staffRole, setStaffRole] = useState(
@@ -157,7 +150,6 @@ function AddCoach({ navigation, route }) {
     control,
     formState: { errors: formErrors },
     handleSubmit,
-    setFocus,
     watch,
   } = useForm({
     defaultValues,
@@ -172,50 +164,30 @@ function AddCoach({ navigation, route }) {
 
   const { invitationDuStaff, inviteTrainer } = useAuth();
 
+  // INVITE-STAFF (10/11, maquette validée) — une vraie invitation : la personne accepte ou
+  // refuse. Le serveur répond PAREIL que le numéro ait un compte ou non (pas d'oracle) :
+  // l'écran n'a qu'un seul succès, « Invitation envoyée ». Le guide compte M2 à l'envoi.
   const createTrainerMutation = useMutation({
-    mutationFn: isManagerMode ? createManager : createTrainer,
-    onError: (/** @type {import('axios').AxiosError} */error, variables) => {
+    mutationFn: sendStaffInvitation,
+    onError: (/** @type {any} */error) => {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
-
-      // PETITSBUGS-3 : le service aplatit l'erreur (`buildPreservedApiError`) ; ses
-      // `details` restent sur l'erreur, plus sous `response`. Lus sous les deux
-      // formes : sinon « Failed to create trainer: Uniqueness check failed » brut,
-      // puis l'alerte du filet global (2 alertes, rejeu 4).
-      const details = /** @type {any} */ (error)?.details
-        || /** @type {any} */ (error)?.response?.data?.error?.details;
-      // SECU-NOM-NUMERO (decision « 119- A ») : un numero deja inscrit ne dit plus
-      // QUI le detient, ni dans quel club. Le serveur ne dit que « deja dans CE club ».
-      if (details?.code === 'PHONE_NUMBER_TAKEN' && details.sameClub) {
-        Alert.alert(
-          t('addCoach.alerts.alreadyInThisClub.title'),
-          t('addCoach.alerts.alreadyInThisClub.description'),
-        );
-      } else if (details?.code === 'PHONE_NUMBER_TAKEN') {
-        // INVITE-COACH-EXISTANT (10/11/2026) : le numéro a déjà un compte. Il ne rejoint le club
-        // que sur son accord (SECU-RATTACHEMENT) : la feuille d'invitation dit pourquoi, et
-        // propose le SMS (téléphone) ou la copie / l'e-mail (ordinateur). Personne n'est ajouté :
-        // le guide ne compte RIEN (avant : `staff.linked`, M2 comptée faite à tort).
-        Keyboard.dismiss();
-        setCreatedTrainer({ ...variables });
-        setIsDejaInscrit(true);
-        setIsSuccessModalVisible(true);
-      } else {
-        // Une seule alerte, traduite (code EMAIL_TAKEN…), jamais le message brut.
-        displayErrorAlert(error);
-      }
+      // Une seule alerte, traduite, jamais le message brut.
+      displayErrorAlert(error);
     },
     // L'écran parle seul : le filet global (queryClient) se tait.
     meta: { preventToastError: true },
     onSuccess: (data, variables) => {
       emitGuidanceAction('staff.invited', { firstName: variables?.firstname || '' });
-      setCreatedTrainer({ ...(data || {}), ...variables });
-      // INVITESMS (29/10/2026, decision d'Adel « 2- A ») — le dirigeant aussi : la feuille
-      // d'invitation (SMS pre-rempli) au lieu d'une alerte, sinon personne ne le previent.
-      // PETITSBUGS-3 (R4-34) : « Ajout réussi ! » s'ouvrait sur le clavier numérique.
+      setCreatedTrainer({
+        ...variables,
+        teamId: variables?.teamId || undefined,
+        ...(data?.invitation || {}),
+      });
+      // PETITSBUGS-3 (R4-34) : la feuille ne s'ouvre pas sur le clavier numérique.
       Keyboard.dismiss();
       setIsSuccessModalVisible(true);
     },
@@ -227,11 +199,30 @@ function AddCoach({ navigation, route }) {
    */
   const handleFormSubmit = (data) => {
     createTrainerMutation.mutate({
-      ...data,
-      avatar,
-      clubId: routeClubId || clubData?.documentId,
+      clubId: routeClubId || clubData?.documentId || '',
+      firstname: data.firstname,
+      phoneNumber: data.phoneNumber,
+      role: isManagerMode ? 'dirigeant' : 'coach',
+      teamId: isManagerMode ? null : sanitizeRouteParam(route?.params?.teamId) || null,
     });
   };
+
+  const expiresOn = createdTrainer?.expiresAt
+    ? new Date(createdTrainer.expiresAt).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+    })
+    : '';
+  const sentTitle = t('staffInvitation.sent.title', {
+    name: createdTrainer?.firstname || t('staffInvitation.sent.fallbackName'),
+    ...SANS_ECHAPPEMENT,
+  });
+  const sentText = t('staffInvitation.sent.description', {
+    date: expiresOn,
+    hint: createdTrainer?.phoneHint || '',
+    role: isManagerMode ? t('staffInvitation.roles.dirigeant') : t('staffInvitation.roles.coach'),
+    ...SANS_ECHAPPEMENT,
+  });
 
   if (!routeClubId) {
     return (
@@ -335,14 +326,6 @@ function AddCoach({ navigation, route }) {
             style={[Alignments.fill]}
           >
             <View style={[Alignments.fill, Spaces.gap[24]]}>
-              <View style={[Alignments.row, Spaces.marginVertical[24]]}>
-                <SelectAvatar
-                  currentAvatar={avatar}
-                  onAvatarSelected={setAvatar}
-                  size={110}
-                />
-              </View>
-
               <TourTarget id="cf-role" style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
                   {t('addCoach.fields.role.label')}
@@ -407,7 +390,6 @@ function AddCoach({ navigation, route }) {
                       label={t('addCoach.fields.firstname.label')}
                       onBlur={onBlur}
                       onChangeText={onChange}
-                      onSubmitEditing={() => setFocus('lastname')}
                       placeholder={t('addCoach.fields.firstname.placeholder')}
                       ref={ref}
                       value={value}
@@ -415,50 +397,6 @@ function AddCoach({ navigation, route }) {
                   )}
                 />
               </TourTarget>
-              <Controller
-                control={control}
-                name="lastname"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="next"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('addCoach.fields.lastname.label')}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    onSubmitEditing={() => setFocus('birthdate')}
-                    placeholder={t('addCoach.fields.lastname.placeholder')}
-                    ref={ref}
-                    value={value}
-                  />
-                )}
-              />
-              <Controller
-                control={control}
-                name="birthdate"
-                render={({
-                  field: {
-                    name, onBlur, onChange, ref, value,
-                  },
-                }) => (
-                  <Input
-                    enterKeyHint="done"
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    inputMode="numeric"
-                    keyboardType="number-pad"
-                    label={t('addCoach.fields.birthdate.label')}
-                    maxLength={10}
-                    onBlur={onBlur}
-                    onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
-                    placeholder={t('addCoach.fields.birthdate.placeholder', 'JJ/MM/AAAA')}
-                    ref={ref}
-                    value={value}
-                  />
-                )}
-              />
             </View>
           </ScrollView>
         </TourTarget>
@@ -486,9 +424,9 @@ function AddCoach({ navigation, route }) {
         </View>
       </View>
       <TrainerInvitedModal
-        dejaInscrit={isDejaInscrit}
         isManager={isManagerMode}
         isVisible={isSuccessModalVisible}
+        libelleInviter={t('staffInvitation.sent.actions.sms')}
         // RETOURS-TESTEUR-2 (M0077) : sur ordinateur, ce texte se copie ou part par e-mail.
         messageDInvitation={createdTrainer ? invitationDuStaff?.({
           clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
@@ -500,16 +438,11 @@ function AddCoach({ navigation, route }) {
         })?.message : ''}
         onClose={() => {
           setIsSuccessModalVisible(false);
-          if (isDejaInscrit) {
-            // Rien n'a été créé : on reste sur le formulaire (corriger le numéro, ou revenir).
-            setIsDejaInscrit(false);
-            return;
-          }
           emitGuidanceInteraction('staff.invite.later');
           navigation.goBack();
         }}
         onInvite={() => {
-          if (!isDejaInscrit) emitGuidanceInteraction('staff.sms.opened');
+          emitGuidanceInteraction('staff.sms.opened');
           if (createdTrainer) {
             inviteTrainer({
               clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
@@ -524,6 +457,8 @@ function AddCoach({ navigation, route }) {
           setIsSuccessModalVisible(false);
           navigation.goBack();
         }}
+        texte={sentText}
+        titre={sentTitle}
         trainerName={successEntityName(
           createdTrainer?.firstname,
           createdTrainer?.lastname,

@@ -69,6 +69,7 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import useTourScroller from '@/components/molecules/tour/useTourScroller';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
+import InvitationsDeStaffEnAttente from '@/components/organisms/invitationDeStaff/InvitationsDeStaffEnAttente';
 import { lireOngletDOrigine, useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
@@ -4411,6 +4412,10 @@ function ClubDetails({ navigation, route }) {
                       ))
                     }
                     </View>
+                    {/* INVITE-STAFF (10/11, maquette C) : les invitations en attente. */}
+                    {canEdit && club?.documentId ? (
+                      <InvitationsDeStaffEnAttente clubId={club.documentId} clubName={club?.name} />
+                    ) : null}
                     {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
                     {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}
                     {/* Il ne disparait pas pour autant : `startClubChat` n'a AUCUN autre */}

@@ -247,3 +247,19 @@ jest.mock('react-native-linear-gradient', () => {
 jest.mock('react-native-qrcode-svg', () => function QRCodeDoublure() {
   return null;
 });
+// INVITE-STAFF (10/11) — la fiche club (rubrique « Invitations en attente ») et la cloche
+// (« Voir et accepter ») importent ces deux modules ; les témoins de ces écrans ne doublent pas
+// le réseau de l'invitation de staff, et la carte de la cloche tire BottomModal (gorhom, non
+// transpilé). Doublures neutres ici ; les témoins INVITESTAFF les remplacent (`jest.unmock`).
+jest.mock('@/services/staffInvitation/staffInvitationService', () => ({
+  acceptStaffInvitation: jest.fn(() => Promise.resolve({ accepted: true })),
+  cancelStaffInvitation: jest.fn(() => Promise.resolve({ cancelled: true })),
+  getMyStaffInvitations: jest.fn(() => Promise.resolve([])),
+  getSentStaffInvitations: jest.fn(() => Promise.resolve([])),
+  refuseStaffInvitation: jest.fn(() => Promise.resolve({ refused: true })),
+  sendStaffInvitation: jest.fn(() => Promise.resolve({ invitation: {}, sent: true })),
+}));
+jest.mock('@/components/organisms/invitationDeStaff/ActionsInvitationDeStaff', () => ({
+  __esModule: true,
+  default: () => null,
+}));

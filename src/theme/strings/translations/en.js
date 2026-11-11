@@ -70,7 +70,7 @@ export default {
       },
     },
     hints: {
-      invitation: 'You will send them the text right after.',
+      invitation: 'They get the invitation and choose to accept. Nothing changes without their consent.',
     },
     roles: {
       manager: 'Club manager',
@@ -21207,6 +21207,86 @@ export default {
     },
     submitError: 'Unable to create',
   },
+  // INVITE-STAFF (10/11/2026, approved mock-up) — staff invitation.
+  staffInvitation: {
+    close: 'Close',
+    errors: {
+      accept: 'Unable to accept this invitation right now.',
+      cancel: 'Unable to cancel this invitation.',
+      expiredText: 'Ask the club to send you a new one.',
+      expiredTitle: 'This invitation is no longer valid',
+      fullText: 'Your invitation stays open. Let the manager know: they can free up a spot.',
+      fullTitle: 'The club has reached its member limit',
+      mine: 'Unable to load your invitations.',
+      minorText: 'You can stay a player in your teams. Talk to your club manager.',
+      minorTitle: 'You must be 18 to join a staff',
+      protectedText: 'A parent account stays a parent account. Ask the club to invite another number.',
+      protectedTitle: 'This account cannot join a staff',
+      refuse: 'Unable to decline this invitation right now.',
+      send: 'Unable to send the invitation right now.',
+      sent: 'Unable to load pending invitations.',
+    },
+    form: {
+      hint: 'They get your invitation and choose to accept. Nothing changes without their consent.',
+      send: 'Send the invitation',
+      title: 'Invite a coach',
+    },
+    ok: 'Got it',
+    pending: {
+      cancel: 'Cancel',
+      note: 'You see what you typed, not the person’s profile. They join the staff once they accept.',
+      resend: 'Resend by text',
+      sentOn: 'sent on {{date}}',
+      someone: 'Invitee',
+      state: 'Pending',
+      title: 'Pending invitations · {{count}}',
+    },
+    received: {
+      by: 'Invitation from {{name}}.',
+      coach: '{{club}} invites you as a coach',
+      coachOf: '{{club}} invites you as coach of the {{team}} team',
+      dirigeant: '{{club}} invites you as a club manager',
+      open: 'View and accept',
+      refuse: 'Decline',
+    },
+    refused: {
+      text: 'Nothing changed on your account. The club is not notified.',
+      title: 'Invitation declined',
+    },
+    roles: {
+      coach: 'Coach',
+      dirigeant: 'Manager',
+    },
+    sent: {
+      actions: {
+        sms: 'Let them know by text',
+      },
+      description: '{{role}} · number ending in {{hint}} · valid until {{date}}.\n\n'
+        + 'If they already use FoundClub, they find it in their notifications. Otherwise it waits: '
+        + 'they will see it as soon as they sign up with this number.',
+      fallbackName: 'your invitee',
+      title: 'Invitation sent to {{name}}',
+    },
+    sheet: {
+      accept: 'Accept',
+      becomeCoach: 'You become a coach of the club.',
+      becomeCoachOf: 'You become coach of the {{team}} team: matches, trainings, call-ups.',
+      becomeDirigeant: 'You become a club manager: teams, staff and members.',
+      ifAccept: 'If you accept:',
+      ifRefuse: 'If you decline, nothing changes and the club is not notified.',
+      ifRefuseUntil: 'If you decline, nothing changes and the club is not notified. Valid until {{date}}.',
+      joinClub: 'You join the club {{club}}.',
+      refuse: 'Decline',
+      teamsStay: 'Your current teams stay as they are.',
+    },
+    welcome: {
+      coach: 'You are a coach. You can call up players, create trainings and follow the team right away.',
+      dirigeant: 'You are a manager. You can manage teams, staff and members right away.',
+      later: 'Later',
+      openClub: 'Open the club',
+      title: 'Welcome to the {{club}} staff',
+    },
+  },
   stepper: {
     progress: 'Step {{filled}} of {{total}}',
   },
@@ -24805,15 +24885,15 @@ export default {
         + 'from the left edge.',
       'm2-back-hub': 'Back on your club page. Now create a team: open “Our teams”.',
       'm2-back-site': 'You are on Staff. Go back to your club page: tap the arrow.',
-      'm2-fields': 'Their number (required) and first name. An account is created for this '
-        + 'number, and you send the text yourself right after.',
+      'm2-fields': 'Their number (required) and first name. They get the invitation and choose to '
+        + 'accept; you send the text yourself right after.',
       'm2-fields-required': 'First give their number.',
       'm2-invite': 'Added to the club! Tap “Invite”: your messaging app opens with the message '
         + 'ready. Send it, then come back here.',
       'm2-invite-site': 'Added to the club! Tap “Invite”: the invitation message is copied (on a '
         + 'phone, your share sheet opens). Send it to your coach.',
       'm2-role': 'The right role is already selected. Keep it.',
-      'm2-send': 'Tap “Send the invitation”: their account is created.',
+      'm2-send': 'Tap “Send the invitation”: they will receive it.',
       'm2-sms': 'Send the text from your messaging app, then come back here. It’s up to you to '
         + 'send it: the app doesn’t.',
       'm2-sms-next': 'It’s sent',

@@ -59,10 +59,13 @@ describe('M2 : inviter un coach', () => {
     expect(step('m2-fields').veil).toBe(false);
   });
 
-  it('la phrase dit la vérité : un compte créé, et le SMS est à envoyer soi-même', () => {
-    expect(step('m2-fields').text).toMatch(/compte/);
+  // INVITE-STAFF (10/11/2026, « 1A ») : on invite, le compte n'est plus créé d'office.
+  it('la phrase dit la vérité : une invitation à accepter, le SMS à envoyer soi-même', () => {
+    expect(step('m2-fields').text).toMatch(/invitation/);
+    expect(step('m2-fields').text).toMatch(/accepter/);
     expect(step('m2-fields').text).toMatch(/SMS/);
-    expect(step('m2-fields').text).not.toMatch(/recevra/);
+    expect(step('m2-fields').text).not.toMatch(/compte est créé/);
+    expect(step('m2-send').text).toMatch(/recevra/);
   });
 
   it('« Inviter » puis retour : M2 validée, avec un bouton si le téléphone ne dit rien', () => {

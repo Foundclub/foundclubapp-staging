@@ -94,7 +94,7 @@ const creer = async () => {
   act(() => { mockChamps.get('Telephone *').onChangeText('0612345678'); });
   act(() => { mockChamps.get('Prenom').onChangeText('Luc'); });
   await act(async () => {
-    await arbre.root.findByProps({ testID: 'bouton-Ajouter' }).props.onPress();
+    await arbre.root.findByProps({ testID: 'bouton-staffInvitation.form.send' }).props.onPress();
   });
   return { arbre, onClose };
 };
@@ -124,7 +124,8 @@ describe('🔴 INVITESMS — après « Créer un entraîneur », la feuille d in
     const { arbre } = await creer();
     await act(async () => { derniereFeuille().onInvite(); });
     expect(mockInviteTrainer).toHaveBeenCalledWith(expect.objectContaining({
-      clubId: 'club-1', clubName: 'SMUC', firstname: 'Luc', phoneNumber: '+33612345678',
+      // INVITE-STAFF : aucun compte n'est renvoyé, le SMS part vers le numéro TAPÉ.
+      clubId: 'club-1', clubName: 'SMUC', firstname: 'Luc', phoneNumber: '0612345678',
     }));
     expect(derniereFeuille().isVisible).toBe(false);
     act(() => arbre.unmount());
@@ -149,31 +150,9 @@ const refusUnicite = (/** @type {any} */ details) => buildPreservedApiError({
   },
 }, 'Failed to create trainer');
 
-describe('INVITE-COACH-EXISTANT — depuis une équipe, un numéro déjà inscrit', () => {
-  it('ouvre la feuille d invitation (sans alerte) et referme le formulaire', async () => {
-    mockErreur = refusUnicite({ code: 'PHONE_NUMBER_TAKEN' });
-    const { arbre, onClose } = await creer();
-    expect(Alert.alert).not.toHaveBeenCalled();
-    expect(derniereFeuille())
-      .toEqual(expect.objectContaining({ dejaInscrit: true, isVisible: true }));
-    expect(onClose).toHaveBeenCalled();
-    await act(async () => { derniereFeuille().onInvite(); });
-    expect(mockInviteTrainer).toHaveBeenCalledWith(expect.objectContaining({
-      clubId: 'club-1', phoneNumber: '0612345678',
-    }));
-    act(() => arbre.unmount());
-  });
-
-  it('déjà dans CE club : le dit, sans feuille', async () => {
-    mockErreur = refusUnicite({ code: 'PHONE_NUMBER_TAKEN', sameClub: true });
-    const { arbre } = await creer();
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    expect(/** @type {any} */ (Alert.alert).mock.calls[0][1])
-      .toBe('addCoach.alerts.alreadyInThisClub.description');
-    expect(derniereFeuille().isVisible).toBe(false);
-    act(() => arbre.unmount());
-  });
-
+// INVITE-STAFF (10/11/2026) : plus de « numéro déjà inscrit » côté écran — le serveur répond
+// PAREIL que le numéro ait un compte ou non. Reste le refus ordinaire.
+describe('INVITE-STAFF — depuis une équipe, un refus du serveur', () => {
   it('autre erreur du serveur : un message, jamais l anglais brut', async () => {
     mockErreur = refusUnicite({ code: 'EMAIL_TAKEN' });
     const { arbre } = await creer();
