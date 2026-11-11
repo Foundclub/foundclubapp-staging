@@ -20345,6 +20345,7 @@ export default {
       voirLesCreneauxA11y: '{{nom}} : voir les créneaux',
     },
     creneau: {
+      ageMinimumIci: 'Chaque complexe fixe un âge minimum. Ici : {{age}} ans.',
       agrandirPhotos: 'Agrandir les photos',
       aucunCeJour: 'Aucun créneau libre ce jour-là.',
       choisi: 'Choisi',
@@ -20634,14 +20635,30 @@ export default {
       surPlace: '{{prix}}, à régler sur place',
     },
     recapitulatif: {
+      // eslint-disable-next-line max-len
+      annoncePart: 'Une annonce part dans « Recherche de joueurs ». Dis « On a assez de joueurs » quand vous êtes {{nombre}}, ou plus tôt si tu es sûr de ton groupe.',
       annulation: '{{regle}}. Ensuite, appelle le complexe.',
+      assezDeJoueurs: 'On a assez de joueurs',
+      // eslint-disable-next-line max-len
+      avertissementBanni: 'Si ton groupe ne vient pas, tu pourras être banni de ce complexe, et FoundClub peut suspendre ton compte.',
       capacite: 'De 2 à {{max}} : la capacité du terrain.',
       combien: 'Combien de joueurs ?',
+      creneauOuvert: 'Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau.',
+      enConstruction: 'Ta réservation sera créée « en construction ».',
       envoyerLaDemande: 'Envoyer la demande',
+      // eslint-disable-next-line max-len
+      groupePaieCreneau: 'Le groupe paie le créneau : {{total}}, à régler sur place, même si vous êtes moins nombreux le jour J.',
+      // eslint-disable-next-line max-len
+      groupePaieJoueurs: 'Le groupe paie pour {{nombre}} joueurs : {{total}}, à régler sur place, même si vous êtes moins nombreux le jour J.',
       honneur: 'Tu t’engages sur l’honneur à venir.',
+      ilManqueN: 'Il manque {{nombre}} joueurs.',
+      ilManqueUn: 'Il manque {{nombre}} joueur.',
+      ilNousManque: 'Il nous manque des joueurs',
       lancerLaCollecte: 'Lancer la collecte',
       modifier: 'Modifier',
       moins: 'Un joueur de moins',
+      nombreFixe: 'Nombre fixé par le complexe.',
+      onEstCombien: 'On est combien, toi compris ?',
       paiement: 'Le paiement se fait sur place.',
       partagerNumero: 'Partager mon numéro avec le complexe pour cette réservation',
       petitMot: 'Un petit mot',
@@ -20651,8 +20668,11 @@ export default {
       pourTous: 'La réservation vaut pour tous les participants.',
       quand: '{{jour}} · {{creneau}}',
       reserver: 'Réserver',
+      reserverEtPublier: 'Réserver et publier l’annonce',
+      seReservePour: 'Ce terrain se réserve pour {{nombre}} joueurs.',
       taReservation: 'Ta réservation',
       titre: 'Récapitulatif',
+      tonGroupe: 'Ton groupe',
     },
     recherche: {
       apresMidi: '12 h – 18 h',

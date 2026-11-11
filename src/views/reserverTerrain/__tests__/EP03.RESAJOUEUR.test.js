@@ -2,6 +2,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import ReserverCreneau from '@/views/reserverTerrain/ReserverCreneau';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
 import { creneau, recapitulatif } from '@/testSupport/temoinReserver';
 
@@ -20,6 +22,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 let mockPhotos = /** @type {string[]} */ ([]);
+let mockNaissance = /** @type {string | null} */ ('1990-01-01');
 let mockCreneauxParJour = /** @type {Record<string, any>} */ ({});
 const mockRelire = jest.fn();
 const mockApercu = jest.fn();
@@ -53,7 +56,7 @@ jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
 // CORR-RESA (78 A) : l'écran lit le compte (l'âge) ; un adulte ici.
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => ({ userData: { birthdate: '1990-01-01', documentId: 'u-1' } }),
+  default: () => ({ userData: { birthdate: mockNaissance, documentId: 'u-1' } }),
 }));
 jest.mock(
   '@/components/molecules/bottomModal/BottomModal',
@@ -129,8 +132,8 @@ const toucher = async (noeud) => {
 // RESA-JOUEUR (11/11/2026) — maquette validée par Adel le 10/11 (« 232- ok », piste B choisie) :
 // D48 « il manque les photos de l'installation et les cases des heures sont pas très UX/UI ».
 // Les photos du terrain en tête (elles défilent, « 1 / N », un appui les ouvre en grand) ; les
-// pastilles d'infos en haut ; une LIGNE par créneau (début et fin, prix, état), rangée par moment de
-// la journée avec le nombre de libres ; le pied redit le créneau ET son prix ; un jour fermé donne
+// pastilles d'infos en haut ; une LIGNE par créneau (début et fin, prix, état), rangée par moment
+// de la journée avec le nombre de libres ; le pied redit le créneau ET son prix ; un jour fermé donne
 // le motif du complexe (le serveur l'envoie déjà : `closureLabel`).
 
 beforeEach(() => {
@@ -138,6 +141,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockParams = { slug: 'le-five-de-montrivage', terrainId: 't-1' };
   mockPhotos = ['https://cdn.test/t1-a.jpg', 'https://cdn.test/t1-b.jpg'];
+  mockNaissance = '1990-01-01';
   mockCreneauxParJour = {
     '2026-10-14': jour('2026-10-14', [
       creneau('15:00', '16:30'),
@@ -224,5 +228,31 @@ describe('RESA-JOUEUR — E-P03 : les infos et les créneaux (piste B)', () => {
     const arbre = await monter();
     await toucher(parRepere(arbre, 'jour-2026-10-15'));
     expect(lisibles(arbre)).toContain('Fermé ce jour-là : Travaux');
+  });
+});
+
+// M1158 (feuille du testeur) : sans date de naissance, l'échec arrivait APRÈS « Continuer ». La
+// maquette (« 232- ok ») le dit avant le bouton : un bandeau, « Compléter mon profil », et le
+// bouton grisé tant qu'elle manque.
+describe('RESA-JOUEUR — sans date de naissance, avant le bouton (M1158)', () => {
+  it('le bandeau, « Compléter mon profil », « Continuer » grisé', async () => {
+    mockNaissance = null;
+    const arbre = await monter();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Ajoute ta date de naissance pour réserver.',
+      'Chaque complexe fixe un âge minimum. Ici : 16 ans.',
+    ]));
+    await toucher(parRepere(arbre, 'creneau-18:00'));
+    const continuer = arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.title === 'Continuer' && typeof n.props?.onPress === 'function'
+    ))[0];
+    expect(continuer.props.disabled).toBe(true);
+    await toucher(arbre.root.findAll((/** @type {any} */ n) => (
+      n.props?.title === 'Compléter mon profil' && typeof n.props?.onPress === 'function'
+    ))[0]);
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ProfileStack, {
+      screen: RouteNames.ProfileEdit,
+    });
+    expect(mockApercu).not.toHaveBeenCalled();
   });
 });

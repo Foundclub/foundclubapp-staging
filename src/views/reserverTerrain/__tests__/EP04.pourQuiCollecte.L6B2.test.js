@@ -4,7 +4,7 @@ import ReserverRecapitulatif from '@/views/reserverTerrain/ReserverRecapitulatif
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
+import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
 import { complexePublic, maReservation, recapitulatif } from '@/testSupport/temoinReserver';
 
 // RESA-L6B-2 (20/10/2026) — E-P04, ce que le serveur RESA-L3 ouvre (planche EP04 états 2 et 3 ;
@@ -39,6 +39,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useComplexePublic: () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
+  // RESA-JOUEUR : l'annonce publiée avec la réservation en construction.
+  usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReserverUnCreneau: () => ({ isPending: false, mutateAsync: mockReserver }),
 }));
 
@@ -202,64 +204,10 @@ describe('E-P04 — « Pour qui ? » (A-P04, AT-03 B)', () => {
   });
 });
 
-describe('E-P04 — la collecte (A-P07, RC-P05, Q3)', () => {
-  it('décochée : la case et ce qu’elle fait', async () => {
-    const arbre = await monter();
-    const caseCollecte = parRepere(arbre, 'reserver-collecte');
-    expect(caseCollecte.props.accessibilityState)
-      .toEqual(expect.objectContaining({ checked: false }));
-    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'Réserver seulement quand assez de joueurs ont répondu présent',
-      'Le créneau n’est réservé qu’une fois le nombre atteint.',
-    ]));
-  });
-
-  it('cochée : le nombre requis, la date limite, « le créneau reste libre »', async () => {
-    const arbre = await monter();
-    await toucher(parRepere(arbre, 'reserver-collecte'));
-    expect(mockApercu).toHaveBeenCalledWith(expect.objectContaining({
-      collectDeadline: expect.any(String), quorum: 10,
-    }));
-    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'Nombre requis (toi compris)',
-      'Date limite',
-      'Mercredi 10/03, 18 h',
-      'Mardi 09/03, 18 h',
-      'Au plus tard 24 h avant le créneau : la règle du complexe.',
-      'En attendant, le créneau reste libre : quelqu’un peut le réserver avant toi.',
-      'Lancer la collecte',
-    ]));
-    expect(parRepere(arbre, `reserver-echeance-${PLUS_TARD}`).props.choisie).toBe(true);
-  });
-
-  it('« Lancer la collecte » : nombre requis et date limite partent, puis E-P05', async () => {
-    const arbre = await monter();
-    await toucher(parRepere(arbre, 'reserver-collecte'));
-    await toucher(pressable(arbre, 'Un joueur requis de moins'));
-    await toucher(parRepere(arbre, 'reserver-echeance-2027-03-09T17:00:00.000Z'));
-    await toucher(bouton(arbre, 'Lancer la collecte'));
-    expect(mockReserver).toHaveBeenCalledWith(expect.objectContaining({
-      collectDeadline: '2027-03-09T17:00:00.000Z', players: 10, quorum: 9,
-    }));
-    expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverResultat, expect.objectContaining({
-      collecte: { collectDeadline: '2027-03-09T17:00:00.000Z', quorum: 9 },
-    }));
-  });
-
-  it('trop près du créneau : la phrase du serveur, la case se décoche', async () => {
-    mockApercu.mockRejectedValueOnce({
-      details: { code: 'COMPLEXE_RESERVATION_INVALID' },
-      message: 'La date limite de la collecte est déjà passée.',
-      status: 400,
-    });
-    const arbre = await monter();
-    await toucher(parRepere(arbre, 'reserver-collecte'));
-    expect(lisibles(arbre)).toContain('La date limite de la collecte est déjà passée.');
-    expect(parRepere(arbre, 'reserver-collecte').props.accessibilityState)
-      .toEqual(expect.objectContaining({ checked: false }));
-    expect(lisibles(arbre)).toContain('Réserver');
-  });
-});
+// RESA-JOUEUR (11/11) : la case « Réserver seulement quand assez de joueurs ont répondu présent »
+// (nombre requis, date limite, « Lancer la collecte ») est RETIRÉE par la maquette validée
+// « 232- ok » (Adel : « ce n'est pas au joueur de cocher ça »). « Il nous manque des joueurs »
+// la remplace : EP04.RESAJOUEUR.test.js.
 
 it('le complexe public sert l’âge minimum du bandeau (témoin de la doublure)', () => {
   expect(complexePublic().rules.minAge).toBe(16);

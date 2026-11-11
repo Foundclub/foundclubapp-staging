@@ -315,6 +315,35 @@ export const prixDUneLigne = (prix) => (
 );
 
 /**
+ * RESA-JOUEUR (E-P04, maquette « 232- ok ») : ce que paie le groupe, écrit AVANT de réserver —
+ * toujours le nombre requis par le complexe, « même si vous êtes moins nombreux le jour J ».
+ * Au créneau : le prix du créneau ; par joueur : le prix × le nombre requis.
+ * @param {Traduire} t - Traduction.
+ * @param {{ amount?: number | null, unit?: string | null } | null | undefined} prix - Le prix figé.
+ * @param {number} requis - Le nombre de joueurs fixé par le complexe.
+ * @returns {string} La phrase, ou '' sans prix.
+ */
+export const texteCeQuePaieLeGroupe = (t, prix, requis) => {
+  if (!prix || prix.amount === null || prix.amount === undefined) return '';
+  const montant = Number(prix.amount);
+  if (!Number.isFinite(montant)) return '';
+  if (prix.unit === 'joueur') {
+    return t(
+      'reserverTerrain.recapitulatif.groupePaieJoueurs',
+      'Le groupe paie pour {{nombre}} joueurs : {{total}}, à régler sur place, même si vous êtes '
+        + 'moins nombreux le jour J.',
+      { nombre: requis, total: formatEuros(montant * requis), ...SANS_ECHAPPEMENT },
+    );
+  }
+  return t(
+    'reserverTerrain.recapitulatif.groupePaieCreneau',
+    'Le groupe paie le créneau : {{total}}, à régler sur place, même si vous êtes moins nombreux '
+      + 'le jour J.',
+    { total: formatEuros(montant), ...SANS_ECHAPPEMENT },
+  );
+};
+
+/**
  * Le mode d'un terrain, côté JOUEUR (P00 bloc 5) : une configuration, pas un état.
  * @param {Traduire} t - Traduction.
  * @param {unknown} mode - `automatique | manuel | telephone`.
@@ -581,11 +610,13 @@ export const epinglesDesComplexes = (cartes, pages, telephone) => (
  * Le corps de « Réserver » (E-P04) : la liste blanche du serveur (`readBookingPayload` : terrain,
  * jour, heure de début, nombre de joueurs, petit mot, case du numéro), et rien d'autre (RG-SECU).
  * AT-04 : la case du numéro n'existe pas pour un mineur — et quand bien même, rien ne part.
- * @param {{ collecte?: { collectDeadline?: string | null, quorum?: number | null } | null,
+ * @param {{ collecte?: { collectDeadline?: string | null, externalPlayers?: number | null,
+ *   quorum?: number | null } | null,
  *   date: string, equipe?: string | null, from: string, joueurs?: number | null,
  *   mot?: string | null, partagerNumero?: boolean, peutPartagerNumero?: boolean,
  *   terrainId: string }} choix - Le récapitulatif rempli.
- * @returns {{ collectDeadline?: string, date: string, from: string, note: string | null,
+ * @returns {{ collectDeadline?: string, date: string, externalPlayers?: number, from: string,
+ *   note: string | null,
  *   phoneShared: boolean, players?: number, quorum?: number, team?: string,
  *   terrain: string }} Le corps.
  */
@@ -598,9 +629,15 @@ export const demandeDeReservation = (choix) => {
   const quorum = Number(choix?.collecte?.quorum);
   const echeance = String(choix?.collecte?.collectDeadline || '').trim();
   const collecte = Number.isInteger(quorum) && quorum > 0 && echeance;
+  // RESA-JOUEUR (« On est combien, toi compris ? ») : les joueurs venus d'ailleurs, avec la
+  // collecte seulement.
+  const dAilleurs = Number(choix?.collecte?.externalPlayers);
   return {
     ...(collecte ? { collectDeadline: echeance } : {}),
     date: String(choix.date),
+    ...(collecte && Number.isInteger(dAilleurs) && dAilleurs > 0
+      ? { externalPlayers: dAilleurs }
+      : {}),
     from: String(choix.from),
     note: mot || null,
     phoneShared: choix?.peutPartagerNumero === true && choix?.partagerNumero === true,

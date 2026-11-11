@@ -7,12 +7,12 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
-import { echeancesDeCollecte } from '@/domains/complexe/partieDuJoueur';
 import {
   contenuDEchec,
   demandeDeReservation,
   parametresDEchec,
   texteAnnulation,
+  texteCeQuePaieLeGroupe,
   texteCreneau,
   texteJourLong,
   varianteDEchec,
@@ -25,16 +25,16 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Input from '@/components/molecules/input/Input';
-import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import BlocCollecte from '@/views/reserverTerrain/components/BlocCollecte';
 import BlocPourQui from '@/views/reserverTerrain/components/BlocPourQui';
+import BlocTonGroupe from '@/views/reserverTerrain/components/BlocTonGroupe';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
   useApercuDeReservation,
   useComplexePublic,
+  usePublierUneAnnonce,
   useReserverUnCreneau,
 } from '@/services/complexe/complexeJoueurQueries';
 
@@ -42,10 +42,10 @@ import { isBirthdateUnderAge, PARENTAL_POWER_ENDS_AGE } from '@/constants/parent
 import { useIsDesktop } from '@/responsive';
 
 const COLONNE = 560;
-const JOUEURS_MIN = 2;
 const MOT_MAX = 140;
 // La date limite d'essai qui fait rendre au serveur la plus tardive permise (RG-QUORUM, Q3) :
-// une heure et une minute devant soi, la marge des échéances proposées (`echeancesDeCollecte`).
+// une heure et une minute devant soi. RESA-JOUEUR : la réservation en construction prend toujours
+// cette date la plus tardive (le joueur ne la choisit plus, maquette « 232- ok »).
 const ESSAI_DE_COLLECTE_MS = 61 * 60 * 1000;
 
 /**
@@ -104,11 +104,16 @@ function ReserverRecapitulatif() {
   const { userData } = useAuth();
   const surOrdinateur = useIsDesktop();
   const reserver = useReserverUnCreneau();
+  const publierLAnnonce = usePublierUneAnnonce();
   const lireLApercu = useApercuDeReservation();
 
   const [apercu, setApercu] = useState(/** @type {any} */ (params.apercu || null));
   const capacite = Number(apercu?.terrain?.capacity) > 0 ? Number(apercu.terrain.capacity) : 10;
-  const [joueurs, setJoueurs] = useState(capacite);
+  // RESA-JOUEUR (D50) : « On a assez de joueurs » / « Il nous manque des joueurs » ; le nombre
+  // requis est celui du complexe (la capacité du terrain).
+  const [choixDuGroupe, setChoixDuGroupe] = useState(/** @type {'assez' | 'manque'} */ ('assez'));
+  const [combien, setCombien] = useState(1);
+  const [publication, setPublication] = useState(false);
   const [mot, setMot] = useState('');
   const [partager, setPartager] = useState(false);
   const [bandeau, setBandeau] = useState(/** @type {string | null} */ (null));
@@ -116,9 +121,6 @@ function ReserverRecapitulatif() {
   const [equipe, setEquipe] = useState(/** @type {any} */ (null));
   const [equipeEnCours, setEquipeEnCours] = useState(/** @type {string | null} */ (null));
   const [refusEquipe, setRefusEquipe] = useState(/** @type {string | null} */ (null));
-  const [collecte, setCollecte] = useState(/** @type {any} */ (null));
-  const [collecteEnCours, setCollecteEnCours] = useState(false);
-  const [refusCollecte, setRefusCollecte] = useState(/** @type {string | null} */ (null));
   const slugDuComplexe = params.slug || apercu?.complexe?.slug || null;
   const ageMinimum = Number(useComplexePublic(slugDuComplexe)?.data?.rules?.minAge) || null;
 
@@ -150,7 +152,6 @@ function ReserverRecapitulatif() {
       .then((reponse) => {
         if (!vivant) return;
         setApercu(reponse);
-        if (Number(reponse?.terrain?.capacity) > 0) setJoueurs(Number(reponse.terrain.capacity));
       })
       .catch((erreur) => {
         if (vivant) vaVersLEchec(erreur, null);
@@ -196,70 +197,65 @@ function ReserverRecapitulatif() {
       setEquipeEnCours(null);
     }
   };
-  // RG-QUORUM, Q3 : seul le serveur connaît la date limite la plus tardive du complexe ; un
-  // récapitulatif d'essai la lui fait dire. Impossible (créneau trop proche) : sa phrase.
-  const basculerCollecte = async () => {
-    setRefusCollecte(null);
-    if (collecte) {
-      setCollecte(null);
-      return;
-    }
-    setCollecteEnCours(true);
-    try {
-      const reponse = await lireLApercu.mutateAsync({
-        ...leCreneau(),
-        collectDeadline: new Date(Date.now() + ESSAI_DE_COLLECTE_MS).toISOString(),
-        players: joueurs,
-        quorum: joueurs,
-      });
-      const plusTard = reponse?.collecte?.latestDeadline || null;
-      const echeances = echeancesDeCollecte(plusTard);
-      if (!echeances.length) {
-        setRefusCollecte(t(
-          'reserverTerrain.collecte.tropProche',
-          'Trop près du créneau pour attendre les réponses : réserve directement.',
-        ));
-        return;
-      }
-      setCollecte({
-        echeance: echeances[0], echeances, plusTard, quorum: joueurs,
-      });
-    } catch (erreur) {
-      const variante = varianteDEchec(erreur);
-      const message = /** @type {{ message?: unknown } | null} */ (erreur)?.message;
-      setRefusCollecte(String(message || '').trim()
-        || contenuDEchec(t, variante, { erreur }).titre);
-    } finally {
-      setCollecteEnCours(false);
-    }
-  };
   const equipeAttendue = pourQui === 'equipe' && !equipe;
+
+  const enConstruction = choixDuGroupe === 'manque';
+  // RESA-JOUEUR : « Il nous manque des joueurs » — la collecte du serveur (le nombre requis = celui
+  // du complexe ; la date limite la plus tardive qu'il permet, lue par un récapitulatif d'essai),
+  // puis l'annonce (places = ce qui manque). L'annonce qui échoue ne défait pas la réservation : la
+  // page « Ma réservation » permet de la publier.
+  const laConstruction = async () => {
+    const essai = await lireLApercu.mutateAsync({
+      ...leCreneau(),
+      collectDeadline: new Date(Date.now() + ESSAI_DE_COLLECTE_MS).toISOString(),
+      externalPlayers: combien - 1,
+      players: capacite,
+      quorum: capacite,
+    });
+    const plusTard = String(essai?.collecte?.latestDeadline || '');
+    if (!plusTard || new Date(plusTard).getTime() <= Date.now()) {
+      setBandeau(t(
+        'reserverTerrain.collecte.tropProche',
+        'Trop près du créneau pour attendre les réponses : réserve directement.',
+      ));
+      return null;
+    }
+    return { collectDeadline: plusTard, externalPlayers: combien - 1, quorum: capacite };
+  };
 
   const envoyer = async () => {
     if (!apercu || equipeAttendue) return;
     setBandeau(null);
+    setPublication(true);
     try {
+      const collecte = enConstruction ? await laConstruction() : null;
+      if (enConstruction && !collecte) return;
       const reservation = await reserver.mutateAsync(
         demandeDeReservation({
-          collecte: collecte
-            ? { collectDeadline: collecte.echeance, quorum: Math.min(collecte.quorum, joueurs) }
-            : null,
+          collecte,
           date: String(apercu.date || params.date),
           equipe: pourQui === 'equipe' ? equipe?.documentId : null,
           from: String(apercu.from || params.from),
-          joueurs,
+          joueurs: capacite >= 2 ? capacite : null,
           mot,
           partagerNumero: partager,
           peutPartagerNumero,
           terrainId: String(apercu?.terrain?.documentId || params.terrainId),
         }),
       );
+      if (collecte && reservation?.documentId) {
+        await publierLAnnonce.mutateAsync({
+          annonce: { notifyFavorites: true, places: capacite - combien },
+          reservationId: reservation.documentId,
+        }).catch(() => null);
+      }
       // E-P05 lit le nombre requis et l'équipe ajoutée : la réservation du serveur ne les dit pas.
       navigation.replace(RouteNames.ReserverResultat, {
         ...(collecte ? {
           collecte: {
-            collectDeadline: collecte.echeance,
-            quorum: Math.min(collecte.quorum, joueurs),
+            collectDeadline: collecte.collectDeadline,
+            presents: combien,
+            quorum: collecte.quorum,
           },
         } : {}),
         ...(pourQui === 'equipe' && equipe ? {
@@ -276,6 +272,8 @@ function ReserverRecapitulatif() {
         return;
       }
       vaVersLEchec(erreur, apercu);
+    } finally {
+      setPublication(false);
     }
   };
 
@@ -326,8 +324,11 @@ function ReserverRecapitulatif() {
   });
   const motDuComplexe = String(apercu?.complexe?.playersNote || '').trim();
   let titreDuBouton = t('reserverTerrain.recapitulatif.reserver', 'Réserver');
-  if (collecte) {
-    titreDuBouton = t('reserverTerrain.recapitulatif.lancerLaCollecte', 'Lancer la collecte');
+  if (enConstruction) {
+    titreDuBouton = t(
+      'reserverTerrain.recapitulatif.reserverEtPublier',
+      'Réserver et publier l’annonce',
+    );
   } else if (surDemande) {
     titreDuBouton = t('reserverTerrain.recapitulatif.envoyerLaDemande', 'Envoyer la demande');
   }
@@ -350,6 +351,16 @@ function ReserverRecapitulatif() {
       gras: false,
       texte: t('reserverTerrain.recapitulatif.paiement', 'Le paiement se fait sur place.'),
     },
+    // RESA-JOUEUR (230- B) : au complet, l'avertissement juste au-dessus de « Réserver ».
+    ...(enConstruction ? [] : [{
+      cle: 'banni',
+      gras: false,
+      texte: t(
+        'reserverTerrain.recapitulatif.avertissementBanni',
+        'Si ton groupe ne vient pas, tu pourras être banni de ce complexe, et FoundClub peut '
+          + 'suspendre ton compte.',
+      ),
+    }]),
   ];
 
   return (
@@ -421,46 +432,13 @@ function ReserverRecapitulatif() {
           />
         ) : null}
 
-        <View style={{ gap: 6 }}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t('reserverTerrain.recapitulatif.combien', 'Combien de joueurs ?')}
-          </Text>
-          {/* RESA-FIN-APP : le ton sombre du parcours (le ton « surface » est une barre gris
-              clair, faite pour les fiches claires — tournées 1 et 2). */}
-          <InputStepper
-            decrementLabel={t('reserverTerrain.recapitulatif.moins', 'Un joueur de moins')}
-            incrementLabel={t('reserverTerrain.recapitulatif.plus', 'Un joueur de plus')}
-            max={capacite}
-            min={JOUEURS_MIN}
-            onDecrement={() => {
-              const apres = Math.max(JOUEURS_MIN, joueurs - 1);
-              setJoueurs(apres);
-              // Le nombre requis d'une collecte ne dépasse jamais le nombre de joueurs.
-              if (collecte && collecte.quorum > apres) setCollecte({ ...collecte, quorum: apres });
-            }}
-            onIncrement={() => setJoueurs((avant) => Math.min(capacite, avant + 1))}
-            tone="tunnel"
-            value={joueurs}
-          />
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t(
-              'reserverTerrain.recapitulatif.capacite',
-              'De 2 à {{max}} : la capacité du terrain.',
-              {
-                max: capacite,
-              },
-            )}
-          </Text>
-        </View>
-
-        <BlocCollecte
-          collecte={collecte}
-          enCours={collecteEnCours}
-          joueurs={joueurs}
-          onBasculer={basculerCollecte}
-          onChange={setCollecte}
-          refus={refusCollecte}
-          startsAt={apercu?.startsAt}
+        <BlocTonGroupe
+          choix={choixDuGroupe}
+          combien={combien}
+          onChoix={setChoixDuGroupe}
+          onCombien={setCombien}
+          paie={texteCeQuePaieLeGroupe(t, apercu.price, capacite)}
+          requis={capacite}
         />
 
         <View style={{ gap: 6 }}>
@@ -588,7 +566,7 @@ function ReserverRecapitulatif() {
       >
         <Button
           disabled={equipeAttendue}
-          isLoading={Boolean(reserver?.isPending)}
+          isLoading={Boolean(reserver?.isPending) || publication}
           onPress={envoyer}
           title={titreDuBouton}
           variant="Primary"

@@ -34,6 +34,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useApercuDeReservation: () => ({ isPending: false, mutateAsync: mockApercu }),
   // RESA-L6B-2 : l'âge minimum du bandeau « Pour mon équipe » (témoin EP04.pourQuiCollecte).
   useComplexePublic: () => ({ data: null }),
+  // RESA-JOUEUR : l'annonce publiée avec la réservation en construction.
+  usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReserverUnCreneau: () => ({ isPending: mockReservationEnCours, mutateAsync: mockReserver }),
 }));
 
@@ -134,12 +136,9 @@ describe('E-P04 — les blocs, dans l’ordre de la fiche', () => {
     expect(mockGoBack).toHaveBeenCalled();
   });
 
-  it('« Combien de joueurs ? » : la capacité d’abord, de 2 à la capacité', async () => {
-    const arbre = await monter();
-    expect(lisibles(arbre)).toEqual(
-      expect.arrayContaining(['Combien de joueurs ?', '10', 'De 2 à 10 : la capacité du terrain.']),
-    );
-  });
+  // RESA-JOUEUR (11/11) : « Combien de joueurs ? » est RETIRÉ par la maquette validée « 232- ok »
+  // (Adel : « ce n'est pas au joueur de cocher ça ») ; « Ton groupe » le remplace
+  // (EP04.RESAJOUEUR.test.js).
 
   it('l’engagement sur l’honneur : du texte seul, le bouton actif d’emblée (AT-14)', async () => {
     const arbre = await monter();
@@ -201,14 +200,14 @@ describe('E-P04 — réserver', () => {
       parRepere(arbre, 'reserver-petit-mot').props.onChangeText('  Foot   du jeudi ');
     });
     await toucher(parRepere(arbre, 'reserver-partager-numero'));
-    await toucher(pressable(arbre, 'Un joueur de moins'));
     await toucher(bouton(arbre, 'Réserver'));
     expect(mockReserver).toHaveBeenCalledWith({
       date: '2026-10-16',
       from: '18:00',
       note: 'Foot du jeudi',
       phoneShared: true,
-      players: 9,
+      // RESA-JOUEUR : le nombre fixé par le complexe (le compteur est retiré).
+      players: 10,
       terrain: 't-1',
     });
     expect(mockReplace).toHaveBeenCalledWith(RouteNames.ReserverResultat, {
@@ -283,12 +282,8 @@ describe('E-P04 — réserver', () => {
 // Le compteur prend le ton sombre du parcours (« tunnel », le même que les tunnels de l'app) ; le bouton
 // sort du défilement et reste en bas de l'écran.
 describe('RESA-FIN-APP (2) E-P04 — le compteur sombre, le bouton en pied fixe', () => {
-  it('« Combien de joueurs ? » au ton du parcours ; « Réserver » hors du défilement', async () => {
+  it('« Réserver » hors du défilement (RESA-JOUEUR : le compteur « Combien » est retiré)', async () => {
     const arbre = await monter();
-    const [compteur] = arbre.root.findAll((/** @type {any} */ n) => (
-      typeof n.props?.onIncrement === 'function' && 'tone' in n.props
-    ));
-    expect(compteur?.props.tone).toBe('tunnel');
     const [defilement] = arbre.root.findAllByType(ScrollView);
     const dansLeDefilement = defilement.findAll((/** @type {any} */ n) => (
       n.props?.title === 'Réserver' && typeof n.props?.onPress === 'function'

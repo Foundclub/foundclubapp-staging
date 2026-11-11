@@ -107,6 +107,9 @@ function ReserverCreneau() {
   const ageMinimum = Number(complexe?.rules?.minAge) || null;
   const naissance = /** @type {any} */ (userData)?.birthdate;
   const tropJeune = Boolean(ageMinimum && naissance && isBirthdateUnderAge(naissance, ageMinimum));
+  // RESA-JOUEUR (M1158, maquette « 232- ok ») : sans date de naissance, le dire AVANT le bouton (le
+  // serveur la refuse, BIRTHDATE_REQUIRED) ; « Continuer » reste grisé tant qu'elle manque.
+  const sansNaissance = Boolean(userData) && !naissance;
   const terrains = useTerrainsPublics(slug)?.data;
   const lecture = useCreneauxDuJour(slug, terrainId, date);
   const apercu = useApercuDeReservation();
@@ -156,7 +159,7 @@ function ReserverCreneau() {
   };
 
   const continuer = async () => {
-    if (!creneauChoisi) return;
+    if (!creneauChoisi || sansNaissance) return;
     setBandeau(null);
     const demande = { date, from: creneauChoisi.from, terrain: String(terrainId) };
     try {
@@ -531,6 +534,7 @@ function ReserverCreneau() {
         ) : null}
       </View>
       <Button
+        disabled={sansNaissance}
         isLoading={Boolean(apercu?.isPending)}
         onPress={continuer}
         title={t('reserverTerrain.creneau.continuer', 'Continuer')}
@@ -574,6 +578,48 @@ function ReserverCreneau() {
             }}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{bandeau}</Text>
+          </View>
+        ) : null}
+        {sansNaissance ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              backgroundColor: withAlpha(Colors.warning500, 0.1),
+              borderColor: withAlpha(Colors.warning500, 0.45),
+              borderRadius: 16,
+              borderWidth: 1,
+              gap: 8,
+              padding: 12,
+            }}
+            testID="creneau-sans-naissance"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t(
+                'reserverTerrain.echec.dateDeNaissance',
+                'Ajoute ta date de naissance pour réserver.',
+              )}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {ageMinimum
+                ? t(
+                  'reserverTerrain.creneau.ageMinimumIci',
+                  'Chaque complexe fixe un âge minimum. Ici : {{age}} ans.',
+                  { age: ageMinimum },
+                )
+                : t(
+                  'reserverTerrain.echec.dateDeNaissanceTexte',
+                  'Chaque complexe fixe un âge minimum.',
+                )}
+            </Text>
+            <View style={{ alignSelf: 'flex-start' }}>
+              <Button
+                onPress={() => navigation.navigate(RouteNames.ProfileStack, {
+                  screen: RouteNames.ProfileEdit,
+                })}
+                title={t('reserverTerrain.echec.completerProfil', 'Compléter mon profil')}
+                variant="Secondary"
+              />
+            </View>
           </View>
         ) : null}
         {tropJeune ? (
