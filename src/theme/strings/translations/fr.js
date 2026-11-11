@@ -8214,6 +8214,7 @@ export default {
       prixDeBaseDit: 'tous les créneaux sans autre tarif',
       prolonger: 'Prolonger la période',
       quitter: 'Quitter sans enregistrer',
+      // eslint-disable-next-line max-len
       quitterMessage: 'Tes plages et tes tarifs ne sont pas encore enregistrés : les joueurs ne les voient pas.',
       quitterTitre: 'Enregistrer tes créneaux ?',
       reste: 'De {{de}} à {{a}}, il reste {{duree}} sans créneau.',
@@ -8224,8 +8225,8 @@ export default {
       sansPrixDeBase: 'Aucun : fixe-le sur la fiche du terrain.',
       semaine: 'Les prix de la semaine',
       soitParJoueur: 'Soit {{prix}} par joueur à {{joueurs}}.',
-      tarifSansPlage: 'Aucune plage ouverte {{jours}} : ce tarif ne s’applique pas encore.',
       tarifs: 'Tarifs',
+      tarifSansPlage: 'Aucune plage ouverte {{jours}} : ce tarif ne s’applique pas encore.',
       // eslint-disable-next-line max-len
       telephone: 'Ce terrain se réserve par téléphone : tes créneaux s’affichent, et un joueur qui en touche un t’appelle.',
       terrainAjoute: '{{nom}} est ajouté. Ouvre maintenant ses créneaux.',
