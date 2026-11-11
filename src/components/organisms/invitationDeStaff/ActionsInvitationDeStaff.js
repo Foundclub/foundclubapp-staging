@@ -109,13 +109,19 @@ function ActionsInvitationDeStaff({
     .join('\n');
   const texteQuestion = [
     invitation.inviterName
-      ? t('staffInvitation.received.by', { name: invitation.inviterName, interpolation: { escapeValue: false } })
+      ? t('staffInvitation.received.by', {
+        interpolation: { escapeValue: false },
+        name: invitation.inviterName,
+      })
       : '',
     t('staffInvitation.sheet.ifAccept'),
     effets,
     '',
     echeance
-      ? t('staffInvitation.sheet.ifRefuseUntil', { date: echeance, interpolation: { escapeValue: false } })
+      ? t('staffInvitation.sheet.ifRefuseUntil', {
+        date: echeance,
+        interpolation: { escapeValue: false },
+      })
       : t('staffInvitation.sheet.ifRefuse'),
   ]
     .filter((ligne, index) => index > 0 || ligne)
