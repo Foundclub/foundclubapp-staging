@@ -134,10 +134,10 @@ describe('PAR-L12 — le mode parent d un compte sportif', () => {
     expect(vu.isPlayerMode).toBe(false);
     expect(vu.accountRoleKey).toBe('player');
     expect(vu.userData.role.name).toBe('Joueur');
-    // ACCUEIL-JOUEUR (09/11) : avant le premier changement de mode, l'origine du compte Joueur
-    // se fige sur le téléphone (né Joueur ici). Toujours rien au serveur.
+    // ACCUEIL-JOUEUR (09/11) : l'origine du compte Joueur se garde sur le téléphone ; T9-RETOURS-B
+    // (12/11, M1207) : CHOISIR le mode parent la fait « parent ». Toujours rien au serveur.
     expect(storage.set.mock.calls).toEqual([
-      ['user.parent_origin.joueur-1', 'player'],
+      ['user.parent_origin.joueur-1', 'parent'],
       ['user.player_mode.joueur-1', 'parent'],
     ]);
     Object.values(authService).forEach((fonction) => expect(fonction).not.toHaveBeenCalled());
@@ -196,11 +196,13 @@ describe('ACCUEIL-JOUEUR — qui voit la bascule parent sur l accueil', () => {
     expect(lire(JOUEUR_PARENT).offersParentSwitch).toBe(false);
   });
 
-  test('né Joueur, passé en mode parent par « Mon compte » : le retour reste, puis se tait', () => {
+  // T9-RETOURS-B (12/11, M1207, Adel : « le bouton apparaît uniquement en mode parent ») : la
+  // bascule ne s'efface plus d'elle-même quand il touche « Joueur » (avant : « puis se tait »).
+  test('né Joueur, mode parent choisi dans « Mon compte » : la bascule reste (2 sens)', () => {
     expect(lire(JOUEUR_PARENT, (valeur) => valeur.setDisplayMode('parent')).offersParentSwitch)
       .toBe(true);
     expect(lire(JOUEUR_PARENT, (valeur) => valeur.setDisplayMode(null)).offersParentSwitch)
-      .toBe(false);
+      .toBe(true);
   });
 
   test('parent qui joue aussi (origine « parent ») : la bascule dans les deux sens', () => {
