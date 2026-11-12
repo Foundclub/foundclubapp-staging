@@ -1,15 +1,21 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 
+// PHOTO-SITE (12/11, D90) : le selecteur de photos, charge A L'APPEL par le chargeur partage.
+// L'app et jest prennent complexeChargeurs.js (un `require` a l'appel : `@/platform/media` tire
+// les modules natifs du selecteur de documents, que les temoins des ecrans ne doublent pas) ; le
+// site prend complexeChargeurs.web.js, qui l'importe en tete. Avant, un `require` ecrit ici : au
+// site construit il rendait `undefined` (comme M1205), et « Choisir dans la galerie » ne faisait
+// rien. Temoins : site.sansRequire.test.js, photoDuGroupe.PHOTO-SITE.test.js et
+// web/tests/components/photo-site-groupe.spec.ts.
+// ponytail: le chargeur porte le nom du chantier complexe (comme EventChatRow, CHAT-EVT-T9) ;
+// le temoin RESA-L7-1 garde les memes exports app / site. Sortie : un chargeur partage a part.
+import { media as selecteur } from '@/services/complexe/complexeChargeurs';
+
+import { createLogger } from '@/utils/logger/logger';
+
 import { checkImageSize } from '@/platform/media/photoLimits';
 
-/**
- * Le selecteur de photos, charge A L'APPEL : `@/platform/media` tire les modules natifs du
- * selecteur de documents, que les temoins des ecrans (« Nouvelle discussion », le fil) ne
- * doublent pas — les charger a l'import faisait tomber leurs suites entieres.
- * @returns {{ capturePhoto: (o?: any) => Promise<any>, pickImage: (o?: any) => Promise<any> }}
- */
-// eslint-disable-next-line global-require -- chargement differe voulu (voir ci-dessus)
-const selecteur = () => require('@/platform/media');
+const journal = createLogger('photo-du-groupe');
 
 /**
  * MSG1BA (§3.15, §3.16) — LA PHOTO D'UN GROUPE EST REDUITE COMME L'AVATAR DU PROFIL : memes
@@ -33,12 +39,12 @@ const REGLAGES_DE_L_AVATAR = Object.freeze({
  */
 
 /**
- * Ouvre la camera ou la galerie et rend la photo choisie, deja reduite.
+ * Le chemin sans filet : ouvre la camera ou la galerie (voir `choisirLaPhotoDuGroupe`).
  * @param {'camera' | 'galerie'} source
  * @param {(cle: string, repli: string) => string} t
  * @returns {Promise<PhotoChoisie | { erreur: string } | null>} `null` si on a annule.
  */
-export const choisirLaPhotoDuGroupe = async (source, t) => {
+const ouvrirLeSelecteur = async (source, t) => {
   if (Platform.OS === 'web') {
     const { capturePhoto, pickImage } = selecteur();
     const fichier = source === 'camera' ? await capturePhoto() : await pickImage();
@@ -93,6 +99,32 @@ export const choisirLaPhotoDuGroupe = async (source, t) => {
       uri: image.uri,
     },
   };
+};
+
+/**
+ * Ouvre la camera ou la galerie et rend la photo choisie, deja reduite.
+ * PHOTO-SITE (12/11, D90) — aucun des trois ecrans qui l'appellent n'entoure l'appel d'un `try` :
+ * un selecteur introuvable ou qui leve se dit ici (un message a l'ecran, un avertissement au
+ * journal) au lieu de ne rien faire.
+ * @param {'camera' | 'galerie'} source
+ * @param {(cle: string, repli: string) => string} t
+ * @returns {Promise<PhotoChoisie | { erreur: string } | null>} `null` si on a annule.
+ */
+export const choisirLaPhotoDuGroupe = async (source, t) => {
+  try {
+    return await ouvrirLeSelecteur(source, t);
+  } catch (erreur) {
+    journal.warn('selecteur de photo en panne', {
+      erreur: String(/** @type {any} */ (erreur)?.message || erreur),
+      source,
+    });
+    return {
+      erreur: t(
+        'profile.errors.photoNotRetrieved',
+        'La photo n\'a pas pu être récupérée. Réessaie.',
+      ),
+    };
+  }
 };
 
 export default choisirLaPhotoDuGroupe;

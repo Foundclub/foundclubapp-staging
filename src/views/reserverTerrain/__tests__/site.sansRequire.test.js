@@ -23,6 +23,10 @@ const FICHIERS = [
   'config/fonctionsMasquees.js',
   'domains/auth/authUseCases.js',
   'domains/complexe/reserverTerrain.js',
+  // PHOTO-SITE (12/11, D90) : le choix d'une photo (« Nouveau groupe », « Infos du groupe », la
+  // carte d'un enfant). Son `require('@/platform/media')` rendait `undefined` au site construit :
+  // « Choisir dans la galerie » ne faisait rien.
+  'domains/messaging/photoDuGroupe.js',
   'navigation/routeNames.js',
   'services/complexe/complexeJoueurQueries.js',
   'services/complexe/complexeJoueurService.js',
@@ -79,7 +83,7 @@ describe('RESA-L7-1 — le chargeur du site a les mêmes exports que celui de l 
 
   it('complexeChargeurs.web.js ≡ complexeChargeurs.js', () => {
     const app = exports(`${CHARGEURS}.js`);
-    expect(app).toEqual(['client', 'fermetures', 'messages']);
+    expect(app).toEqual(['client', 'fermetures', 'media', 'messages']);
     expect(exports(`${CHARGEURS}.web.js`)).toEqual(app);
   });
 });
