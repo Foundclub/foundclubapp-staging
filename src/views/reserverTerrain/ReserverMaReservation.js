@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import { formatEuros, texteDuree } from '@/domains/complexe/complexeTerrain';
+import { reglerSurPlaceAvecRemise } from '@/domains/complexe/fideliteDuComplexe';
 import {
   lignesAReglerSurPlace, optionsModifiables, peutModifierLesOptions,
 } from '@/domains/complexe/optionsTerrain';
@@ -471,12 +472,17 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     })
     : '';
   // RESA-OPTIONS (D61) : les options choisies, figées à la réservation ; sans option, rien de plus.
-  const aReglerSurPlace = lignesAReglerSurPlace(
-    t,
-    reservation?.price,
-    Number(reservation?.players) || Number(reservation?.terrain?.capacity) || 1,
-    reservation?.options,
-  );
+  const requisDeLaResa = Number(reservation?.players)
+    || Number(reservation?.terrain?.capacity) || 1;
+  // FIDELITE (12/11, D63) : la remise FIGÉE (`loyalty`) — la ligne « − 15 € », 150 € barré puis
+  // 135 € — jusqu'au jour J ; sans remise, le bloc d'avant.
+  const prixDeLaResa = reservation?.price;
+  const optionsDeLaResa = reservation?.options;
+  const remise = reservation?.loyalty;
+  const options = optionsDeLaResa;
+  const remiseFigee = reglerSurPlaceAvecRemise(t, prixDeLaResa, requisDeLaResa, options, remise);
+  const aReglerSurPlace = remiseFigee
+    || lignesAReglerSurPlace(t, prixDeLaResa, requisDeLaResa, optionsDeLaResa);
   // RESA-OPTIONS-2 (décision a de « 233- oui ») : « Modifier les options » tant que l'annulation
   // est gratuite ; une option déjà prise garde son prix figé.
   const modifiables = optionsModifiables(terrainPublic?.options, reservation?.options);
@@ -904,6 +910,11 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           {enTete}
           {enTeteDEchec}
           {quandOu}
+          {reservation?.loyalty ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]} testID="ma-resa-fidelite-revient">
+              {t('fidelite.maResa.revient', 'Si tu annules, ton bonus fidélité te revient.')}
+            </Text>
+          ) : null}
           {aReglerSurPlace ? (
             <BlocReglerSurPlace
               action={lienDesOptions}

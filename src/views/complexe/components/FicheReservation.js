@@ -27,6 +27,7 @@ import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
 import {
   evolutionDeLaConstruction, partDeLaJauge, texteDuCompteur, texteDuManque,
 } from '@/domains/complexe/constructionDuGerant';
+import { libelleDuBonus, reglerSurPlaceAvecRemise } from '@/domains/complexe/fideliteDuComplexe';
 import { lignesAReglerSurPlace } from '@/domains/complexe/optionsTerrain';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -267,7 +268,10 @@ function FicheReservation({
   // RESA-OPTIONS (D61) : les options à préparer et le total à encaisser ; sans option, rien.
   const aPreparer = /** @type {any[]} */ (Array.isArray(r.options) ? r.options : [])
     .filter((option) => Number(option?.quantity) > 0);
-  const aEncaisser = lignesAReglerSurPlace(t, r.price, Number(r.players) || 1, aPreparer);
+  // FIDELITE (12/11, D63) : « Fidélité appliquée » — la remise figée et le total remisé.
+  const requis = Number(r.players) || 1;
+  const aEncaisser = reglerSurPlaceAvecRemise(t, r.price, requis, aPreparer, r.loyalty)
+    || lignesAReglerSurPlace(t, r.price, Number(r.players) || 1, aPreparer);
   const ligneTerrain = [
     String(r.terrain?.name || ''),
     // RESA-FIN-APP : « Foot à 5 », comme partout (plan §1.1), plus « Football à 5 ».
@@ -682,6 +686,13 @@ function FicheReservation({
               </View>
             ))}
           </View>
+        ) : null}
+        {r.loyalty ? (
+          <Text style={[Fonts.p2Bold, Fonts.success500]} testID="fiche-fidelite-appliquee">
+            {t('fidelite.fiche.appliquee', 'Fidélité appliquée : {{bonus}}', {
+              bonus: libelleDuBonus(t, r.loyalty), ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
         ) : null}
         {aEncaisser ? (
           <BlocReglerSurPlace

@@ -7,6 +7,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { formatEuros, libelleSport, texteDuree } from '@/domains/complexe/complexeTerrain';
+import { reglerSurPlaceAvecRemise } from '@/domains/complexe/fideliteDuComplexe';
 import {
   choixDesOptions,
   lignesAReglerSurPlace,
@@ -31,6 +32,7 @@ import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import BlocBonusFidelite from '@/views/reserverTerrain/components/BlocBonusFidelite';
 import BlocOptions from '@/views/reserverTerrain/components/BlocOptions';
 import BlocPourQui from '@/views/reserverTerrain/components/BlocPourQui';
 import BlocReglerSurPlace from '@/views/reserverTerrain/components/BlocReglerSurPlace';
@@ -149,7 +151,16 @@ function ReserverRecapitulatif() {
     ...option,
     quantity: Number(quantites[option.id]) || 0,
   }));
-  const aReglerSurPlace = lignesAReglerSurPlace(t, apercu?.price, capacite, choisies);
+  // FIDELITE (12/11, D63, précision 2) : le bonus du joueur ici (calculé par le serveur) ; il
+  // choisit de l'utiliser (par défaut) ou de le garder ; le prix barré, puis le prix remisé.
+  const bonus = /** @type {any} */ (apercu?.fidelite?.bonus || null);
+  const [utiliserBonus, setUtiliserBonus] = useState(true);
+  const avecBonus = Boolean(bonus) && utiliserBonus;
+  const remise = avecBonus ? {
+    amount: bonus.remise, percent: bonus.percent, rewardType: bonus.rewardType, scope: bonus.scope,
+  } : null;
+  const aReglerSurPlace = reglerSurPlaceAvecRemise(t, apercu?.price, capacite, choisies, remise)
+    || lignesAReglerSurPlace(t, apercu?.price, capacite, choisies);
   const slugDuComplexe = params.slug || apercu?.complexe?.slug || null;
   const ageMinimum = Number(useComplexePublic(slugDuComplexe)?.data?.rules?.minAge) || null;
 
@@ -267,6 +278,7 @@ function ReserverRecapitulatif() {
           date: String(apercu.date || params.date),
           duree: dureeChoisie,
           equipe: pourQui === 'equipe' ? equipe?.documentId : null,
+          fidelite: avecBonus,
           from: String(apercu.from || params.from),
           joueurs: capacite >= 2 ? capacite : null,
           mot,
@@ -483,6 +495,15 @@ function ReserverRecapitulatif() {
           paie={texteCeQuePaieLeGroupe(t, apercu.price, capacite)}
           requis={capacite}
         />
+
+        {bonus ? (
+          <BlocBonusFidelite
+            bonus={bonus}
+            complexe={String(apercu?.complexe?.name || '')}
+            onUtiliser={setUtiliserBonus}
+            utiliser={utiliserBonus}
+          />
+        ) : null}
 
         {offertes.length ? (
           <BlocOptions

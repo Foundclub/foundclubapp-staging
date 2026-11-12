@@ -10,8 +10,10 @@ import useTheme from '@/theme/themeContext';
  * et dans la fiche du gérant (« À encaisser sur place », où une ligne « Options » remplace le
  * détail, déjà dit dans « Options à préparer »). Rien n'est encaissé dans l'app.
  * @param {object} props - Les propriétés.
- * @param {{ lignes: Array<{ cle: string, libelle: string, montant: string }>, options: string,
- *   total: string }} props.bloc - Le bloc de `lignesAReglerSurPlace`.
+ * @param {{ avant?: string, lignes: Array<{ cle: string, libelle: string, montant: string }>,
+ *   options: string, total: string }} props.bloc - Le bloc de `lignesAReglerSurPlace` ; FIDELITE
+ *   (12/11, D63) : avec `avant` (`reglerSurPlaceAvecRemise`), le total d'avant est barré devant le
+ *   total remisé.
  * @param {{ libelle: string, onPress: () => void, testID: string } | null} [props.action] -
  *   RESA-OPTIONS-2 : un lien à droite du titre (« Modifier les options » dans Ma réservation).
  * @param {boolean} [props.indicatif] - « Indicatif : le complexe encaisse… » (récapitulatif).
@@ -32,6 +34,8 @@ function BlocReglerSurPlace({
         libelle: t('complexeOptions.lesOptions', 'Options'),
         montant: bloc.options,
       },
+      // FIDELITE : la ligne de la remise reste visible au gérant.
+      ...bloc.lignes.filter((ligne) => ligne.cle === 'fidelite'),
     ]
     : bloc.lignes;
   const ligne = (
@@ -80,7 +84,20 @@ function BlocReglerSurPlace({
       </View>
       {lignes.map((une) => ligne(une.cle, une.libelle, une.montant))}
       <View style={{ backgroundColor: withAlpha(Colors.neutral00, 0.12), height: 1 }} />
-      {ligne('total', t('complexeOptions.total', 'Total'), bloc.total, true)}
+      {bloc.avant ? (
+        <View
+          style={[Alignments.row, Alignments.justifyBetween, { gap: 12 }]}
+          testID="regler-total"
+        >
+          <Text style={[Fonts.p1Bold, Fonts.neutral00, Alignments.fill]}>
+            {t('complexeOptions.total', 'Total')}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral200, { textDecorationLine: 'line-through' }]}>
+            {bloc.avant}
+          </Text>
+          <Text style={[Fonts.p1Bold, Fonts.success500]}>{bloc.total}</Text>
+        </View>
+      ) : ligne('total', t('complexeOptions.total', 'Total'), bloc.total, true)}
       {indicatif ? (
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {t(
