@@ -537,3 +537,48 @@ describe('RESA-FIN-APP-2 E-G02 ⇒ E-G03 — positionné sur le créneau libre d
     expect(lisibles(arbre)).not.toContain('Ce créneau');
   });
 });
+
+// DT-2 (12/11/2026) — DUREES-TARIFS, G4 (maquette validée le 12/11) : le serveur rend la grille de
+// la durée la plus courte ; une réservation de 2 h y arrive en DEUX créneaux d'1 h. Le planning en
+// fait UN bloc (vue Jour, Semaine) et UNE ligne (vue Liste, « 20 h – 22 h · Terrain 1 »).
+describe('DT-2 G4 — une réservation de 2 h = un seul bloc', () => {
+  beforeEach(() => {
+    const julien = reservation('r-2h', 'Julien M.');
+    mockPlanning = {
+      data: {
+        ...PLANNING_DU_JOUR,
+        terrains: [{
+          ...PLANNING_DU_JOUR.terrains[0],
+          days: [{
+            date: JOUR,
+            slots: [
+              creneau(JOUR, '19:00', '20:00'),
+              creneau(JOUR, '20:00', '21:00', { reservation: julien, state: 'reserve-app' }),
+              creneau(JOUR, '21:00', '22:00', { reservation: julien, state: 'reserve-app' }),
+              creneau(JOUR, '22:00', '23:00'),
+            ],
+          }],
+        }],
+      },
+      isLoading: false,
+      refetch: jest.fn(),
+    };
+  });
+
+  it('vue Jour : un bloc 20 h – 22 h, une seule fois le nom', async () => {
+    const arbre = await monter();
+    expect(lisibles(arbre).filter((texte) => texte === 'Julien M. · App')).toHaveLength(1);
+    expect(parRepere(arbre, `creneau-t-1-${JOUR}-20:00`)).not.toBeNull();
+    expect(parRepere(arbre, `creneau-t-1-${JOUR}-21:00`)).toBeNull();
+    const bloc = parRepere(arbre, `creneau-t-1-${JOUR}-20:00`);
+    expect(bloc.props.accessibilityLabel).toContain('20 h – 22 h');
+  });
+
+  it('vue Liste : « 20 h – 22 h · Terrain 1 », une ligne', async () => {
+    const arbre = await monter();
+    await appuyer(arbre, 'Liste');
+    const lus = lisibles(arbre);
+    expect(lus).toContain('20 h – 22 h · Terrain 1');
+    expect(lus.filter((texte) => texte === 'Julien M. · App')).toHaveLength(1);
+  });
+});
