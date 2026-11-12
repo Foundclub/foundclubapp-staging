@@ -22,6 +22,8 @@ const mockModifier = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useAnnulerMaReservation: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useComplexePublic: () => ({ data: jest.requireActual('@/testSupport/temoinReserver').complexePublic() }),
+  // DT-3 : les créneaux publics du jour (« · 2 h » si plusieurs durées) ; aucun ici.
+  useCreneauxDuJour: () => ({ data: undefined }),
   useGroupeDeLaReservation: () => ({ data: null }),
   useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useMaRelationAuComplexe: () => ({ data: null }),

@@ -6,7 +6,9 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { libelleLieu, libelleSport } from '@/domains/complexe/complexeTerrain';
+import {
+  formatEuros, libelleLieu, libelleSport, texteDuree,
+} from '@/domains/complexe/complexeTerrain';
 import {
   ajouterJours,
   contenuDEchec,
@@ -116,6 +118,8 @@ function ReserverCreneau() {
     /** @type {{ creneau: any, telephone: any } | null} */ (null),
   );
   const [joursSansLibre, setJoursSansLibre] = useState(() => new Set());
+  // DT-3 : la durée choisie (minutes) ; null = celle du créneau reçu, sinon la plus courte.
+  const [duree, setDuree] = useState(/** @type {number | null} */ (null));
 
   const { userData } = useAuth();
   // CORR-RESA (78 A) : un joueur plus jeune que l'âge du complexe le lit AVANT de choisir un
@@ -135,11 +139,39 @@ function ReserverCreneau() {
     (/** @type {any} */ terrain) => terrain?.documentId === terrainId,
   ) || null;
   const terrain = { ...(terrainPublic || {}), ...(lecture?.data?.terrain || {}) };
-  const creneaux = Array.isArray(lecture?.data?.slots) ? lecture.data.slots : [];
-  const libres = creneaux.filter((/** @type {any} */ creneau) => creneau?.state === 'libre');
-  const parTelephone = terrain?.bookingMode === 'telephone';
+  const grilleDAvant = Array.isArray(lecture?.data?.slots) ? lecture.data.slots : [];
+  // DT-3 (DUREES-TARIFS, maquette J1 validée le 12/11) : plusieurs durées ce jour-là ⇒ le serveur
+  // (DT-1) ajoute `offers`, une liste par durée ; un choix « 1 h · 2 h » montre celle de la durée
+  // choisie. Sans `offers` : la grille `slots` d'avant, à l'identique.
+  const offres = Array.isArray(lecture?.data?.offers) && lecture.data.offers.length > 1
+    ? lecture.data.offers
+    : null;
+  // Un créneau se repère par son début ET sa durée : un ponctuel d'1 h 30 peut partager le début
+  // d'un créneau d'1 h dans la même offre.
+  const cleDuCreneau = (/** @type {any} */ creneau) => (offres
+    ? `${creneau?.startsAt || creneau?.from}|${creneau?.durationMinutes}`
+    : creneau?.startsAt || creneau?.from);
   const estChoisi = (/** @type {any} */ creneau) => Boolean(choisi)
-    && (creneau?.startsAt === choisi || creneau?.from === choisi);
+    && [cleDuCreneau(creneau), creneau?.from, creneau?.startsAt].includes(choisi);
+  // Arrivé avec un créneau (page du complexe, recherche) : l'offre qui le contient ; sinon la plus
+  // courte (le serveur les range de la plus courte à la plus longue).
+  const offre = offres
+    ? offres.find((/** @type {any} */ une) => une.durationMinutes === duree)
+      || offres.find((/** @type {any} */ une) => (une.slots || []).some(estChoisi))
+      || offres[0]
+    : null;
+  const creneaux = offre ? (offre.slots || []) : grilleDAvant;
+  const libres = creneaux.filter((/** @type {any} */ creneau) => creneau?.state === 'libre');
+  const tousLesCreneaux = offres
+    ? offres.flatMap((/** @type {any} */ une) => une.slots || [])
+    : creneaux;
+  const libresDuJour = tousLesCreneaux
+    .filter((/** @type {any} */ creneau) => creneau?.state === 'libre');
+  const parTelephone = terrain?.bookingMode === 'telephone';
+  // La durée DU CRÉNEAU (DT-1) — pas celle de l'onglet : un ponctuel d'1 h 30 part avec 90.
+  const dureeDuCreneau = (/** @type {any} */ creneau) => (
+    Number(creneau?.durationMinutes) || Number(offre?.durationMinutes) || null
+  );
   const creneauChoisi = creneaux.find(
     (/** @type {any} */ creneau) => estChoisi(creneau) && creneau.state === 'libre',
   ) || null;
@@ -151,14 +183,14 @@ function ReserverCreneau() {
   useEffect(() => {
     if (!lecture?.data || lecture?.isLoading) return;
     setJoursSansLibre((avant) => {
-      const sansLibre = !libres.length;
+      const sansLibre = !libresDuJour.length;
       if (avant.has(date) === sansLibre) return avant;
       const apres = new Set(avant);
       if (sansLibre) apres.add(date);
       else apres.delete(date);
       return apres;
     });
-  }, [date, lecture?.data, lecture?.isLoading, libres.length]);
+  }, [date, lecture?.data, lecture?.isLoading, libresDuJour.length]);
 
   const changerDeJour = (/** @type {string} */ nouveau) => {
     setDate(nouveau);
@@ -180,14 +212,26 @@ function ReserverCreneau() {
       });
       return;
     }
-    setChoisi(creneau.startsAt || creneau.from);
+    setChoisi(cleDuCreneau(creneau));
+  };
+
+  const changerDeDuree = (/** @type {number} */ minutes) => {
+    setDuree(minutes);
+    setChoisi(null);
+    setBandeau(null);
   };
 
   const continuer = async () => {
     if (!creneauChoisi || sansNaissance) return;
     setBandeau(null);
+    // DT-3 : la durée part seulement quand le joueur l'a choisie parmi plusieurs ; sinon la
+    // demande d'avant, à l'identique (le serveur prend alors la plus courte).
+    const avecDuree = offres && dureeDuCreneau(creneauChoisi)
+      ? { durationMinutes: dureeDuCreneau(creneauChoisi) }
+      : {};
     const demande = {
       date: jourDe(creneauChoisi),
+      ...avecDuree,
       from: creneauChoisi.from,
       terrain: String(terrainId),
     };
@@ -196,6 +240,7 @@ function ReserverCreneau() {
       navigation.navigate(RouteNames.ReserverRecapitulatif, {
         apercu: reponse,
         date: demande.date,
+        ...avecDuree,
         from: creneauChoisi.from,
         slug,
         terrainId,
@@ -459,6 +504,61 @@ function ReserverCreneau() {
     </ScrollView>
   );
 
+  // DT-3 (maquette J1) : « 1 h · 2 h », chacune « dès » son prix le plus bas de ce jour.
+  const choixDeDuree = offres ? (
+    <View
+      accessibilityLabel={t('reserverTerrain.creneau.dureeDuCreneau', 'Durée du créneau')}
+      style={[Alignments.row, { gap: 8 }]}
+      testID="durees-du-creneau"
+    >
+      {offres.map((/** @type {any} */ une) => {
+        const minutes = Number(une.durationMinutes);
+        const actif = une === offre;
+        const montants = (une.slots || [])
+          .map((/** @type {any} */ creneau) => Number(creneau?.price?.amount))
+          .filter((/** @type {number} */ montant) => Number.isFinite(montant));
+        const des = montants.length
+          ? t('reserverTerrain.prix.des', 'dès {{prix}}', {
+            prix: formatEuros(Math.min(...montants)),
+            ...SANS_ECHAPPEMENT,
+          })
+          : '';
+        return (
+          <TouchableOpacity
+            accessibilityLabel={[texteDuree(minutes), des].filter(Boolean).join(', ')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: actif }}
+            key={minutes}
+            onPress={() => changerDeDuree(minutes)}
+            style={[
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+              {
+                backgroundColor: actif ? Colors.primary500 : withAlpha(Colors.primary500, 0.08),
+                borderColor: withAlpha(Colors.primary500, actif ? 1 : 0.45),
+                borderRadius: 12,
+                borderWidth: 1,
+                flexBasis: 0,
+                flexGrow: 1,
+                minHeight: 52,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+              },
+            ]}
+            testID={`duree-${minutes}`}
+          >
+            <Text style={[Fonts.p1Bold, actif ? Fonts.primary900 : Fonts.neutral00]}>
+              {texteDuree(minutes)}
+            </Text>
+            {des ? (
+              <Text style={[Fonts.p3, actif ? Fonts.primary900 : Fonts.primary200]}>{des}</Text>
+            ) : null}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  ) : null;
+
   const grille = () => {
     if (lecture?.isLoading && !lecture?.data) {
       return (
@@ -582,7 +682,7 @@ function ReserverCreneau() {
                   accessibilityRole="button"
                   accessibilityState={{ disabled: !touchable, selected: choisiIci }}
                   disabled={!touchable}
-                  key={creneau.startsAt || creneau.from}
+                  key={cleDuCreneau(creneau)}
                   onPress={() => toucherUnCreneau(creneau)}
                   style={[
                     Alignments.row,
@@ -603,9 +703,12 @@ function ReserverCreneau() {
                       rowGap: 2,
                     },
                   ]}
-                  testID={jourDe(creneau) !== date
-                    ? `creneau-${jourDe(creneau)}-${creneau.from}`
-                    : `creneau-${creneau.from}`}
+                  testID={[
+                    'creneau',
+                    jourDe(creneau) !== date ? jourDe(creneau) : null,
+                    creneau.from,
+                    offres ? dureeDuCreneau(creneau) : null,
+                  ].filter(Boolean).join('-')}
                 >
                   <Text
                     style={[
@@ -703,6 +806,7 @@ function ReserverCreneau() {
         {ligneDInfos}
         {bandeDesJours}
         <Text style={[Fonts.p2Bold, Fonts.primary200]}>{texteJourLong(t, date)}</Text>
+        {pasEncoreOuvert ? null : choixDeDuree}
         {bandeau ? (
           <View
             accessibilityRole="alert"

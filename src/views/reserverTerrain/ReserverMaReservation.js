@@ -5,7 +5,7 @@ import {
   Image, Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { formatEuros } from '@/domains/complexe/complexeTerrain';
+import { formatEuros, texteDuree } from '@/domains/complexe/complexeTerrain';
 import {
   lignesAReglerSurPlace, optionsModifiables, peutModifierLesOptions,
 } from '@/domains/complexe/optionsTerrain';
@@ -52,6 +52,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   useAnnulerMaReservation,
   useComplexePublic,
+  useCreneauxDuJour,
   useGroupeDeLaReservation,
   useMaRelationAuComplexe,
   useMaReservation,
@@ -126,6 +127,17 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const complexePublic = useComplexePublic(reservation?.complexe?.slug)?.data;
   // RESA-OPTIONS-2 : le terrain de la page publique — ses options d'aujourd'hui et ses photos.
   const terrainsPublics = useTerrainsPublics(reservation?.complexe?.slug)?.data;
+  // DT-3 (maquette J3) : « · 2 h » après les heures, SEULEMENT quand le terrain propose plusieurs
+  // durées ce jour-là (`offers` des créneaux publics, DT-1) ; la réservation ne le dit pas.
+  // ponytail: un jour passé, la route publique ne répond plus (jour hors fenêtre) : la durée n'est
+  // plus écrite ; sortie = un `durationMinutes` dans la vue de la réservation, côté serveur.
+  const creneauxDuJour = useCreneauxDuJour(
+    reservation?.complexe?.slug,
+    reservation?.terrain?.documentId,
+    reservation?.date,
+  )?.data;
+  const plusieursDurees = Array.isArray(creneauxDuJour?.offers)
+    && creneauxDuJour.offers.length > 1;
   const groupe = useGroupeDeLaReservation(params.reservationId)?.data || null;
   const relation = useMaRelationAuComplexe(reservation?.complexe?.slug)?.data || null;
   const ouvrirUnFil = useOuvrirUnFil();
@@ -501,6 +513,11 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     );
   }
 
+  // DT-3 : la durée réservée, lue sur les heures enregistrées (début et fin).
+  const dureeReservee = Math.round(
+    (new Date(String(reservation.endsAt)).getTime()
+      - new Date(String(reservation.startsAt)).getTime()) / 60000,
+  );
   const quandOu = (
     <View style={carte}>
       <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -509,6 +526,9 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           jour: texteJourLong(t, reservation.date),
           ...SANS_ECHAPPEMENT,
         })}
+        {plusieursDurees && dureeReservee > 0 ? (
+          <Text style={[Fonts.p1Bold, Fonts.primary200]}>{` · ${texteDuree(dureeReservee)}`}</Text>
+        ) : null}
       </Text>
       <TouchableOpacity
         accessibilityRole="link"

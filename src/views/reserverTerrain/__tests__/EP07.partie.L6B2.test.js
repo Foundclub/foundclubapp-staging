@@ -52,6 +52,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
   useConstruireLaReservation: () => ({ isPending: false, mutateAsync: mockConstruire }),
+  // DT-3 : les créneaux publics du jour (« · 2 h » si plusieurs durées) ; aucun ici.
+  useCreneauxDuJour: () => ({ data: undefined }),
   useGroupeDeLaReservation: () => mockGroupe,
   useLienDInvitation: () => ({ isPending: false, mutateAsync: mockLien }),
   useMaRelationAuComplexe: () => mockRelation,

@@ -19765,6 +19765,7 @@ export default {
       choix: '{{jour}} · {{creneau}}',
       compteurPhotos: '{{indice}} / {{total}}',
       continuer: 'Continue',
+      dureeDuCreneau: 'Slot length',
       erreur: 'Could not load the slots.',
       ferme: 'Closed',
       fermerPhotos: 'Close the photos',
