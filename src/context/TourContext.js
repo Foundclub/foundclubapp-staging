@@ -19,6 +19,7 @@ import {
   getTourProfile,
   GUIDE_PRE_START_SIGNALS,
   TOUR_HOME_TARGET,
+  TOUR_PROFILES,
 } from '@/domains/tour/tourCatalog';
 import {
   firstIndexOfNextMission,
@@ -63,6 +64,18 @@ const MAX_AUTO_ADVANCE = 20;
 const getStorageKey = (userId) => `tourProgress_${String(userId || 'anonymous')}`;
 
 /**
+ * GUIDE-PROGRESSIONS (Adel D45, « 222 B », 10/11) : la progression d'un guide qui n'est pas à
+ * l'écran, rangée quand un autre guide part. Le guide à l'écran garde `getStorageKey`, la clé
+ * d'avant ce lot : une progression déjà gardée se relit telle quelle (migration douce).
+ * @param {string | null | undefined} userId - Identifiant de la personne.
+ * @param {string} profileKey - Clé du guide.
+ * @returns {string} Clé MMKV.
+ */
+const getParkedKey = (userId, profileKey) => (
+  `tourParked_${String(userId || 'anonymous')}_${profileKey}`
+);
+
+/**
  * Clé des bonus laissés « pour plus tard » au palier (relance depuis Mon compte).
  * @param {string | null | undefined} userId - Identifiant de la personne.
  * @returns {string} Clé MMKV.
@@ -93,6 +106,77 @@ const getOfferDeclinedKey = (userId) => `tourOfferDeclined_${String(userId || 'a
  * @returns {boolean} Guide à missions ?
  */
 const isGuideProfile = (profile) => profile?.version === GUIDE_VERSION;
+
+/**
+ * Ce qui est gardé sur le téléphone d'un état du guide (ou d'un tour v2).
+ * @param {any} state - État du guide.
+ * @returns {string} JSON gardé.
+ */
+const serializeState = (state) => {
+  if (state.version === GUIDE_VERSION) {
+    return JSON.stringify({
+      created: state.created || {},
+      flags: state.flags || {},
+      gauge: state.gauge || 0,
+      missionStatus: state.missionStatus || {},
+      profileKey: state.profileKey,
+      skippedSubMissions: state.skippedSubMissions || [],
+      // FIN-GUIDE : l'id d'abord ; une étape ajoutée au catalogue décale les rangs.
+      stepId: getTourProfile(state.profileKey)?.steps?.[state.stepIndex]?.id,
+      stepIndex: state.stepIndex,
+      version: GUIDE_VERSION,
+    });
+  }
+  return JSON.stringify({
+    profileKey: state.profileKey,
+    skippedStepIds: state.skippedStepIds || [],
+    stepIndex: state.stepIndex,
+  });
+};
+
+/**
+ * Relit un état gardé, en pause.
+ * @param {any} saved - JSON relu.
+ * @returns {any} L'état ; `undefined` s'il ne se relit pas ; `null` s'il faut l'effacer.
+ */
+const restoreSaved = (saved) => {
+  const profile = getTourProfile(saved?.profileKey);
+  if (!profile || !Number.isFinite(Number(saved?.stepIndex))) return undefined;
+  const savedIndex = saved.stepId ? indexOfStep(profile, saved.stepId) : -1;
+  const stepIndex = savedIndex !== -1
+    ? savedIndex
+    : Math.min(Number(saved.stepIndex), profile.steps.length - 1);
+  if (isGuideProfile(profile)) {
+    // Un état v2 d'un profil devenu guide à missions ne se rejoue pas : purge.
+    if (saved.version !== GUIDE_VERSION) return null;
+    return {
+      created: saved.created || {},
+      flags: saved.flags || {},
+      gauge: Number(saved.gauge) || 0,
+      missionStatus: saved.missionStatus || {},
+      profileKey: saved.profileKey,
+      // Relancement de l'app : un brouillon de tunnel est perdu ⇒ `resumeFrom`.
+      restored: true,
+      skippedSubMissions: saved.skippedSubMissions || [],
+      status: 'paused',
+      stepIndex,
+      version: GUIDE_VERSION,
+    };
+  }
+  return {
+    profileKey: saved.profileKey,
+    skippedStepIds: Array.isArray(saved.skippedStepIds) ? saved.skippedStepIds : [],
+    status: 'paused',
+    stepIndex,
+  };
+};
+
+/**
+ * Le guide gardé d'un état : celui d'avant la visite « sans rien créer », sinon lui-même.
+ * @param {any} state - État du guide.
+ * @returns {any} État à garder, ou rien.
+ */
+const keptStateOf = (state) => (state?.review ? state.resumeAfter : state) || null;
 
 /**
  * T3-GUIDE-SITE : le site n'a pas d'onglets imbriqués. Il va à l'écran final, et son accueil est
@@ -180,28 +264,22 @@ export function TourProvider({ children }) {
     if (!userId) return;
     // La visite « sans rien créer » ne touche jamais la progression gardée.
     if (nextState?.review || (!nextState && tourStateRef.current?.review)) return;
-    if (nextState && nextState.version === GUIDE_VERSION) {
-      storage.set(getStorageKey(userId), JSON.stringify({
-        created: nextState.created || {},
-        flags: nextState.flags || {},
-        gauge: nextState.gauge || 0,
-        missionStatus: nextState.missionStatus || {},
-        profileKey: nextState.profileKey,
-        skippedSubMissions: nextState.skippedSubMissions || [],
-        // FIN-GUIDE : l'id d'abord ; une étape ajoutée au catalogue décale les rangs.
-        stepId: getTourProfile(nextState.profileKey)?.steps?.[nextState.stepIndex]?.id,
-        stepIndex: nextState.stepIndex,
-        version: GUIDE_VERSION,
-      }));
-    } else if (nextState) {
-      storage.set(getStorageKey(userId), JSON.stringify({
-        profileKey: nextState.profileKey,
-        skippedStepIds: nextState.skippedStepIds || [],
-        stepIndex: nextState.stepIndex,
-      }));
+    if (nextState) {
+      storage.set(getStorageKey(userId), serializeState(nextState));
     } else {
       storage.delete(getStorageKey(userId));
     }
+  }, [userId]);
+
+  // GUIDE-PROGRESSIONS : le guide quitté pour un autre range sa progression à part ; celui qui
+  // part reprend la sienne (`resumeTour`) ou repart de zéro, et vide alors son rangement.
+  const parkOthers = useCallback((/** @type {string} */ profileKey) => {
+    if (!userId) return;
+    const kept = keptStateOf(tourStateRef.current);
+    if (kept?.profileKey && kept.profileKey !== profileKey) {
+      storage.set(getParkedKey(userId, kept.profileKey), serializeState(kept));
+    }
+    storage.delete(getParkedKey(userId, profileKey));
   }, [userId]);
 
   // Reprise : un tour inachevé revient en mode « paused » au prochain lancement.
@@ -223,42 +301,17 @@ export function TourProvider({ children }) {
     try {
       const raw = storage.getString(getStorageKey(userId));
       if (!raw) return;
-      const saved = JSON.parse(raw);
-      const profile = getTourProfile(saved?.profileKey);
-      if (!profile || !Number.isFinite(Number(saved?.stepIndex))) return;
-      const savedIndex = saved.stepId ? indexOfStep(profile, saved.stepId) : -1;
-      const stepIndex = savedIndex !== -1
-        ? savedIndex
-        : Math.min(Number(saved.stepIndex), profile.steps.length - 1);
-      if (isGuideProfile(profile)) {
-        // Un état v2 d'un profil devenu guide à missions ne se rejoue pas : purge.
-        if (saved.version !== GUIDE_VERSION) {
-          storage.delete(getStorageKey(userId));
-          return;
-        }
-        storage.set(getGuideDoneKey(userId), '1');
-        setGuideDone(true);
-        setTourState({
-          created: saved.created || {},
-          flags: saved.flags || {},
-          gauge: Number(saved.gauge) || 0,
-          missionStatus: saved.missionStatus || {},
-          profileKey: saved.profileKey,
-          // Relancement de l'app : un brouillon de tunnel est perdu ⇒ `resumeFrom`.
-          restored: true,
-          skippedSubMissions: saved.skippedSubMissions || [],
-          status: 'paused',
-          stepIndex,
-          version: GUIDE_VERSION,
-        });
+      const restored = restoreSaved(JSON.parse(raw));
+      if (restored === undefined) return;
+      if (restored === null) {
+        storage.delete(getStorageKey(userId));
         return;
       }
-      setTourState({
-        profileKey: saved.profileKey,
-        skippedStepIds: Array.isArray(saved.skippedStepIds) ? saved.skippedStepIds : [],
-        status: 'paused',
-        stepIndex,
-      });
+      if (restored.version === GUIDE_VERSION) {
+        storage.set(getGuideDoneKey(userId), '1');
+        setGuideDone(true);
+      }
+      setTourState(restored);
     } catch (error) {
       storage.delete(getStorageKey(userId));
     }
@@ -479,6 +532,7 @@ export function TourProvider({ children }) {
         : nextAvailableIndex(profile, -1, ctx);
       if (startIndex === -1) return false;
       const startState = { ...base, stepIndex: startIndex };
+      parkOthers(profileKey);
       historyRef.current = [{ index: startIndex, route: null, stepRoute: null }];
       setTourState(startState);
       persist(startState);
@@ -504,11 +558,12 @@ export function TourProvider({ children }) {
       status: 'active',
       stepIndex: startIndex,
     };
+    parkOthers(profileKey);
     setTourState(nextState);
     persist(nextState);
     goToStep(nextState, nextState.stepIndex);
     return true;
-  }, [enterGuideStep, goToStep, persist, subscriptionAccessLevel, userData, userId]);
+  }, [enterGuideStep, goToStep, parkOthers, persist, subscriptionAccessLevel, userData, userId]);
 
   // GUIDE-RECOMMENCER (décision d'Adel 29/10 « 5- B ») : « Recommencer à zéro ».
   // Seule la PROGRESSION du guide repart de zéro (progression, bonus gardés, marque
@@ -517,6 +572,8 @@ export function TourProvider({ children }) {
   const restartTour = useCallback((/** @type {string} */ profileKey) => {
     // Sans guide sur le site : on n'efface rien pour ne rien relancer.
     if (!isGuideSupported()) return false;
+    // GUIDE-PROGRESSIONS : seul CE guide repart de zéro ; un autre guide à l'écran est rangé.
+    parkOthers(profileKey);
     if (userId) {
       storage.delete(getStorageKey(userId));
       storage.delete(getBonusLaterKey(userId));
@@ -527,7 +584,7 @@ export function TourProvider({ children }) {
     tourStateRef.current = null;
     setTourState(null);
     return startTour(profileKey);
-  }, [startTour, userId]);
+  }, [parkOthers, startTour, userId]);
 
   // Bloquant n° 6 de l'audit : l'écran a refusé le geste d'une mission
   // essentielle (quota, club partenaire, publication refusée). On ne contourne
@@ -705,8 +762,29 @@ export function TourProvider({ children }) {
     });
   }, []);
 
-  const resumeTour = useCallback((/** @type {{ pop?: boolean }} */ options = {}) => {
-    const { current } = tourStateRef;
+  const resumeTour = useCallback((
+    /** @type {{ pop?: boolean; profileKey?: string }} */ options = {},
+  ) => {
+    let { current } = tourStateRef;
+    // GUIDE-PROGRESSIONS : « Reprendre » un guide rangé ; celui à l'écran est rangé à son tour.
+    if (options.profileKey && options.profileKey !== current?.profileKey) {
+      const parkedKey = getParkedKey(userId, options.profileKey);
+      const raw = userId ? storage.getString(parkedKey) : null;
+      let parked = null;
+      try {
+        parked = raw ? restoreSaved(JSON.parse(raw)) : null;
+      } catch (error) {
+        parked = null;
+      }
+      if (!parked) {
+        if (raw) storage.delete(parkedKey);
+        return;
+      }
+      clearSuccessTimer();
+      parkOthers(options.profileKey);
+      current = parked;
+      tourStateRef.current = parked;
+    }
     const profile = getTourProfile(current?.profileKey);
     // Guide : « Reprendre là où j'en étais » (Mon compte) vaut aussi en cours.
     const resumable = current?.status === 'paused'
@@ -749,8 +827,9 @@ export function TourProvider({ children }) {
     }
     const nextState = { ...current, status: 'active' };
     setTourState(nextState);
+    persist(nextState);
     goToStep(nextState, nextState.stepIndex);
-  }, [goToStep, persist, userData]);
+  }, [goToStep, parkOthers, persist, userData, userId]);
 
   // G93 : l'écran de l'étape a été quitté (flèche Retour) ; la bulle propose d'y revenir. L'étape
   // repart de son point de reprise, le seul dont on sait qu'il se joue depuis n'importe quel écran.
@@ -924,6 +1003,12 @@ export function TourProvider({ children }) {
   const isWaitOver = Boolean(isGuide && tourState?.status === 'paused' && currentStep?.pausedLabel
     && !isStepAvailable(currentStep, guideContext(tourState)));
 
+  // GUIDE-PROGRESSIONS : les guides rangés (en pause, hors de l'écran), pour Mon compte.
+  const parkedGuideKeys = useMemo(() => (userId
+    ? Object.keys(TOUR_PROFILES).filter((key) => key !== keptStateOf(tourState)?.profileKey
+      && storage.getString(getParkedKey(userId, key)))
+    : []), [tourState, userId]);
+
   // FIN-GUIDE2 (Adel « 1- A », 02/11) : le stockage est lu ici, pas après coup dans un effet, pour
   // que la carte ne clignote pas au montage devant un guide déjà lancé.
   const offerGuideKey = getGuideKeyForRole(getUserRoleKey(userData?.role?.name));
@@ -985,6 +1070,7 @@ export function TourProvider({ children }) {
     missions: isGuide ? profile.missions : [],
     missionStatus: tourState?.missionStatus || {},
     offerGuideKey,
+    parkedGuideKeys,
     pauseTour,
     profileKey: tourState?.profileKey || null,
     restartTour,
@@ -1013,6 +1099,7 @@ export function TourProvider({ children }) {
     isGuideOfferable,
     isWaitOver,
     offerGuideKey,
+    parkedGuideKeys,
     pauseTour,
     profile,
     restartTour,

@@ -294,20 +294,34 @@ describe('GUIDE-MENU-ROLE — le guide du rôle passe en premier', () => {
     expect(mockTour.startTour).not.toHaveBeenCalled();
   });
 
-  it('… le guide Dirigeant demande avant d’arrêter celui en pause, puis part', async () => {
+  // GUIDE-PROGRESSIONS (Adel D45, « 222 B », 10/11) : chaque guide garde sa progression. Lancer le
+  // Dirigeant range l'Entraîneur sans le remettre à zéro : plus de question qui l'annoncerait.
+  it('… le guide Dirigeant part d’un toucher, l’Entraîneur garde sa progression', async () => {
     mockTour = coachEnPause();
     await monter(PRESIDENT);
     await toucher('Guide dirigeant·e');
-    // Rien ne part sans réponse : le guide entraîneur n'est pas écrasé d'un toucher.
-    expect(mockTour.startTour).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
-    const [titre, message, boutons] = Alert.alert.mock.calls[0];
-    expect(titre).toMatch(/dirigeant/i);
-    expect(message).toMatch(/en pause/i);
-    expect(message).toMatch(/rien de ce que tu as créé/i);
-    const confirmer = boutons.find((b) => b.style !== 'cancel');
-    await act(async () => { confirmer.onPress(); });
+    expect(Alert.alert).not.toHaveBeenCalled();
     expect(mockTour.startTour).toHaveBeenCalledWith('president');
+  });
+
+  it('Dirigeant à l’écran, Entraîneur rangé : « En pause », Reprendre le ramène', async () => {
+    mockTour = tourDe({
+      hasGuideHistory: true,
+      isGuide: true,
+      isTourActive: true,
+      parkedGuideKeys: ['coach'],
+      profileKey: 'president',
+      restartTour: jest.fn(() => true),
+      tourStatus: 'active',
+    });
+    await monter(PRESIDENT);
+    expect(textes()).toContain('Guide entraîneur·e');
+    expect(rangeeDe('Guide entraîneur·e').findAll((n) => n.props.testID === 'coachGuide-pause'))
+      .not.toHaveLength(0);
+    await toucher('Guide entraîneur·e');
+    expect(mockTour.startTour).not.toHaveBeenCalled();
+    await toucher('Reprendre là où j’en étais');
+    expect(mockTour.resumeTour).toHaveBeenCalledWith({ pop: true, profileKey: 'coach' });
   });
 
   it('dirigeant dont le guide ne peut pas démarrer (pas de club) : une phrase le dit', async () => {
