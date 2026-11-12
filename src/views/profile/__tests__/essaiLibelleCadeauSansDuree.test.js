@@ -55,7 +55,9 @@ describe('ESSAI — aucun écran ne promet une durée d\'essai écrite en dur', 
     .join(' ');
 
   test('les libellés des plans offerts ne citent aucun nombre de jours', () => {
-    const source = lireSource('views/profile/SubscriptionOverview.js');
+    // ABONNEMENT-HAUT (12/11) : les libelles ont suivi la carte de statut, sortie de
+    // SubscriptionOverview.js pour etre partagee avec le site.
+    const source = lireSource('views/profile/SubscriptionPlanCard.js');
     const debut = source.indexOf('const TRIAL_PLAN_LABELS');
     const blocLibelles = source.slice(debut, source.indexOf('};', debut));
 

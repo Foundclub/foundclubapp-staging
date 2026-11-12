@@ -22573,6 +22573,7 @@ export default {
         renewsOn: '{{plan}}, renews on {{date}}',
       },
       otherPlans: 'Other active plans: {{plans}}',
+      partnerSignal: 'Internal partner signal active.',
     },
     sections: {
       club: 'Club',
