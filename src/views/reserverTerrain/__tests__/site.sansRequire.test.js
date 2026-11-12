@@ -33,6 +33,11 @@ const FICHIERS = [
   'utils/notifications/notificationPresentation.js',
   'views/complexe/components/PastilleMode.js',
   'views/event/EventDetails.js',
+  // CHAT-EVT-T9 (12/11, M1205) : la rangee du chat de la fiche et l'en-tete du fil, montes par
+  // EventDetails.web.js et Conversation.web.js. Leur `require` de chatService rendait `undefined`
+  // au site construit : la rangee n'y est jamais apparue (trains 8 et 9).
+  'views/event/components/EventChatInfos.js',
+  'views/event/components/EventChatRow.js',
   'views/search/SearchHubScreen.js',
   // RESA-CARTE (20/10) : l'adresse du site /search/reservations monte la recherche de terrains.
   'views/search/SearchReservationsScreen.js',

@@ -12,6 +12,19 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+// CHAT-EVT-T9 (12/11, M1205) : le service des messages, charge A L'APPEL, par le chargeur partage.
+// L'app et jest prennent complexeChargeurs.js (un `require` a l'appel : la fiche se monte sans
+// lui dans les bancs sans `.env`) ; le site prend complexeChargeurs.web.js, qui l'importe en tete.
+// Avant, un `require` ecrit ici : au site, Vite n'en fait pas un module (au serveur de dev
+// `require` n'existe pas, au site construit il rend `undefined`), l'erreur etait avalee et la
+// rangee n'est jamais apparue sur le site (trains 8 et 9). Temoins : site.sansRequire.test.js et
+// web/tests/components/chat-evt-t9-rangee.spec.ts.
+// ponytail: le chargeur porte le nom du chantier complexe ; s'il change de forme, le temoin
+// RESA-L7-1 (memes exports app / site) le dira. Sortie : un chargeur de messagerie a part.
+import { messages as service } from '@/services/complexe/complexeChargeurs';
+
+import { createLogger } from '@/utils/logger/logger';
+
 // ==========================================================================
 // CONVERSATION-EVENEMENT (10/11/2026, decisions d Adel « 192 » et reponses du 10/11) —
 // LA RANGEE « Ouvrir le chat de l'événement » DE LA FICHE (maquette validee, ecrans A a G).
@@ -24,10 +37,7 @@ import { RouteNames } from '@/navigation/routeNames';
 // Un 2e appui ouvre le meme chat : le serveur retrouve celui qui existe.
 // ==========================================================================
 
-// Le service (et le client reseau qu'il charge) n'est lu qu'au premier appel : la fiche de
-// l'evenement se monte sans lui (bancs, ecran hors ligne), et la rangee reste alors vide.
-// eslint-disable-next-line global-require -- chargement differe voulu (voir ci-dessus)
-const service = () => require('@/services/chat/chatService');
+const journal = createLogger('event-chat-row');
 
 /**
  * Ce que `GET /chats/event/:id` renvoie.
@@ -65,8 +75,14 @@ function EventChatRow({ eventDocumentId, navigation }) {
     const lire = () => Promise.resolve()
       .then(() => service().getEventChatState(eventDocumentId))
       .then((lu) => { if (vivant) setEtat(lu || null); })
-      // Pas de reponse (hors ligne, droit absent) : la rangee reste vide.
-      .catch(() => {});
+      // Pas de reponse (hors ligne, droit absent) : la rangee reste vide, mais le dit
+      // (CHAT-EVT-T9 : avalee sans trace, la panne du site a dure deux trains).
+      .catch((erreur) => {
+        journal.warn('etat du chat illisible, rangee masquee', {
+          erreur: String(erreur?.message || erreur),
+          eventDocumentId,
+        });
+      });
     lire();
     // CONVERSATION-EVENEMENT-2 (G) — au retour du chat, les non-lus se relisent.
     const quitter = navigation?.addListener?.('focus', lire);
