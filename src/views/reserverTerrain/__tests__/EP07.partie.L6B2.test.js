@@ -247,10 +247,10 @@ describe('E-P07 — en collecte (état 2)', () => {
     };
   });
 
-  it('« En collecte · 7/10 », la jauge, la date limite, le créneau libre', async () => {
+  it('« En construction · 7/10 », la jauge, la date limite, le créneau libre', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'En collecte · 7/10',
+      'En construction · 7/10',
       'Date limite : jeudi 18 h · le créneau reste libre jusque-là',
     ]));
     expect(parRepere(arbre, 'ma-reservation-jauge')).not.toBeNull();

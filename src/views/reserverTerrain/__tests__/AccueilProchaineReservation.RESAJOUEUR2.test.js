@@ -13,7 +13,7 @@ import { maReservation } from '@/testSupport/temoinReserver';
 
 // RESA-JOUEUR-2 (11/11/2026) — Accueil « Ta prochaine réservation » (maquette « 232- ok ») :
 // une carte en haut de l'accueil, tant qu'une réservation est à venir — le jour et l'heure, le
-// complexe et le terrain, son état (« En collecte · 6/10 » pour une réservation en construction),
+// complexe et le terrain, son état (« En construction · 6/10 » quand il manque des joueurs),
 // « Ouvrir » (sa fiche) et « Toutes mes réservations (3) ». Rien sans réservation à venir, rien
 // quand la lecture échoue (elle reste discrète). Les cases de l'accueil ne changent pas.
 
@@ -89,7 +89,7 @@ describe('RESA-JOUEUR-2 — Accueil « Ta prochaine réservation »', () => {
       'Ta prochaine réservation',
       'Demain · 19 h 30 – 21 h',
       'Le Five de Montrivage · Terrain 1',
-      'En collecte · 6/10',
+      'En construction · 6/10',
       'Ouvrir',
       'Toutes mes réservations (3)',
     ]));

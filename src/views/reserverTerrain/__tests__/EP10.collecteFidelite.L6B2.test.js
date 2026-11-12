@@ -192,7 +192,7 @@ describe('E-P10 — À venir', () => {
 });
 
 describe('E-P10 — En collecte (état 2)', () => {
-  it('chaque collecte : sa jauge, sa date limite, « En collecte · 6/10 »', async () => {
+  it('chaque collecte : sa jauge, sa date limite, « En construction · 6/10 »', async () => {
     const arbre = await monter();
     await act(async () => {
       parRepere(arbre, 'mes-reservations-onglet-en-collecte').props.onPress();
@@ -201,7 +201,7 @@ describe('E-P10 — En collecte (état 2)', () => {
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       '20 h · Le Five de Montrivage · Terrain 1',
       '6 sur 10 · date limite jeudi 20 h',
-      'En collecte · 6/10',
+      'En construction · 6/10',
     ]));
     expect(lisibles(arbre)).not.toContain('Tu as réservé');
     expect(lisibles(arbre)).not.toContain('MA FIDÉLITÉ');

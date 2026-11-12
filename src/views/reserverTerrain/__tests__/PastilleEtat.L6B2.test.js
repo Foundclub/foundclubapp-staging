@@ -30,10 +30,13 @@ const monter = (props) => {
   return arbre;
 };
 
-it('« En collecte », avec le compte quand on le sait', () => {
-  expect(lisibles(monter({ compte: '6/10', etat: 'enCollecte' }))).toEqual(['En collecte · 6/10']);
+// RESA-JOUEUR-2 (12/11, chef « Q2 A ») : « En collecte » devient « En construction », comme la
+// maquette « 232- ok » et le côté gérant.
+it('« En construction », avec le compte quand on le sait', () => {
+  expect(lisibles(monter({ compte: '6/10', etat: 'enCollecte' })))
+    .toEqual(['En construction · 6/10']);
   const sansCompte = monter({ etat: 'enCollecte' });
-  expect(lisibles(sansCompte)).toEqual(['En collecte']);
+  expect(lisibles(sansCompte)).toEqual(['En construction']);
   expect(parRepere(sansCompte, 'pastille-etat-enCollecte')).not.toBeNull();
 });
 
