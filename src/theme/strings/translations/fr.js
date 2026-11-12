@@ -19170,11 +19170,6 @@ export default {
       },
       resume: 'Reprendre là où j’en étais',
       review: 'Revoir sans rien créer',
-      switchConfirm: {
-        confirm: 'Lancer',
-        message: 'Le guide en pause s’arrête et sa progression repart de zéro. '
-          + 'Rien de ce que tu as créé n’est effacé.',
-      },
     },
     contactSupport: {
       ecrire: 'Écrire à l’assistance',

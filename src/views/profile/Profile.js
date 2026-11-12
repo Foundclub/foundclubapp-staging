@@ -193,9 +193,12 @@ function Profile({ navigation, route }) {
   const isRoleGuideBlocked = Boolean(roleGuideKey && !canStartRoleGuide);
   // Le guide en cours ; sans nom (TourContext n'en produit pas), il compte pour celui du rôle.
   const activeGuideKey = tour.isGuide ? (tour.profileKey || roleGuideKey) : null;
+  // GUIDE-PROGRESSIONS (Adel D45, « 222 B ») : les guides rangés, chacun avec sa progression.
+  const parkedGuideKeys = tour.parkedGuideKeys || [];
   const guideKeys = [...new Set([
     roleGuideKey,
     activeGuideKey,
+    ...parkedGuideKeys,
     // Coach devenu dirigeant en créant son club (« Moi »), club pas encore rattaché : il retrouve
     // son guide, comme la clôture le lui annonce (recette du 05/11, défaut 4).
     isRoleGuideBlocked && currentRoleKey === 'president' && tour.hasGuideHistory ? 'coach' : null,
@@ -1168,13 +1171,14 @@ function Profile({ navigation, route }) {
     const base = rang === 0 ? 'coachGuide' : `coachGuide-${guideKey}`;
     const label = t(guideProfile?.accountLabelKey, 'Guide entraîneur·e');
     const isBlocked = guideKey === roleGuideKey && isRoleGuideBlocked;
-    const isThisInProgress = isGuideInProgress && activeGuideKey === guideKey;
+    const isThisParked = parkedGuideKeys.includes(guideKey);
+    const isThisInProgress = (isGuideInProgress && activeGuideKey === guideKey) || isThisParked;
     const needsClub = t(
       'profile.coachGuide.needsClub',
       'S’ouvre dès que ton club est rattaché à ton compte.',
     );
     const row = {
-      accessoire: isThisInProgress && tour.tourStatus === 'paused' ? (
+      accessoire: isThisParked || (isThisInProgress && tour.tourStatus === 'paused') ? (
         <PastilleDEtat
           testID="coachGuide-pause"
           texte={t('profile.coachGuide.paused', 'En pause')}
@@ -1189,26 +1193,9 @@ function Profile({ navigation, route }) {
           Alert.alert(label, needsClub);
           return;
         }
-        // Le téléphone ne garde qu'un guide à la fois : en lancer un autre arrête celui en cours.
-        if (isGuideInProgress && !isThisInProgress) {
-          Alert.alert(
-            label,
-            t(
-              'profile.coachGuide.switchConfirm.message',
-              'Le guide en pause s’arrête et sa progression repart de zéro. '
-                + 'Rien de ce que tu as créé n’est effacé.',
-            ),
-            [
-              { style: 'cancel', text: t('profile.coachGuide.restartConfirm.cancel', 'Annuler') },
-              {
-                onPress: () => chooseGuide(() => tour.startTour(guideKey)),
-                text: t('profile.coachGuide.switchConfirm.confirm', 'Lancer'),
-              },
-            ],
-          );
-          return;
-        }
-        if (!tour.hasGuideHistory) {
+        // GUIDE-PROGRESSIONS : en lancer un autre range celui en cours, avec sa progression ;
+        // rien n'est perdu, donc plus de question (ses textes sont retirés).
+        if (!tour.hasGuideHistory || (isGuideInProgress && !isThisInProgress)) {
           tour.startTour(guideKey);
           return;
         }
@@ -1227,7 +1214,9 @@ function Profile({ navigation, route }) {
         icon: Images.flag,
         key: `${base}-resume`,
         label: t('profile.coachGuide.resume', 'Reprendre là où j’en étais'),
-        onPress: () => chooseGuide(() => tour.resumeTour({ pop: true })),
+        onPress: () => chooseGuide(() => tour.resumeTour(isThisParked
+          ? { pop: true, profileKey: guideKey }
+          : { pop: true })),
         sousLigne: true,
       }] : []),
       // Guide Dirigeant : pas d'étape de visite, la ligne ne mènerait à rien.
@@ -1238,8 +1227,9 @@ function Profile({ navigation, route }) {
         onPress: () => chooseGuide(() => tour.startTour(guideKey, { review: true })),
         sousLigne: true,
       }] : []),
-      // Un bonus remplacerait la progression en cours : seulement sans guide en cours.
-      ...(isGuideInProgress ? [] : [{
+      // Un bonus remplacerait la progression de CE guide : seulement sans elle
+      // (GUIDE-PROGRESSIONS : un autre guide en cours est rangé, il ne compte plus).
+      ...(isThisInProgress ? [] : [{
         icon: Images.flag,
         key: `${base}-bonus`,
         label: t('profile.coachGuide.bonus', 'Faire un bonus'),
