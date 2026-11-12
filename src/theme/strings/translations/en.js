@@ -21235,7 +21235,9 @@ export default {
     ok: 'Got it',
     pending: {
       cancel: 'Cancel',
+      inviteAgain: 'Invite again',
       note: 'You see what you typed, not the person’s profile. They join the staff once they accept.',
+      refusedState: 'Declined',
       resend: 'Resend by text',
       sentOn: 'sent on {{date}}',
       someone: 'Invitee',
@@ -21251,7 +21253,7 @@ export default {
       refuse: 'Decline',
     },
     refused: {
-      text: 'Nothing changed on your account. The club is not notified.',
+      text: 'Nothing changed on your account. The club will see that you declined.',
       title: 'Invitation declined',
     },
     roles: {
@@ -21274,8 +21276,9 @@ export default {
       becomeCoachOf: 'You become coach of the {{team}} team: matches, trainings, call-ups.',
       becomeDirigeant: 'You become a club manager: teams, staff and members.',
       ifAccept: 'If you accept:',
-      ifRefuse: 'If you decline, nothing changes and the club is not notified.',
-      ifRefuseUntil: 'If you decline, nothing changes and the club is not notified. Valid until {{date}}.',
+      ifRefuse: 'If you decline, nothing changes for you, and the club will see that you declined.',
+      ifRefuseUntil: 'If you decline, nothing changes for you, and the club will see that you declined. '
+        + 'Valid until {{date}}.',
       joinClub: 'You join the club {{club}}.',
       refuse: 'Decline',
       teamsStay: 'Your current teams stay as they are.',
