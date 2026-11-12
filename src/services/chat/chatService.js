@@ -63,6 +63,9 @@ const chatSchema = Joi.object({
       'assistance',
       // MSG-VILLE-NOUVELLE (20/10) : la conversation que la Ville ouvre avec qui elle veut.
       'collectivite_conversation',
+      // CHAT-EVT-TEL (12/11) : le chat d'un événement. Sans lui, getChatById JETAIT : pas de
+      // chatData, donc `canWrite` faux et « Canal d'annonce (lecture seule) » (M1176, 2.6.99).
+      'event',
     )
     .required(),
   updatedAt: Joi.date().required(),
