@@ -31,10 +31,6 @@ export default {
         actions: {
           send: 'Send invitation',
         },
-        description: 'This number cannot be added directly: the person has to accept first. '
-          + 'Send them the invitation. From the link, they ask to join your club, then you accept '
-          + 'their request in “Membership requests”.',
-        title: 'Invitation to send',
       },
       inviteCopied: 'Invitation copied: paste it into an email, WhatsApp or a text message.',
       success: {
@@ -7890,8 +7886,6 @@ export default {
       avanceJours: 'Up to N days ahead',
       avanceQuestion: 'How far ahead can a player book?',
       avanceSansLimite: 'No limit (until the slot starts)',
-      aVenir: 'Upcoming bookings per person',
-      aVenirAide: 'Pending requests and open collections count.',
       bannir: 'Ban automatically after',
       bannirAide: 'The ban only applies at your venue. You can lift it at any time.',
       bannirExplication: 'A no-show booking: the player didn’t come. At this number, they can no longer book with you.',
@@ -20494,22 +20488,6 @@ export default {
     typeSelection: {
       desc: 'Choose the type of alert you want to create.',
       title: 'What are you looking for?',
-    },
-  },
-  searchClubsScreen: {
-    tutorial: {
-      content: {
-        description: 'Use the search bar and filters, and open a club page.',
-        title: 'Club list',
-      },
-      header: {
-        description: 'Find the full club search here.',
-        title: 'Club search',
-      },
-      switcher: {
-        description: 'Quickly switch between the different searches.',
-        title: 'Search types',
-      },
     },
   },
   searchCountdown: {

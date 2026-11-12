@@ -19,8 +19,6 @@ import { useIsDesktop } from '@/responsive/useIsDesktop';
  * @param {() => void} props.onInvite - Function to call when clicking on "Invite"
  * @param {string} props.trainerName - Name of the trainer
  * @param {boolean} [props.isManager] - INVITESMS (29/10) : un dirigeant (son texte).
- * @param {boolean} [props.dejaInscrit] - INVITE-COACH-EXISTANT (10/11) : le numéro a déjà un
- *   compte ; personne n'est ajouté, la feuille dit pourquoi et comment il rejoindra le club.
  * @param {string} [props.messageDInvitation] - RETOURS-TESTEUR-2 (M0077) : le texte du SMS, lien
  *   compris. Sur le site, sur ordinateur, il se copie ou part par e-mail au lieu du SMS.
  * @param {string} [props.titre] - INVITE-STAFF (10/11) : titre fourni par l'appelant.
@@ -29,7 +27,6 @@ import { useIsDesktop } from '@/responsive/useIsDesktop';
  * @returns {import('react').ReactElement} La feuille.
  */
 function TrainerInvitedModal({
-  dejaInscrit = false,
   isManager = false,
   isVisible,
   libelleInviter = '',
@@ -48,17 +45,15 @@ function TrainerInvitedModal({
     if (!isVisible) setCopie('');
   }, [isVisible]);
 
-  // INVITE-COACH-EXISTANT : « Ajout réussi ! » serait faux, rien n'a été créé.
-  let titre = dejaInscrit
-    ? t('addCoach.alerts.invitation.title')
-    : t('addCoach.alerts.success.title');
-  if (titreFourni) titre = titreFourni;
+  // INVITE-STAFF (10/11) : les deux appelants (AddCoach, CreateTrainerModal) fournissent le titre
+  // et le texte de l'invitation envoyée ; l'ancienne prop « déjà inscrit », sans appelant, est
+  // retirée (MENAGE-T10).
+  const titre = titreFourni || t('addCoach.alerts.success.title');
   let texteDuSucces = isManager
     ? t('addClubManager.alerts.success.description', {
       managerName: trainerName, ...SANS_ECHAPPEMENT,
     })
     : t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT });
-  if (dejaInscrit) texteDuSucces = t('addCoach.alerts.invitation.description');
   if (texteFourni) texteDuSucces = texteFourni;
 
   // RETOURS-TESTEUR-2 (06/11/2026, M0077, décision du chef « A ») — un ordinateur n'envoie pas
