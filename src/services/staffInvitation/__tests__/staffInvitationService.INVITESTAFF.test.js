@@ -67,7 +67,7 @@ describe('INVITE-STAFF — staffInvitationService', () => {
     });
     await expect(getSentStaffInvitations('club-1')).resolves.toEqual([{ documentId: 'i1' }]);
     expect(client.get).toHaveBeenCalledWith('/staff-invitations/sent', {
-      params: { clubId: 'club-1' },
+      params: { clubId: 'club-1', withRefused: 1 }, // INVITE-REFUS (274 B)
     });
   });
 });
