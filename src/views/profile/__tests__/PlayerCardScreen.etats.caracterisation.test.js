@@ -250,9 +250,12 @@ describe('PAR-L14 — etat NORMAL : les gestes qui doivent survivre au redessin'
     expect(mockSaveCardToGallery).toHaveBeenCalledTimes(1);
   });
 
-  it('la jauge de rarete garde sa phrase', () => {
-    expect(textes(monter().arbre))
-      .toContain('Complète ton profil et ton parcours pour monter en rareté.');
+  // « 295- A » (Adel, 12/11/2026) : l'ancienne phrase de la jauge est retirée ; la prochaine
+  // marche (CARTE-MARCHE) la remplace, sous la jauge.
+  it('la jauge de rarete porte la prochaine marche, plus l ancienne phrase', () => {
+    const lus = textes(monter().arbre);
+    expect(lus.join(' ')).toMatch(/Pour passer /);
+    expect(lus.join(' ')).not.toMatch(/monter en rareté/);
   });
 
   it('un club de l historique arrive a la carte avec sa periode', () => {
@@ -311,8 +314,9 @@ describe('PAR-L14 — etat VERROUILLE (13-14 ans sans accord) : inchange', () =>
     expect(lus).toEqual(expect.arrayContaining([
       'Ma carte joueur',
       'Partage ta carte, gagne en visibilité et fais-toi détecter.',
-      'Complète ton profil et ton parcours pour monter en rareté.',
     ]));
+    // « 295- A » : l'ancienne phrase de la jauge est retirée, ici aussi.
+    expect(lus.join(' ')).not.toMatch(/monter en rareté/);
   });
 });
 

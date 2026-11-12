@@ -26,7 +26,9 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import { CARD_COMPLETION_STEP, listMissingCardSteps } from '@/domains/playerCard/cardCompletion';
 import { getCardConsentState } from '@/domains/playerCard/cardConsent';
 import { buildCardDisclosure, buildCardShareMessage } from '@/domains/playerCard/cardMessages';
-import { buildPlayerCardModel, computeNextRarityStep } from '@/domains/playerCard/cardModel';
+import {
+  buildPlayerCardModel, computeNextRarityStep, RARITY_FLOORS,
+} from '@/domains/playerCard/cardModel';
 import { buildPlayerCardProps } from '@/domains/playerCard/cardProps';
 import useShareCard from '@/domains/playerCard/useShareCard';
 import useTheme from '@/theme/themeContext';
@@ -338,13 +340,16 @@ function PlayerCardScreen({ navigation, route }) {
   // plus simple (barème de computeCardRarity).
   const nomRarete = (rarity) => t(`playerCard.rarity.${rarity}`).toLowerCase();
   const capitale = (mot) => mot.replace(/^./, (c) => c.toUpperCase());
-  const marche = parcours?.done ? computeNextRarityStep({
+  // CARTE-MARCHE (D97, « 291 B et A ») : la même marche s'affiche aussi EN PERMANENCE sous la
+  // carte ; mêmes entrées que la barre (model), donc le même score.
+  const marcheCourante = computeNextRarityStep({
     clubCount: model.historyClubCount,
     fill: model.fill,
     isTeamMember: Array.isArray(cardUser.myTeams) && cardUser.myTeams.length > 0,
     matchCount,
-  }) : null;
-  const gestes = (marche?.actions || []).map(({ count, kind }) => {
+  });
+  const marche = parcours?.done ? marcheCourante : null;
+  const gestes = marcheCourante.actions.map(({ count, kind }) => {
     if (kind !== 'matches') return t(`playerCard.completion.nextStep.${kind}`, { count });
     return matchCount > 0
       ? t('playerCard.completion.nextStep.matchesMore', { count })
@@ -383,6 +388,59 @@ function PlayerCardScreen({ navigation, route }) {
       </Text>
     </View>
   ) : null;
+
+  // CARTE-MARCHE (B) : le score, puis Rare (40), Épique (65), Légendaire (85) — chevrons, pas de
+  // flèche typographique (SANS-EMOJI) ; le palier atteint est mis en avant. (A) : la marche
+  // suivante, ou « Rareté maximale ».
+  const paliers = [...RARITY_FLOORS].reverse();
+  const phraseMarche = marcheCourante.next
+    ? (gestes.length && t('playerCard.completion.nextStep.goal', {
+      actions: listeGestes, rarity: nomRarete(marcheCourante.next),
+    })) || null
+    : t('playerCard.ladder.max');
+  const echelle = (
+    <View style={[Spaces.gap[8], Alignments.alignCenter]}>
+      <View
+        accessibilityLabel={t('playerCard.ladder.a11y', {
+          rarity: nomRarete(marcheCourante.rarity), score: marcheCourante.score,
+        })}
+        accessible
+        style={[Spaces.gap[4], Alignments.alignCenter]}
+      >
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('playerCard.ladder.points', { count: marcheCourante.score })}
+        </Text>
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], styles.paliers]}>
+          {paliers.map(([seuil, rarete], rang) => {
+            const estAtteint = rarete === marcheCourante.rarity;
+            return (
+              <View key={rarete} style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4]]}>
+                {rang ? <GlyphIcon color={Colors.neutral400} name="chevronRight" size={12} /> : null}
+                <View
+                  style={[styles.palier, estAtteint ? { borderColor: Colors.primary500 } : null]}
+                  testID={estAtteint ? 'carte-marche-palier-atteint' : undefined}
+                >
+                  <Text style={estAtteint
+                    ? [Fonts.p4Bold, { color: Colors.primary200 }]
+                    : [Fonts.p4, Fonts.neutral300]}
+                  >
+                    {t('playerCard.ladder.step', {
+                      floor: seuil, rarity: capitale(nomRarete(rarete)),
+                    })}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+      {phraseMarche ? (
+        <Text style={[Fonts.p3, Fonts.neutral200, styles.centre]} testID="carte-marche-prochaine">
+          {phraseMarche}
+        </Text>
+      ) : null}
+    </View>
+  );
 
   // ponytail: carte modèle FICTIVE (aucun compte derrière) ; ses mots passent par la traduction,
   // les noms propres restent. Sortie : la tirer du serveur si un jour elle doit changer seule.
@@ -597,13 +655,17 @@ function PlayerCardScreen({ navigation, route }) {
         {missingBanner}
 
         {/* Jauge de rarete (double usage : incite a completer le profil) */}
-        <View style={[Spaces.gap[8]]}>
+        <View style={[Spaces.gap[8]]} testID="carte-marche">
           <View style={styles.gaugeTrack}>
-            <View style={[styles.gaugeFill, { backgroundColor: Colors.primary500, width: `${Math.min(100, model.rarityScore)}%` }]} />
+            <View
+              style={[styles.gaugeFill, {
+                backgroundColor: Colors.primary500, width: `${Math.min(100, model.rarityScore)}%`,
+              }]}
+              testID="carte-marche-barre"
+            />
           </View>
-          <Text style={[Fonts.p4, Fonts.neutral300, { textAlign: 'center' }]}>
-            {t('playerCard.rarityHint', 'Complète ton profil et ton parcours pour monter en rareté.')}
-          </Text>
+          {/* « 295- A » (Adel, 12/11) : la marche remplace l'ancienne phrase générale. */}
+          {echelle}
         </View>
 
         {/* Garde-fou mineurs : aperçu verrouille */}
@@ -721,6 +783,14 @@ const styles = StyleSheet.create({
   offscreen: {
     left: -9999, position: 'absolute', top: 0,
   },
+  palier: {
+    borderColor: 'transparent',
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  paliers: { flexWrap: 'wrap', justifyContent: 'center' },
   tilted: { transform: [{ rotate: '-3deg' }] },
 });
 

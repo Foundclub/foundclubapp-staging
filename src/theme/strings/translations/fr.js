@@ -18562,7 +18562,15 @@ export default {
     },
     parentalConsentPreview: 'APERÇU — ACCORD PARENTAL REQUIS',
     preferredFormation: 'DISPOSITION PRÉFÉRÉE',
-    rarityHint: 'Complète ton profil et ton parcours pour monter en rareté.',
+    // CARTE-MARCHE (D97) : sous sa carte, le score, les 3 paliers et la rareté maximale.
+    ladder: {
+      a11y: 'Score de rareté : {{score}} sur 100, palier {{rarity}}. '
+        + 'Paliers : rare à 40, épique à 65, légendaire à 85.',
+      max: 'Rareté maximale',
+      points_one: '{{count}} point',
+      points_other: '{{count}} points',
+      step: '{{rarity}} ({{floor}})',
+    },
     saveCta: 'Enregistrer l\'image',
     savedDescription: 'Ta carte a été ajoutée aux photos de ton téléphone (album FoundClub).',
     savedTitle: 'Image enregistrée',
