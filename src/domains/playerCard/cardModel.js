@@ -288,7 +288,8 @@ export const computeRarity = ({ bestLevel = '', completeness = 0, topHistory = [
   return { completeness, rarity, score };
 };
 
-const RARITY_FLOORS = [[85, RARITY.LEGENDARY], [65, RARITY.EPIC], [40, RARITY.RARE]];
+// CARTE-MARCHE (D97) : l'écran de la carte affiche ces paliers ; ils restent écrits une fois, ici.
+export const RARITY_FLOORS = [[85, RARITY.LEGENDARY], [65, RARITY.EPIC], [40, RARITY.RARE]];
 
 // ponytail: copie de SPORTS_WITH_POSITIONS (constants/positions.js) — ce module reste SANS
 // dependance projet, le serveur le charge tel quel (SECUEVENT-verifications-age). Sortie : un

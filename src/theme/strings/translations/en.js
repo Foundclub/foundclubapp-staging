@@ -17734,6 +17734,15 @@ export default {
       ultraRare: 'ULTRA RARE',
     },
     rarityA11y: 'Rarity',
+    // CARTE-MARCHE (D97): under your card, the score, the 3 tiers and the maximum rarity.
+    ladder: {
+      a11y: 'Rarity score: {{score}} out of 100, {{rarity}} tier. '
+        + 'Tiers: rare at 40, epic at 65, legendary at 85.',
+      max: 'Maximum rarity',
+      points_one: '{{count}} point',
+      points_other: '{{count}} points',
+      step: '{{rarity}} ({{floor}})',
+    },
     rarityHint: 'Complete your profile and history to increase your rarity.',
     recruitTitle: 'RECRUITING · TRIALS',
     requestConsent: 'Request parental consent',
