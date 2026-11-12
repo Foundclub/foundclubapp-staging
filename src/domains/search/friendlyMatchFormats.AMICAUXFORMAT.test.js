@@ -91,7 +91,8 @@ describe('AMICAUX-FORMAT — la recherche filtrée, au serveur (4 A, 5 A)', () =
     expect(buildFormatServerFilters()).toEqual([]);
   });
 
-  // T9-RETOURS-A (12/11, M1193) remplace « 5 A » : plus d'annonce sans format sous un filtre.
+  // « 5 A » remplacée par le retour M1193 du 12/11 (T9-RETOURS-A) : plus d'annonce sans format
+  // sous un filtre de format.
   it('un sport et un format : les annonces de ce format seulement', () => {
     expect(buildFormatServerFilters({ format: '7v7', sport: 'Football' })).toEqual([
       { activity: { name: { $eqi: 'Football' } } },

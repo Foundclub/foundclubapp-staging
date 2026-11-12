@@ -292,7 +292,7 @@ export const getFilterSports = (teamSportNames) => {
 /**
  * AMICAUX-FORMAT (« 4 A ») — le tri par sport et par format, au SERVEUR.
  * Rend les clauses Strapi à poser sous `filters.$and`.
- * T9-RETOURS-A (12/11, M1193, remplace « 5 A ») : une annonce SANS format
+ * « 5 A » remplacée par le retour M1193 du 12/11 (T9-RETOURS-A) : une annonce SANS format
  * (« À convenir ») ne sort PAS sous un filtre de format ; elle sort quand aucun
  * format n'est choisi (aucune clause).
  * @param {{ format?: any, sport?: any }} [filters]

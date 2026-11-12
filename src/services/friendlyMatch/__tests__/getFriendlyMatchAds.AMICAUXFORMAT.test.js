@@ -14,7 +14,8 @@ jest.mock('@/services/client', () => ({
 describe('AMICAUX-FORMAT — getFriendlyMatchAds trie au serveur', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // T9-RETOURS-A (12/11, M1193) : plus d'annonce sans format sous un filtre de format.
+  // « 5 A » remplacée par le retour M1193 du 12/11 (T9-RETOURS-A) : plus d'annonce sans format
+  // sous un filtre de format.
   it('sport + format : les clauses partent sous $and, sans les annonces sans format', async () => {
     await getFriendlyMatchAds({ format: '7v7', search: 'Marseille', sport: 'Football' });
     const { filters } = /** @type {any} */ (client.get).mock.calls[0][1].params;
