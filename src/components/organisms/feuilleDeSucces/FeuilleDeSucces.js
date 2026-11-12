@@ -27,6 +27,8 @@ const TAILLE_ICONE = 20;
  * @param {() => void} props.close - Fermeture (fond touché, glissé vers le bas).
  * @param {boolean} props.isVisible - Feuille ouverte.
  * @param {() => void} [props.onDismissed] - Appelé quand la feuille a quitté l'écran.
+ * @param {React.ReactNode} [props.pastille] - INVITE-STAFF-DESIGN (11/11) : remplace la coche
+ *   verte (l'envoi d'une invitation, l'écusson du club qui invite). Sans elle, la coche.
  * @param {string} props.texte - La phrase sous le titre.
  * @param {string} props.titre - Le titre.
  * @param {string} [props.tourTargetId] - Ancre du guide sur le bouton plein.
@@ -39,6 +41,7 @@ function FeuilleDeSucces({
   close,
   isVisible,
   onDismissed,
+  pastille = undefined,
   texte,
   titre,
   tourTargetId = undefined,
@@ -64,6 +67,7 @@ function FeuilleDeSucces({
     >
       {/* 12 sous le bord + 12 de la zone = 24 en haut ; 24 en bas, au-dessus de la barre de gestes. */}
       <View style={[Spaces.gap[16], Spaces.paddingTop[12], Spaces.paddingBottom[24]]}>
+        {pastille || (
         <View
           style={[
             Alignments.alignCenter,
@@ -83,6 +87,7 @@ function FeuilleDeSucces({
             style={{ height: TAILLE_ICONE, tintColor: Colors.success500, width: TAILLE_ICONE }}
           />
         </View>
+        )}
         <View accessibilityLiveRegion="polite" style={[Spaces.gap[8]]}>
           <Text accessibilityRole="header" style={[Fonts.h3Bold, Fonts.neutral00]}>
             {titre}

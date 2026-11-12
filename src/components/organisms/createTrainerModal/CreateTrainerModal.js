@@ -13,7 +13,9 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
-import { dateCourte } from '@/components/organisms/invitationDeStaff/textesInvitationDeStaff';
+import {
+  detailsDeLInvitationEnvoyee,
+} from '@/components/organisms/invitationDeStaff/textesInvitationDeStaff';
 import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
 
 import { useGetClub } from '@/services/club/clubQueries';
@@ -195,6 +197,10 @@ function CreateTrainerModal({
         </View>
       </BottomModal>
       <TrainerInvitedModal
+        // INVITE-STAFF-DESIGN (maquette B) : numéro, rôle et échéance dans une carte.
+        details={invitationEnvoyee
+          ? detailsDeLInvitationEnvoyee(t, invitationEnvoyee, 'coach')
+          : undefined}
         isVisible={Boolean(invitationEnvoyee)}
         libelleInviter={t('staffInvitation.sent.actions.sms')}
         // RETOURS-TESTEUR-2 (M0077) : sur ordinateur, ce texte se copie ou part par e-mail.
@@ -215,12 +221,7 @@ function CreateTrainerModal({
           }
           setInvitationEnvoyee(null);
         }}
-        texte={t('staffInvitation.sent.description', {
-          date: dateCourte(invitationEnvoyee?.expiresAt),
-          hint: invitationEnvoyee?.phoneHint || '',
-          role: t('staffInvitation.roles.coach'),
-          ...SANS_ECHAPPEMENT,
-        })}
+        texte={t('staffInvitation.sent.explain')}
         titre={t('staffInvitation.sent.title', {
           name: invitationEnvoyee?.firstname || t('staffInvitation.sent.fallbackName'),
           ...SANS_ECHAPPEMENT,

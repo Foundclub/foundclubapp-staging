@@ -95,6 +95,8 @@ jest.mock('@/theme/themeContext', () => {
 
 // Le vrai Joi, sans tirer toute la chaine i18n de `@/theme/strings`.
 jest.mock('@/theme/strings', () => ({ Joi: jest.requireActual('joi') }));
+// INVITE-STAFF-DESIGN (11/11) : « Son équipe » ouvre une feuille (BottomModal) ; hors sujet ici.
+jest.mock('@/components/molecules/select/Select', () => () => null);
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,

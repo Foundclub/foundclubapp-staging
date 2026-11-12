@@ -725,7 +725,9 @@ describe('Guide Dirigeant·e, M2 : ce que l écran dit au guide', () => {
       libelleInviter: 'Prévenir par SMS',
     }));
     expect(dernieresProps(mockInvitedModalProps).titre).toContain('Invitation envoyée à');
-    expect(dernieresProps(mockInvitedModalProps).texte).toContain('se terminant par');
+    // INVITE-STAFF-DESIGN (maquette B) : le numéro réduit passe du texte à la carte.
+    expect(dernieresProps(mockInvitedModalProps).details)
+      .toEqual(expect.arrayContaining([{ label: 'Numéro', value: '•• 00' }]));
     expect(cles().filter((cle) => STAFF.includes(cle))).toEqual(['staff.invited']);
   });
 
@@ -739,5 +741,85 @@ describe('Guide Dirigeant·e, M2 : ce que l écran dit au guide', () => {
     expect(dernieresProps(mockInvitedModalProps).isVisible).toBe(false);
     expect(cles().filter((cle) => STAFF.includes(cle))).toEqual([]);
     spy.mockRestore();
+  });
+});
+
+// INVITE-STAFF-DESIGN (11/11/2026, maquette validée le 10/11, écrans A et B) — « Son équipe »,
+// facultatif, vide par défaut : depuis la fiche du club, l'invitation part sans équipe comme
+// avant (décision du chef). La feuille « envoyée » range numéro, rôle et échéance dans une carte.
+jest.mock('@/components/molecules/select/Select', () => {
+  const reactActuel = jest.requireActual('react');
+  const {
+    Text: TexteRN, TouchableOpacity: PressableRN, View: VueRN,
+  } = jest.requireActual('react-native');
+  return function SelectMock(/** @type {any} */ props) {
+    return reactActuel.createElement(
+      VueRN,
+      null,
+      reactActuel.createElement(TexteRN, null, props.label),
+      ...props.options.map((/** @type {any} */ option) => reactActuel.createElement(
+        PressableRN,
+        { key: option.value, onPress: () => props.onSelect(option.value) },
+        reactActuel.createElement(TexteRN, null, `choix:${option.label}`),
+      )),
+    );
+  };
+});
+
+describe('INVITE-STAFF-DESIGN — A « Son équipe » et B la carte envoyée', () => {
+  const { sendStaffInvitation } = jest.requireMock(
+    '@/services/staffInvitation/staffInvitationService',
+  );
+  const EQUIPES = [{ documentId: 't-1', name: 'U13 A' }, { documentId: 't-2', name: 'U15' }];
+
+  it('A : coach, club avec équipes : « Son équipe » facultatif, vide, sans équipe', async () => {
+    mockClubQuery.data = { documentId: 'club-1', name: 'SMUC', teams: EQUIPES };
+    const arbre = await monterEcran();
+    const texte = texteDe(arbre.root);
+    expect(texte).toContain('Son équipe');
+    expect(texte).toContain('Facultatif. Tu pourras l’ajouter à une équipe plus tard.');
+    await saisirTelephone('+33 6 00 00 00 00');
+    await appuyerSur(arbre, LIBELLE_CTA);
+    expect(sendStaffInvitation)
+      .toHaveBeenCalledWith(expect.objectContaining({ role: 'coach', teamId: null }));
+  });
+
+  it('A : une équipe choisie part avec l invitation', async () => {
+    mockClubQuery.data = { documentId: 'club-1', name: 'SMUC', teams: EQUIPES };
+    const arbre = await monterEcran();
+    await appuyerSur(arbre, 'choix:U13 A');
+    await saisirTelephone('+33 6 00 00 00 00');
+    await appuyerSur(arbre, LIBELLE_CTA);
+    expect(sendStaffInvitation).toHaveBeenCalledWith(expect.objectContaining({ teamId: 't-1' }));
+  });
+
+  it('A : un dirigeant n a pas d équipe à choisir ; un club sans équipe non plus', async () => {
+    mockClubQuery.data = { documentId: 'club-1', name: 'SMUC', teams: EQUIPES };
+    const dirigeant = await monterEcran({ name: RouteNames.AddClubManager });
+    expect(texteDe(dirigeant.root)).not.toContain('Son équipe');
+    mockClubQuery.data = { documentId: 'club-1', name: 'SMUC', teams: [] };
+    const sansEquipe = await monterEcran();
+    expect(texteDe(sansEquipe.root)).not.toContain('Son équipe');
+  });
+
+  it('B : la feuille porte la carte Numéro / Rôle / Valable', async () => {
+    createTrainer.mockResolvedValueOnce({
+      invitation: {
+        expiresAt: '2026-12-10T12:00:00.000Z',
+        phoneHint: '78',
+        team: { documentId: 't-1', name: 'U13 A' },
+      },
+      sent: true,
+    });
+    const arbre = await monterEcran();
+    await saisirTelephone('+33 6 12 34 56 78');
+    await appuyerSur(arbre, LIBELLE_CTA);
+    expect(dernieresProps(mockInvitedModalProps).details).toEqual([
+      { label: 'Numéro', value: '•• 78' },
+      { label: 'Rôle', value: 'Coach · U13 A' },
+      // La doublure de `t` n'interpole pas : la date est vérifiée par le témoin des textes.
+      { label: 'Valable', value: expect.stringContaining('jusqu’au') },
+    ]);
+    expect(dernieresProps(mockInvitedModalProps).texte).toContain('S’il a déjà FoundClub');
   });
 });

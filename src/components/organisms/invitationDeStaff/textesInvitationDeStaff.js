@@ -23,6 +23,36 @@ export const dateCourte = (iso) => {
 };
 
 /**
+ * INVITE-STAFF-DESIGN (11/11, maquette B) — la carte de « Invitation envoyée » : le numéro réduit
+ * à ses 2 derniers chiffres, le rôle (et l'équipe), l'échéance. Une ligne vide ne s'affiche pas.
+ * @param {import('i18next').TFunction} t - la traduction.
+ * @param {{ expiresAt?: string, phoneHint?: string, team?: { name?: string } | null }} invitation
+ *   - la réponse du serveur.
+ * @param {string} role - 'coach' ou 'dirigeant'.
+ * @returns {{ label: string, value: string }[]} les lignes.
+ */
+export const detailsDeLInvitationEnvoyee = (t, invitation, role) => {
+  const date = dateCourte(invitation?.expiresAt);
+  return [
+    {
+      label: t('staffInvitation.sent.rows.number'),
+      value: invitation?.phoneHint ? `•• ${invitation.phoneHint}` : '',
+    },
+    {
+      label: t('staffInvitation.sent.rows.role'),
+      value: [
+        t(role === 'dirigeant' ? 'staffInvitation.roles.dirigeant' : 'staffInvitation.roles.coach'),
+        invitation?.team?.name,
+      ].filter(Boolean).join(' · '),
+    },
+    {
+      label: t('staffInvitation.sent.rows.valid'),
+      value: date ? t('staffInvitation.sent.rows.validUntil', { date, ...SANS_ECHAPPEMENT }) : '',
+    },
+  ].filter((ligne) => ligne.value);
+};
+
+/**
  * « FC Lyon Est t'invite comme coach de l'équipe U13 A ».
  * @param {import('i18next').TFunction} t - la traduction.
  * @param {InvitationDeStaff} invitation - l'invitation.

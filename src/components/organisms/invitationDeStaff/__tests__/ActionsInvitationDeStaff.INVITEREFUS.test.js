@@ -39,7 +39,7 @@ jest.mock('react-i18next', () => {
 
 jest.mock('@/theme/themeContext', () => {
   const vide = new Proxy({}, { get: () => ({}) });
-  return { __esModule: true, default: () => ({ Alignments: vide, Spaces: vide }) };
+  return { __esModule: true, default: () => ({ Alignments: vide, Fonts: vide, Spaces: vide }) };
 });
 
 /** @type {any[]} */

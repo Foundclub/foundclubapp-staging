@@ -18,9 +18,11 @@ it('la liste du club demande aussi les refusées (withRefused=1)', async () => {
   /** @type {any} */ (client.get).mockResolvedValue({
     data: { data: { invitations: [{ documentId: 'i1', state: 'refused' }] } },
   });
-  await expect(getSentStaffInvitations('club-1')).resolves.toEqual([
-    { documentId: 'i1', state: 'refused' },
-  ]);
+  await expect(getSentStaffInvitations('club-1')).resolves.toEqual({
+    // Récolte T10 : la lecture rend aussi `recentlyAccepted` (INVITE-STAFF-DESIGN).
+    invitations: [{ documentId: 'i1', state: 'refused' }],
+    recentlyAccepted: [],
+  });
   expect(client.get).toHaveBeenCalledWith('/staff-invitations/sent', {
     params: { clubId: 'club-1', withRefused: 1 },
   });

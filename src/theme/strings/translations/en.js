@@ -21501,8 +21501,12 @@ export default {
     form: {
       hint: 'They get your invitation and choose to accept. Nothing changes without their consent.',
       send: 'Send the invitation',
+      team: 'Their team',
+      teamHint: 'Optional. You can add them to a team later.',
+      teamNone: 'No team',
       title: 'Invite a coach',
     },
+    newMember: 'New',
     ok: 'Got it',
     pending: {
       cancel: 'Cancel',
@@ -21535,10 +21539,16 @@ export default {
       actions: {
         sms: 'Let them know by text',
       },
-      description: '{{role}} · number ending in {{hint}} · valid until {{date}}.\n\n'
-        + 'If they already use FoundClub, they find it in their notifications. Otherwise it waits: '
-        + 'they will see it as soon as they sign up with this number.',
+      explain: 'If they already use FoundClub, they find it in their notifications. Otherwise it waits: '
+        + 'they will see it as soon as they sign up with this number.\n\n'
+        + 'You can let them know by text, with the link to install the app.',
       fallbackName: 'your invitee',
+      rows: {
+        number: 'Number',
+        role: 'Role',
+        valid: 'Valid',
+        validUntil: 'until {{date}}',
+      },
       title: 'Invitation sent to {{name}}',
     },
     sheet: {
@@ -21546,6 +21556,7 @@ export default {
       becomeCoach: 'You become a coach of the club.',
       becomeCoachOf: 'You become coach of the {{team}} team: matches, trainings, call-ups.',
       becomeDirigeant: 'You become a club manager: teams, staff and members.',
+      eyebrow: 'Invitation',
       ifAccept: 'If you accept:',
       ifRefuse: 'If you decline, nothing changes for you, and the club will see that you declined.',
       ifRefuseUntil: 'If you decline, nothing changes for you, and the club will see that you declined. '
@@ -21556,9 +21567,12 @@ export default {
     },
     welcome: {
       coach: 'You are a coach. You can call up players, create trainings and follow the team right away.',
+      coachOf: 'You are coach of the {{team}} team. You can call up players, create trainings and '
+        + 'follow the team right away.',
       dirigeant: 'You are a manager. You can manage teams, staff and members right away.',
       later: 'Later',
       openClub: 'Open the club',
+      openTeam: 'Open the {{team}} team',
       title: 'Welcome to the {{club}} staff',
     },
   },

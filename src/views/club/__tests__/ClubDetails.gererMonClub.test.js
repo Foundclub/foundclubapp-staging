@@ -73,6 +73,8 @@ const mockRattachementQuery = jest.fn(() => ({ data: [], error: null, isLoading:
 // VOIE 3 (07/10) : « Ma collectivité » (la rangée du hub et sa sous-page).
 /** @type {jest.Mock<any, any[]>} */
 const mockMaCollectiviteQuery = jest.fn(() => ({ data: null, error: null, isLoading: false }));
+// INVITE-STAFF-DESIGN (D) : la lecture des invitations envoyées (en attente + arrivées récentes).
+const mockStaffSentQuery = jest.fn(() => ({ data: [], isLoading: false, refetch: jest.fn() }));
 const mockRemindClubWeekendScore = jest.fn(() => Promise.resolve({
   alreadyRemindedCount: 0, remindedCount: 1, trainerCount: 1,
 }));
@@ -109,6 +111,7 @@ jest.mock('@tanstack/react-query', () => ({
     if (options?.queryKey?.[0] === 'club-weekend-results') return mockWeekendQuery(options);
     if (options?.queryKey?.[2] === 'collectivite-requests') return mockRattachementQuery(options);
     if (options?.queryKey?.[2] === 'ma-collectivite') return mockMaCollectiviteQuery(options);
+    if (options?.queryKey?.[0] === 'staffInvitationsSent') return mockStaffSentQuery(options);
     return { data: [], isLoading: false, refetch: jest.fn() };
   },
   // LOT INSTANT (2026-08-27) — l'ecran demande desormais le cache pour
@@ -1724,5 +1727,45 @@ describe('GUIDES-SITE-CORR : les ancres du guide sur le hub de l ordinateur', ()
       expect([ordinateur, [...new Set(ancres)].sort()])
         .toEqual([ordinateur, ['club.card', 'club.edit', 'club.poster']]);
     });
+  });
+});
+
+// INVITE-STAFF-DESIGN (11/11/2026, maquette D validée le 10/11) — la ligne d'un coach arrivé par
+// une invitation acceptée il y a moins de 7 jours porte « Nouveau » et un bord vert ; les autres
+// lignes ne changent pas. Le serveur nomme ces arrivées (`recentlyAccepted`, champ facultatif).
+describe('INVITE-STAFF-DESIGN : « Nouveau » sur la ligne du staff', () => {
+  afterEach(() => {
+    mockStaffSentQuery.mockImplementation(() => ({
+      data: [], isLoading: false, refetch: jest.fn(),
+    }));
+  });
+
+  const MEMBRES = [
+    {
+      documentId: 'u-2', firstname: 'Mehdi', lastname: 'Toumi', role: { name: 'coach' },
+    },
+    {
+      documentId: 'u-3', firstname: 'Karim', lastname: 'Haddad', role: { name: 'coach' },
+    },
+  ];
+
+  it('seul le coach arrivé par invitation porte « Nouveau »', () => {
+    mockClubQuery.data = { ...CLUB, members: MEMBRES };
+    mockStaffSentQuery.mockImplementation(() => ({
+      data: { invitations: [], recentlyAccepted: ['u-3'] }, isLoading: false, refetch: jest.fn(),
+    }));
+    const arbre = monter('staff');
+    const ligneDe = (/** @type {string} */ nom) => arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.props?.onPress === 'function' && texteDe(n).includes(nom),
+    ).pop();
+    expect(texteDe(ligneDe('Karim Haddad'))).toContain('Nouveau');
+    expect(texteDe(ligneDe('Mehdi Toumi'))).not.toContain('Nouveau');
+  });
+
+  it('sans le champ (serveur plus ancien), aucune ligne ne porte « Nouveau »', () => {
+    mockClubQuery.data = { ...CLUB, members: MEMBRES };
+    const arbre = monter('staff');
+    expect(texteDe(arbre.root)).toContain('Karim Haddad');
+    expect(texteDe(arbre.root)).not.toContain('Nouveau');
   });
 });

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Platform } from 'react-native';
+import {
+  Linking, Platform, Text, View,
+} from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+import useTheme from '@/theme/themeContext';
 
+import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FeuilleDeSucces from '@/components/organisms/feuilleDeSucces/FeuilleDeSucces';
 
 // Jumeaux `.native.js` / `.web.js` : le contrôle de types ne voit aucun fichier à ce chemin.
@@ -24,9 +29,12 @@ import { useIsDesktop } from '@/responsive/useIsDesktop';
  * @param {string} [props.titre] - INVITE-STAFF (10/11) : titre fourni par l'appelant.
  * @param {string} [props.texte] - INVITE-STAFF : texte fourni par l'appelant.
  * @param {string} [props.libelleInviter] - INVITE-STAFF : libellé du bouton SMS.
+ * @param {{ label: string, value: string }[]} [props.details] - INVITE-STAFF-DESIGN (11/11,
+ *   maquette B) : la carte Numéro / Rôle / Valable, et la pastille bleue de l'envoi.
  * @returns {import('react').ReactElement} La feuille.
  */
 function TrainerInvitedModal({
+  details = undefined,
   isManager = false,
   isVisible,
   libelleInviter = '',
@@ -38,6 +46,9 @@ function TrainerInvitedModal({
   trainerName,
 }) {
   const { t } = useTranslation();
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
   const estOrdinateur = useIsDesktop();
   const [copie, setCopie] = useState(/** @type {'' | 'copie' | 'echec'} */ (''));
 
@@ -55,6 +66,46 @@ function TrainerInvitedModal({
     })
     : t('addCoach.alerts.success.description', { trainerName, ...SANS_ECHAPPEMENT });
   if (texteFourni) texteDuSucces = texteFourni;
+
+  // INVITE-STAFF-DESIGN (maquette B) : l'invitation envoyée a sa carte et sa pastille d'envoi.
+  const carte = details?.length ? (
+    <View
+      style={[
+        ApplicationStyle.backgroundColor.primary800,
+        Spaces.gap[8],
+        Spaces.padding[16],
+        { borderRadius: 16 },
+      ]}
+    >
+      {details.map((ligne) => (
+        <View
+          key={ligne.label}
+          style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.gap[12]]}
+        >
+          <Text style={[Fonts.p3, Fonts.neutral300]}>{ligne.label}</Text>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00, { flexShrink: 1, textAlign: 'right' }]}>
+            {ligne.value}
+          </Text>
+        </View>
+      ))}
+    </View>
+  ) : null;
+  const pastille = carte ? (
+    <View
+      style={[
+        Alignments.alignCenter,
+        Alignments.justifyCenter,
+        {
+          backgroundColor: withAlpha(Colors.primary500, 0.16),
+          borderRadius: 28,
+          height: 56,
+          width: 56,
+        },
+      ]}
+    >
+      <SvgIcon color={Colors.primary500} height={26} name="envelope" width={26} />
+    </View>
+  ) : undefined;
 
   // RETOURS-TESTEUR-2 (06/11/2026, M0077, décision du chef « A ») — un ordinateur n'envoie pas
   // de SMS : sur le site, sur ordinateur, on copie l'invitation ou on l'envoie par e-mail. Le site
@@ -93,10 +144,13 @@ function TrainerInvitedModal({
         }}
         close={onClose}
         isVisible={isVisible}
+        pastille={pastille}
         texte={texte}
         titre={titre}
         tourTargetId="ok-sheet"
-      />
+      >
+        {carte}
+      </FeuilleDeSucces>
     );
   }
 
@@ -112,10 +166,13 @@ function TrainerInvitedModal({
       actionSecondaire={{ onPress: () => onClose(), title: t('common.actions.askLater') }}
       close={onClose}
       isVisible={isVisible}
+      pastille={pastille}
       texte={texteDuSucces}
       titre={titre}
       tourTargetId="ok-sheet"
-    />
+    >
+      {carte}
+    </FeuilleDeSucces>
   );
 }
 

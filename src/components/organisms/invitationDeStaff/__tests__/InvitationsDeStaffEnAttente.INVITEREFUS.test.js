@@ -52,7 +52,8 @@ let mockInvitations = [];
 const mockAnnuler = jest.fn();
 jest.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ isPending: false, mutate: mockAnnuler, variables: undefined }),
-  useQuery: () => ({ data: mockInvitations, refetch: jest.fn() }),
+  // Récolte T10 : la lecture rend { invitations, recentlyAccepted } (INVITE-STAFF-DESIGN).
+  useQuery: () => ({ data: { invitations: mockInvitations, recentlyAccepted: [] }, refetch: jest.fn() }),
 }));
 
 jest.mock('@/components/atoms/button/Button', () => {

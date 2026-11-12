@@ -18,10 +18,14 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
+import Select from '@/components/molecules/select/Select';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import TourBubbleSlot from '@/components/molecules/tour/TourBubbleSlot';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import useTourScroller from '@/components/molecules/tour/useTourScroller';
+import {
+  detailsDeLInvitationEnvoyee,
+} from '@/components/organisms/invitationDeStaff/textesInvitationDeStaff';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -116,6 +120,9 @@ function AddCoach({ navigation, route }) {
     openedAsManager ? STAFF_ROLES.MANAGER : STAFF_ROLES.TRAINER,
   );
   const isManagerMode = staffRole === STAFF_ROLES.MANAGER;
+  // INVITE-STAFF-DESIGN (maquette A, décision du chef 11/11) : « Son équipe » est facultatif et
+  // vide par défaut ; sans choix, l'invitation part sans équipe, comme avant.
+  const [equipe, setEquipe] = useState('');
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routeClubName = String(route?.params?.clubName || '').trim();
   const {
@@ -203,26 +210,16 @@ function AddCoach({ navigation, route }) {
       firstname: data.firstname,
       phoneNumber: data.phoneNumber,
       role: isManagerMode ? 'dirigeant' : 'coach',
-      teamId: isManagerMode ? null : sanitizeRouteParam(route?.params?.teamId) || null,
+      teamId: isManagerMode ? null : equipe || sanitizeRouteParam(route?.params?.teamId) || null,
     });
   };
 
-  const expiresOn = createdTrainer?.expiresAt
-    ? new Date(createdTrainer.expiresAt).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-    })
-    : '';
+  const equipesDuClub = Array.isArray(clubData?.teams) ? clubData?.teams || [] : [];
   const sentTitle = t('staffInvitation.sent.title', {
     name: createdTrainer?.firstname || t('staffInvitation.sent.fallbackName'),
     ...SANS_ECHAPPEMENT,
   });
-  const sentText = t('staffInvitation.sent.description', {
-    date: expiresOn,
-    hint: createdTrainer?.phoneHint || '',
-    role: isManagerMode ? t('staffInvitation.roles.dirigeant') : t('staffInvitation.roles.coach'),
-    ...SANS_ECHAPPEMENT,
-  });
+  const sentText = t('staffInvitation.sent.explain');
 
   if (!routeClubId) {
     return (
@@ -351,6 +348,28 @@ function AddCoach({ navigation, route }) {
                 </View>
               </TourTarget>
 
+              {!isManagerMode && equipesDuClub.length ? (
+                <View style={[Spaces.gap[8]]}>
+                  <Select
+                    error={undefined}
+                    label={t('staffInvitation.form.team')}
+                    onSelect={setEquipe}
+                    options={[
+                      { label: t('staffInvitation.form.teamNone'), value: '' },
+                      ...equipesDuClub.map((/** @type {any} */ team) => ({
+                        label: team?.name || '',
+                        value: team?.documentId || '',
+                      })),
+                    ]}
+                    placeholder={t('staffInvitation.form.teamNone')}
+                    value={equipe}
+                  />
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {t('staffInvitation.form.teamHint')}
+                  </Text>
+                </View>
+              ) : null}
+
               <TourTarget id="cf-fields" style={[Spaces.gap[24]]}>
                 <Controller
                   control={control}
@@ -424,6 +443,11 @@ function AddCoach({ navigation, route }) {
         </View>
       </View>
       <TrainerInvitedModal
+        details={createdTrainer ? detailsDeLInvitationEnvoyee(
+          t,
+          createdTrainer,
+          isManagerMode ? 'dirigeant' : 'coach',
+        ) : undefined}
         isManager={isManagerMode}
         isVisible={isSuccessModalVisible}
         libelleInviter={t('staffInvitation.sent.actions.sms')}

@@ -14,11 +14,12 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import FeuilleDeSucces from '@/components/organisms/feuilleDeSucces/FeuilleDeSucces';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -51,7 +52,7 @@ function ActionsInvitationDeStaff({
   data, navigation, relire, repondue = false, testID = '',
 }) {
   const { t } = useTranslation();
-  const { Alignments, Spaces } = useTheme();
+  const { Alignments, Fonts, Spaces } = useTheme();
   const [phase, setPhase] = useState(
     /** @type {'' | 'question' | 'bienvenue' | 'refusee' | 'bloquee'} */ (''),
   );
@@ -59,6 +60,11 @@ function ActionsInvitationDeStaff({
   const [refusServeur, setRefusServeur] = useState({ texte: '', titre: '' });
   const [echeance, setEcheance] = useState('');
   const [eteinte, setEteinte] = useState(false);
+  // INVITE-STAFF-DESIGN : l'écusson (F), lu avec l'invitation ; l'équipe rejointe (G).
+  const [logoUrl, setLogoUrl] = useState('');
+  const [equipe, setEquipe] = useState(
+    /** @type {{ documentId?: string, name?: string } | null} */ (null),
+  );
 
   const documentId = String(data?.invitationId || '').trim();
   const sansBoutons = eteinte || repondue;
@@ -92,6 +98,7 @@ function ActionsInvitationDeStaff({
         return;
       }
       setEcheance(dateCourte(encore.expiresAt));
+      setLogoUrl(String(encore.club?.logoUrl || ''));
     } catch (error) {
       // Lecture impossible : la feuille reste ouverte, l'acceptation tranchera.
     }
@@ -102,7 +109,8 @@ function ActionsInvitationDeStaff({
     setEnCours(true);
     try {
       if (geste === 'accept') {
-        await acceptStaffInvitation(documentId);
+        const reponse = /** @type {any} */ (await acceptStaffInvitation(documentId));
+        setEquipe(reponse?.team?.documentId ? reponse.team : null);
         setPhase('bienvenue');
       } else {
         await refuseStaffInvitation(documentId);
@@ -142,6 +150,32 @@ function ActionsInvitationDeStaff({
     .filter((ligne, index) => index > 0 || ligne)
     .join('\n');
 
+  // F (maquette validée) : l'écusson du club, « Invitation » et son nom, à la place de la coche.
+  const ecusson = (
+    <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+      <ClubLogoMark logoUrl={logoUrl || undefined} name={invitation.clubName || ''} size={56} />
+      <View style={[Alignments.fill]}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{t('staffInvitation.sheet.eyebrow')}</Text>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{invitation.clubName || ''}</Text>
+      </View>
+    </View>
+  );
+
+  // G : une invitation avec équipe ouvre l'équipe ; sans équipe, le club, comme avant.
+  const valeursEquipe = { interpolation: { escapeValue: false }, team: equipe?.name || '' };
+  let texteBienvenue = t('staffInvitation.welcome.coach');
+  if (invitation.role === 'dirigeant') texteBienvenue = t('staffInvitation.welcome.dirigeant');
+  else if (equipe) texteBienvenue = t('staffInvitation.welcome.coachOf', valeursEquipe);
+  const ouvrirApresAccord = () => {
+    fermer();
+    if (!navigation?.navigate) return;
+    if (equipe?.documentId) {
+      navigation.navigate(RouteNames.TeamDetails, { teamId: equipe.documentId });
+    } else if (data?.clubId) {
+      navigation.navigate(RouteNames.Club, { clubId: data.clubId });
+    }
+  };
+
   return (
     <View
       style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12]]}
@@ -175,28 +209,22 @@ function ActionsInvitationDeStaff({
         }}
         close={fermer}
         isVisible={phase === 'question'}
+        pastille={ecusson}
         texte={texteQuestion}
         titre={phraseDInvitation(t, invitation)}
       />
 
       <FeuilleDeSucces
         actionPrincipale={{
-          onPress: () => {
-            fermer();
-            if (data?.clubId && navigation?.navigate) {
-              navigation.navigate(RouteNames.Club, { clubId: data.clubId });
-            }
-          },
-          title: t('staffInvitation.welcome.openClub'),
+          onPress: ouvrirApresAccord,
+          title: equipe
+            ? t('staffInvitation.welcome.openTeam', valeursEquipe)
+            : t('staffInvitation.welcome.openClub'),
         }}
         actionSecondaire={{ onPress: fermer, title: t('staffInvitation.welcome.later') }}
         close={fermer}
         isVisible={phase === 'bienvenue'}
-        texte={
-          invitation.role === 'dirigeant'
-            ? t('staffInvitation.welcome.dirigeant')
-            : t('staffInvitation.welcome.coach')
-        }
+        texte={texteBienvenue}
         titre={t('staffInvitation.welcome.title', {
           club: invitation.clubName || '',
           interpolation: { escapeValue: false },
