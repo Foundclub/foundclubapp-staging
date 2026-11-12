@@ -22,8 +22,10 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -72,6 +74,9 @@ function ReserverVeille() {
   const reservationId = params.reservationId || null;
   const surOrdinateur = useIsDesktop();
   const { dockClearance } = useBottomDockLayout();
+  // DEFILEMENT-LOT2 : le retrait que le cadre gardait (mode `screen` : barre du téléphone + 12).
+  const retraitBas = useRetraitBasDuDefilement(12);
+  const [hauteurDuPied, setHauteurDuPied] = useState(0);
   const lecture = useMaReservation(reservationId);
   const repondre = useRepondreALaVeille();
   const enVol = useRef(false);
@@ -138,45 +143,75 @@ function ReserverVeille() {
   };
 
   /**
-   * La page : le contenu qui défile, puis le pied fixe (au-dessus de la barre flottante du site) ;
-   * sur ordinateur (OR3, gabarit B), le pied devient le dernier bloc de la colonne.
+   * La page : tout défile ; sur le téléphone, seule l'action principale reste visible, dans un pied
+   * flottant. Sur le site, les boutons viennent au bout du défilement (au-dessus de la barre
+   * flottante, `dockClearance`) ; sur ordinateur (OR3, gabarit B), ils sont le dernier bloc de
+   * la colonne.
+   * DEFILEMENT-LOT2 (11/11, « 244- A », relevé D03b ligne 3) — le pied de deux boutons restait
+   * hors du défilement, au-dessus d'une bande de 46 px gardée par le cadre (~160 px figés sur
+   * iPhone). Règle B : « Je confirme », la réponse que l'écran attend, flotte ; le reste défile.
+   * Règle A : le cadre ne garde rien en bas, la fin du défilement garde le retrait. Un lien seul
+   * n'a pas de fond (BOUTONS-FLOTTANTS) : il ne flotte pas, il vient au bout du défilement.
+   * Témoin : __tests__/ReserverVeille.DEFILEMENT-LOT2.test.js.
    * @param {import('react').ReactNode} contenu - Le contenu.
-   * @param {import('react').ReactNode} [pied] - Les boutons du bas.
+   * @param {import('react').ReactNode} [pied] - Les boutons du bas, qui défilent.
+   * @param {import('react').ReactNode} [actionPrincipale] - Le bouton qui reste visible.
    * @returns {import('react').ReactElement} La page.
    */
-  const page = (contenu, pied = null) => (
-    // `boundedHeight` : sur le SITE, l'écran prend la hauteur de la fenêtre, pas celle de son
-    // contenu ; le pied reste en bas, au-dessus de la barre flottante (`dockClearance`).
-    <ScreenContainer
-      bgImage="bg2"
-      bottomInsetMode="screen"
-      boundedHeight
-      contentContainerStyle={[Alignments.fill]}
-    >
-      <ScrollView
-        contentContainerStyle={{
-          ...colonne, gap: 16, paddingBottom: 24, paddingTop: 12,
-        }}
-        showsVerticalScrollIndicator={false}
-        style={[Alignments.fill]}
+  const page = (contenu, pied = null, actionPrincipale = null) => {
+    const flotte = Boolean(actionPrincipale) && Platform.OS !== 'web';
+    const aDesBoutons = Boolean(pied || actionPrincipale);
+    let finDuDefilement = 24 + retraitBas;
+    if (Platform.OS === 'web') {
+      finDuDefilement = 24 + (aDesBoutons && !surOrdinateur ? dockClearance : 0);
+    } else if (flotte) {
+      // Avant la mesure, la place d'un bouton (48) et de ses marges.
+      finDuDefilement = (hauteurDuPied || 48 + 12 + retraitBas) + 12;
+    }
+    return (
+      // `boundedHeight` : sur le SITE, l'écran prend la hauteur de la fenêtre, pas celle de son
+      // contenu.
+      <ScreenContainer
+        bgImage="bg2"
+        bottomInsetMode="scroll-edge"
+        boundedHeight
+        contentContainerStyle={[Alignments.fill]}
       >
-        {contenu}
-        {surOrdinateur && pied ? <View style={{ gap: 8 }}>{pied}</View> : null}
-      </ScrollView>
-      {pied && !surOrdinateur ? (
-        <View
-          style={{
-            ...colonne,
-            gap: 8,
-            paddingBottom: Platform.OS === 'web' ? dockClearance : 0,
-            paddingTop: 12,
+        <ScrollView
+          contentContainerStyle={{
+            ...colonne, gap: 16, paddingBottom: finDuDefilement, paddingTop: 12,
           }}
+          showsVerticalScrollIndicator={false}
+          style={[Alignments.fill]}
         >
-          {pied}
-        </View>
-      ) : null}
-    </ScreenContainer>
-  );
+          {contenu}
+          {aDesBoutons && (pied || !flotte) ? (
+            <View style={{ gap: 8 }}>
+              {flotte ? null : actionPrincipale}
+              {pied}
+            </View>
+          ) : null}
+        </ScrollView>
+        {flotte ? (
+          <PiedFlottant
+            onLayout={(evenement) => setHauteurDuPied(evenement.nativeEvent.layout.height)}
+            style={{
+              ...colonne,
+              bottom: 0,
+              left: 0,
+              paddingBottom: retraitBas,
+              paddingTop: 12,
+              position: 'absolute',
+              right: 0,
+            }}
+            testID="reserver-veille-pied"
+          >
+            {actionPrincipale}
+          </PiedFlottant>
+        ) : null}
+      </ScreenContainer>
+    );
+  };
 
   /**
    * Un rond teinté et son icône (planche EP14 : `picto-rond`).
@@ -441,19 +476,19 @@ function ReserverVeille() {
         <>
           <Button
             disabled={envoiEnCours}
-            isLoading={envoiEnCours && derniere === 'confirme'}
-            onPress={() => envoyer('confirme')}
-            title={t('reserverTerrain.veille.jeConfirme', 'Je confirme')}
-            variant="Primary"
-          />
-          <Button
-            disabled={envoiEnCours}
             onPress={() => setConfirmation(true)}
             title={t('reserverTerrain.veille.jAnnule', 'J’annule')}
             variant="Secondary"
           />
           {lienVersLaFiche}
         </>,
+        <Button
+          disabled={envoiEnCours}
+          isLoading={envoiEnCours && derniere === 'confirme'}
+          onPress={() => envoyer('confirme')}
+          title={t('reserverTerrain.veille.jeConfirme', 'Je confirme')}
+          variant="Primary"
+        />,
       )}
       <BottomModal
         close={() => setConfirmation(false)}

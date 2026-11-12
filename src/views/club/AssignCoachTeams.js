@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -17,9 +18,11 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import PiedFlottant from '@/components/atoms/piedFlottant/PiedFlottant';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import ClubStateView from '@/views/club/components/ClubStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -64,6 +67,10 @@ function AssignCoachTeams({ navigation, route }) {
   const trainerId = sanitizeRouteParam(route?.params?.trainerId)
     || sanitizeRouteParam(route?.params?.coachId);
   const { t } = useTranslation();
+  // DEFILEMENT-LOT2 (11/11, « 244- A ») : le pied flottant mesure sa hauteur, la fin de la liste
+  // la laisse libre ; le retrait est celui que le cadre gardait (barre du téléphone + 12).
+  const retraitBas = useRetraitBasDuDefilement(12);
+  const [hauteurDuPied, setHauteurDuPied] = useState(0);
   // CORR-TEXTES (point 35) : l'adresse du site ne porte que l'identifiant ; ouvert à
   // froid (rechargement), le nom se relit au serveur au lieu de dire « Utilisateur ».
   const nomPasse = String(route?.params?.trainerName || '').trim();
@@ -404,13 +411,87 @@ function AssignCoachTeams({ navigation, route }) {
     );
   }
 
+  // DEFILEMENT-LOT2 (11/11, « 244- A », relevé D03b ligne 1) — 43 % de l'écran ne défilait pas sur
+  // iPhone : la carte de titre en haut, le compteur et les deux boutons en bas. Règle C : la carte
+  // passe en tête de liste. Règle B : seul « Assigner », l'action que l'écran sert à faire, reste
+  // visible dans un pied flottant ; le compteur et « Créer une équipe » viennent au bout de la
+  // liste. Sur le site, le pied vient au bout du défilement (REPRISE-PLACE, 01/11).
+  // Témoin : __tests__/AssignCoachTeams.DEFILEMENT-LOT2.test.js.
+  const surLeSite = Platform.OS === 'web';
+  const enTete = (
+    <View
+      style={[
+        ApplicationStyle.backgroundColor.primary700,
+        ApplicationStyle.borderRadius24,
+        ApplicationStyle.borderWidth1,
+        Spaces.marginBottom[16],
+        Spaces.padding[16],
+        { borderColor: `${Colors.primary500}33` },
+      ]}
+    >
+      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+        {t('assignCoachTeams.header.title', 'Assigner un entraîneur')}
+      </Text>
+      <Text style={[Fonts.p1Bold, Fonts.primary500, Spaces.marginTop[8]]}>
+        {trainerName || t('assignCoachTeams.header.userFallback', 'Utilisateur')}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.primary100, Spaces.marginTop[8]]}>
+        {t('assignCoachTeams.header.hint', 'Coche une ou plusieurs équipes, puis valide.')}
+      </Text>
+    </View>
+  );
+  const boutonAssigner = (
+    <Button
+      disabled={!selectedTeamIds.length || assignMutation.isPending || isLoading}
+      isLoading={assignMutation.isPending}
+      onPress={handleAssignSelected}
+      title={t(
+        'assignCoachTeams.actions.assignSelected',
+        'Assigner aux équipes sélectionnées',
+      )}
+      variant="Primary"
+    />
+  );
+  const pied = (
+    <PiedFlottant
+      flottant={!surLeSite}
+      onLayout={surLeSite ? undefined : (evenement) => {
+        setHauteurDuPied(evenement.nativeEvent.layout.height);
+      }}
+      style={surLeSite ? Spaces.paddingTop[12] : {
+        bottom: 0,
+        left: 0,
+        paddingBottom: retraitBas,
+        paddingTop: 12,
+        position: 'absolute',
+        right: 0,
+      }}
+      testID="assign-coach-teams-pied"
+    >
+      {boutonAssigner}
+    </PiedFlottant>
+  );
+  const finDeListe = (
+    <View style={[Spaces.gap[12], Spaces.paddingTop[12]]}>
+      <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
+        {selectedCountLabel}
+      </Text>
+      {surLeSite ? pied : null}
+      <Button
+        onPress={handleCreateTeam}
+        title={t('assignCoachTeams.actions.createTeam', 'Créer une équipe')}
+        variant="Secondary"
+      />
+    </View>
+  );
+  // Avant la mesure, la place d'un bouton (48) et de ses marges.
+  const finDuDefilement = surLeSite ? 24 : (hauteurDuPied || 48 + 12 + retraitBas) + 12;
+
   return (
     <ScreenContainer
       bgImage="bg2"
-      contentContainerStyle={[
-        Alignments.fill,
-        Spaces.paddingBottom[24],
-      ]}
+      bottomInsetMode="scroll-edge"
+      contentContainerStyle={[Alignments.fill]}
     >
       <WithDataWrapper
         error={error?.message}
@@ -418,63 +499,20 @@ function AssignCoachTeams({ navigation, route }) {
         wrapperStyle={[Alignments.fill]}
       >
         <View style={[Alignments.fill]}>
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary700,
-              ApplicationStyle.borderRadius24,
-              ApplicationStyle.borderWidth1,
-              Spaces.marginBottom[16],
-              Spaces.padding[16],
-              { borderColor: `${Colors.primary500}33` },
-            ]}
-          >
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('assignCoachTeams.header.title', 'Assigner un entraîneur')}
-            </Text>
-            <Text style={[Fonts.p1Bold, Fonts.primary500, Spaces.marginTop[8]]}>
-              {trainerName || t('assignCoachTeams.header.userFallback', 'Utilisateur')}
-            </Text>
-            <Text style={[Fonts.p2, Fonts.primary100, Spaces.marginTop[8]]}>
-              {t('assignCoachTeams.header.hint', 'Coche une ou plusieurs équipes, puis valide.')}
-            </Text>
-          </View>
-
           <FlashList
+            contentContainerStyle={{ paddingBottom: finDuDefilement }}
             data={teams}
             keyExtractor={(item, index) => item?.documentId || String(index)}
             ListEmptyComponent={renderEmptyList}
+            ListFooterComponent={finDeListe}
+            ListHeaderComponent={enTete}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
             onRefresh={refetch}
             refreshing={isLoading && !isFetchingNextPage}
             renderItem={renderItem}
           />
-
-          <View
-            style={[
-              Spaces.gap[12],
-              Spaces.paddingTop[12],
-            ]}
-          >
-            <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
-              {selectedCountLabel}
-            </Text>
-            <Button
-              disabled={!selectedTeamIds.length || assignMutation.isPending || isLoading}
-              isLoading={assignMutation.isPending}
-              onPress={handleAssignSelected}
-              title={t(
-                'assignCoachTeams.actions.assignSelected',
-                'Assigner aux équipes sélectionnées',
-              )}
-              variant="Primary"
-            />
-            <Button
-              onPress={handleCreateTeam}
-              title={t('assignCoachTeams.actions.createTeam', 'Créer une équipe')}
-              variant="Secondary"
-            />
-          </View>
+          {surLeSite ? null : pied}
         </View>
       </WithDataWrapper>
     </ScreenContainer>

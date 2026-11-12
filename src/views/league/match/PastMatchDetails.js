@@ -13,7 +13,6 @@ import {
   Image,
   Platform,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,6 +28,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import LeagueCard from '@/components/atoms/league/LeagueCard';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { getProposalLocationLabel } from '@/views/league/match/utils/proposalPayload';
 
@@ -111,11 +111,14 @@ function PastMatchDetails() {
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   // DEFILEMENT-LOT1 : la barre d'onglets n'est là que sous l'onglet League ; depuis la pile
   // racine, sa place (134 sur iPhone) restait vide en fin de défilement. Même règle que
-  // PlayerMatchResponseScreen. Le site garde sa marge (sa coque décide du dock). Le cadre et le
-  // SafeAreaView (le haut) : lot 2.
+  // PlayerMatchResponseScreen. Le site garde sa marge (sa coque décide du dock).
+  // DEFILEMENT-LOT2 : le cadre ne garde plus rien en bas (`scroll-edge`) ; depuis la pile
+  // racine, la fin du défilement garde donc aussi la barre du téléphone (le retrait commun).
+  // Sous l'onglet League, la place de la barre d'onglets la couvre déjà.
+  const retraitBas = useRetraitBasDuDefilement();
   const hauteurDeLaBarre = useContext(BottomTabBarHeightContext) || 0;
   const gardeLaPlaceDuDock = Platform.OS === 'web' || hauteurDeLaBarre > 0;
-  const scrollBottomPadding = gardeLaPlaceDuDock ? sceneBottomInset : 44;
+  const scrollBottomPadding = gardeLaPlaceDuDock ? sceneBottomInset : 44 + retraitBas;
 
   const routeParams = /** @type {{ matchId?: string | number, myTeamId?: string | number } | undefined } */ (
     route.params
@@ -340,12 +343,12 @@ function PastMatchDetails() {
 
   if (loading) {
     return (
-      <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>
-        <SafeAreaView style={styles.safeArea}>
+      <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge" style={[styles.screenContainer]}>
+        <View style={styles.safeArea}>
           <View style={styles.centered}>
             <ActivityIndicator color={Colors.primary500} size="large" />
           </View>
-        </SafeAreaView>
+        </View>
       </ScreenContainer>
     );
   }
@@ -388,22 +391,23 @@ function PastMatchDetails() {
   );
 
   return (
-    <ScreenContainer bgImage="bg2" style={[styles.screenContainer]}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerBar}>
-          <View style={styles.headerSide}>
-            <HeaderBackButton
-              borderColor="primary500"
-              color="primary500"
-              onPress={() => navigation.goBack()}
-              style={styles.headerBackButton}
-              withDefaultMargin={false}
-            />
-          </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>
-            {t('pastMatchDetails.headerTitle', 'Match termine')}
-          </Text>
-          <View style={styles.headerSide} />
+    // DEFILEMENT-LOT2 (11/11, « 244- A », relevé D03b ligne 6, « Q1 A » du chef) — l'écran en
+    // entier. Le haut : la barre « Match terminé » restait figée ; règle C, elle défile avec le
+    // match, seule la flèche reste en place, posée au-dessus, avec son fond (BOUTONS-FLOTTANTS,
+    // essai `useEnteteFlottant` du 03/11). Le SafeAreaView a disparu : le cadre garde déjà la
+    // barre d'état (sans en-tête de pile), il l'ajoutait une seconde fois sur iPhone, et il aurait
+    // remis la barre du bas dès que le cadre ne la garde plus. Le bas : règle A, voir plus haut.
+    // Témoin : __tests__/PastMatchDetails.DEFILEMENT-LOT2.test.js.
+    <ScreenContainer bgImage="bg2" bottomInsetMode="scroll-edge" style={[styles.screenContainer]}>
+      <View style={styles.safeArea}>
+        <View style={styles.headerBackFloating} testID="past-match-retour">
+          <HeaderBackButton
+            borderColor="primary500"
+            color="primary500"
+            onPress={() => navigation.goBack()}
+            style={[styles.headerBackButton, { backgroundColor: Colors.primary800 }]}
+            withDefaultMargin={false}
+          />
         </View>
 
         <ScrollView
@@ -420,6 +424,15 @@ function PastMatchDetails() {
           )}
           showsVerticalScrollIndicator={false}
         >
+          <View style={[styles.headerBar, styles.headerBarInScroll]}>
+            {/* La place de la flèche, posée au-dessus du défilement. */}
+            <View style={styles.headerSideSpace} />
+            <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>
+              {t('pastMatchDetails.headerTitle', 'Match termine')}
+            </Text>
+            <View style={styles.headerSideSpace} />
+          </View>
+
           <View
             style={[
               styles.resultBadge,
@@ -653,7 +666,7 @@ function PastMatchDetails() {
             />
           ) : null}
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </ScreenContainer>
   );
 }
@@ -713,6 +726,12 @@ const styles = StyleSheet.create({
   headerBackButton: {
     marginLeft: 0,
   },
+  headerBackFloating: {
+    left: 16,
+    position: 'absolute',
+    top: 12,
+    zIndex: 2,
+  },
   headerBar: {
     alignItems: 'center',
     borderBottomColor: 'rgba(255,255,255,0.1)',
@@ -722,8 +741,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  headerSide: {
-    alignItems: 'flex-start',
+  // Dans le défilement, la barre garde toute la largeur et son écart au contenu d'avant.
+  headerBarInScroll: {
+    marginBottom: 16,
+    marginHorizontal: -16,
+    marginTop: -16,
+  },
+  // La place de la flèche (34 de haut) : la barre garde sa hauteur d'avant.
+  headerSideSpace: {
+    minHeight: 34,
     minWidth: 42,
   },
   headerTitle: {

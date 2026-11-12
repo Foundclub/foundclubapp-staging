@@ -9,9 +9,9 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FlatList,
   Image,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -218,47 +218,75 @@ function RankingScreen() {
     );
   }
 
+  // DEFILEMENT-LOT2 (11/11, « 244- A », relevé D03b ligne 5) — le titre, la ligne « DIVISION » et
+  // les en-têtes de colonnes restaient figés (~210 px sur iPhone) ; seule la liste défilait,
+  // dans sa carte. Règle C (T3-BANDEAU-HAUT : tout défile sauf la flèche) : tout passe dans un
+  // seul défilement ; la flèche de retour reste en place, posée au-dessus, et porte son fond
+  // (BOUTONS-FLOTTANTS), comme l'essai `useEnteteFlottant` du 03/11. Le bas ne change pas.
+  // ponytail: les lignes ne sont plus virtualisées (une division se lit en entier, `getRanking`
+  // ramène toutes les pages) ; si une division dépasse quelques centaines d'équipes, revenir à
+  // une FlatList dont l'en-tête porte le haut et le dessus de la carte.
+  // Témoin : __tests__/RankingScreen.DEFILEMENT-LOT2.test.js.
   return (
     <ScreenContainer bgImage="bg2">
       <View style={styles.screen}>
-        <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={{ color: Colors.neutral00, fontSize: 24 }}>{'<'}</Text>
-          </TouchableOpacity>
-          <Text style={[Fonts.h1, { color: Colors.neutral00 }]}>
-            {t('rankingScreen.title', 'CLASSEMENT')}
-          </Text>
-          <View style={{ width: 40 }} />
-        </View>
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => navigation.goBack()}
+          style={[
+            styles.backButton,
+            styles.backButtonFloating,
+            { backgroundColor: Colors.primary800 },
+          ]}
+          testID="ranking-retour"
+        >
+          <Text style={{ color: Colors.neutral00, fontSize: 24 }}>{'<'}</Text>
+        </TouchableOpacity>
 
-        <View style={styles.divisionRow}>
-          <TouchableOpacity onPress={() => changeDivision(-1)} style={styles.divisionArrow}>
-            <Text style={[Fonts.h2, { color: Colors.gold500 }]}>{'<'}</Text>
-          </TouchableOpacity>
-          <Text style={[Fonts.h2, { color: Colors.neutral00, marginHorizontal: 20 }]}>
-            DIVISION
-            {' '}
-            <Text style={{ color: Colors.gold500 }}>{division}</Text>
-          </Text>
-          <TouchableOpacity onPress={() => changeDivision(1)} style={styles.divisionArrow}>
-            <Text style={[Fonts.h2, { color: Colors.gold500 }]}>{'>'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <LeagueCard style={{ overflow: 'hidden', padding: 0, ...leagueSurface }}>
-          <View style={[styles.headerRow, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 40 }]}>#</Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1 }]}>
-              {t('rankingScreen.teamColumn', 'Équipe')}
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: listBottomPadding }]}
+          refreshControl={(
+            <RefreshControl
+              onRefresh={loadData}
+              refreshing={loading}
+              tintColor={Colors.primary500}
+            />
+          )}
+          style={styles.scroll}
+        >
+          <View style={styles.topBar}>
+            {/* La place de la flèche, posée au-dessus du défilement. */}
+            <View style={styles.backButtonSpace} />
+            <Text style={[Fonts.h1, { color: Colors.neutral00 }]}>
+              {t('rankingScreen.title', 'CLASSEMENT')}
             </Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 68 }]}>PTS</Text>
+            <View style={styles.backButtonSpace} />
           </View>
 
-          <FlatList
-            contentContainerStyle={{ paddingBottom: listBottomPadding }}
-            data={ranking}
-            keyExtractor={(/** @type {Team} */ item) => String(getEntityDocumentId(item) || '')}
-            ListEmptyComponent={(
+          <View style={styles.divisionRow}>
+            <TouchableOpacity onPress={() => changeDivision(-1)} style={styles.divisionArrow}>
+              <Text style={[Fonts.h2, { color: Colors.gold500 }]}>{'<'}</Text>
+            </TouchableOpacity>
+            <Text style={[Fonts.h2, { color: Colors.neutral00, marginHorizontal: 20 }]}>
+              DIVISION
+              {' '}
+              <Text style={{ color: Colors.gold500 }}>{division}</Text>
+            </Text>
+            <TouchableOpacity onPress={() => changeDivision(1)} style={styles.divisionArrow}>
+              <Text style={[Fonts.h2, { color: Colors.gold500 }]}>{'>'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <LeagueCard style={{ overflow: 'hidden', padding: 0, ...leagueSurface }}>
+            <View style={[styles.headerRow, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 40 }]}>#</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1 }]}>
+                {t('rankingScreen.teamColumn', 'Équipe')}
+              </Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 68 }]}>PTS</Text>
+            </View>
+
+            {ranking.length === 0 ? (
               <View style={{ alignItems: 'center', paddingVertical: 28 }}>
                 <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
                   {t('rankingScreen.emptyTitle', 'Aucune équipe sur cette division.')}
@@ -267,17 +295,13 @@ function RankingScreen() {
                   {t('rankingScreen.emptyHint', 'Change de division ou relance plus tard.')}
                 </Text>
               </View>
-            )}
-            refreshControl={(
-              <RefreshControl
-                onRefresh={loadData}
-                refreshing={loading}
-                tintColor={Colors.primary500}
-              />
-            )}
-            renderItem={renderItem}
-          />
-        </LeagueCard>
+            ) : ranking.map((/** @type {Team} */ item, /** @type {number} */ index) => (
+              <View key={String(getEntityDocumentId(item) || index)}>
+                {renderItem({ index, item })}
+              </View>
+            ))}
+          </LeagueCard>
+        </ScrollView>
       </View>
     </ScreenContainer>
   );
@@ -286,6 +310,21 @@ function RankingScreen() {
 const styles = StyleSheet.create({
   backButton: {
     padding: 8,
+  },
+  backButtonFloating: {
+    alignItems: 'center',
+    borderRadius: 22,
+    justifyContent: 'center',
+    left: 16,
+    minHeight: 44,
+    minWidth: 44,
+    position: 'absolute',
+    top: 60,
+    zIndex: 2,
+  },
+  backButtonSpace: {
+    height: 44,
+    width: 44,
   },
   crestImage: {
     height: '100%',
@@ -333,6 +372,11 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 60,
   },
