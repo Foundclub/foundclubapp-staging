@@ -11,6 +11,14 @@ import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 
+// Charge a l'appel, comme EventChatRow (CHAT-EVT-T9) : `require` au telephone et dans jest, import
+// en tete au site (complexeChargeurs.web.js). Un `require` ecrit ici ne marchait pas au site.
+import { messages as service } from '@/services/complexe/complexeChargeurs';
+
+import { createLogger } from '@/utils/logger/logger';
+
+const journal = createLogger('event-chat-infos');
+
 // ==========================================================================
 // CONVERSATION-EVENEMENT-2 (10/11/2026, « 215- B ») — LE FIL DU CHAT DE L'EVENEMENT, d'apres la
 // maquette validee « 193 » :
@@ -21,9 +29,6 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 // Le serveur decide tout (`GET /chats/event-chat/:chatId`) : les noms ne lui sortent que pour un
 // membre. Partage par le telephone (Conversation.js) et le site (Conversation.web.js).
 // ==========================================================================
-
-// eslint-disable-next-line global-require -- chargement differe, comme EventChatRow
-const service = () => require('@/services/chat/chatService');
 
 const PARIS = 'Europe/Paris';
 const K = 'eventDetails.eventChat';
@@ -45,8 +50,13 @@ export const useChatDeLEvenement = (chatId, estUnChatDEvenement) => {
     Promise.resolve()
       .then(() => service().getEventChatOfChat(chatId))
       .then((lu) => { if (vivant) setInfo(lu || null); })
-      // Hors ligne ou refuse : le fil s'affiche comme avant, sans en-tete d'evenement.
-      .catch(() => {});
+      // Hors ligne ou refuse : le fil s'affiche comme avant, sans en-tete d'evenement, mais le dit.
+      .catch((erreur) => {
+        journal.warn('etat du chat illisible, en-tete masque', {
+          chatId,
+          erreur: String(erreur?.message || erreur),
+        });
+      });
     return () => { vivant = false; };
   }, [chatId, estUnChatDEvenement, tour]);
   const relire = useCallback(() => setTour((n) => n + 1), []);
