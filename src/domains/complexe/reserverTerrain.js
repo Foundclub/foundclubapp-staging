@@ -612,11 +612,13 @@ export const epinglesDesComplexes = (cartes, pages, telephone) => (
  * AT-04 : la case du numéro n'existe pas pour un mineur — et quand bien même, rien ne part.
  * @param {{ collecte?: { collectDeadline?: string | null, externalPlayers?: number | null,
  *   quorum?: number | null } | null,
- *   date: string, equipe?: string | null, from: string, joueurs?: number | null,
+ *   date: string, duree?: number | null, equipe?: string | null, from: string,
+ *   joueurs?: number | null,
  *   mot?: string | null, options?: Array<{ id: string, quantity: number }>,
  *   partagerNumero?: boolean, peutPartagerNumero?: boolean,
  *   terrainId: string }} choix - Le récapitulatif rempli.
- * @returns {{ collectDeadline?: string, date: string, externalPlayers?: number, from: string,
+ * @returns {{ collectDeadline?: string, date: string, durationMinutes?: number,
+ *   externalPlayers?: number, from: string,
  *   note: string | null, options?: Array<{ id: string, quantity: number }>,
  *   phoneShared: boolean, players?: number, quorum?: number, team?: string,
  *   terrain: string }} Le corps.
@@ -635,9 +637,12 @@ export const demandeDeReservation = (choix) => {
   const dAilleurs = Number(choix?.collecte?.externalPlayers);
   // RESA-OPTIONS (D61) : les options choisies ; sans option, le corps reste celui d'avant.
   const options = Array.isArray(choix?.options) ? choix.options : [];
+  // DT-3 : la durée choisie parmi plusieurs (DT-1) ; sans elle, le corps reste celui d'avant.
+  const duree = Number(choix?.duree);
   return {
     ...(collecte ? { collectDeadline: echeance } : {}),
     date: String(choix.date),
+    ...(Number.isInteger(duree) && duree > 0 ? { durationMinutes: duree } : {}),
     ...(collecte && Number.isInteger(dAilleurs) && dAilleurs > 0
       ? { externalPlayers: dAilleurs }
       : {}),

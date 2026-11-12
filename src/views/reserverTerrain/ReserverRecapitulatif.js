@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
+import { formatEuros, libelleSport, texteDuree } from '@/domains/complexe/complexeTerrain';
 import {
   choixDesOptions,
   lignesAReglerSurPlace,
@@ -106,8 +106,15 @@ function ReserverRecapitulatif() {
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @type {{ apercu?: any, date?: string, from?: string, slug?: string, terrainId?: string }} */
+  /**
+   * @type {{ apercu?: any, date?: string, durationMinutes?: number, from?: string, slug?: string,
+   *   terrainId?: string }}
+   */
   const params = /** @type {any} */ (route?.params) || {};
+  // DT-3 (maquette J2) : la durée, SEULEMENT quand le joueur l'a choisie parmi plusieurs (E-P03) ;
+  // elle repart au serveur avec chaque demande (DT-1 : absente, c'est la plus courte).
+  const dureeChoisie = Number(params.durationMinutes) > 0 ? Number(params.durationMinutes) : null;
+  const avecDuree = dureeChoisie ? { durationMinutes: dureeChoisie } : {};
   const { userData } = useAuth();
   const surOrdinateur = useIsDesktop();
   const reserver = useReserverUnCreneau();
@@ -168,6 +175,7 @@ function ReserverRecapitulatif() {
     lireLApercu
       .mutateAsync({
         date: params.date,
+        ...avecDuree,
         from: params.from,
         terrain: String(params.terrainId),
       })
@@ -193,6 +201,7 @@ function ReserverRecapitulatif() {
   const equipesEncadrees = majeur ? getManagedTeams(userData) : [];
   const leCreneau = () => ({
     date: String(apercu?.date || params.date),
+    ...avecDuree,
     from: String(apercu?.from || params.from),
     terrain: String(apercu?.terrain?.documentId || params.terrainId),
   });
@@ -256,6 +265,7 @@ function ReserverRecapitulatif() {
         demandeDeReservation({
           collecte,
           date: String(apercu.date || params.date),
+          duree: dureeChoisie,
           equipe: pourQui === 'equipe' ? equipe?.documentId : null,
           from: String(apercu.from || params.from),
           joueurs: capacite >= 2 ? capacite : null,
@@ -436,7 +446,14 @@ function ReserverRecapitulatif() {
             </TouchableOpacity>
           </View>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{ligneDuLieu}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>{quand}</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {quand}
+            {dureeChoisie ? (
+              <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+                {` · ${texteDuree(dureeChoisie)}`}
+              </Text>
+            ) : null}
+          </Text>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{prixSurPlace(t, apercu.price)}</Text>
           {surDemande ? (
             <Text style={[Fonts.p3Bold, Fonts.primary200]}>

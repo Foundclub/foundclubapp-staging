@@ -20468,6 +20468,7 @@ export default {
       choix: '{{jour}} · {{creneau}}',
       compteurPhotos: '{{indice}} / {{total}}',
       continuer: 'Continuer',
+      dureeDuCreneau: 'Durée du créneau',
       erreur: 'Impossible de charger les créneaux.',
       ferme: 'Fermé',
       fermerPhotos: 'Fermer les photos',

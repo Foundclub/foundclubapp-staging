@@ -35,6 +35,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
   // RESA-L6B-2 : le groupe, la relation au complexe, les fils, le lien et l'annonce (aucun ici).
+  // DT-3 : les créneaux publics du jour (« · 2 h » si plusieurs durées) ; aucun ici.
+  useCreneauxDuJour: () => ({ data: undefined }),
   useGroupeDeLaReservation: () => ({ data: null }),
   useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useMaRelationAuComplexe: () => ({ data: null }),
