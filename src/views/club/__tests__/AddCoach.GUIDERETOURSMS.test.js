@@ -173,6 +173,9 @@ jest.mock(
     return null;
   },
 );
+// Récolte T10 : AddCoach importe Select depuis INVITE-STAFF-DESIGN (doublure comme
+// AddCoach.GUIDEDCORR3).
+jest.mock('@/components/molecules/select/Select', () => () => null);
 jest.mock('@/views/club/components/ClubStateView', () => function ClubStateViewMock() {
   return null;
 });
