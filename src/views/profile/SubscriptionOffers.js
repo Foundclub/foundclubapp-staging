@@ -208,6 +208,12 @@ const CTA_BOTTOM_RESERVE = 12;
 
 const CARD_MAX_WIDTH = 306;
 const CARD_GAP = 10;
+/**
+ * Largeur d'une carte pour une largeur de carrousel donnee.
+ * @param {number} largeurUtile
+ * @returns {number}
+ */
+const getCardWidth = (largeurUtile) => Math.min(CARD_MAX_WIDTH, Math.max(240, largeurUtile - 64));
 // Une cle stable par carte : `key={index}` ferait rerendre toute la rangee des
 // que l'ordre bougerait, et la regle react/no-array-index-key l'interdit.
 const CARD_KEYS = ['gratuit', 'equipe', 'club'];
@@ -233,6 +239,19 @@ const getEntryFeatureLabels = (entry, excludedFeatureKeys = []) => (
   .map((featureKey) => SUBSCRIPTION_FEATURE_LABELS[String(featureKey)] || String(featureKey));
 
 /**
+ * ABONNEMENT-MODELE — le cadre du carrousel quand il est pose dans une page : un simple
+ * conteneur. Les reglages du cadre d'ecran (fond, retrait bas, clavier) lui sont passes et
+ * ignores, la page hote s'en charge.
+ * @param {{ children?: import('react').ReactNode }} props
+ * @returns {import('react').ReactElement}
+ */
+function CadreIntegre({ children }) {
+  return <View>{children}</View>;
+}
+
+/** @typedef {{ integre?: boolean }} OptionIntegre */
+
+/**
  * Ecran 2 du parcours Abonnement (L33) : CHOISIR. Carrousel horizontal d'une
  * carte par offre, CTA collant qui suit la carte active, achat natif.
  *
@@ -242,10 +261,16 @@ const getEntryFeatureLabels = (entry, excludedFeatureKeys = []) => (
  *
  * Param de route `focusScope` ('TEAM' | 'CLUB', L38) : famille d'offre exigee par
  * le mur payant d'ou l'on vient. Absent, le carrousel s'ouvre sur Équipe.
- * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
+ *
+ * `integre` (ABONNEMENT-MODELE, 12/11, D89 — Adel : « "Mon abonnement" : il faut reprendre le
+ * même modèle que le détail des offres lors de l'inscription ») : le carrousel est POSE DANS
+ * la page « Mon abonnement » du site (web/src/views/profile/SubscriptionOverview.tsx), qui a
+ * deja son cadre. Sans cadre d'ecran ni defilement vertical propre, et jamais un sas
+ * d'inscription. Absent, rien ne change (telephone, /profile/subscription/offers).
+ * @param {import('@react-navigation/stack').StackScreenProps<any> & OptionIntegre} props
  * @returns {import('react').ReactElement | null}
  */
-function SubscriptionOffers({ navigation, route }) {
+function SubscriptionOffers({ integre = false, navigation, route }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -291,7 +316,8 @@ function SubscriptionOffers({ navigation, route }) {
   // vide), l'écran se sait sas : sortie et retour d'achat vers la Bienvenue, qui finit
   // l'inscription
   // et propose le tour guidé (la page cadeau n'a pas d'adresse sur le site).
-  const estLeSasDuSite = Platform.OS === 'web'
+  const estLeSasDuSite = !integre
+    && Platform.OS === 'web'
     && !route?.params?.skipRouteName
     && Array.isArray(onboardingViews?.views)
     && onboardingViews.views.length > 0;
@@ -307,7 +333,8 @@ function SubscriptionOffers({ navigation, route }) {
   // origine (`resumeRouteName`) sans etre un sas pour autant.
   // La porte de sortie n'existe que si une destination est nommee ⇒ un bouton
   // mort est impossible par construction, pas par precaution.
-  const skipRouteName = String(
+  // ABONNEMENT-MODELE — « Mon abonnement » n'est pas une fin d'inscription : pas de sortie de sas.
+  const skipRouteName = integre ? '' : String(
     route?.params?.skipRouteName || (estLeSasDuSite ? RouteNames.Welcome : ''),
   ).trim();
   const isOnboardingExit = Boolean(skipRouteName);
@@ -1131,7 +1158,7 @@ function SubscriptionOffers({ navigation, route }) {
   // MESURÉE du carrousel ; avant la mesure (premier rendu, téléphone), sur la fenêtre, comme avant.
   const [largeurCarrousel, setLargeurCarrousel] = useState(0);
   const largeurUtile = largeurCarrousel || windowWidth;
-  const cardWidth = Math.min(CARD_MAX_WIDTH, Math.max(240, largeurUtile - 64));
+  const cardWidth = getCardWidth(largeurUtile);
   const carteAmeneeRef = useRef(false);
 
   /**
@@ -1530,9 +1557,13 @@ function SubscriptionOffers({ navigation, route }) {
   };
 
   const activeCta = getActiveCta();
+  // ABONNEMENT-MODELE — pose dans « Mon abonnement » du site, le carrousel n'a ni cadre d'ecran
+  // ni defilement vertical : la page qui le porte a les siens (et ses 24 px de marge).
+  const Cadre = integre ? CadreIntegre : ScreenContainer;
+  const Defilement = integre ? CadreIntegre : ScrollView;
 
   return (
-    <ScreenContainer
+    <Cadre
       bgImage="bg2"
       // R07 point 6 — « il y a un probleme de padding en bas » (Adel,
       // 2026-08-13). Le mode `screen` reservait `insets.bottom + 12` SOUS le
@@ -1554,13 +1585,13 @@ function SubscriptionOffers({ navigation, route }) {
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
-      <View style={[Alignments.fill, { marginHorizontal: -24 }]}>
-        <ScrollView
+      <View style={[Alignments.fill, { marginHorizontal: integre ? 0 : -24 }]}>
+        <Defilement
           contentContainerStyle={[Spaces.paddingBottom[24]]}
           showsVerticalScrollIndicator={false}
           style={Alignments.fill}
         >
-          <View style={{ paddingHorizontal: sidePadding + 24 }}>
+          <View style={{ paddingHorizontal: sidePadding + (integre ? 0 : 24) }}>
             <TierSelector
               onChange={(periodId) => setBillingPeriod(String(periodId))}
               options={BILLING_PERIOD_OPTIONS}
@@ -1584,7 +1615,8 @@ function SubscriptionOffers({ navigation, route }) {
             decelerationRate="fast"
             horizontal
             onLayout={(event) => {
-              setLargeurCarrousel(event.nativeEvent.layout.width);
+              const largeurMesuree = event.nativeEvent.layout.width;
+              setLargeurCarrousel(largeurMesuree);
               // CORR-INSCRIPTION p11 — la carte active (Équipe par défaut) est amenée sous les yeux
               // une fois le carrousel posé : sans ce geste, « Gratuit » restait affichée pendant
               // que
@@ -1593,7 +1625,11 @@ function SubscriptionOffers({ navigation, route }) {
                 carteAmeneeRef.current = true;
                 scrollRef.current?.scrollTo?.({
                   animated: false,
-                  x: activeIndex * (cardWidth + CARD_GAP),
+                  // ABONNEMENT-MODELE — la largeur MESUREE, pas celle du rendu en cours (calculee
+                  // sur la fenetre) : pose dans une page plus etroite que la fenetre, le carrousel
+                  // s'arretait entre deux cartes (390 px : carte Equipe coupee de 13 px a gauche).
+                  // Plein ecran, les deux largeurs donnent la meme carte : rien ne change.
+                  x: activeIndex * (getCardWidth(largeurMesuree) + CARD_GAP),
                 });
               }
             }}
@@ -1869,7 +1905,7 @@ function SubscriptionOffers({ navigation, route }) {
               </TouchableOpacity>
             ))}
           </View>
-        </ScrollView>
+        </Defilement>
 
         {/* CTA collant : en flux normal sous le defilement, pour que RIEN ne
             puisse se cacher dessous — un bandeau en surimpression obligerait a
@@ -2070,7 +2106,7 @@ function SubscriptionOffers({ navigation, route }) {
           </View>
         </View>
       </BottomModal>
-    </ScreenContainer>
+    </Cadre>
   );
 }
 
