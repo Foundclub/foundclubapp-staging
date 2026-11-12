@@ -5,6 +5,8 @@
  *  (A) la prochaine marche (computeNextRarityStep, textes playerCard.completion.nextStep.*) ;
  *  (B) le score et les 3 paliers (Rare 40, Épique 65, Légendaire 85), le palier atteint en avant ;
  *  en Légendaire : « Rareté maximale », sans marche. La barre et « Compléter ma carte » restent.
+ * « 295- A » (Adel, 12/11/2026) : l'ancienne phrase « Complète ton profil et ton parcours pour
+ * monter en rareté » est retirée PARTOUT (normal, verrouillé, célébration) ; la marche la remplace.
  */
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
@@ -220,11 +222,11 @@ const COMPLET = {
 const UN_CLUB = [{ customClubName: 'Club 1', startYear: 2011 }];
 const EQUIPE = [{ club: { name: 'AS Aix' }, name: 'Séniors' }];
 
-const monter = async () => {
+const monter = async (params = {}) => {
   const navigation = { navigate: jest.fn() };
   let arbre;
   await act(async () => {
-    arbre = renderer.create(<PlayerCardScreen navigation={navigation} route={{ params: {} }} />);
+    arbre = renderer.create(<PlayerCardScreen navigation={navigation} route={{ params }} />);
   });
   return arbre;
 };
@@ -326,13 +328,52 @@ describe('CARTE-MARCHE (A)+(B) — sous ma carte, la marche et les paliers, en p
     expect(marche(arbre)).toContain('70 points');
   });
 
-  it('rien de retiré : la barre, sa phrase et « Compléter ma carte » restent', async () => {
+  it('rien de retiré : la barre et « Compléter ma carte » restent', async () => {
     const arbre = await monter();
-    expect(textes(arbre)).toEqual(expect.arrayContaining([
-      'Complète ton profil et ton parcours pour monter en rareté.',
-      'Compléter ma carte',
-    ]));
+    expect(textes(arbre)).toContain('Compléter ma carte');
     expect(parTestId(arbre, 'carte-marche-barre')).not.toHaveLength(0);
+  });
+});
+
+// « 295- A » : la marche remplace l'ancienne phrase, dans les trois états de l'écran.
+const ANCIENNE_PHRASE = /monter en rareté/;
+const ADO_SANS_ACCORD = {
+  ...SAMIR,
+  birthdate: `${new Date().getFullYear() - 14}-01-01`,
+  documentId: 'ado-doc',
+};
+
+describe('CARTE-MARCHE « 295- A » — l ancienne phrase n apparaît plus, même en Légendaire', () => {
+  it('état normal, commune : la marche, pas l ancienne phrase', async () => {
+    const arbre = await monter();
+    expect(marche(arbre).join(' ')).toMatch(/Pour passer rare/);
+    expect(textes(arbre).join(' ')).not.toMatch(ANCIENNE_PHRASE);
+  });
+
+  it('état normal, légendaire : « Rareté maximale » seule', async () => {
+    mockUser = { ...COMPLET, myTeams: EQUIPE };
+    mockHistories = UN_CLUB;
+    const arbre = await monter();
+    expect(marche(arbre)).toContain('Rareté maximale');
+    expect(textes(arbre).join(' ')).not.toMatch(ANCIENNE_PHRASE);
+  });
+
+  it('état verrouillé (13-14 ans sans accord) : la marche, pas l ancienne phrase', async () => {
+    mockUser = ADO_SANS_ACCORD;
+    const arbre = await monter();
+    expect(textes(arbre)).toContain('Partage ta carte, gagne en visibilité et fais-toi détecter.');
+    expect(marche(arbre).join(' ')).toMatch(/Pour passer rare/);
+    expect(textes(arbre).join(' ')).not.toMatch(ANCIENNE_PHRASE);
+  });
+
+  it('état célébration (après la carte modèle) : la marche, pas l ancienne phrase', async () => {
+    const arbre = await monter({ celebration: true });
+    const decouvrir = arbre.root.findAll((n) => typeof n.props.onPress === 'function'
+      && lire(n).includes('Découvrir ma carte'))[0];
+    await act(async () => { decouvrir.props.onPress(); });
+    expect(textes(arbre)).toContain('Voici ta carte joueur');
+    expect(marche(arbre).join(' ')).toMatch(/Pour passer rare/);
+    expect(textes(arbre).join(' ')).not.toMatch(ANCIENNE_PHRASE);
   });
 });
 

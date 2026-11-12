@@ -664,10 +664,8 @@ function PlayerCardScreen({ navigation, route }) {
               testID="carte-marche-barre"
             />
           </View>
+          {/* « 295- A » (Adel, 12/11) : la marche remplace l'ancienne phrase générale. */}
           {echelle}
-          <Text style={[Fonts.p4, Fonts.neutral300, { textAlign: 'center' }]}>
-            {t('playerCard.rarityHint', 'Complète ton profil et ton parcours pour monter en rareté.')}
-          </Text>
         </View>
 
         {/* Garde-fou mineurs : aperçu verrouille */}

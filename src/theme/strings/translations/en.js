@@ -17743,7 +17743,6 @@ export default {
       points_other: '{{count}} points',
       step: '{{rarity}} ({{floor}})',
     },
-    rarityHint: 'Complete your profile and history to increase your rarity.',
     recruitTitle: 'RECRUITING · TRIALS',
     requestConsent: 'Request parental consent',
     revealContinue: 'Later, continue',

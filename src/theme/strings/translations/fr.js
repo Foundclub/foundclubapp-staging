@@ -18369,7 +18369,6 @@ export default {
       points_other: '{{count}} points',
       step: '{{rarity}} ({{floor}})',
     },
-    rarityHint: 'Complète ton profil et ton parcours pour monter en rareté.',
     saveCta: 'Enregistrer l\'image',
     savedDescription: 'Ta carte a été ajoutée aux photos de ton téléphone (album FoundClub).',
     savedTitle: 'Image enregistrée',
