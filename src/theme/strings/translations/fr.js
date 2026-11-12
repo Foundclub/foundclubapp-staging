@@ -13415,6 +13415,7 @@ export default {
     fiche: {
       appliquee: 'Fidélité appliquée : {{bonus}}',
       marquerRemise: 'Marquer comme remise',
+      marquerRemiseTitre: 'Marquer la récompense de {{nom}} comme remise ?',
     },
     joueur: {
       debloque: 'Bonus débloqué : {{bonus}}. Tu l’utilises au récapitulatif de ta prochaine réservation. Prochain bonus : {{compte}} sur {{seuil}}.',

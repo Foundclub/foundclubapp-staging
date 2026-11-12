@@ -901,7 +901,18 @@ function FicheReservation({
       >
         <View style={{ gap: 16 }}>
           <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('complexeFidelite.valider.titre', 'Valider la partie offerte de {{nom}} ?', options)}
+            {/* FIDELITE-2 (Q1 B du chef, 12/11) : une récompense LIBRE se « marque remise ». */}
+            {r?.recompenseARemettre
+              ? t(
+                'fidelite.fiche.marquerRemiseTitre',
+                'Marquer la récompense de {{nom}} comme remise ?',
+                options,
+              )
+              : t(
+                'complexeFidelite.valider.titre',
+                'Valider la partie offerte de {{nom}} ?',
+                options,
+              )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t('complexeFidelite.valider.dit', 'Son compteur repart à 0.')}

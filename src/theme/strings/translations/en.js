@@ -12623,6 +12623,7 @@ export default {
     fiche: {
       appliquee: 'Loyalty applied: {{bonus}}',
       marquerRemise: 'Mark as handed over',
+      marquerRemiseTitre: 'Mark {{nom}}’s reward as handed over?',
     },
     joueur: {
       debloque: 'Bonus unlocked: {{bonus}}. Use it on the summary of your next booking. Next bonus: {{compte}} of {{seuil}}.',

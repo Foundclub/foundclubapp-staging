@@ -247,15 +247,22 @@ describe('FIDELITE-2 E-G05 — récompense libre : « Marquer comme remise »', 
     expect(vus).toContain('Marquer comme remise');
     expect(vus).not.toContain('Valider la partie offerte');
     await appuyerDans(arbre, 'fiche-valider-recompense');
+    // Q1 B du chef (12/11) : la feuille dit « Marquer la récompense de … comme remise ? ».
+    const feuille = lisibles(arbre);
+    expect(feuille).toContain('Marquer la récompense de Julien M. comme remise ?');
+    expect(feuille).not.toContain('Valider la partie offerte de Julien M. ?');
     await appuyerDans(arbre, 'fiche-valider-confirmer');
     expect(mockValider).toHaveBeenCalledWith({ complexeId: 'cx-five', joueurId: 'u-julien' });
   });
 
   it('caractérisant : sans `recompenseARemettre`, « Valider la partie offerte »', async () => {
     avecRecompense();
-    const vus = lisibles(await monter());
+    const arbre = await monter();
+    const vus = lisibles(arbre);
     expect(vus).toContain('Valider la partie offerte');
     expect(vus).not.toContain('Marquer comme remise');
+    await appuyerDans(arbre, 'fiche-valider-recompense');
+    expect(lisibles(arbre)).toContain('Valider la partie offerte de Julien M. ?');
   });
 });
 
