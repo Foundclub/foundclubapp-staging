@@ -172,6 +172,24 @@ const mesurer = () => {
 
 const total = (comptes) => Object.values(comptes).reduce((somme, n) => somme + n, 0);
 
+// D78 « 253 A » (Adel, 12/11/2026) : tolérance CHIFFRÉE pour les 4 fichiers attribués à la récolte
+// du train 9 (banc RECOLTE-TRAIN9-1111/I18N-ATTRIBUTION.md) : le texte légal des règles des
+// complexes (+41), des débuts de messages du serveur comparés (+4), un repli passé à t() (+2), des
+// synonymes de recherche (+1). Ce n'est PAS un recalage de la baseline : une ligne de plus
+// dans l'un de ces fichiers fait toujours rougir la porte.
+// ponytail: tolérance par fichier, pas par ligne ; un fichier renommé la perd (sortie :
+// la reporter sous son nouveau nom).
+const EXCEPTIONS_D78 = Object.freeze({
+  'src/domains/complexe/reglesDesComplexes.js': 41,
+  'src/domains/search/friendlyMatchFormats.js': 1,
+  'src/domains/subscription/subscriptionBilling.js': 4,
+  'src/views/event/components/EventChatInfos.js': 2,
+});
+
+const fichiersEnHausse = (comptes, plafonds) => Object.entries(comptes)
+  .filter(([f, n]) => n > (plafonds[f] || 0) + (EXCEPTIONS_D78[f] || 0))
+  .map(([f]) => f);
+
 const run = () => {
   const mesure = mesurer();
   const comptes = Object.fromEntries(Object.entries(mesure).map(([f, l]) => [f, l.length]));
@@ -201,8 +219,8 @@ const run = () => {
     throw new Error(`Baseline absente : ${path.relative(RACINE, BASELINE)}`);
   }
   const { fichiers: plafonds, totalLignes } = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
-  const hausses = Object.entries(comptes)
-    .filter(([f, n]) => n > (plafonds[f] || 0))
+  const hausses = fichiersEnHausse(comptes, plafonds)
+    .map((f) => [f, comptes[f]])
     .map(([f, n]) => `${f} : ${plafonds[f] || 0} -> ${n}`
       + ` (lignes ${mesure[f].slice(0, 15).join(', ')}${n > 15 ? ', …' : ''})`);
   const baisses = Object.entries(plafonds).filter(([f, n]) => (comptes[f] || 0) < n).length;
@@ -219,4 +237,6 @@ const run = () => {
 
 if (require.main === module) run();
 
-module.exports = { estFrancais, normaliser, textesFrancais };
+module.exports = {
+  estFrancais, EXCEPTIONS_D78, fichiersEnHausse, normaliser, textesFrancais,
+};

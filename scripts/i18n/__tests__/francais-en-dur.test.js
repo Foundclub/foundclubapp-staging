@@ -2,7 +2,9 @@
 // 🔤 I18N-0 — le témoin du cliquet du français en dur et du contrôle
 // d'extraction fidèle : ce qu'ils comptent, ce qu'ils ignorent.
 const { textesDisparus } = require('../extraction-fidele');
-const { estFrancais, textesFrancais } = require('../francais-en-dur');
+const {
+  estFrancais, EXCEPTIONS_D78, fichiersEnHausse, textesFrancais,
+} = require('../francais-en-dur');
 
 describe('I18N-0 — estFrancais', () => {
   it.each([
@@ -65,5 +67,29 @@ describe('I18N-0 — textesDisparus (extraction fidèle)', () => {
     expect(textesDisparus('src/Ecran.js', AVANT, apres)).toEqual([
       { ligne: 1, texte: 'Chargement du profil' },
     ]);
+  });
+});
+
+// D78 « 253 A » (Adel, 12/11/2026) : les 4 fichiers attribués à la récolte du train 9 (texte légal
+// et faux positifs, banc RECOLTE-TRAIN9-1111/I18N-ATTRIBUTION.md) ont une tolérance CHIFFRÉE ; une
+// ligne de plus dans l'un d'eux fait toujours rougir la porte.
+describe('D78 — les exceptions des 4 fichiers du train 9', () => {
+  it('tolère exactement les lignes attribuées, pas une de plus', () => {
+    const plafonds = { 'src/domains/subscription/subscriptionBilling.js': 5 };
+    const juste = {
+      'src/domains/complexe/reglesDesComplexes.js': 41,
+      'src/domains/search/friendlyMatchFormats.js': 1,
+      'src/domains/subscription/subscriptionBilling.js': 9,
+      'src/views/event/components/EventChatInfos.js': 2,
+    };
+    expect(fichiersEnHausse(juste, plafonds)).toEqual([]);
+    Object.keys(juste).forEach((fichier) => {
+      expect(fichiersEnHausse({ ...juste, [fichier]: juste[fichier] + 1 }, plafonds))
+        .toEqual([fichier]);
+    });
+    expect(Object.values(EXCEPTIONS_D78).reduce((a, b) => a + b, 0)).toBe(48);
+  });
+  it('un autre fichier n’a aucune tolérance', () => {
+    expect(fichiersEnHausse({ 'src/x.js': 1 }, {})).toEqual(['src/x.js']);
   });
 });
