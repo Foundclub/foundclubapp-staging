@@ -43,6 +43,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
 import JaugeOccupation from '@/views/collectivite/components/JaugeOccupation';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import BlocEnConstruction from '@/views/complexe/components/BlocEnConstruction';
 import FriseDuJour from '@/views/complexe/components/FriseDuJour';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
@@ -761,6 +762,16 @@ function ComplexeAccueil() {
         {journee}
         {avecTerrains ? frise : null}
         {avecTerrains ? chiffres : null}
+        {/* GERANT-CONSTRUCTION (11/11/2026, D50) : les réservations en construction. */}
+        {avecTerrains ? (
+          <BlocEnConstruction
+            aujourdhui={date}
+            carte={carte}
+            complexeId={complexeId}
+            navigation={navigation}
+            titreSection={titreSection}
+          />
+        ) : null}
         {avecTerrains ? prochaines : null}
         {avecTerrains ? alerteHier : null}
         {gerer}

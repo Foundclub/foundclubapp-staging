@@ -13,12 +13,16 @@ import {
   libelleDeLEtat,
   styleDuCreneau,
 } from '@/views/complexe/components/allureDuCreneau';
+import HachuresDuCreneau from '@/views/complexe/components/HachuresDuCreneau';
 
 const PAR_MINUTE = 1.4;
 const NOMS = 84;
 const HAUTEUR = 44;
 
-/** @typedef {'app' | 'attente' | 'bloque' | 'exterieur' | 'ferme' | 'libre'} EtatDuCreneau */
+/**
+ * @typedef {'app' | 'attente' | 'bloque' | 'construction' | 'exterieur' | 'ferme' | 'libre'}
+ *   EtatDuCreneau
+ */
 /**
  * @typedef {{ etat: EtatDuCreneau, from: string, libelle?: string, reservationId?: string | null,
  *   to: string }} CreneauDeLaFrise
@@ -110,6 +114,7 @@ function FriseDuJour({
         ]}
         testID={`frise-creneau-${ligne.cle}-${creneau.from}`}
       >
+        {creneau.etat === 'construction' ? <HachuresDuCreneau /> : null}
         <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary100]}>{libelle}</Text>
       </Case>
     );
@@ -187,7 +192,9 @@ function FriseDuJour({
                   },
                   styleDe(etat),
                 ]}
-              />
+              >
+                {etat === 'construction' ? <HachuresDuCreneau /> : null}
+              </View>
               <Text style={[Fonts.p3, Fonts.neutral100]}>{libelleDe(etat)}</Text>
             </View>
           ))}

@@ -16,12 +16,17 @@ import {
   nomCourt,
   nonHonoreesLisibles,
   plageHoraire,
+  quand,
   quandCourt,
   STATUTS,
+  STATUTS_COLLECTE,
   telephoneLisible,
   titreDuJour,
 } from '@/domains/complexe/complexeReservation';
 import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
+import {
+  evolutionDeLaConstruction, partDeLaJauge, texteDuCompteur, texteDuManque,
+} from '@/domains/complexe/constructionDuGerant';
 import { lignesAReglerSurPlace } from '@/domains/complexe/optionsTerrain';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -32,6 +37,7 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import { JaugeDeConstruction } from '@/views/complexe/components/BlocEnConstruction';
 import EcrireAuClient from '@/views/complexe/components/EcrireAuClient';
 import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
 import FeuilleNonHonoree from '@/views/complexe/components/FeuilleNonHonoree';
@@ -176,6 +182,9 @@ function FicheReservation({
   const aVenir = new Date(r.startsAt).getTime() > Date.now();
   const enAttente = r.status === STATUTS.enAttente;
   const confirmeeAVenir = r.status === STATUTS.confirmee && aVenir;
+  // GERANT-CONSTRUCTION (11/11/2026, D50) : une réservation en construction (une collecte), que le
+  // gérant suit (la jauge, l'évolution) et aide (« Écrire au client », « Partager l'annonce »).
+  const enConstruction = r.status === STATUTS_COLLECTE.enCollecte && Boolean(r.construction);
   const repli = t('complexeReservations.fiche.erreurGeste', 'Le geste n’a pas pu être fait.');
   const options = { nom: reserveur, ...SANS_ECHAPPEMENT };
 
@@ -368,6 +377,87 @@ function FicheReservation({
     </View>
   );
 
+  // RESA-PARTAGER (A-G32) — l'annonce ouverte de la réservation, en carte dans SON canal ; le
+  // résultat (partagée, déjà partagée) ou le refus du serveur en haut de la fiche.
+  const partagerDansLeCanal = async () => {
+    setMessage('');
+    setConflit('');
+    try {
+      setMessage(messageDuPartage(t, await partager.mutateAsync({ complexeId, reservationId })));
+    } catch (erreur) {
+      setConflit(messageDeRefusResa(t, erreur, repli));
+    }
+  };
+
+  // GERANT-CONSTRUCTION (maquette gerant-fiche.png) — la jauge, ce qui manque, l'évolution.
+  const evolution = enConstruction ? evolutionDeLaConstruction(t, r) : [];
+  // ACCEPTER-CONSTRUCTION (Adel « 263 A ») : un terrain sur demande s'accepte avant que le groupe
+  // soit complet ; le créneau est alors gardé jusqu'à l'échéance.
+  const acceptee = enConstruction ? quand(r.construction.acceptedAt) : '';
+  const peutAccepterLaConstruction = enConstruction && aVenir && r.construction.surDemande === true
+    && !r.construction.acceptedAt;
+  const accepterLaConstruction = async () => {
+    setMessage('');
+    setConflit('');
+    try {
+      await decider.mutateAsync({ complexeId, decision: 'accepter', reservationId });
+      setMessage(t(
+        'complexeGerant.construction.accepteeMessage',
+        'Réservation acceptée : le créneau est gardé pour ce groupe.',
+      ));
+      lecture.refetch?.();
+    } catch (erreur) {
+      setConflit(messageDeRefusResa(t, erreur, repli));
+    }
+  };
+  const construction = enConstruction ? (
+    <View
+      style={[
+        carte, Spaces.padding[16], { borderColor: withAlpha(Colors.warning500, 0.5), gap: 10 },
+      ]}
+      testID="fiche-construction"
+    >
+      <Text style={[Fonts.p3Bold, { color: Colors.warning500, letterSpacing: 0.5 }]}>
+        {t('complexeGerant.construction.titre', 'En construction').toUpperCase()}
+      </Text>
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
+          {texteDuCompteur(t, r.construction)}
+        </Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+          {texteDuManque(t, r.construction)}
+        </Text>
+      </View>
+      <JaugeDeConstruction part={partDeLaJauge(r.construction)} />
+      {acceptee ? (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="fiche-construction-acceptee">
+          {t(
+            'complexeGerant.construction.accepteeLe',
+            'Acceptée par toi le {{le}} : le créneau est gardé pour ce groupe.',
+            { le: acceptee, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+      <View style={{ gap: 8, marginTop: 6 }}>
+        {legende(t('complexeGerant.construction.evolution', 'Évolution').toUpperCase())}
+        {evolution.map((ligne) => (
+          <View key={ligne.cle} style={{ gap: 2 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.titre}</Text>
+            {ligne.detail ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{ligne.detail}</Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t(
+          'complexeGerant.construction.regleFiche',
+          'Tant qu’elle est en construction, un autre groupe peut réserver ce créneau.',
+        )}
+      </Text>
+    </View>
+  ) : null;
+
   // ── Le pied, selon l'état et la source ─────────────────────────────────────────────────
   let pied = null;
   // RESA-FIN-SITE (21/10/2026) — RG-DELAIS : délai passé, la demande ne se tranche plus.
@@ -424,18 +514,53 @@ function FicheReservation({
         </View>
       </View>
     );
+  } else if (enConstruction && aVenir) {
+    // GERANT-CONSTRUCTION (maquette gerant-fiche.png) : « Écrire au client », « Partager
+    // l'annonce » (dans son canal) s'il y a une annonce ouverte.
+    pied = (
+      <View style={{ gap: 8 }}>
+        {peutAccepterLaConstruction ? (
+          <View style={{ gap: 6 }} testID="fiche-accepter-construction">
+            <Button
+              isLoading={Boolean(decider.isPending)}
+              onPress={accepterLaConstruction}
+              title={t('complexeGerant.construction.accepter', 'Accepter maintenant')}
+            />
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'complexeGerant.construction.accepterAide',
+                'Accepter garde le créneau à ce groupe ; la réservation reste en construction '
+                  + 'jusqu’à « On a assez de joueurs ».',
+              )}
+            </Text>
+          </View>
+        ) : null}
+        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+          <View style={{ flexBasis: 140, flexGrow: 1 }}>
+            <EcrireAuClient
+              complexeId={complexeId || ''}
+              navigation={/** @type {any} */ (navigation)}
+              reservationId={reservationId}
+              testID="fiche-ecrire"
+              title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
+            />
+          </View>
+          {peutPartagerLAnnonce(r) ? (
+            <View style={{ flexBasis: 140, flexGrow: 1 }} testID="fiche-partager-annonce">
+              <Button
+                icon="share"
+                iconPosition="before"
+                isLoading={Boolean(partager.isPending)}
+                onPress={partagerDansLeCanal}
+                title={t('complexeGerant.construction.partager', 'Partager l’annonce')}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
+        </View>
+      </View>
+    );
   } else if (confirmeeAVenir) {
-    // RESA-PARTAGER (A-G32) — l'annonce ouverte de la réservation, en carte dans SON canal ; le
-    // résultat (partagée, déjà partagée) ou le refus du serveur en haut de la fiche.
-    const partagerDansLeCanal = async () => {
-      setMessage('');
-      setConflit('');
-      try {
-        setMessage(messageDuPartage(t, await partager.mutateAsync({ complexeId, reservationId })));
-      } catch (erreur) {
-        setConflit(messageDeRefusResa(t, erreur, repli));
-      }
-    };
     pied = (
       <View style={{ gap: 8 }}>
         {peutPartagerLAnnonce(r) ? (
@@ -541,6 +666,7 @@ function FicheReservation({
             </Text>
           ) : null}
         </View>
+        {construction}
         {aPreparer.length ? (
           <View
             style={[carte, Spaces.padding[16], { borderColor: Colors.primary500, gap: 6 }]}

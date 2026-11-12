@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 
 import { contenuDEchec, varianteDEchec } from '@/domains/complexe/reserverTerrain';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -20,12 +21,19 @@ import { useConstruireLaReservation } from '@/services/complexe/complexeJoueurQu
  *   · « J'ai trouvé des joueurs » — des joueurs trouvés hors de l'app : l'annonce se met à jour.
  * Le serveur confirme seul quand le nombre requis est atteint.
  * @param {object} props - Les propriétés.
- * @param {{ presents?: number, quorum?: number }} props.collecte - La collecte du groupe.
+ * ACCEPTER-CONSTRUCTION (12/11/2026, Adel « 263 A ») : le complexe a accepté (`acceptedAt`, un
+ * terrain sur demande) — « Acceptée par … Le créneau t'est gardé » remplace « un autre groupe peut
+ * prendre ce créneau ».
+ * @param {{ acceptedAt?: string | null, presents?: number, quorum?: number }} props.collecte - La
+ *   collecte du groupe.
+ * @param {string} [props.complexe] - Le nom du complexe.
  * @param {string} [props.paie] - « Le groupe paie… » (ou '').
  * @param {string} props.reservationId - documentId de la réservation.
  * @returns {import('react').ReactElement} Le bloc.
  */
-function BlocConstruction({ collecte, paie = '', reservationId }) {
+function BlocConstruction({
+  collecte, complexe = '', paie = '', reservationId,
+}) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const construire = useConstruireLaReservation();
@@ -76,12 +84,23 @@ function BlocConstruction({ collecte, paie = '', reservationId }) {
             })}
         </Text>
       ) : null}
-      <Text style={[Fonts.p3, Fonts.neutral100]}>
-        {t(
-          'reserverTerrain.recapitulatif.creneauOuvert',
-          'Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau.',
-        )}
-      </Text>
+      {collecte?.acceptedAt ? (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="ma-reservation-construction-acceptee">
+          {t(
+            'reserverTerrain.construction.acceptee',
+            'Acceptée par {{complexe}}. Le créneau t’est gardé. '
+              + 'Dis « On a assez de joueurs » quand ton groupe est prêt.',
+            { complexe, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : (
+        <Text style={[Fonts.p3, Fonts.neutral100]}>
+          {t(
+            'reserverTerrain.recapitulatif.creneauOuvert',
+            'Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau.',
+          )}
+        </Text>
+      )}
       {refus ? (
         <Text accessibilityRole="alert" style={[Fonts.p2Bold, Fonts.error500]}>{refus}</Text>
       ) : null}

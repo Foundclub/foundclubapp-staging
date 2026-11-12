@@ -8,8 +8,10 @@ import {
 import {
   CHOIX_AGE_MINIMUM,
   CHOIX_ANNULATION,
+  JUSQU_A_L_HEURE,
   messageDeRefus,
   REGLES_DU_SERVEUR,
+  SANS_LIMITE_JOURS,
 } from '@/domains/complexe/complexeGerant';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -44,7 +46,12 @@ const MOT_MAX = 500;
  *     personne » est SUPPRIMÉ (le serveur ne lit plus `maxUpcomingPerUser`) ; un « ? » ouvre
  *     l'explication des réglages qui ne s'expliquent pas d'eux-mêmes, dans une même petite bulle.
  *   · « Ton message aux joueurs » : 500 caractères au plus ; vide, il n'apparaît nulle part.
- *   · « Collectes » : la date limite au plus tard (Q3) ; « Non honorées » : le x du
+ *   · REGLES-RESERVATION (12/11/2026, D47, maquette DESIGN-RESA-JOUEUR) : « Réserver à
+ *     l'avance » — « Sans limite (jusqu'à l'heure du créneau) » présélectionné (90 jours), ou
+ *     « Jusqu'à N jours à l'avance » et son compteur (`bookingDaysAhead`).
+ *   · « Collectes » : la date limite au plus tard (Q3) — REGLES-RESERVATION (« 226 ») : « Jusqu'à
+ *     l'heure du créneau » (`collectDeadlineHours = 0`) ou « Plus tôt » et son compteur ;
+ *     « Non honorées » : le x du
  *     bannissement automatique (Q1, « Jamais » = 0) ; « Notifications » : résumé du matin,
  *     confirmation la veille.
  * Les bornes sont celles du serveur (`RULE_SPECS`) : une valeur hors bornes est impossible. Un
@@ -294,6 +301,19 @@ function ComplexeReglages() {
       </TouchableOpacity>
     );
   };
+  // REGLES-RESERVATION : les deux règles réglées par une puce, puis un compteur si besoin.
+  const avecLimite = Number(regles?.bookingDaysAhead ?? SANS_LIMITE_JOURS) < SANS_LIMITE_JOURS;
+  const jusquALHeure = Number(regles?.collectDeadlineHours) === JUSQU_A_L_HEURE;
+  const joursAvant = (/** @type {number} */ jours) => t(
+    'complexeGerant.reglages.jours',
+    '{{count}} jours',
+    {
+      count: jours,
+      defaultValue_one: '{{count}} jour',
+      defaultValue_other: '{{count}} jours',
+      ...SANS_ECHAPPEMENT,
+    },
+  );
   const heuresAvant = (/** @type {number} */ heures) => t(
     'complexeGerant.reglages.heuresAvant',
     '{{heures}} h avant le créneau',
@@ -399,6 +419,52 @@ function ComplexeReglages() {
         )}
 
         {groupe(
+          t('complexeGerant.reglages.avance', 'Réserver à l’avance'), (
+            <>
+              <ChoiceChipGroup
+                onSelect={(valeur) => {
+                  if (valeur !== 'limite') changer('bookingDaysAhead', SANS_LIMITE_JOURS);
+                  else if (!avecLimite) changer('bookingDaysAhead', 14);
+                }}
+                options={[
+                  {
+                    label: t(
+                      'complexeGerant.reglages.avanceSansLimite',
+                      'Sans limite (jusqu’à l’heure du créneau)',
+                    ),
+                    value: 'sans',
+                  },
+                  {
+                    label: t('complexeGerant.reglages.avanceJours', 'Jusqu’à N jours à l’avance'),
+                    value: 'limite',
+                  },
+                ]}
+                selectedValue={avecLimite ? 'limite' : 'sans'}
+                title={t(
+                  'complexeGerant.reglages.avanceQuestion',
+                  'Jusqu’à quand un joueur peut-il réserver ?',
+                )}
+              />
+              {avecLimite
+                ? compteur(
+                  'bookingDaysAhead',
+                  t('complexeGerant.reglages.nombreDeJours', 'Nombre de jours'),
+                  joursAvant,
+                  t(
+                    'complexeGerant.reglages.joursAide',
+                    // eslint-disable-next-line max-len
+                    'Un joueur ne voit que ces jours. Au-delà, l’app lui dit quand le jour suivant ouvrira.',
+                  ),
+                )
+                : aide(t(
+                  'complexeGerant.reglages.avanceAide',
+                  '« Sans limite » : un joueur réserve jusqu’à 90 jours à l’avance.',
+                ))}
+            </>
+          ),
+        )}
+
+        {groupe(
           t('complexeGerant.reglages.annulerReserver', 'Annuler et réserver'), (
             <>
               <ChoiceChipGroup
@@ -457,16 +523,47 @@ function ComplexeReglages() {
           ),
         )}
 
-        {groupe(t('complexeGerant.reglages.collectes', 'Collectes'), compteur(
-          'collectDeadlineHours',
-          t('complexeGerant.reglages.dateLimite', 'Date limite de collecte au plus tard'),
-          heuresAvant,
-          t(
-            'complexeGerant.reglages.dateLimiteAide',
-            // eslint-disable-next-line max-len
-            'Une collecte attend que ses joueurs la rejoignent. Elle doit être complète au plus tard ce délai avant le créneau ; sinon elle s’arrête et le créneau reste libre.',
-          ),
-        ))}
+        {groupe(
+          t('complexeGerant.reglages.collectes', 'Collectes'),
+          <>
+            <ChoiceChipGroup
+              onSelect={(valeur) => {
+                if (valeur === 'heure') changer('collectDeadlineHours', JUSQU_A_L_HEURE);
+                else if (jusquALHeure) {
+                  changer('collectDeadlineHours', REGLES_DU_SERVEUR.defauts.collectDeadlineHours);
+                }
+              }}
+              options={[
+                {
+                  label: t('complexeGerant.reglages.echeanceHeure', 'Jusqu’à l’heure du créneau'),
+                  value: 'heure',
+                },
+                { label: t('complexeGerant.reglages.echeanceAvant', 'Plus tôt'), value: 'avant' },
+              ]}
+              selectedValue={jusquALHeure ? 'heure' : 'avant'}
+              title={t(
+                'complexeGerant.reglages.echeanceQuestion',
+                'Une réservation en construction attend ses joueurs',
+              )}
+            />
+            {jusquALHeure
+              ? aide(t(
+                'complexeGerant.reglages.echeanceAide',
+                // eslint-disable-next-line max-len
+                'Le groupe peut trouver ses joueurs jusqu’à l’heure du créneau ; sinon la réservation s’arrête et le créneau reste libre.',
+              ))
+              : compteur(
+                'collectDeadlineHours',
+                t('complexeGerant.reglages.dateLimite', 'Date limite de collecte au plus tard'),
+                heuresAvant,
+                t(
+                  'complexeGerant.reglages.dateLimiteAide',
+                  // eslint-disable-next-line max-len
+                  'Une collecte attend que ses joueurs la rejoignent. Elle doit être complète au plus tard ce délai avant le créneau ; sinon elle s’arrête et le créneau reste libre.',
+                ),
+              )}
+          </>,
+        )}
 
         {groupe(
           t('complexeGerant.reglages.nonHonorees', 'Non honorées'), (

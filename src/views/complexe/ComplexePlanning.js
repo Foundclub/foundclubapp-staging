@@ -193,10 +193,10 @@ function ComplexePlanning() {
     ouvrir(creneauCible, 'libre');
   });
   const toucher = (/** @type {Creneau} */ creneau) => {
-    if (creneau.reservation?.documentId) {
-      navigation.navigate(RouteNames.ComplexeReservation, {
-        complexeId, reservationId: creneau.reservation.documentId,
-      });
+    // GERANT-CONSTRUCTION (D50) : une réservation en construction ouvre aussi sa fiche.
+    const reservationId = creneau.reservation?.documentId || creneau.construction?.documentId;
+    if (reservationId) {
+      navigation.navigate(RouteNames.ComplexeReservation, { complexeId, reservationId });
       return;
     }
     if (creneau.state === 'bloque') ouvrir(creneau, 'bloque');
@@ -393,7 +393,8 @@ function ComplexePlanning() {
         terrain,
         (terrain.days || []).find((/** @type {any} */ d) => d.date === jour),
       ))
-      .filter((/** @type {any} */ creneau) => creneau.state !== 'libre')
+      // GERANT-CONSTRUCTION : une réservation en construction est listée (le créneau reste libre).
+      .filter((/** @type {any} */ creneau) => creneau.state !== 'libre' || creneau.construction)
       .sort((/** @type {any} */ a, /** @type {any} */ b) => (
         String(a.startsAt).localeCompare(String(b.startsAt))
       ));

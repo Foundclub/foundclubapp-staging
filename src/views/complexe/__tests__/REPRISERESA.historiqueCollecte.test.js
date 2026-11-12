@@ -9,6 +9,8 @@ import { lisibles, parRepere } from '@/testSupport/temoinComplexe';
 // d'un client : une ligne de collecte n'avait AUCUN état (la pastille restait vide). Chaque
 // ligne dit maintenant « En collecte » ou « Non aboutie ». Doublures recopiées de
 // CORRRESA.client.test.js.
+// GERANT-CONSTRUCTION (12/11/2026, D50, réponse du chef « Q3 : A ») : côté gérant, une collecte se
+// dit « En construction », comme la maquette validée (gerant-fiche.png) ; « Non aboutie » reste.
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn() }),
@@ -107,11 +109,12 @@ const monter = async () => {
 };
 
 describe('REPRISE-RESA (D-GERANT-3) — l’historique d’un client dit l’état de ses collectes', () => {
-  it('« En collecte » et « Non aboutie », chacune sur sa ligne', async () => {
+  it('« En construction » et « Non aboutie », chacune sur sa ligne', async () => {
     const arbre = await monter();
     const enCours = parRepere(arbre, 'client-historique-r-collecte');
     const arretee = parRepere(arbre, 'client-historique-r-arretee');
-    expect(lisibles({ root: enCours })).toContain('En collecte');
+    expect(lisibles({ root: enCours })).toContain('En construction');
+    expect(lisibles({ root: enCours })).not.toContain('En collecte');
     expect(lisibles({ root: arretee })).toContain('Non aboutie');
     expect(parRepere({ root: enCours }, 'pastille-etat-en_collecte')).not.toBeNull();
     expect(parRepere({ root: arretee }, 'pastille-etat-non_aboutie')).not.toBeNull();

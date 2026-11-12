@@ -35,6 +35,13 @@ function PastilleEtat({ compte = null, etat }) {
 
   /** @type {Record<string, Apparence>} */
   const etats = {
+    // REGLES-RESERVATION (12/11/2026) : une réservation en construction ACCEPTÉE par le complexe
+    // (ACCEPTER-CONSTRUCTION, `collecte.acceptedAt`) ; à côté de son état, jamais à sa place.
+    acceptee: {
+      couleur: Colors.success500,
+      icone: 'coche',
+      mot: t('reserverTerrain.etat.acceptee', 'Acceptée'),
+    },
     annulee: {
       couleur: Colors.error500,
       icone: 'croix',
