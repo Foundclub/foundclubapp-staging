@@ -19,6 +19,7 @@ import {
   titreDuJour,
 } from '@/domains/complexe/complexeReservation';
 import { texteHeure } from '@/domains/complexe/complexeTerrain';
+import { fondreLesReservations } from '@/domains/complexe/dureesTarifs';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -139,10 +140,15 @@ function ComplexePlanning() {
     const terrain = terrains.find((candidat) => candidat.documentId === terrainId);
     return terrain ? resolveFacilityPlanningColor(terrain) : null;
   };
-  const avecTerrain = (/** @type {any} */ terrain, /** @type {any} */ jour) => (
+  // DT-2 G4 : une réservation de 2 h arrive en deux créneaux d'1 h (la grille de la plus courte) ;
+  // ils se fondent en UN bloc, dans les trois vues.
+  const avecTerrain = (
+    /** @type {any} */ terrain,
+    /** @type {any} */ jour,
+  ) => fondreLesReservations(
     (Array.isArray(jour?.slots) ? jour.slots : []).map((/** @type {any} */ creneau) => ({
       ...creneau, date: jour.date, terrainId: terrain.documentId, terrainNom: terrain.name,
-    }))
+    })),
   );
   const lignesDuServeur = Array.isArray(planning.data?.terrains) ? planning.data.terrains : [];
 
@@ -193,10 +199,10 @@ function ComplexePlanning() {
     ouvrir(creneauCible, 'libre');
   });
   const toucher = (/** @type {Creneau} */ creneau) => {
-    if (creneau.reservation?.documentId) {
-      navigation.navigate(RouteNames.ComplexeReservation, {
-        complexeId, reservationId: creneau.reservation.documentId,
-      });
+    // GERANT-CONSTRUCTION (D50) : une réservation en construction ouvre aussi sa fiche.
+    const reservationId = creneau.reservation?.documentId || creneau.construction?.documentId;
+    if (reservationId) {
+      navigation.navigate(RouteNames.ComplexeReservation, { complexeId, reservationId });
       return;
     }
     if (creneau.state === 'bloque') ouvrir(creneau, 'bloque');
@@ -393,7 +399,8 @@ function ComplexePlanning() {
         terrain,
         (terrain.days || []).find((/** @type {any} */ d) => d.date === jour),
       ))
-      .filter((/** @type {any} */ creneau) => creneau.state !== 'libre')
+      // GERANT-CONSTRUCTION : une réservation en construction est listée (le créneau reste libre).
+      .filter((/** @type {any} */ creneau) => creneau.state !== 'libre' || creneau.construction)
       .sort((/** @type {any} */ a, /** @type {any} */ b) => (
         String(a.startsAt).localeCompare(String(b.startsAt))
       ));

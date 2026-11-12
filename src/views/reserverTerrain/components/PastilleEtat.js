@@ -35,6 +35,13 @@ function PastilleEtat({ compte = null, etat }) {
 
   /** @type {Record<string, Apparence>} */
   const etats = {
+    // REGLES-RESERVATION (12/11/2026) : une réservation en construction ACCEPTÉE par le complexe
+    // (ACCEPTER-CONSTRUCTION, `collecte.acceptedAt`) ; à côté de son état, jamais à sa place.
+    acceptee: {
+      couleur: Colors.success500,
+      icone: 'coche',
+      mot: t('reserverTerrain.etat.acceptee', 'Acceptée'),
+    },
     annulee: {
       couleur: Colors.error500,
       icone: 'croix',
@@ -66,11 +73,11 @@ function PastilleEtat({ compte = null, etat }) {
       icone: 'personnes',
       mot: compte
         // « 6/10 » : sans SANS_ECHAPPEMENT, i18next en fait « 6&#x2F;10 » (banc du site, 20/10).
-        ? t('reserverTerrain.etat.enCollecteCompte', 'En collecte · {{compte}}', {
+        ? t('reserverTerrain.etat.enCollecteCompte', 'En construction · {{compte}}', {
           compte,
           ...SANS_ECHAPPEMENT,
         })
-        : t('reserverTerrain.etat.enCollecte', 'En collecte'),
+        : t('reserverTerrain.etat.enCollecte', 'En construction'),
     },
     jouee: {
       couleur: Colors.success700,

@@ -15,11 +15,11 @@ jest.mock('@/theme/themeContext', () => (
   jest.requireActual('@/testSupport/temoinComplexe').themeDeTemoin()
 ));
 
-it('« En collecte · 1/10 » : le compte passe tel quel, sans entité HTML', () => {
+it('« En construction · 1/10 » : le compte passe tel quel, sans entité HTML', () => {
   /** @type {any} */
   let arbre;
   act(() => {
     arbre = renderer.create(<PastilleEtat compte="1/10" etat="enCollecte" />);
   });
-  expect(lisibles(arbre)).toEqual(['En collecte · 1/10']);
+  expect(lisibles(arbre)).toEqual(['En construction · 1/10']);
 });

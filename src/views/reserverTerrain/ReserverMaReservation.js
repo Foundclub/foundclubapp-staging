@@ -2,10 +2,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking, ScrollView, Text, TouchableOpacity, View,
+  Image, Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { formatEuros } from '@/domains/complexe/complexeTerrain';
+import { formatEuros, texteDuree } from '@/domains/complexe/complexeTerrain';
+import { pastilleDuBonus, reglerSurPlaceAvecRemise } from '@/domains/complexe/fideliteDuComplexe';
+import {
+  lignesAReglerSurPlace, optionsModifiables, peutModifierLesOptions,
+} from '@/domains/complexe/optionsTerrain';
 import {
   apercuDeLaFidelite,
   jourEtHeure,
@@ -19,6 +23,7 @@ import {
   momentLisible,
   numeroLisible,
   parametresDEchec,
+  texteCeQuePaieLeGroupe,
   texteCreneau,
   texteJourLong,
   varianteDEchec,
@@ -32,11 +37,14 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDefilement';
+import BlocConstruction from '@/views/reserverTerrain/components/BlocConstruction';
 import BlocDEchec from '@/views/reserverTerrain/components/BlocDEchec';
 import BlocParticipants from '@/views/reserverTerrain/components/BlocParticipants';
+import BlocReglerSurPlace from '@/views/reserverTerrain/components/BlocReglerSurPlace';
 import CarteDAction from '@/views/reserverTerrain/components/CarteDAction';
 import FeuilleAnnonce from '@/views/reserverTerrain/components/FeuilleAnnonce';
 import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
+import FeuilleModifierOptions from '@/views/reserverTerrain/components/FeuilleModifierOptions';
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
@@ -45,11 +53,13 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   useAnnulerMaReservation,
   useComplexePublic,
+  useCreneauxDuJour,
   useGroupeDeLaReservation,
   useMaRelationAuComplexe,
   useMaReservation,
   useOuvrirUnFil,
   useRepondreALaPartie,
+  useTerrainsPublics,
 } from '@/services/complexe/complexeJoueurQueries';
 
 import texteInsecable from '@/utils/texteInsecable';
@@ -116,6 +126,19 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const annuler = useAnnulerMaReservation();
   const reservation = lecture?.data || null;
   const complexePublic = useComplexePublic(reservation?.complexe?.slug)?.data;
+  // RESA-OPTIONS-2 : le terrain de la page publique — ses options d'aujourd'hui et ses photos.
+  const terrainsPublics = useTerrainsPublics(reservation?.complexe?.slug)?.data;
+  // DT-3 (maquette J3) : « · 2 h » après les heures, SEULEMENT quand le terrain propose plusieurs
+  // durées ce jour-là (`offers` des créneaux publics, DT-1) ; la réservation ne le dit pas.
+  // ponytail: un jour passé, la route publique ne répond plus (jour hors fenêtre) : la durée n'est
+  // plus écrite ; sortie = un `durationMinutes` dans la vue de la réservation, côté serveur.
+  const creneauxDuJour = useCreneauxDuJour(
+    reservation?.complexe?.slug,
+    reservation?.terrain?.documentId,
+    reservation?.date,
+  )?.data;
+  const plusieursDurees = Array.isArray(creneauxDuJour?.offers)
+    && creneauxDuJour.offers.length > 1;
   const groupe = useGroupeDeLaReservation(params.reservationId)?.data || null;
   const relation = useMaRelationAuComplexe(reservation?.complexe?.slug)?.data || null;
   const ouvrirUnFil = useOuvrirUnFil();
@@ -123,7 +146,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const [confirmation, setConfirmation] = useState(false);
   const [refusTropTard, setRefusTropTard] = useState(/** @type {any} */ (null));
   const [bandeau, setBandeau] = useState(/** @type {string | null} */ (null));
-  const [feuille, setFeuille] = useState(/** @type {'annonce' | 'lien' | null} */ (
+  const [feuille, setFeuille] = useState(/** @type {'annonce' | 'lien' | 'options' | null} */ (
     params.ouvrir === 'annonce' ? 'annonce' : null
   ));
   const [refusDuFil, setRefusDuFil] = useState(/** @type {string | null} */ (null));
@@ -331,8 +354,25 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   // Les blocs
   // -------------------------------------------------------------------------------------------
 
+  const terrainPublic = (Array.isArray(terrainsPublics) ? terrainsPublics : [])
+    .find((un) => un?.documentId && un.documentId === terrainId) || null;
+  // RESA-OPTIONS-2 (D79, maquette « Acceptée par le complexe ») : la photo du terrain en tête, la
+  // première de la page publique ; aucune sur un écran d'échec ni sans photo.
+  const photoDuTerrain = !varianteDEnTete && Array.isArray(terrainPublic?.photos)
+    ? terrainPublic.photos.find(Boolean) || null
+    : null;
   const enTete = (
     <View style={{ gap: 8 }}>
+      {photoDuTerrain ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          accessible={false}
+          resizeMode="cover"
+          source={{ uri: String(photoDuTerrain) }}
+          style={{ borderRadius: 20, height: 120, width: '100%' }}
+          testID="ma-reservation-photo"
+        />
+      ) : null}
       <Text
         accessibilityRole="header"
         style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
@@ -341,10 +381,33 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           ? t('reserverTerrain.maReservation.titreParticipant', 'Réservation')
           : t('reserverTerrain.maReservation.titre', 'Ma réservation')).toUpperCase()}
       </Text>
-      <PastilleEtat
-        compte={enCollecte && collecte ? `${collecte.presents}/${collecte.quorum}` : null}
-        etat={etat}
-      />
+      <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+        <PastilleEtat
+          compte={enCollecte && collecte ? `${collecte.presents}/${collecte.quorum}` : null}
+          etat={etat}
+        />
+        {/* REGLES-RESERVATION : l'en-tête « Acceptée » de la maquette (ACCEPTER-CONSTRUCTION). */}
+        {enCollecte && collecte?.acceptedAt ? <PastilleEtat etat="acceptee" /> : null}
+        {/* FIDELITE-2 (maquette 237) : « Partie offerte · ta part », jusqu'au jour J. */}
+        {pastilleDuBonus(t, reservation?.loyalty) ? (
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              backgroundColor: withAlpha(Colors.success500, 0.14),
+              borderColor: withAlpha(Colors.success500, 0.6),
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+            }}
+            testID="ma-resa-pastille-fidelite"
+          >
+            <Text style={[Fonts.p3Bold, Fonts.success500]}>
+              {texteInsecable(pastilleDuBonus(t, reservation?.loyalty))}
+            </Text>
+          </View>
+        ) : null}
+      </View>
       {enCollecte && collecte ? (
         <View style={{ gap: 6 }}>
           <View
@@ -365,11 +428,18 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
             />
           </View>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t(
-              'reserverTerrain.maReservation.dateLimite',
-              'Date limite : {{echeance}} · le créneau reste libre jusque-là',
-              { echeance: jourEtHeure(t, collecte.collectDeadline), ...SANS_ECHAPPEMENT },
-            )}
+            {/* ACCEPTER-CONSTRUCTION : acceptée par le complexe, le créneau lui est gardé. */}
+            {collecte.acceptedAt
+              ? t(
+                'reserverTerrain.maReservation.dateLimiteGardee',
+                'Date limite : {{echeance}} · le créneau t’est gardé jusque-là',
+                { echeance: jourEtHeure(t, collecte.collectDeadline), ...SANS_ECHAPPEMENT },
+              )
+              : t(
+                'reserverTerrain.maReservation.dateLimite',
+                'Date limite : {{echeance}} · le créneau reste libre jusque-là',
+                { echeance: jourEtHeure(t, collecte.collectDeadline), ...SANS_ECHAPPEMENT },
+              )}
           </Text>
         </View>
       ) : null}
@@ -420,6 +490,28 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
       ...SANS_ECHAPPEMENT,
     })
     : '';
+  // RESA-OPTIONS (D61) : les options choisies, figées à la réservation ; sans option, rien de plus.
+  const requisDeLaResa = Number(reservation?.players)
+    || Number(reservation?.terrain?.capacity) || 1;
+  // FIDELITE (12/11, D63) : la remise FIGÉE (`loyalty`) — la ligne « − 15 € », 150 € barré puis
+  // 135 € — jusqu'au jour J ; sans remise, le bloc d'avant.
+  const prixDeLaResa = reservation?.price;
+  const optionsDeLaResa = reservation?.options;
+  const remise = reservation?.loyalty;
+  const options = optionsDeLaResa;
+  const remiseFigee = reglerSurPlaceAvecRemise(t, prixDeLaResa, requisDeLaResa, options, remise);
+  const aReglerSurPlace = remiseFigee
+    || lignesAReglerSurPlace(t, prixDeLaResa, requisDeLaResa, optionsDeLaResa);
+  // RESA-OPTIONS-2 (décision a de « 233- oui ») : « Modifier les options » tant que l'annulation
+  // est gratuite ; une option déjà prise garde son prix figé.
+  const modifiables = optionsModifiables(terrainPublic?.options, reservation?.options);
+  const lienDesOptions = !varianteDEnTete && peutModifierLesOptions({
+    commence, etat, modifiables, participant, reservation,
+  }) ? {
+      libelle: t('complexeOptions.modifier', 'Modifier les options'),
+      onPress: () => setFeuille('options'),
+      testID: 'ma-reservation-modifier-options',
+    } : null;
   const lienAgenda = lienAgendaGoogle({
     debut: reservation.startsAt,
     details: t(
@@ -446,6 +538,11 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     );
   }
 
+  // DT-3 : la durée réservée, lue sur les heures enregistrées (début et fin).
+  const dureeReservee = Math.round(
+    (new Date(String(reservation.endsAt)).getTime()
+      - new Date(String(reservation.startsAt)).getTime()) / 60000,
+  );
   const quandOu = (
     <View style={carte}>
       <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
@@ -454,6 +551,9 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           jour: texteJourLong(t, reservation.date),
           ...SANS_ECHAPPEMENT,
         })}
+        {plusieursDurees && dureeReservee > 0 ? (
+          <Text style={[Fonts.p1Bold, Fonts.primary200]}>{` · ${texteDuree(dureeReservee)}`}</Text>
+        ) : null}
       </Text>
       <TouchableOpacity
         accessibilityRole="link"
@@ -638,6 +738,16 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   } else if (!varianteDEnTete && enCollecte && !commence) {
     annulation = (
       <View style={carte}>
+        {/* RESA-JOUEUR (maquette « 232- ok ») : la réservation en construction du réserveur —
+            « On a assez de joueurs », « J'ai trouvé des joueurs ». */}
+        {collecte ? (
+          <BlocConstruction
+            collecte={collecte}
+            complexe={nomDuComplexe}
+            paie={texteCeQuePaieLeGroupe(t, reservation?.price, Number(collecte.quorum) || 0)}
+            reservationId={String(reservation.documentId)}
+          />
+        ) : null}
         <Button
           onPress={() => setConfirmation(true)}
           title={t('reserverTerrain.maReservation.arreterLaCollecte', 'Arrêter la collecte')}
@@ -819,6 +929,29 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           {enTete}
           {enTeteDEchec}
           {quandOu}
+          {reservation?.loyalty ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]} testID="ma-resa-fidelite-revient">
+              {t('fidelite.maResa.revient', 'Si tu annules, ton bonus fidélité te revient.')}
+            </Text>
+          ) : null}
+          {aReglerSurPlace ? (
+            <BlocReglerSurPlace
+              action={lienDesOptions}
+              bloc={aReglerSurPlace}
+              titre={t('complexeOptions.aReglerSurPlace', 'À régler sur place')}
+            />
+          ) : null}
+          {/* RESA-OPTIONS-2 : sans option prise, le lien seul (ajouter des options). */}
+          {!aReglerSurPlace && lienDesOptions ? (
+            <View style={{ alignSelf: 'flex-start' }} testID={lienDesOptions.testID}>
+              <Button
+                onPress={lienDesOptions.onPress}
+                size="sm"
+                title={lienDesOptions.libelle}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
           {tuViens}
           {!varianteDEnTete ? <BlocParticipants groupe={groupe} /> : null}
           {actions}
@@ -877,6 +1010,14 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           />
         </View>
       </BottomModal>
+      {feuille === 'options' && lienDesOptions ? (
+        <FeuilleModifierOptions
+          close={() => setFeuille(null)}
+          figees={Array.isArray(reservation?.options) ? reservation.options : []}
+          modifiables={modifiables}
+          reservationId={String(reservation.documentId)}
+        />
+      ) : null}
       {feuille === 'lien' && !participant ? (
         <FeuilleInviterParLien
           close={() => setFeuille(null)}

@@ -10,7 +10,7 @@ import RechercheDeTerrains from '@/views/reserverTerrain/RechercheDeTerrains';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { pressable } from '@/testSupport/temoinComplexe';
+import { lisibles, parRepere, pressable } from '@/testSupport/temoinComplexe';
 import { carteDeRecherche } from '@/testSupport/temoinReserver';
 
 // RESA-L6A (14/10/2026) — E-P01 « Réserver un terrain : la recherche » (planches EP01, RA1 ; plan
@@ -34,7 +34,26 @@ jest.mock('@react-navigation/native', () => ({
 
 let mockRecherche = /** @type {any} */ ({});
 const mockAppels = /** @type {any[]} */ ([]);
+let mockLieuDesAnnonces = /** @type {any} */ (null);
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  // RESA-JOUEUR (D51) : la liste « Recherche de joueurs ».
+  useAnnoncesOuvertes: (/** @type {any} */ lieu) => {
+    mockLieuDesAnnonces = lieu;
+    return {
+      data: [{
+        annonce: 'a-1',
+        complexe: { name: 'Le Five de Montrivage' },
+        date: '2026-11-11',
+        distanceKm: 2.4,
+        from: '19:30',
+        manque: 4,
+        places: 10,
+        price: null,
+        terrain: { name: 'Terrain 1', sport: 'Football à 5' },
+        to: '21:00',
+      }],
+    };
+  },
   useRechercheDeTerrains: (/** @type {any} */ filtres, /** @type {any} */ options) => {
     mockAppels.push({ filtres, options });
     return mockRecherche;
@@ -55,6 +74,8 @@ jest.mock('@/services/activity/activityQueries', () => ({
 const mockVilles = /** @type {any[]} */ ([]);
 jest.mock('@/services/places/placesQueries', () => ({
   useGetPlaces: () => ({ data: mockVilles }),
+  // RESA-JOUEUR-2 (D54) : le nom du lieu de la position (la zone écrite) ; rien ici.
+  useGetPlacesFromCoordinates: () => ({ data: null }),
 }));
 
 let mockPositionAccordee = /** @type {any} */ (null);
@@ -153,4 +174,22 @@ it('« Mes favoris » sur la même ligne que « Mes réservations », ouvre E-P1
     favoris.props.onPress();
   });
   expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverFavoris);
+}, 30_000);
+
+// RESA-JOUEUR (11/11, maquette « 232- ok », D51 : « où est-ce qu'on trouve les annonces ? ») :
+// l'entrée « Recherche de joueurs » en tête du panneau (vue liste) ouvre les annonces autour de la
+// zone cherchée.
+it('« Recherche de joueurs » en tête du panneau ouvre les annonces autour de la zone', async () => {
+  const arbre = await monter();
+  const entree = parRepere(arbre, 'reserver-recherche-de-joueurs');
+  const champ = arbre.root.findAll((/** @type {any} */ n) => (
+    n.props?.testID === 'reserver-recherche-champ'
+  ))[0];
+  const tous = arbre.root.findAll(() => true);
+  expect(tous.indexOf(entree)).toBeLessThan(tous.indexOf(champ));
+  await act(async () => {
+    entree.props.onPress();
+  });
+  expect(mockLieuDesAnnonces).toEqual({ lat: 48.83, lng: 1.48, rayon: 10 });
+  expect(lisibles(arbre)).toEqual(expect.arrayContaining(['Il manque 4 joueurs', '2,4 km']));
 }, 30_000);

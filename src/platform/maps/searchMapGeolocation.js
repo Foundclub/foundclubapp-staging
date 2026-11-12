@@ -40,7 +40,7 @@ const readSearchMapPosition = () => new Promise((resolve) => {
   /** @type {any} */
   let safetyNet;
 
-  const settle = (/** @type {{ lat: number, lng: number } | null} */ value) => {
+  const settle = (/** @type {{ accuracy?: number, lat: number, lng: number } | null} */ value) => {
     if (settled) {
       return;
     }
@@ -65,7 +65,9 @@ const readSearchMapPosition = () => new Promise((resolve) => {
           return;
         }
 
-        settle({ lat, lng });
+        // RESA-JOUEUR-2 (D54) : la précision en mètres, si le capteur la donne (« à 50 m près »).
+        const accuracy = Number(position?.coords?.accuracy);
+        settle(Number.isFinite(accuracy) && accuracy > 0 ? { accuracy, lat, lng } : { lat, lng });
       },
       () => settle(null),
       DEFAULT_GEOLOCATION_OPTIONS,
@@ -78,7 +80,7 @@ const readSearchMapPosition = () => new Promise((resolve) => {
 /**
  * Request the current device position for the search map.
  * Keeps the renderer detached from direct geolocation access details.
- * @returns {Promise<{ lat: number, lng: number } | null>}
+ * @returns {Promise<{ accuracy?: number, lat: number, lng: number } | null>}
  */
 export const requestCurrentSearchMapLocation = async () => {
   try {
@@ -100,7 +102,7 @@ export const requestCurrentSearchMapLocation = async () => {
 /**
  * ADRESSE-CARTE (07/10) — la position SEULEMENT si l'autorisation est DÉJÀ accordée. Ne demande
  * jamais rien : sans autorisation (ou sur iOS, qui ne sait pas le dire sans demander), `null`.
- * @returns {Promise<{ lat: number, lng: number } | null>}
+ * @returns {Promise<{ accuracy?: number, lat: number, lng: number } | null>}
  */
 export const readCurrentSearchMapLocationIfGranted = async () => {
   try {

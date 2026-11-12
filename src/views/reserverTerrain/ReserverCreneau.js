@@ -6,19 +6,25 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { libelleSport } from '@/domains/complexe/complexeTerrain';
+import {
+  formatEuros, libelleLieu, libelleSport, texteDuree,
+} from '@/domains/complexe/complexeTerrain';
 import {
   ajouterJours,
   contenuDEchec,
   jourDeParis,
   libelleEtatDuCreneau,
+  momentsDesCreneaux,
   numeroLisible,
   parametresDEchec,
   prixDuCreneau,
+  prixDUneLigne,
   quatorzeJours,
   texteCreneau,
   texteJourCourt,
+  texteJourFerme,
   texteJourLong,
+  texteLibres,
   varianteDEchec,
 } from '@/domains/complexe/reserverTerrain';
 import { withAlpha } from '@/theme/colors';
@@ -26,9 +32,12 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import PastilleMode from '@/views/complexe/components/PastilleMode';
 import FeuilleTelephone from '@/views/reserverTerrain/components/FeuilleTelephone';
+import GaleriePhotos from '@/views/reserverTerrain/components/GaleriePhotos';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -51,7 +60,10 @@ const JOUR = 56;
  * E-P03 — « CHOISIR UN CRÉNEAU » — RESA-L6A (14/10/2026), planche EP03 et P00 bloc 3, plan E-P03.
  * Le calendrier d'un terrain sur 14 jours (l'écran de départ, BookingCalendar.js, est mort) :
  *   · l'en-tête « TERRAIN 1 » et « Le Five de Montrivage · Foot à 5 » ;
- *   · la bande de 14 jours (un jour déjà lu sans créneau libre est en pointillé) ;
+ *   · la bande de 14 jours (un jour déjà lu sans créneau libre est en pointillé) —
+ *     REGLES-RESERVATION (12/11/2026, D47) : elle s'arrête aux jours que le complexe ouvre
+ *     (`rules.bookingDaysAhead`) ;
+ *     la case suivante, en pointillé gris, dit « Pas encore ouvert » et quand ce jour ouvrira ;
  *   · les créneaux du jour : libre, choisi, pris (il ne se touche pas — le joueur ne voit
  *     jamais qui ni pourquoi, D7), trop tard ici (la feuille d'appel), fermé ; un jour tout fermé
  *     le dit ;
@@ -66,7 +78,7 @@ const JOUR = 56;
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverCreneau() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
@@ -78,8 +90,13 @@ function ReserverCreneau() {
   const { slug, terrainId } = params;
   const surOrdinateur = useIsDesktop();
   const aujourdhui = jourDeParis();
-  const jours = quatorzeJours(t, aujourdhui);
+  const complexe = useComplexePublic(slug)?.data;
+  // REGLES-RESERVATION (D47) : le complexe ouvre ses créneaux N jours à l'avance (90 sans
+  // réglage, ou un serveur plus ancien) ; le serveur refuse au-delà.
+  const joursPermis = Number(complexe?.rules?.bookingDaysAhead) || 90;
+  const jours = quatorzeJours(t, aujourdhui).slice(0, joursPermis + 1);
   const dernierJour = jours[jours.length - 1].date;
+  const premierJourFerme = joursPermis + 1 < 14 ? ajouterJours(aujourdhui, joursPermis + 1) : null;
 
   const [date, setDate] = useState(
     params.date && params.date >= aujourdhui && params.date <= dernierJour
@@ -101,15 +118,19 @@ function ReserverCreneau() {
     /** @type {{ creneau: any, telephone: any } | null} */ (null),
   );
   const [joursSansLibre, setJoursSansLibre] = useState(() => new Set());
+  // DT-3 : la durée choisie (minutes) ; null = celle du créneau reçu, sinon la plus courte.
+  const [duree, setDuree] = useState(/** @type {number | null} */ (null));
 
   const { userData } = useAuth();
-  const complexe = useComplexePublic(slug)?.data;
   // CORR-RESA (78 A) : un joueur plus jeune que l'âge du complexe le lit AVANT de choisir un
   // créneau
   // (le serveur refusait seulement au bout du parcours).
   const ageMinimum = Number(complexe?.rules?.minAge) || null;
   const naissance = /** @type {any} */ (userData)?.birthdate;
   const tropJeune = Boolean(ageMinimum && naissance && isBirthdateUnderAge(naissance, ageMinimum));
+  // RESA-JOUEUR (M1158, maquette « 232- ok ») : sans date de naissance, le dire AVANT le bouton (le
+  // serveur la refuse, BIRTHDATE_REQUIRED) ; « Continuer » reste grisé tant qu'elle manque.
+  const sansNaissance = Boolean(userData) && !naissance;
   const terrains = useTerrainsPublics(slug)?.data;
   const lecture = useCreneauxDuJour(slug, terrainId, date);
   const apercu = useApercuDeReservation();
@@ -118,11 +139,39 @@ function ReserverCreneau() {
     (/** @type {any} */ terrain) => terrain?.documentId === terrainId,
   ) || null;
   const terrain = { ...(terrainPublic || {}), ...(lecture?.data?.terrain || {}) };
-  const creneaux = Array.isArray(lecture?.data?.slots) ? lecture.data.slots : [];
-  const libres = creneaux.filter((/** @type {any} */ creneau) => creneau?.state === 'libre');
-  const parTelephone = terrain?.bookingMode === 'telephone';
+  const grilleDAvant = Array.isArray(lecture?.data?.slots) ? lecture.data.slots : [];
+  // DT-3 (DUREES-TARIFS, maquette J1 validée le 12/11) : plusieurs durées ce jour-là ⇒ le serveur
+  // (DT-1) ajoute `offers`, une liste par durée ; un choix « 1 h · 2 h » montre celle de la durée
+  // choisie. Sans `offers` : la grille `slots` d'avant, à l'identique.
+  const offres = Array.isArray(lecture?.data?.offers) && lecture.data.offers.length > 1
+    ? lecture.data.offers
+    : null;
+  // Un créneau se repère par son début ET sa durée : un ponctuel d'1 h 30 peut partager le début
+  // d'un créneau d'1 h dans la même offre.
+  const cleDuCreneau = (/** @type {any} */ creneau) => (offres
+    ? `${creneau?.startsAt || creneau?.from}|${creneau?.durationMinutes}`
+    : creneau?.startsAt || creneau?.from);
   const estChoisi = (/** @type {any} */ creneau) => Boolean(choisi)
-    && (creneau?.startsAt === choisi || creneau?.from === choisi);
+    && [cleDuCreneau(creneau), creneau?.from, creneau?.startsAt].includes(choisi);
+  // Arrivé avec un créneau (page du complexe, recherche) : l'offre qui le contient ; sinon la plus
+  // courte (le serveur les range de la plus courte à la plus longue).
+  const offre = offres
+    ? offres.find((/** @type {any} */ une) => une.durationMinutes === duree)
+      || offres.find((/** @type {any} */ une) => (une.slots || []).some(estChoisi))
+      || offres[0]
+    : null;
+  const creneaux = offre ? (offre.slots || []) : grilleDAvant;
+  const libres = creneaux.filter((/** @type {any} */ creneau) => creneau?.state === 'libre');
+  const tousLesCreneaux = offres
+    ? offres.flatMap((/** @type {any} */ une) => une.slots || [])
+    : creneaux;
+  const libresDuJour = tousLesCreneaux
+    .filter((/** @type {any} */ creneau) => creneau?.state === 'libre');
+  const parTelephone = terrain?.bookingMode === 'telephone';
+  // La durée DU CRÉNEAU (DT-1) — pas celle de l'onglet : un ponctuel d'1 h 30 part avec 90.
+  const dureeDuCreneau = (/** @type {any} */ creneau) => (
+    Number(creneau?.durationMinutes) || Number(offre?.durationMinutes) || null
+  );
   const creneauChoisi = creneaux.find(
     (/** @type {any} */ creneau) => estChoisi(creneau) && creneau.state === 'libre',
   ) || null;
@@ -134,14 +183,14 @@ function ReserverCreneau() {
   useEffect(() => {
     if (!lecture?.data || lecture?.isLoading) return;
     setJoursSansLibre((avant) => {
-      const sansLibre = !libres.length;
+      const sansLibre = !libresDuJour.length;
       if (avant.has(date) === sansLibre) return avant;
       const apres = new Set(avant);
       if (sansLibre) apres.add(date);
       else apres.delete(date);
       return apres;
     });
-  }, [date, lecture?.data, lecture?.isLoading, libres.length]);
+  }, [date, lecture?.data, lecture?.isLoading, libresDuJour.length]);
 
   const changerDeJour = (/** @type {string} */ nouveau) => {
     setDate(nouveau);
@@ -163,14 +212,26 @@ function ReserverCreneau() {
       });
       return;
     }
-    setChoisi(creneau.startsAt || creneau.from);
+    setChoisi(cleDuCreneau(creneau));
+  };
+
+  const changerDeDuree = (/** @type {number} */ minutes) => {
+    setDuree(minutes);
+    setChoisi(null);
+    setBandeau(null);
   };
 
   const continuer = async () => {
-    if (!creneauChoisi) return;
+    if (!creneauChoisi || sansNaissance) return;
     setBandeau(null);
+    // DT-3 : la durée part seulement quand le joueur l'a choisie parmi plusieurs ; sinon la
+    // demande d'avant, à l'identique (le serveur prend alors la plus courte).
+    const avecDuree = offres && dureeDuCreneau(creneauChoisi)
+      ? { durationMinutes: dureeDuCreneau(creneauChoisi) }
+      : {};
     const demande = {
       date: jourDe(creneauChoisi),
+      ...avecDuree,
       from: creneauChoisi.from,
       terrain: String(terrainId),
     };
@@ -179,6 +240,7 @@ function ReserverCreneau() {
       navigation.navigate(RouteNames.ReserverRecapitulatif, {
         apercu: reponse,
         date: demande.date,
+        ...avecDuree,
         from: creneauChoisi.from,
         slug,
         terrainId,
@@ -249,6 +311,146 @@ function ReserverCreneau() {
     </View>
   );
 
+  // RESA-JOUEUR (D48, maquette « 232- ok ») : les photos du terrain en tête — la page publique
+  // les donne déjà (`photos`) ; sans photo, la galerie n'est pas dessinée.
+  const photos = Array.isArray(terrainPublic?.photos) ? terrainPublic.photos : [];
+  const galerie = (
+    <GaleriePhotos
+      legende={[terrain?.name, complexe?.name].filter(Boolean).join(' · ')}
+      photos={photos}
+      testID="creneau"
+    />
+  );
+  // La ligne d'infos en pastilles, en haut (la maquette y remonte le mode, rappelé en bas avant).
+  const capacite = Number(terrain?.capacity) > 0 ? Number(terrain.capacity) : null;
+  const infos = [
+    libelleLieu(t, terrain?.setting),
+    capacite ? t('complexeGerant.terrain.joueurs', '{{nombre}} joueurs', { nombre: capacite }) : '',
+  ].filter(Boolean);
+  const pastille = {
+    backgroundColor: withAlpha(Colors.primary500, 0.1),
+    borderColor: withAlpha(Colors.primary500, 0.35),
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  };
+  const ligneDInfos = (
+    <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 8 }]}>
+      {infos.map((info) => (
+        <View key={info} style={pastille}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{info}</Text>
+        </View>
+      ))}
+      <PastilleMode joueur mode={terrain?.bookingMode} />
+    </View>
+  );
+
+  const pasEncoreOuvert = Boolean(premierJourFerme) && date === premierJourFerme;
+  const caseFermee = premierJourFerme ? (
+    <TouchableOpacity
+      accessibilityLabel={t(
+        'reserverTerrain.creneau.jourPasOuvertA11y',
+        '{{jour}}, pas encore ouvert',
+        { jour: texteJourLong(t, premierJourFerme), ...SANS_ECHAPPEMENT },
+      )}
+      accessibilityRole="button"
+      accessibilityState={{ selected: pasEncoreOuvert }}
+      onPress={() => changerDeJour(premierJourFerme)}
+      style={[
+        Alignments.alignCenter,
+        Alignments.justifyCenter,
+        {
+          backgroundColor: pasEncoreOuvert ? Colors.primary700 : 'transparent',
+          borderColor: withAlpha(Colors.neutral300, 0.45),
+          borderRadius: 12,
+          borderStyle: pasEncoreOuvert ? 'solid' : 'dashed',
+          borderWidth: 1,
+          height: JOUR,
+          width: JOUR,
+        },
+      ]}
+      testID={`jour-pas-ouvert-${premierJourFerme}`}
+    >
+      {/* RESA-OPTIONS-2 (D79) : le cadenas de la maquette, l'icône `lockShut` du jeu de l'app. */}
+      <View testID="cadenas-du-jour-pas-ouvert">
+        <GlyphIcon color={Colors.neutral300} name="lockShut" size={12} />
+      </View>
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        {quatorzeJours(t, aujourdhui)[joursPermis + 1]?.court}
+      </Text>
+      <Text style={[Fonts.p1Bold, pasEncoreOuvert ? Fonts.neutral00 : Fonts.neutral300]}>
+        {quatorzeJours(t, aujourdhui)[joursPermis + 1]?.numero}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+  // RESA-OPTIONS-2 (D79) : « le lundi 19 octobre » en français ; en anglais, le jour garde sa
+  // majuscule (« Monday 19 October can be booked… »).
+  const enAnglais = String(i18n?.language || '').toLowerCase().startsWith('en');
+  const enMinuscule = (/** @type {string} */ texte) => (
+    texte && !enAnglais ? texte.charAt(0).toLocaleLowerCase() + texte.slice(1) : texte
+  );
+  const carteFermee = pasEncoreOuvert && premierJourFerme ? (
+    <View
+      style={{
+        alignItems: 'center',
+        backgroundColor: withAlpha(Colors.primary800, 0.6),
+        borderColor: withAlpha(Colors.primary500, 0.24),
+        borderRadius: 20,
+        borderWidth: 1,
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 24,
+      }}
+      testID="creneau-pas-encore-ouvert"
+    >
+      <View
+        style={{
+          alignItems: 'center',
+          backgroundColor: withAlpha(Colors.primary200, 0.12),
+          borderRadius: 28,
+          height: 56,
+          justifyContent: 'center',
+          width: 56,
+        }}
+        testID="creneau-pas-encore-ouvert-cadenas"
+      >
+        <GlyphIcon color={Colors.primary200} name="lockShut" size={24} />
+      </View>
+      <Text style={[Fonts.p1Bold, Fonts.neutral00, { textAlign: 'center' }]}>
+        {t('reserverTerrain.creneau.pasEncoreOuvert', 'Pas encore ouvert')}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral200, { textAlign: 'center' }]}>
+        {t(
+          'reserverTerrain.creneau.pasEncoreOuvertTexte',
+          // eslint-disable-next-line max-len
+          '{{complexe}} ouvre ses réservations {{count}} jours à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
+          {
+            complexe: String(
+              complexe?.name || t('reserverTerrain.echec.leComplexe', 'Le complexe'),
+            ),
+            count: joursPermis,
+            // eslint-disable-next-line max-len
+            defaultValue_one: '{{complexe}} ouvre ses réservations {{count}} jour à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
+            // eslint-disable-next-line max-len
+            defaultValue_other: '{{complexe}} ouvre ses réservations {{count}} jours à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
+            jour: enMinuscule(texteJourLong(t, premierJourFerme)),
+            ouverture: enMinuscule(texteJourLong(t, ajouterJours(premierJourFerme, -joursPermis))),
+            ...SANS_ECHAPPEMENT,
+          },
+        )}
+      </Text>
+      <Button
+        onPress={() => changerDeJour(dernierJour)}
+        title={t('reserverTerrain.creneau.revenirAu', 'Revenir au {{jour}}', {
+          jour: enMinuscule(texteJourLong(t, dernierJour)),
+          ...SANS_ECHAPPEMENT,
+        })}
+        variant="Secondary"
+      />
+    </View>
+  ) : null;
+
   const bandeDesJours = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={[Alignments.row, { gap: 8 }]}>
@@ -297,9 +499,65 @@ function ReserverCreneau() {
             </TouchableOpacity>
           );
         })}
+        {caseFermee}
       </View>
     </ScrollView>
   );
+
+  // DT-3 (maquette J1) : « 1 h · 2 h », chacune « dès » son prix le plus bas de ce jour.
+  const choixDeDuree = offres ? (
+    <View
+      accessibilityLabel={t('reserverTerrain.creneau.dureeDuCreneau', 'Durée du créneau')}
+      style={[Alignments.row, { gap: 8 }]}
+      testID="durees-du-creneau"
+    >
+      {offres.map((/** @type {any} */ une) => {
+        const minutes = Number(une.durationMinutes);
+        const actif = une === offre;
+        const montants = (une.slots || [])
+          .map((/** @type {any} */ creneau) => Number(creneau?.price?.amount))
+          .filter((/** @type {number} */ montant) => Number.isFinite(montant));
+        const des = montants.length
+          ? t('reserverTerrain.prix.des', 'dès {{prix}}', {
+            prix: formatEuros(Math.min(...montants)),
+            ...SANS_ECHAPPEMENT,
+          })
+          : '';
+        return (
+          <TouchableOpacity
+            accessibilityLabel={[texteDuree(minutes), des].filter(Boolean).join(', ')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: actif }}
+            key={minutes}
+            onPress={() => changerDeDuree(minutes)}
+            style={[
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+              {
+                backgroundColor: actif ? Colors.primary500 : withAlpha(Colors.primary500, 0.08),
+                borderColor: withAlpha(Colors.primary500, actif ? 1 : 0.45),
+                borderRadius: 12,
+                borderWidth: 1,
+                flexBasis: 0,
+                flexGrow: 1,
+                minHeight: 52,
+                paddingHorizontal: 8,
+                paddingVertical: 6,
+              },
+            ]}
+            testID={`duree-${minutes}`}
+          >
+            <Text style={[Fonts.p1Bold, actif ? Fonts.primary900 : Fonts.neutral00]}>
+              {texteDuree(minutes)}
+            </Text>
+            {des ? (
+              <Text style={[Fonts.p3, actif ? Fonts.primary900 : Fonts.primary200]}>{des}</Text>
+            ) : null}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  ) : null;
 
   const grille = () => {
     if (lecture?.isLoading && !lecture?.data) {
@@ -366,12 +624,7 @@ function ReserverCreneau() {
             padding: 16,
           }}
         >
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t(
-              'reserverTerrain.creneau.jourFerme',
-              'Fermé ce jour-là : le complexe a fermé ce terrain.',
-            )}
-          </Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{texteJourFerme(t, creneaux)}</Text>
         </View>
       );
     }
@@ -393,62 +646,91 @@ function ReserverCreneau() {
         </View>
       );
     }
+    // RESA-JOUEUR — piste B (choisie par Adel le 10/11 : « c'est plus clair ») : une LIGNE par
+    // créneau, pleine largeur — début et fin, prix, état —, rangées par moment de la journée.
+    // Rien ne se coupe : le texte agrandi fait passer l'état sous l'heure. Un état ne se lit jamais
+    // à sa seule couleur : il est écrit.
     return (
-      <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-        {creneaux.map((/** @type {any} */ creneau) => {
-          const choisiIci = estChoisi(creneau) && creneau.state === 'libre';
-          const touchable = creneau.state === 'libre' || creneau.state === 'trop-tard';
-          const pris = creneau.state === 'pris';
-          const ferme = creneau.state === 'ferme';
-          let etat = libelleEtatDuCreneau(t, creneau.state);
-          if (choisiIci) etat = t('reserverTerrain.creneau.choisi', 'Choisi');
-          let couleurDuBord = withAlpha(Colors.primary500, 0.6);
-          if (ferme || creneau.state === 'trop-tard') {
-            couleurDuBord = withAlpha(Colors.warning500, 0.6);
-          }
-          if (pris) couleurDuBord = withAlpha(Colors.primary200, 0.35);
-          return (
-            <TouchableOpacity
-              accessibilityLabel={`${texteCreneau(creneau.from, creneau.to)}, ${etat}`}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !touchable, selected: choisiIci }}
-              disabled={!touchable}
-              key={creneau.startsAt || creneau.from}
-              onPress={() => toucherUnCreneau(creneau)}
-              style={{
-                backgroundColor: choisiIci
-                  ? Colors.primary500
-                  : withAlpha(Colors.primary500, pris ? 0.03 : 0.08),
-                borderColor: choisiIci ? Colors.primary500 : couleurDuBord,
-                borderRadius: 12,
-                borderStyle: pris ? 'dashed' : 'solid',
-                borderWidth: 1,
-                flexBasis: surOrdinateur ? '15%' : '31%',
-                flexGrow: 1,
-                gap: 2,
-                justifyContent: 'center',
-                minHeight: 56,
-                paddingHorizontal: 8,
-              }}
-              testID={jourDe(creneau) !== date
-                ? `creneau-${jourDe(creneau)}-${creneau.from}`
-                : `creneau-${creneau.from}`}
-            >
-              <Text
-                style={[
-                  Fonts.p2Bold,
-                  choisiIci ? Fonts.primary900 : Fonts.neutral00,
-                  pris ? { textDecorationLine: 'line-through' } : null,
-                ]}
-              >
-                {texteCreneau(creneau.from, creneau.to)}
+      <View style={{ gap: 16 }}>
+        {momentsDesCreneaux(t, creneaux).map((moment) => (
+          <View key={moment.cle} style={{ gap: 8 }} testID={`moment-${moment.cle}`}>
+            <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+              <Text accessibilityRole="header" style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {moment.titre}
               </Text>
-              <Text style={[Fonts.p3, choisiIci ? Fonts.primary900 : Fonts.primary200]}>
-                {etat}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+              <Text style={[Fonts.p3, Fonts.primary200]}>{texteLibres(t, moment.libres)}</Text>
+            </View>
+            {moment.creneaux.map((/** @type {any} */ creneau) => {
+              const choisiIci = estChoisi(creneau) && creneau.state === 'libre';
+              const touchable = creneau.state === 'libre' || creneau.state === 'trop-tard';
+              const pris = creneau.state === 'pris';
+              const ferme = creneau.state === 'ferme';
+              const tard = creneau.state === 'trop-tard';
+              let etat = libelleEtatDuCreneau(t, creneau.state);
+              if (choisiIci) etat = t('reserverTerrain.creneau.choisi', 'Choisi');
+              let couleurDuBord = withAlpha(Colors.primary500, 0.6);
+              if (ferme || tard) couleurDuBord = withAlpha(Colors.warning500, 0.6);
+              if (pris) couleurDuBord = withAlpha(Colors.primary200, 0.35);
+              let styleDeLEtat = Fonts.primary200;
+              if (tard || ferme) styleDeLEtat = Fonts.warning500;
+              if (choisiIci) styleDeLEtat = Fonts.primary900;
+              const prix = prixDUneLigne(creneau.price);
+              const texteDuCreneau = texteCreneau(creneau.from, creneau.to);
+              return (
+                <TouchableOpacity
+                  accessibilityLabel={[texteDuCreneau, prix, etat].filter(Boolean).join(', ')}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !touchable, selected: choisiIci }}
+                  disabled={!touchable}
+                  key={cleDuCreneau(creneau)}
+                  onPress={() => toucherUnCreneau(creneau)}
+                  style={[
+                    Alignments.row,
+                    Alignments.wrap,
+                    Alignments.alignCenter,
+                    {
+                      backgroundColor: choisiIci
+                        ? Colors.primary500
+                        : withAlpha(Colors.primary500, pris ? 0.03 : 0.08),
+                      borderColor: choisiIci ? Colors.primary500 : couleurDuBord,
+                      borderRadius: 12,
+                      borderStyle: pris ? 'dashed' : 'solid',
+                      borderWidth: 1,
+                      columnGap: 12,
+                      minHeight: 52,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      rowGap: 2,
+                    },
+                  ]}
+                  testID={[
+                    'creneau',
+                    jourDe(creneau) !== date ? jourDe(creneau) : null,
+                    creneau.from,
+                    offres ? dureeDuCreneau(creneau) : null,
+                  ].filter(Boolean).join('-')}
+                >
+                  <Text
+                    style={[
+                      Fonts.p1Bold,
+                      choisiIci ? Fonts.primary900 : Fonts.neutral00,
+                      pris ? { textDecorationLine: 'line-through' } : null,
+                      { flexGrow: 1 },
+                    ]}
+                  >
+                    {texteDuCreneau}
+                  </Text>
+                  {prix ? (
+                    <Text style={[Fonts.p2Bold, choisiIci ? Fonts.primary900 : Fonts.neutral100]}>
+                      {prix}
+                    </Text>
+                  ) : null}
+                  <Text style={[Fonts.p3Bold, styleDeLEtat]}>{etat}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </View>
     );
   };
@@ -458,7 +740,8 @@ function ReserverCreneau() {
     (creneauChoisi || libres[0] || creneaux[0])?.price,
     terrain?.capacity,
   );
-  let rappelDuMode = t('reserverTerrain.mode.automatique', 'Confirmation immédiate');
+  // Le mode est en pastille en haut (maquette) ; en bas, seulement ce qu'il demande de faire.
+  let rappelDuMode = '';
   if (terrain?.bookingMode === 'manuel') {
     rappelDuMode = t('reserverTerrain.creneau.surDemande', 'Sur demande : le complexe te répond');
   } else if (parTelephone) {
@@ -477,14 +760,21 @@ function ReserverCreneau() {
         paddingTop: 12,
       }}
     >
-      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-        {t('reserverTerrain.creneau.choix', '{{jour}} · {{creneau}}', {
-          creneau: texteCreneau(creneauChoisi.from, creneauChoisi.to),
-          jour: texteJourCourt(t, jourDe(creneauChoisi)),
-          ...SANS_ECHAPPEMENT,
-        })}
-      </Text>
+      {/* RESA-JOUEUR : le pied redit le créneau entier ET son prix, près du bouton. */}
+      <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { columnGap: 12 }]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00, { flexGrow: 1 }]}>
+          {t('reserverTerrain.creneau.choix', '{{jour}} · {{creneau}}', {
+            creneau: texteCreneau(creneauChoisi.from, creneauChoisi.to),
+            jour: texteJourCourt(t, jourDe(creneauChoisi)),
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+        {prixMontre ? (
+          <Text style={[Fonts.p2Bold, Fonts.primary200]}>{prixMontre.principal}</Text>
+        ) : null}
+      </View>
       <Button
+        disabled={sansNaissance}
         isLoading={Boolean(apercu?.isPending)}
         onPress={continuer}
         title={t('reserverTerrain.creneau.continuer', 'Continuer')}
@@ -511,9 +801,12 @@ function ReserverCreneau() {
         showsVerticalScrollIndicator={false}
         style={[Alignments.fill]}
       >
+        {galerie}
         {enTete}
+        {ligneDInfos}
         {bandeDesJours}
         <Text style={[Fonts.p2Bold, Fonts.primary200]}>{texteJourLong(t, date)}</Text>
+        {pasEncoreOuvert ? null : choixDeDuree}
         {bandeau ? (
           <View
             accessibilityRole="alert"
@@ -526,6 +819,48 @@ function ReserverCreneau() {
             }}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{bandeau}</Text>
+          </View>
+        ) : null}
+        {sansNaissance ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              backgroundColor: withAlpha(Colors.warning500, 0.1),
+              borderColor: withAlpha(Colors.warning500, 0.45),
+              borderRadius: 16,
+              borderWidth: 1,
+              gap: 8,
+              padding: 12,
+            }}
+            testID="creneau-sans-naissance"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t(
+                'reserverTerrain.echec.dateDeNaissance',
+                'Ajoute ta date de naissance pour réserver.',
+              )}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral100]}>
+              {ageMinimum
+                ? t(
+                  'reserverTerrain.creneau.ageMinimumIci',
+                  'Chaque complexe fixe un âge minimum. Ici : {{age}} ans.',
+                  { age: ageMinimum },
+                )
+                : t(
+                  'reserverTerrain.echec.dateDeNaissanceTexte',
+                  'Chaque complexe fixe un âge minimum.',
+                )}
+            </Text>
+            <View style={{ alignSelf: 'flex-start' }}>
+              <Button
+                onPress={() => navigation.navigate(RouteNames.ProfileStack, {
+                  screen: RouteNames.ProfileEdit,
+                })}
+                title={t('reserverTerrain.echec.completerProfil', 'Compléter mon profil')}
+                variant="Secondary"
+              />
+            </View>
           </View>
         ) : null}
         {tropJeune ? (
@@ -547,8 +882,8 @@ function ReserverCreneau() {
             </Text>
           </View>
         ) : null}
-        {grille()}
-        {prixMontre ? (
+        {carteFermee || grille()}
+        {prixMontre && !pasEncoreOuvert ? (
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t('reserverTerrain.prix.surPlace', '{{prix}}, à régler sur place', {
               prix: prixMontre.principal,
@@ -556,7 +891,9 @@ function ReserverCreneau() {
             })}
           </Text>
         ) : null}
-        <Text style={[Fonts.p3Bold, Fonts.primary200]}>{rappelDuMode}</Text>
+        {rappelDuMode ? (
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>{rappelDuMode}</Text>
+        ) : null}
         {pied}
       </ScrollView>
       <BottomModal

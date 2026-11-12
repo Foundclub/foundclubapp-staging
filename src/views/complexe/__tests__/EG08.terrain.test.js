@@ -49,6 +49,8 @@ jest.mock('@/services/complexe/complexeQueries', () => ({
   useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useComplexeGere: () => ({ data: { phoneNumber: '+33639981234' } }),
   useEnregistrerTerrain: () => ({ isPending: false, mutateAsync: mockEnregistrer }),
+  // RESA-OPTIONS (12/11) : le bloc « Options » (EG08.options.RESAOPTIONS).
+  useModifierComplexe: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useReservationsDuComplexe: () => mockDemandes,
   useRetirerTerrain: () => ({ isPending: false, mutateAsync: mockRetirer }),
   useTerrains: () => mockTerrains,

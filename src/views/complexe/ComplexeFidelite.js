@@ -10,11 +10,13 @@ import {
   apercuDuJoueur,
   avertissementsDuProgramme,
   corpsDuProgramme,
+  estAutomatique,
   ligneValidee,
   PROGRAMME_PAR_DEFAUT,
   RECOMPENSE_MAX,
   SEUIL_MAX,
   SEUIL_MIN,
+  UTILISATIONS_MAX,
 } from '@/domains/complexe/fideliteDuComplexe';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -28,6 +30,7 @@ import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
 import DeuxVolets from '@/views/complexe/components/DeuxVolets';
+import StatistiquesFidelite from '@/views/complexe/components/StatistiquesFidelite';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -40,7 +43,10 @@ import {
 
 import { useIsDesktop } from '@/responsive';
 
-/** @typedef {{ active: boolean, counts: string, reward: string, threshold: number }} Programme */
+/**
+ * @typedef {{ active: boolean, counts: string, percent?: number, reward: string,
+ *   rewardType?: string, rewardUses?: number, scope?: string, threshold: number }} Programme
+ */
 
 /**
  * E-G14 — LA FIDÉLITÉ DU COMPLEXE — RESA-L5B-2 (20/10/2026), planche EG14 ; plan :933-969 ;
@@ -79,6 +85,7 @@ function ComplexeFidelite() {
   );
   const [aValider, setAValider] = useState(/** @type {any} */ (null));
   const [erreurFeuille, setErreurFeuille] = useState('');
+  const [voirStats, setVoirStats] = useState(false);
 
   // Le réglage de l'écran part du programme enregistré (ou de rien : « Créer mon programme »).
   useEffect(() => {
@@ -86,7 +93,13 @@ function ComplexeFidelite() {
       setSaisie({
         active: enregistre.active === true,
         counts: enregistre.counts,
+        percent: Number(enregistre.percent) || 10,
         reward: String(enregistre.reward || ''),
+        // FIDELITE (D63) : un programme d'avant (sans type) s'affiche « libre » et renvoie le corps
+        // d'avant (pas de type) tant que le gérant ne choisit rien.
+        ...(enregistre.rewardType ? { rewardType: enregistre.rewardType } : {}),
+        rewardUses: Number(enregistre.rewardUses) || 1,
+        scope: enregistre.scope === 'terrain' ? 'terrain' : 'joueur',
         threshold: Number(enregistre.threshold),
       });
     }
@@ -215,6 +228,10 @@ function ComplexeFidelite() {
     );
   };
   const libelleActive = t('complexeFidelite.programme.active', 'Fidélité active');
+  const automatique = t('fidelite.reglage.automatique', 'automatique');
+  const surPlace = t('fidelite.reglage.surPlace', 'remise sur place');
+  const pourcent = Number(saisie?.percent) || 10;
+  const utilisations = Number(saisie?.rewardUses) || 1;
   const programme = saisie ? (
     <View style={[carte, Spaces.padding[16], { gap: 16 }]} testID="fidelite-programme">
       {legende(t('complexeFidelite.programme.titre', 'Ton programme'))}
@@ -260,6 +277,43 @@ function ComplexeFidelite() {
           ton="attention"
         />
       ) : null}
+      <View accessibilityRole="radiogroup" style={{ gap: 6 }} testID="fidelite-types">
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('fidelite.reglage.type', 'Type de récompense')}
+        </Text>
+        <View style={[carte, { gap: 4, padding: 4 }]}>
+          {[
+            ['partie', t('fidelite.reglage.partie', 'Partie offerte'), automatique],
+            ['remise', t('fidelite.reglage.remise', 'Réduction en %'), automatique],
+            ['libre', t('fidelite.reglage.libre', 'Récompense libre'), surPlace],
+          ].map(([valeur, titre, sousTitre]) => {
+            const choisi = (saisie.rewardType || 'libre') === valeur;
+            return (
+              <TouchableOpacity
+                accessibilityLabel={`${titre}, ${sousTitre}`}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: choisi }}
+                key={valeur}
+                onPress={() => changer({ rewardType: valeur })}
+                style={[Alignments.alignCenter, Alignments.justifyCenter, {
+                  backgroundColor: choisi ? Colors.primary500 : 'transparent',
+                  borderRadius: 12,
+                  minHeight: 52,
+                  paddingVertical: 6,
+                }]}
+                testID={`fidelite-type-${valeur}`}
+              >
+                <Text style={[Fonts.p2Bold, choisi ? Fonts.primary900 : Fonts.primary200]}>
+                  {titre}
+                </Text>
+                <Text style={[Fonts.p3, choisi ? Fonts.primary900 : Fonts.neutral200]}>
+                  {sousTitre}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
       <View style={{ gap: 4 }}>
         <InputStepper
           decrementLabel={t('complexeFidelite.programme.moins', 'Une réservation de moins')}
@@ -285,23 +339,95 @@ function ComplexeFidelite() {
           )}
         />
       ) : null}
-      <View style={{ gap: 4 }}>
-        <Input
-          accessibilityLabel={t('complexeFidelite.programme.recompense', 'Récompense')}
-          label={t('complexeFidelite.programme.recompense', 'Récompense')}
-          maxLength={RECOMPENSE_MAX}
-          onChangeText={(texte) => changer({ reward: String(texte).slice(0, RECOMPENSE_MAX) })}
-          placeholder={t('complexeFidelite.programme.exemple', '1 partie offerte')}
-          value={saisie.reward}
-        />
-        <Text style={[Fonts.p3, Fonts.neutral200, { alignSelf: 'flex-end' }]}>
-          {t('complexeGerant.reglages.compte', '{{nombre}} / {{max}}', {
-            max: RECOMPENSE_MAX,
-            nombre: saisie.reward.length,
-            ...SANS_ECHAPPEMENT,
-          })}
-        </Text>
-      </View>
+      {estAutomatique(saisie.rewardType) ? (
+        <View style={{ gap: 12 }} testID="fidelite-reglage-auto">
+          {saisie.rewardType === 'remise' ? (
+            <InputStepper
+              decrementLabel={t('fidelite.reglage.moinsPourcent', '5 % de moins')}
+              incrementLabel={t('fidelite.reglage.plusPourcent', '5 % de plus')}
+              label={t('fidelite.reglage.reduction', 'Réduction (%)')}
+              max={100}
+              min={5}
+              onDecrement={() => changer({ percent: Math.max(5, pourcent - 5) })}
+              onIncrement={() => changer({ percent: Math.min(100, pourcent + 5) })}
+              tone="tunnel"
+              value={pourcent}
+            />
+          ) : null}
+          <InputStepper
+            decrementLabel={t('fidelite.reglage.moinsPartie', 'Une partie de moins')}
+            incrementLabel={t('fidelite.reglage.plusPartie', 'Une partie de plus')}
+            label={saisie.rewardType === 'remise'
+              ? t('fidelite.reglage.sur', 'Sur (parties)')
+              : t('fidelite.reglage.partiesOffertes', 'Parties offertes')}
+            max={UTILISATIONS_MAX}
+            min={1}
+            onDecrement={() => changer({ rewardUses: Math.max(1, utilisations - 1) })}
+            onIncrement={() => changer({
+              rewardUses: Math.min(UTILISATIONS_MAX, utilisations + 1),
+            })}
+            tone="tunnel"
+            value={utilisations}
+          />
+          <View accessibilityRole="radiogroup" style={{ gap: 4 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('fidelite.reglage.ceQuiEstOffert', 'Ce qui est offert')}
+            </Text>
+            {[
+              ['joueur', t('fidelite.reglage.partDuJoueur', 'La part du joueur')],
+              ['terrain', t('fidelite.reglage.terrainEntier', 'Le terrain entier')],
+            ].map(([valeur, libelle]) => {
+              const choisi = (saisie.scope || 'joueur') === valeur;
+              return (
+                <TouchableOpacity
+                  accessibilityLabel={libelle}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: choisi }}
+                  key={valeur}
+                  onPress={() => changer({ scope: valeur })}
+                  style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}
+                  testID={`fidelite-part-${valeur}`}
+                >
+                  <Text
+                    style={[
+                      choisi ? Fonts.p2Bold : Fonts.p2,
+                      choisi ? Fonts.primary500 : Fonts.neutral00,
+                    ]}
+                  >
+                    {libelle}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      ) : (
+        <View style={{ gap: 4 }}>
+          <Input
+            accessibilityLabel={t('complexeFidelite.programme.recompense', 'Récompense')}
+            label={t('complexeFidelite.programme.recompense', 'Récompense')}
+            maxLength={RECOMPENSE_MAX}
+            onChangeText={(texte) => changer({ reward: String(texte).slice(0, RECOMPENSE_MAX) })}
+            placeholder={t('complexeFidelite.programme.exemple', '1 partie offerte')}
+            value={saisie.reward}
+          />
+          <Text style={[Fonts.p3, Fonts.neutral200, { alignSelf: 'flex-end' }]}>
+            {t('complexeGerant.reglages.compte', '{{nombre}} / {{max}}', {
+              max: RECOMPENSE_MAX,
+              nombre: saisie.reward.length,
+              ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+          {saisie.rewardType === 'libre' ? (
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'fidelite.reglage.libreDit',
+                'Rien n’est retiré du prix : tu la remets sur place et tu la marques remise.',
+              )}
+            </Text>
+          ) : null}
+        </View>
+      )}
       <View accessibilityRole="radiogroup" style={{ gap: 4 }}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
           {t('complexeFidelite.programme.quiCompte', 'Qui compte ?')}
@@ -512,6 +638,18 @@ function ComplexeFidelite() {
         </View>
       ) : null}
       {message?.ou === 'programme' ? bandeau(message) : null}
+      {enregistre ? (
+        <View testID="fidelite-voir-stats">
+          <Button
+            onPress={() => setVoirStats((avant) => !avant)}
+            title={voirStats
+              ? t('fidelite.stats.fermer', 'Fermer les statistiques')
+              : t('fidelite.stats.ouvrir', 'Statistiques fidélité')}
+            variant="Secondary"
+          />
+        </View>
+      ) : null}
+      {voirStats ? <StatistiquesFidelite complexeId={complexeId} /> : null}
     </View>
   );
 

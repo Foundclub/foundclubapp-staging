@@ -358,6 +358,28 @@ function ReserverMesReservations() {
             <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
               {String(fidelite?.complexe?.name || '')}
             </Text>
+            {/* FIDELITE-2 (maquette 237) : « 1 bonus », vert, tant qu'un bonus attend. */}
+            {Array.isArray(fidelite?.bonus) && fidelite.bonus.length ? (
+              <View
+                style={{
+                  backgroundColor: withAlpha(Colors.success500, 0.14),
+                  borderColor: withAlpha(Colors.success500, 0.6),
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                }}
+                testID="ma-fidelite-pastille-bonus"
+              >
+                <Text style={[Fonts.p3Bold, Fonts.success500]}>
+                  {t('fidelite.pastille.nombre', {
+                    count: fidelite.bonus.length,
+                    defaultValue_one: '{{count}} bonus',
+                    defaultValue_other: '{{count}} bonus',
+                  })}
+                </Text>
+              </View>
+            ) : null}
             {!apercu.disponible ? (
               <Text style={[Fonts.p2Bold, Fonts.primary200]}>
                 {`${apercu.compte}/${apercu.seuil}`}

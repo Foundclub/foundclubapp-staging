@@ -87,6 +87,8 @@ import {
 } from '@/views/profile/parent/mesEnfantsEnBref';
 import PastilleDEtat from '@/views/profile/parent/PastilleDEtat';
 import useMesEnfantsEnBref from '@/views/profile/parent/useMesEnfantsEnBref';
+import CarteProchaineReservation
+  from '@/views/reserverTerrain/components/CarteProchaineReservation';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -2851,6 +2853,9 @@ function HomeHubContent({ auth, navigation, route }) {
         <TourResumePill />
         {/* FIN-GUIDE2 : le guide proposé à qui a quitté l'inscription sans voir Bienvenue. */}
         {isPlayerMode || isParentMode ? null : <TourOfferCard />}
+        {/* RESA-JOUEUR-2 (11/11, maquette « 232- ok ») : « Ta prochaine réservation », tant
+            qu'une réservation est à venir ; rien sinon. Les cases de l'accueil ne changent pas. */}
+        <CarteProchaineReservation navigation={navigation} />
 
         <View onLayout={(event) => registerSectionAnchor('manage', event)} ref={(node) => registerSectionViewRef('manage', node)}>
           {isPublishingGovernedBlocked ? (

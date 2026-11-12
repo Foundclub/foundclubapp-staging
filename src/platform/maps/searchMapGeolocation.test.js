@@ -89,6 +89,16 @@ describe('searchMapGeolocation — demande de position', () => {
     await expect(requestCurrentSearchMapLocation()).resolves.toEqual({ lat: 43.3, lng: 5.37 });
   });
 
+  // RESA-JOUEUR-2 (D54) : « Ta position, à 50 m près » — la précision lue remonte, si elle existe.
+  it('position acceptée avec sa précision : elle remonte en mètres', async () => {
+    mockGetCurrentPosition.mockImplementation((onSuccess) => onSuccess({
+      coords: { accuracy: 48.6, latitude: 43.3, longitude: 5.37 },
+    }));
+
+    await expect(requestCurrentSearchMapLocation())
+      .resolves.toEqual({ accuracy: 48.6, lat: 43.3, lng: 5.37 });
+  });
+
   it('coordonnées non exploitables : `null`', async () => {
     mockGetCurrentPosition.mockImplementation((onSuccess) => onSuccess({
       coords: { latitude: null, longitude: undefined },

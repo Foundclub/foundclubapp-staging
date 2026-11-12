@@ -76,6 +76,10 @@ const VERS_LES_DEMANDES = Object.freeze(['demande', 'expire-bientot']);
 const ICONES_DU_GERANT = Object.freeze({
   annulee: 'close',
   'bannissement-auto': 'shield',
+  // GERANT-CONSTRUCTION (D50) : la réservation en construction (le sablier de la maquette n'existe
+  // pas dans le jeu d'icônes : l'horloge, comme « Demande à trancher »).
+  construction: 'clock-two-thirty',
+  'construction-evolution': 'clock-two-thirty',
   demande: 'calendar-days',
   'expire-bientot': 'clock-two-thirty',
   hier: 'flag',

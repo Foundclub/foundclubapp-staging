@@ -25,6 +25,8 @@ const client = {
   delete: (/** @type {any[]} */ ...args) => chargerLeClient().delete(...args),
   get: (/** @type {any[]} */ ...args) => chargerLeClient().get(...args),
   post: (/** @type {any[]} */ ...args) => chargerLeClient().post(...args),
+  // RESA-OPTIONS-2 : « Modifier les options » (PUT).
+  put: (/** @type {any[]} */ ...args) => chargerLeClient().put(...args),
 };
 
 /**
@@ -136,6 +138,17 @@ export const annulerMaReservation = async (reservationId) => corps(
 );
 
 /**
+ * RESA-OPTIONS-2 (12/11/2026) — E-P07 « Modifier les options » : la liste ENTIÈRE (absente = 0),
+ * tant que l'annulation est gratuite ; après : 409 COMPLEXE_RESERVATION_CANCEL_TOO_LATE.
+ * @param {string} reservationId - documentId de la réservation.
+ * @param {Array<{ id: string, quantity: number }>} options - Le choix.
+ * @returns {Promise<any>} `{ data: réservation vue par son réserveur }`.
+ */
+export const modifierMesOptions = async (reservationId, options) => corps(
+  client.put(`/reservations-terrain/${enc(reservationId)}/options`, { data: { options } }),
+);
+
+/**
  * RESA-L6B-1 — E-P10 « Mes réservations » : SES réservations d'une période (50 au plus ; à venir
  * dans l'ordre du calendrier, passées et refusées des plus récentes aux plus anciennes).
  * @param {'a-venir' | 'passees' | 'refusees'} periode - L'onglet.
@@ -189,6 +202,38 @@ export const lireLeGroupe = async (reservationId) => corps(
  */
 export const repondreALaPartie = async (reservationId, reponse) => corps(
   client.post(`/reservations-terrain/${enc(reservationId)}/reponse`, { data: { reponse } }),
+);
+
+/**
+ * RESA-JOUEUR — E-P07, la réservation EN CONSTRUCTION du réserveur : « On a assez de joueurs »
+ * (`geste: 'assez'`) ou « J'ai trouvé des joueurs » (`geste: 'trouves'`, `nombre`).
+ * @param {string} reservationId - documentId de la réservation.
+ * @param {{ geste: 'assez' | 'trouves', nombre?: number }} geste - Le geste.
+ * @returns {Promise<any>} `{ data: groupe }` ; 404 (pas le réserveur), 409 `_STATE`.
+ */
+export const construireLaReservation = async (reservationId, geste) => corps(
+  client.post(`/reservations-terrain/${enc(reservationId)}/construction`, {
+    data: geste?.geste === 'trouves'
+      ? { geste: 'trouves', nombre: Number(geste.nombre) }
+      : { geste: 'assez' },
+  }),
+);
+
+/**
+ * RESA-JOUEUR, D51 — la liste « Recherche de joueurs » : les annonces ouvertes autour d'un point
+ * (`lat`, `lng`, `rayon` en km) ou d'un complexe (`complexe` : son slug).
+ * @param {{ complexe?: string, lat?: number, lng?: number, rayon?: number }} lieu - Où chercher.
+ * @returns {Promise<any>} `{ data: cartes[] }`.
+ */
+export const listerLesAnnonces = async (lieu) => corps(
+  client.get('/annonces-reservation', {
+    params: {
+      ...(lieu?.complexe ? { complexe: lieu.complexe } : {}),
+      ...(Number.isFinite(Number(lieu?.lat)) && Number.isFinite(Number(lieu?.lng))
+        ? { lat: Number(lieu.lat), lng: Number(lieu.lng), rayon: Number(lieu?.rayon) || 10 }
+        : {}),
+    },
+  }),
 );
 
 /**

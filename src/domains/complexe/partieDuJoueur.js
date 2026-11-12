@@ -1,4 +1,5 @@
 import { texteHeure } from '@/domains/complexe/complexeTerrain';
+import { estAutomatique, libelleDuBonus } from '@/domains/complexe/fideliteDuComplexe';
 import {
   dateEtHeureDeParis,
   texteJourCourt,
@@ -152,6 +153,43 @@ export const apercuDeLaFidelite = (t, fidelite) => {
   const seuil = Number(fidelite.threshold);
   const compte = Math.min(seuil, Math.max(0, Number(fidelite.count) || 0));
   const recompense = String(fidelite.reward || '').trim();
+  // FIDELITE (12/11, D63) : un programme automatique — le bonus débloqué s'utilise au
+  // récapitulatif ; sinon « Encore 2 réservations avant ta partie offerte / 20 % de réduction ».
+  const auto = /** @type {any} */ (fidelite);
+  const bonus = Array.isArray(auto.bonus) ? auto.bonus : [];
+  if (bonus.length) {
+    return {
+      compte,
+      disponible: true,
+      seuil,
+      texte: t(
+        'fidelite.joueur.debloque',
+        'Bonus débloqué : {{bonus}}. Tu l’utilises au récapitulatif de ta prochaine '
+        + 'réservation. Prochain bonus : {{compte}} sur {{seuil}}.',
+        {
+          bonus: libelleDuBonus(t, bonus[0]), compte, seuil, ...SANS_ECHAPPEMENT,
+        },
+      ),
+    };
+  }
+  if (estAutomatique(auto.rewardType)) {
+    const restantAuto = Math.max(1, Number(fidelite.restant) || seuil - compte);
+    const texte = auto.rewardType === 'remise'
+      ? t('complexeFidelite.apercu.encoreRemise', {
+        count: restantAuto,
+        defaultValue_one: 'Encore {{count}} réservation avant {{pourcent}} % de réduction',
+        defaultValue_other: 'Encore {{count}} réservations avant {{pourcent}} % de réduction',
+        pourcent: Number(auto.percent) || 0,
+      })
+      : t('complexeFidelite.apercu.encorePartie', {
+        count: restantAuto,
+        defaultValue_one: 'Encore {{count}} réservation avant ta partie offerte',
+        defaultValue_other: 'Encore {{count}} réservations avant ta partie offerte',
+      });
+    return {
+      compte, disponible: false, seuil, texte,
+    };
+  }
   if (fidelite.disponible) {
     return {
       compte,

@@ -1,6 +1,9 @@
 import { withAlpha } from '@/theme/colors';
 
-/** @typedef {'app' | 'attente' | 'bloque' | 'exterieur' | 'ferme' | 'libre'} EtatDuCreneau */
+/**
+ * @typedef {'app' | 'attente' | 'bloque' | 'construction' | 'exterieur' | 'ferme' | 'libre'}
+ *   EtatDuCreneau
+ */
 
 /**
  * L'ALLURE D'UN CRÉNEAU — sortie de `FriseDuJour` (RESA-L5A1) par RESA-L5A2 (14/10/2026) pour
@@ -10,8 +13,10 @@ import { withAlpha } from '@/theme/colors';
  */
 
 /** Les 6 états, dans l'ordre de la légende. */
+// GERANT-CONSTRUCTION (11/11/2026, D50) : + « En construction » (une réservation en construction :
+// le créneau reste libre, hachuré, maquette gerant-accueil.png).
 export const ETATS_DU_CRENEAU = /** @type {ReadonlyArray<EtatDuCreneau>} */ (Object.freeze([
-  'libre', 'app', 'exterieur', 'attente', 'bloque', 'ferme',
+  'libre', 'app', 'exterieur', 'attente', 'construction', 'bloque', 'ferme',
 ]));
 
 /**
@@ -28,6 +33,8 @@ export const libelleDeLEtat = (t, etat) => {
       return t('complexeGerant.frise.attente', 'En attente');
     case 'bloque':
       return t('complexeGerant.frise.bloque', 'Bloqué');
+    case 'construction':
+      return t('complexeGerant.frise.construction', 'En construction');
     case 'exterieur':
       return t('complexeGerant.frise.exterieur', 'Réservé à l’extérieur');
     case 'ferme':
@@ -63,6 +70,13 @@ export const styleDuCreneau = (Colors, etat) => {
       return {
         backgroundColor: withAlpha(Colors.primary200, 0.14),
         borderColor: withAlpha(Colors.primary200, 0.4),
+      };
+    case 'construction':
+      // Le hachuré (`HachuresDuCreneau`) la distingue sans compter sur la couleur.
+      return {
+        backgroundColor: withAlpha(Colors.warning500, 0.12),
+        borderColor: Colors.warning500,
+        overflow: 'hidden',
       };
     case 'exterieur':
       return {

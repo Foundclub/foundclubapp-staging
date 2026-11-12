@@ -45,18 +45,25 @@ const mockRepondre = jest.fn();
 const mockFil = jest.fn();
 const mockLien = jest.fn();
 const mockPublier = jest.fn();
+const mockConstruire = jest.fn();
 jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useAnnulerMaReservation: () => ({ isPending: false, mutateAsync: mockAnnuler }),
   useComplexePublic: () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
+  useConstruireLaReservation: () => ({ isPending: false, mutateAsync: mockConstruire }),
+  // DT-3 : les créneaux publics du jour (« · 2 h » si plusieurs durées) ; aucun ici.
+  useCreneauxDuJour: () => ({ data: undefined }),
   useGroupeDeLaReservation: () => mockGroupe,
   useLienDInvitation: () => ({ isPending: false, mutateAsync: mockLien }),
   useMaRelationAuComplexe: () => mockRelation,
   useMaReservation: () => mockLecture,
+  // RESA-OPTIONS-2 (12/11) : « Modifier les options », le terrain public (photo, options).
+  useModifierMesOptions: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useOuvrirUnFil: () => ({ isPending: false, mutateAsync: mockFil }),
   usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: mockPublier }),
   useRepondreALaPartie: () => ({ isPending: false, mutateAsync: mockRepondre }),
+  useTerrainsPublics: () => ({ data: [] }),
 }));
 jest.mock('@/platform/maps/externalMap', () => ({ openExternalMap: jest.fn() }));
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
@@ -245,10 +252,10 @@ describe('E-P07 — en collecte (état 2)', () => {
     };
   });
 
-  it('« En collecte · 7/10 », la jauge, la date limite, le créneau libre', async () => {
+  it('« En construction · 7/10 », la jauge, la date limite, le créneau libre', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'En collecte · 7/10',
+      'En construction · 7/10',
       'Date limite : jeudi 18 h · le créneau reste libre jusque-là',
     ]));
     expect(parRepere(arbre, 'ma-reservation-jauge')).not.toBeNull();
@@ -261,6 +268,65 @@ describe('E-P07 — en collecte (état 2)', () => {
     await toucher(pressable(arbre, 'Arrêter la collecte'));
     await toucher(pressable(arbre, 'Oui, arrêter'));
     expect(mockAnnuler).toHaveBeenCalledWith('r-1');
+  });
+
+  // RESA-JOUEUR (11/11, maquette « 232- ok ») : la réservation en construction du réserveur.
+  it('RESA-JOUEUR · « 7 sur 10 présents », ce qui manque, le créneau ouvert', async () => {
+    const vus = lisibles(await monter());
+    expect(vus).toEqual(expect.arrayContaining([
+      '7 sur 10 présents',
+      'Il manque 3 joueurs.',
+      'Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau.',
+    ]));
+  });
+
+  it('RESA-JOUEUR · « On a assez de joueurs » : la question, puis le geste part', async () => {
+    mockConstruire.mockResolvedValue({});
+    const arbre = await monter();
+    await toucher(pressable(arbre, 'On a assez de joueurs'));
+    expect(lisibles(arbre)).toContain('Vous avez assez de joueurs ?');
+    await toucher(pressable(arbre, 'Oui, on a assez de joueurs'));
+    expect(mockConstruire).toHaveBeenCalledWith({
+      geste: 'assez', nombre: 1, reservationId: 'r-1',
+    });
+  });
+
+  // ACCEPTER-CONSTRUCTION (12/11, Adel « 263 A ») : le complexe a accepté — le créneau lui est
+  // gardé jusqu'à la date limite ; « un autre groupe peut prendre ce créneau » n'est plus vrai.
+  it('ACCEPTER-CONSTRUCTION · acceptée : la mention, le créneau gardé', async () => {
+    mockGroupe = {
+      data: groupe({
+        collecte: {
+          acceptedAt: '2026-10-14T15:24:00.000Z',
+          collectDeadline: '2026-10-15T16:00:00.000Z',
+          failure: null,
+          presents: 7,
+          quorum: 10,
+          reachedAt: null,
+        },
+        counts: { absents: 1, presents: 7, sansReponse: 2 },
+        status: 'en_collecte',
+      }),
+    };
+    const vus = lisibles(await monter());
+    expect(vus).toEqual(expect.arrayContaining([
+      'Acceptée par Le Five de Montrivage. Le créneau t’est gardé. '
+        + 'Dis « On a assez de joueurs » quand ton groupe est prêt.',
+      'Date limite : jeudi 18 h · le créneau t’est gardé jusque-là',
+    ]));
+    expect(vus)
+      .not.toContain('Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau.');
+  });
+
+  it('RESA-JOUEUR · « J’ai trouvé des joueurs » : combien, puis l’annonce', async () => {
+    mockConstruire.mockResolvedValue({});
+    const arbre = await monter();
+    await toucher(pressable(arbre, 'J’ai trouvé des joueurs'));
+    await toucher(pressable(arbre, 'Un joueur de plus'));
+    await toucher(pressable(arbre, 'Mettre à jour l’annonce'));
+    expect(mockConstruire).toHaveBeenCalledWith({
+      geste: 'trouves', nombre: 2, reservationId: 'r-1',
+    });
   });
 });
 

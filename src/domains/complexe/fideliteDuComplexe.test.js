@@ -20,9 +20,17 @@ describe('E-G14 — les règles pures de la fidélité', () => {
     expect([SEUIL_MIN, SEUIL_MAX, RECOMPENSE_MAX]).toEqual([2, 50, 40]);
   });
 
-  it('« Créer mon programme » : actif, au bout de 10, réserveur et participants', () => {
+  // FIDELITE-2 (12/11/2026, chef) : « Créer mon programme » part sur « Partie offerte »,
+  // 1 partie, la part du joueur.
+  it('« Créer mon programme » : au bout de 10, réserveur et participants, partie offerte', () => {
     expect(PROGRAMME_PAR_DEFAUT).toEqual({
-      active: true, counts: 'participants', reward: '', threshold: 10,
+      active: true,
+      counts: 'participants',
+      reward: '',
+      rewardType: 'partie',
+      rewardUses: 1,
+      scope: 'joueur',
+      threshold: 10,
     });
   });
 

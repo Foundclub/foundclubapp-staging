@@ -16,12 +16,19 @@ import {
   nomCourt,
   nonHonoreesLisibles,
   plageHoraire,
+  quand,
   quandCourt,
   STATUTS,
+  STATUTS_COLLECTE,
   telephoneLisible,
   titreDuJour,
 } from '@/domains/complexe/complexeReservation';
 import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
+import {
+  evolutionDeLaConstruction, partDeLaJauge, texteDuCompteur, texteDuManque,
+} from '@/domains/complexe/constructionDuGerant';
+import { libelleDuBonus, reglerSurPlaceAvecRemise } from '@/domains/complexe/fideliteDuComplexe';
+import { lignesAReglerSurPlace } from '@/domains/complexe/optionsTerrain';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -31,10 +38,12 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import { JaugeDeConstruction } from '@/views/complexe/components/BlocEnConstruction';
 import EcrireAuClient from '@/views/complexe/components/EcrireAuClient';
 import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
 import FeuilleNonHonoree from '@/views/complexe/components/FeuilleNonHonoree';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
+import BlocReglerSurPlace from '@/views/reserverTerrain/components/BlocReglerSurPlace';
 
 import {
   useAnnulerNonHonoree,
@@ -174,6 +183,9 @@ function FicheReservation({
   const aVenir = new Date(r.startsAt).getTime() > Date.now();
   const enAttente = r.status === STATUTS.enAttente;
   const confirmeeAVenir = r.status === STATUTS.confirmee && aVenir;
+  // GERANT-CONSTRUCTION (11/11/2026, D50) : une réservation en construction (une collecte), que le
+  // gérant suit (la jauge, l'évolution) et aide (« Écrire au client », « Partager l'annonce »).
+  const enConstruction = r.status === STATUTS_COLLECTE.enCollecte && Boolean(r.construction);
   const repli = t('complexeReservations.fiche.erreurGeste', 'Le geste n’a pas pu être fait.');
   const options = { nom: reserveur, ...SANS_ECHAPPEMENT };
 
@@ -253,6 +265,13 @@ function FicheReservation({
         montant: formatEuros(r.price.amount), ...SANS_ECHAPPEMENT,
       });
   }
+  // RESA-OPTIONS (D61) : les options à préparer et le total à encaisser ; sans option, rien.
+  const aPreparer = /** @type {any[]} */ (Array.isArray(r.options) ? r.options : [])
+    .filter((option) => Number(option?.quantity) > 0);
+  // FIDELITE (12/11, D63) : « Fidélité appliquée » — la remise figée et le total remisé.
+  const requis = Number(r.players) || 1;
+  const aEncaisser = reglerSurPlaceAvecRemise(t, r.price, requis, aPreparer, r.loyalty)
+    || lignesAReglerSurPlace(t, r.price, Number(r.players) || 1, aPreparer);
   const ligneTerrain = [
     String(r.terrain?.name || ''),
     // RESA-FIN-APP : « Foot à 5 », comme partout (plan §1.1), plus « Football à 5 ».
@@ -362,6 +381,87 @@ function FicheReservation({
     </View>
   );
 
+  // RESA-PARTAGER (A-G32) — l'annonce ouverte de la réservation, en carte dans SON canal ; le
+  // résultat (partagée, déjà partagée) ou le refus du serveur en haut de la fiche.
+  const partagerDansLeCanal = async () => {
+    setMessage('');
+    setConflit('');
+    try {
+      setMessage(messageDuPartage(t, await partager.mutateAsync({ complexeId, reservationId })));
+    } catch (erreur) {
+      setConflit(messageDeRefusResa(t, erreur, repli));
+    }
+  };
+
+  // GERANT-CONSTRUCTION (maquette gerant-fiche.png) — la jauge, ce qui manque, l'évolution.
+  const evolution = enConstruction ? evolutionDeLaConstruction(t, r) : [];
+  // ACCEPTER-CONSTRUCTION (Adel « 263 A ») : un terrain sur demande s'accepte avant que le groupe
+  // soit complet ; le créneau est alors gardé jusqu'à l'échéance.
+  const acceptee = enConstruction ? quand(r.construction.acceptedAt) : '';
+  const peutAccepterLaConstruction = enConstruction && aVenir && r.construction.surDemande === true
+    && !r.construction.acceptedAt;
+  const accepterLaConstruction = async () => {
+    setMessage('');
+    setConflit('');
+    try {
+      await decider.mutateAsync({ complexeId, decision: 'accepter', reservationId });
+      setMessage(t(
+        'complexeGerant.construction.accepteeMessage',
+        'Réservation acceptée : le créneau est gardé pour ce groupe.',
+      ));
+      lecture.refetch?.();
+    } catch (erreur) {
+      setConflit(messageDeRefusResa(t, erreur, repli));
+    }
+  };
+  const construction = enConstruction ? (
+    <View
+      style={[
+        carte, Spaces.padding[16], { borderColor: withAlpha(Colors.warning500, 0.5), gap: 10 },
+      ]}
+      testID="fiche-construction"
+    >
+      <Text style={[Fonts.p3Bold, { color: Colors.warning500, letterSpacing: 0.5 }]}>
+        {t('complexeGerant.construction.titre', 'En construction').toUpperCase()}
+      </Text>
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
+          {texteDuCompteur(t, r.construction)}
+        </Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+          {texteDuManque(t, r.construction)}
+        </Text>
+      </View>
+      <JaugeDeConstruction part={partDeLaJauge(r.construction)} />
+      {acceptee ? (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="fiche-construction-acceptee">
+          {t(
+            'complexeGerant.construction.accepteeLe',
+            'Acceptée par toi le {{le}} : le créneau est gardé pour ce groupe.',
+            { le: acceptee, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
+      <View style={{ gap: 8, marginTop: 6 }}>
+        {legende(t('complexeGerant.construction.evolution', 'Évolution').toUpperCase())}
+        {evolution.map((ligne) => (
+          <View key={ligne.cle} style={{ gap: 2 }}>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{ligne.titre}</Text>
+            {ligne.detail ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{ligne.detail}</Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+      <Text style={[Fonts.p3, Fonts.neutral200]}>
+        {t(
+          'complexeGerant.construction.regleFiche',
+          'Tant qu’elle est en construction, un autre groupe peut réserver ce créneau.',
+        )}
+      </Text>
+    </View>
+  ) : null;
+
   // ── Le pied, selon l'état et la source ─────────────────────────────────────────────────
   let pied = null;
   // RESA-FIN-SITE (21/10/2026) — RG-DELAIS : délai passé, la demande ne se tranche plus.
@@ -418,18 +518,53 @@ function FicheReservation({
         </View>
       </View>
     );
+  } else if (enConstruction && aVenir) {
+    // GERANT-CONSTRUCTION (maquette gerant-fiche.png) : « Écrire au client », « Partager
+    // l'annonce » (dans son canal) s'il y a une annonce ouverte.
+    pied = (
+      <View style={{ gap: 8 }}>
+        {peutAccepterLaConstruction ? (
+          <View style={{ gap: 6 }} testID="fiche-accepter-construction">
+            <Button
+              isLoading={Boolean(decider.isPending)}
+              onPress={accepterLaConstruction}
+              title={t('complexeGerant.construction.accepter', 'Accepter maintenant')}
+            />
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'complexeGerant.construction.accepterAide',
+                'Accepter garde le créneau à ce groupe ; la réservation reste en construction '
+                  + 'jusqu’à « On a assez de joueurs ».',
+              )}
+            </Text>
+          </View>
+        ) : null}
+        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+          <View style={{ flexBasis: 140, flexGrow: 1 }}>
+            <EcrireAuClient
+              complexeId={complexeId || ''}
+              navigation={/** @type {any} */ (navigation)}
+              reservationId={reservationId}
+              testID="fiche-ecrire"
+              title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
+            />
+          </View>
+          {peutPartagerLAnnonce(r) ? (
+            <View style={{ flexBasis: 140, flexGrow: 1 }} testID="fiche-partager-annonce">
+              <Button
+                icon="share"
+                iconPosition="before"
+                isLoading={Boolean(partager.isPending)}
+                onPress={partagerDansLeCanal}
+                title={t('complexeGerant.construction.partager', 'Partager l’annonce')}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
+        </View>
+      </View>
+    );
   } else if (confirmeeAVenir) {
-    // RESA-PARTAGER (A-G32) — l'annonce ouverte de la réservation, en carte dans SON canal ; le
-    // résultat (partagée, déjà partagée) ou le refus du serveur en haut de la fiche.
-    const partagerDansLeCanal = async () => {
-      setMessage('');
-      setConflit('');
-      try {
-        setMessage(messageDuPartage(t, await partager.mutateAsync({ complexeId, reservationId })));
-      } catch (erreur) {
-        setConflit(messageDeRefusResa(t, erreur, repli));
-      }
-    };
     pied = (
       <View style={{ gap: 8 }}>
         {peutPartagerLAnnonce(r) ? (
@@ -535,6 +670,37 @@ function FicheReservation({
             </Text>
           ) : null}
         </View>
+        {construction}
+        {aPreparer.length ? (
+          <View
+            style={[carte, Spaces.padding[16], { borderColor: Colors.primary500, gap: 6 }]}
+            testID="fiche-options-a-preparer"
+          >
+            {legende(t('complexeOptions.aPreparer', 'Options à préparer'))}
+            {aPreparer.map((option) => (
+              <View key={option.id} style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+                <GlyphIcon color={Colors.primary200} name="check" size={16} />
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {`${option.name} × ${option.quantity}`}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {r.loyalty ? (
+          <Text style={[Fonts.p2Bold, Fonts.success500]} testID="fiche-fidelite-appliquee">
+            {t('fidelite.fiche.appliquee', 'Fidélité appliquée : {{bonus}}', {
+              bonus: libelleDuBonus(t, r.loyalty), ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        ) : null}
+        {aEncaisser ? (
+          <BlocReglerSurPlace
+            bloc={aEncaisser}
+            resume
+            titre={t('complexeOptions.aEncaisserSurPlace', 'À encaisser sur place')}
+          />
+        ) : null}
         {qui}
         {historique.length ? (
           <View style={{ gap: 6 }}>
@@ -569,10 +735,11 @@ function FicheReservation({
         <View testID="fiche-valider-recompense">
           <Button
             onPress={() => ouvrir('valider')}
-            title={texteInsecable(t(
-              'complexeReservations.fiche.validerRecompense',
-              'Valider la partie offerte',
-            ))}
+            // FIDELITE-2 (maquette 237) : une récompense LIBRE à remettre (le serveur rend
+            // `recompenseARemettre`) se marque « remise » ; le même geste.
+            title={texteInsecable(r?.recompenseARemettre
+              ? t('fidelite.fiche.marquerRemise', 'Marquer comme remise')
+              : t('complexeReservations.fiche.validerRecompense', 'Valider la partie offerte'))}
             variant="Secondary"
           />
         </View>
@@ -734,7 +901,18 @@ function FicheReservation({
       >
         <View style={{ gap: 16 }}>
           <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('complexeFidelite.valider.titre', 'Valider la partie offerte de {{nom}} ?', options)}
+            {/* FIDELITE-2 (Q1 B du chef, 12/11) : une récompense LIBRE se « marque remise ». */}
+            {r?.recompenseARemettre
+              ? t(
+                'fidelite.fiche.marquerRemiseTitre',
+                'Marquer la récompense de {{nom}} comme remise ?',
+                options,
+              )
+              : t(
+                'complexeFidelite.valider.titre',
+                'Valider la partie offerte de {{nom}} ?',
+                options,
+              )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t('complexeFidelite.valider.dit', 'Son compteur repart à 0.')}

@@ -51,6 +51,8 @@ jest.mock('@/services/activity/activityQueries', () => ({
 let mockVilles = /** @type {any[]} */ ([]);
 jest.mock('@/services/places/placesQueries', () => ({
   useGetPlaces: () => ({ data: mockVilles }),
+  // RESA-JOUEUR-2 (D54) : le nom du lieu de la position (la zone écrite) ; rien ici.
+  useGetPlacesFromCoordinates: () => ({ data: null }),
 }));
 
 let mockPositionAccordee = /** @type {any} */ (null);
@@ -190,7 +192,8 @@ describe('E-P01 — autour de toi (position déjà accordée)', () => {
     const arbre = await monter();
     const vus = lisibles(arbre);
     expect(vus).toEqual(expect.arrayContaining([
-      'Autour de moi',
+      // RESA-JOUEUR-2 (D54, maquette E-P01) : la puce « Autour de moi » devient la zone écrite.
+      'Autour de ta position · 10 km',
       'Le Five de Montrivage',
       'Complexe de réservation',
       '2,4 km',
@@ -271,7 +274,8 @@ describe('E-P01 — la position à l’ouverture (RA1 états 1, 6)', () => {
     expect(derniersFiltres()).toEqual({
       date: '2026-10-14', lat: 48.7, lng: 1.3, rayon: 10,
     });
-    expect(lisibles(arbre)).toContain('Valbrune');
+    // RESA-JOUEUR-2 (D54) : la ville se lit dans la zone écrite.
+    expect(lisibles(arbre)).toContain('Autour de Valbrune · 10 km');
   });
 });
 
@@ -385,17 +389,23 @@ describe('E-P01 — les états', () => {
 
   // RESA-OUVERTURE (03/11/2026, chef, sur « 5- B ») : sans filtre posé, « avec ces filtres » ne
   // voulait rien dire. La distance n'est pas un filtre : l'élargir garde la phrase.
+  // RESA-JOUEUR-2 (11/11, maquette E-P01) : en vue liste, la phrase rappelle la zone (jour, rayon,
+  // lieu) ; le jour n'est plus un « filtre » : « Voir demain » le dit dans la phrase. La vue
+  // carte garde « Aucun terrain disponible… » (EP01.zone.RESAJOUEUR2, « Q3 A »).
   it('vide sans filtre : la phrase honnête ; deux façons d’élargir', async () => {
     mockRecherche.data.complexes = [];
     const arbre = await monter();
-    expect(lisibles(arbre)).toContain('Aucun terrain disponible pour l’instant dans cette zone.');
+    expect(lisibles(arbre))
+      .toContain('Aucun terrain libre aujourd’hui à moins de 10 km de ta position.');
     expect(lisibles(arbre)).not.toContain('Aucun terrain libre avec ces filtres.');
     await appuyer(arbre, 'Élargir à 20 km');
     expect(derniersFiltres().rayon).toBe(20);
-    expect(lisibles(arbre)).toContain('Aucun terrain disponible pour l’instant dans cette zone.');
+    expect(lisibles(arbre))
+      .toContain('Aucun terrain libre aujourd’hui à moins de 20 km de ta position.');
     await appuyer(arbre, 'Voir demain');
     expect(derniersFiltres().date).toBe('2026-10-15');
-    expect(lisibles(arbre)).toContain('Aucun terrain libre avec ces filtres.');
+    expect(lisibles(arbre))
+      .toContain('Aucun terrain libre demain à moins de 20 km de ta position.');
   });
 
   it('vide avec un filtre posé : la phrase des filtres reste', async () => {
@@ -483,7 +493,8 @@ describe('RESA-FIN-APP (4) E-P01 — la ville choisie est gardée', () => {
     mockAppels.length = 0;
     const seconde = await monter();
     expect(lisibles(seconde)).not.toContain('Des terrains autour de toi');
-    expect(lisibles(seconde)).toContain('Valbrune');
+    // RESA-JOUEUR-2 (D54) : la ville se lit dans la zone écrite.
+    expect(lisibles(seconde)).toContain('Autour de Valbrune · 10 km');
     expect(derniersFiltres()).toEqual({
       date: '2026-10-14', lat: 48.7, lng: 1.3, rayon: 10,
     });

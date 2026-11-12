@@ -190,9 +190,11 @@ describe('RESA-L5A1 E-G09 — un terrain ouvert (RA4 état 1)', () => {
     ]));
     expect(parRepere(arbre, 'complexe-creneaux-semaine')).not.toBeNull();
     await appuyer(arbre, 'Enregistrer');
+    // DT-2 (12/11/2026) : `priceStraddle` part dans CHAQUE envoi du modèle, même inchangé ; c'est
+    // ainsi que le serveur DT-1 distingue cette app d'une 2.6.99 (`assertNotOldPhone`).
     expect(mockEnregistrer).toHaveBeenCalledWith({
       complexeId: 'cx-five',
-      plan: AVEC_TARIFS,
+      plan: { ...AVEC_TARIFS, priceStraddle: 'debut' },
       terrainId: 't-1',
     });
     expect(lisibles(arbre)).toContain('612 créneaux ouverts.');

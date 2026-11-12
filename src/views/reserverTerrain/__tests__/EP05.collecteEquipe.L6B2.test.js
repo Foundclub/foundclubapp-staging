@@ -40,6 +40,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   // RESA-FIN-SITE : la relecture par identifiant (site rechargé) ; ici la réservation arrive en
   // paramètre.
   useMaReservation: () => ({ data: null, isLoading: false }),
+  // RESA-JOUEUR-2 : la photo du terrain, lue sur la page publique ; aucune ici.
+  useTerrainsPublics: () => ({ data: [] }),
 }));
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => (
   function FausseFeuille(/** @type {any} */ { children, isVisible }) {
@@ -114,29 +116,27 @@ describe('collecte lancée (A-P07, A-P08)', () => {
     };
   });
 
-  it('« Collecte lancée : 1/10 », la phrase d’A-P08, la jauge et la date limite', async () => {
+  // RESA-JOUEUR-2 (11/11, maquette E-P05 « 232- ok ») : « Réservation en construction » remplace
+  // « Collecte lancée : 1/10 », sa phrase et la date limite ; l'annonce part toute seule depuis le
+  // récapitulatif : « Il me manque des joueurs » et « Voir ma collecte » laissent la place à « Voir
+  // ma réservation ». Le détail est dans EP05.RESAJOUEUR2.
+  it('« Réservation en construction » : la jauge, ni collecte ni date limite', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'Collecte lancée : 1/10',
-      'Rien n’est réservé tant que 10 joueurs n’ont pas répondu présent. Le créneau reste libre : '
-        + 'quelqu’un peut le prendre avant toi.',
-      '1 sur 10 · date limite jeudi 15/10, 18 h',
+      'Réservation en construction',
+      '1 sur 10',
     ]));
     expect(parRepere(arbre, 'resultat-jauge')).not.toBeNull();
     expect(lisibles(arbre)).not.toContain('C’est réservé !');
+    expect(lisibles(arbre).join(' ')).not.toMatch(/Collecte lancée|date limite/);
   });
 
-  it('« Il me manque des joueurs » : l’annonce sur la fiche ; « Voir ma collecte »', async () => {
+  it('« Inviter par lien », puis « Voir ma réservation » ouvre la fiche', async () => {
     const arbre = await monter();
     expect(bouton(arbre, 'Inviter par lien').props.variant).toBe('Primary');
+    expect(bouton(arbre, 'Il me manque des joueurs')).toBeUndefined();
     await act(async () => {
-      bouton(arbre, 'Il me manque des joueurs').props.onPress();
-    });
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverMaReservation, {
-      ouvrir: 'annonce', reservationId: 'r-1',
-    });
-    await act(async () => {
-      pressable(arbre, 'Voir ma collecte').props.onPress();
+      pressable(arbre, 'Voir ma réservation').props.onPress();
     });
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ReserverMaReservation, {
       reservationId: 'r-1',

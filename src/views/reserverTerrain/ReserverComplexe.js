@@ -26,10 +26,12 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BadgeComplexe from '@/views/complexe/components/BadgeComplexe';
 import LogoComplexe from '@/views/complexe/components/LogoComplexe';
+import BlocRechercheDeJoueurs from '@/views/reserverTerrain/components/BlocRechercheDeJoueurs';
 import CarteTerrainJoueur from '@/views/reserverTerrain/components/CarteTerrainJoueur';
 import FeuilleRetirerFavori from '@/views/reserverTerrain/components/FeuilleRetirerFavori';
 import FeuilleSignaler from '@/views/reserverTerrain/components/FeuilleSignaler';
 import FeuilleTelephone from '@/views/reserverTerrain/components/FeuilleTelephone';
+import GaleriePhotos from '@/views/reserverTerrain/components/GaleriePhotos';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -283,13 +285,16 @@ function ReserverComplexe() {
         ...carteDeBloc, alignItems: 'center', gap: 8, overflow: 'hidden', paddingTop: 0,
       }}
     >
+      {/* RESA-JOUEUR-2 (E-P02, maquette « 232- ok ») : les photos du complexe défilent en tête,
+          avec « 1 / N », et s'ouvrent en grand (avant : une seule photo de 112 px). */}
       {photos[0] ? (
-        <Image
-          accessibilityIgnoresInvertColors
-          resizeMode="cover"
-          source={{ uri: String(photos[0]) }}
-          style={{ height: COUVERTURE, marginHorizontal: -16, width: '120%' }}
-        />
+        <View style={{ alignSelf: 'stretch', marginHorizontal: -16 }}>
+          <GaleriePhotos
+            legende={String(complexe.name || '')}
+            photos={photos.map(String)}
+            testID="complexe"
+          />
+        </View>
       ) : (
         <View
           style={{
@@ -664,6 +669,15 @@ function ReserverComplexe() {
           terrain={terrain}
         />
       ))}
+      {/* RESA-JOUEUR (D51, maquette « 232- ok ») : les annonces de ce complexe, 3 au plus. */}
+      {slug ? (
+        <BlocRechercheDeJoueurs
+          lieu={{ complexe: String(slug) }}
+          max={3}
+          testID="complexe-ils-cherchent"
+          titre={t('reserverTerrain.recherche.joueurs.ilsCherchent', 'Ils cherchent des joueurs')}
+        />
+      ) : null}
     </View>
   );
 

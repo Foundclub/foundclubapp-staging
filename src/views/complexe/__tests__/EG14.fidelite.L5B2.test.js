@@ -200,6 +200,19 @@ describe('E-G14 — la fidélité du complexe', () => {
     expect(lisibles(arbre)).not.toContain('TON PROGRAMME');
     await appuyer(arbre, 'Créer mon programme');
     expect(lisibles(arbre)).toContain('TON PROGRAMME');
+    // FIDELITE-2 (12/11/2026) : le défaut est « Partie offerte », 1 partie, la part du joueur.
+    await appuyer(arbre, 'Enregistrer');
+    expect(mockRegler).toHaveBeenCalledWith({
+      complexeId: 'cx-five',
+      programme: {
+        active: true,
+        counts: 'participants',
+        rewardType: 'partie',
+        rewardUses: 1,
+        scope: 'joueur',
+        threshold: 10,
+      },
+    });
   });
 
   it('aucun client proche : la phrase de la planche (état 5)', async () => {

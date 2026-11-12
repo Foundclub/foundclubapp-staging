@@ -19,13 +19,18 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useComplexePublic: () => ({
     data: jest.requireActual('@/testSupport/temoinReserver').complexePublic(),
   }),
+  // DT-3 : les créneaux publics du jour (« · 2 h » si plusieurs durées) ; aucun ici.
+  useCreneauxDuJour: () => ({ data: undefined }),
   useGroupeDeLaReservation: () => ({ data: null }),
   useLienDInvitation: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useMaRelationAuComplexe: () => ({ data: null }),
   useMaReservation: () => mockLecture,
+  // RESA-OPTIONS-2 (12/11) : « Modifier les options », le terrain public (photo, options).
+  useModifierMesOptions: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useOuvrirUnFil: () => ({ isPending: false, mutateAsync: jest.fn() }),
   usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useRepondreALaPartie: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useTerrainsPublics: () => ({ data: [] }),
 }));
 jest.mock('@/platform/maps/externalMap', () => ({ openExternalMap: jest.fn() }));
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));

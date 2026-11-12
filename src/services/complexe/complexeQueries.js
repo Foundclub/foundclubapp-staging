@@ -34,6 +34,7 @@ import {
   lirePlanning,
   lireReservationGeree,
   lireReservationsDuComplexe,
+  lireStatistiquesFidelite,
   lireTerrains,
   listerLaConsole,
   marquerNonHonoree,
@@ -578,6 +579,18 @@ export const useFideliteDuComplexe = (complexeId) => useQuery({
   enabled: Boolean(complexeId),
   queryFn: async () => (await lireFidelite(String(complexeId)))?.data ?? null,
   queryKey: ['complexe', complexeId, 'fidelite'],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * FIDELITE (12/11, D63) — « Statistiques · Fidélité » de SON complexe.
+ * @param {string | null | undefined} complexeId - documentId du complexe.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} `{ mois[], clients[] }`.
+ */
+export const useStatistiquesFidelite = (complexeId) => useQuery({
+  enabled: Boolean(complexeId),
+  queryFn: async () => (await lireStatistiquesFidelite(String(complexeId)))?.data ?? null,
+  queryKey: ['complexe', complexeId, 'fidelite', 'statistiques'],
   staleTime: DEMI_MINUTE,
 });
 
