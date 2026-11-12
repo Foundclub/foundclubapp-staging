@@ -1769,3 +1769,52 @@ describe('INVITE-STAFF-DESIGN : « Nouveau » sur la ligne du staff', () => {
     expect(texteDe(arbre.root)).not.toContain('Nouveau');
   });
 });
+
+// NOUVEAU-DIRIGEANT (11/11/2026, Adel « 262- B ») — la même marque « Nouveau » et le même bord
+// vert sur la ligne d'un DIRIGEANT arrivé par invitation. Les 7 jours sont comptés par le serveur
+// (`recentlyAccepted`, témoin admin NOUVEAU-DIRIGEANT) : passé ce délai, il ne le nomme plus.
+describe('NOUVEAU-DIRIGEANT : « Nouveau » sur la ligne d un dirigeant invité', () => {
+  afterEach(() => {
+    mockStaffSentQuery.mockImplementation(() => ({
+      data: [], isLoading: false, refetch: jest.fn(),
+    }));
+  });
+
+  const DIRIGEANTS = [
+    {
+      documentId: 'u-1', firstname: 'Philippe', lastname: 'Courtoi', role: { name: 'president' },
+    },
+    {
+      documentId: 'u-4', firstname: 'Samia', lastname: 'Rahmani', role: { name: 'president' },
+    },
+  ];
+  const ligneDe = (/** @type {any} */ arbre, /** @type {string} */ nom) => arbre.root.findAll(
+    (/** @type {any} */ n) => typeof n.props?.onPress === 'function' && texteDe(n).includes(nom),
+  ).pop();
+  const bordVert = (/** @type {any} */ ligne) => [ligne.props.style].flat(Infinity)
+    .some((/** @type {any} */ s) => s && s.borderWidth === 1 && s.borderColor);
+
+  it('le dirigeant arrivé depuis moins de 7 jours porte « Nouveau » et le bord vert ; '
+    + 'celui ajouté à la main, non', () => {
+    mockClubQuery.data = { ...CLUB, members: DIRIGEANTS };
+    mockStaffSentQuery.mockImplementation(() => ({
+      data: { invitations: [], recentlyAccepted: ['u-4'] }, isLoading: false, refetch: jest.fn(),
+    }));
+    const arbre = monter('staff');
+    expect(texteDe(ligneDe(arbre, 'Samia Rahmani'))).toContain('Nouveau');
+    expect(bordVert(ligneDe(arbre, 'Samia Rahmani'))).toBe(true);
+    expect(texteDe(ligneDe(arbre, 'Philippe Courtoi'))).not.toContain('Nouveau');
+    expect(bordVert(ligneDe(arbre, 'Philippe Courtoi'))).toBe(false);
+  });
+
+  it('au-delà de 7 jours (le serveur ne le nomme plus), la marque disparaît', () => {
+    mockClubQuery.data = { ...CLUB, members: DIRIGEANTS };
+    mockStaffSentQuery.mockImplementation(() => ({
+      data: { invitations: [], recentlyAccepted: [] }, isLoading: false, refetch: jest.fn(),
+    }));
+    const arbre = monter('staff');
+    expect(texteDe(arbre.root)).toContain('Samia Rahmani');
+    expect(texteDe(arbre.root)).not.toContain('Nouveau');
+    expect(bordVert(ligneDe(arbre, 'Samia Rahmani'))).toBe(false);
+  });
+});

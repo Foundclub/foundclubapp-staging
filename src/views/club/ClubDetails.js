@@ -4494,7 +4494,11 @@ function ClubDetails({ navigation, route }) {
                             Alignments.fill,
                             Alignments.justifySpaceBetween,
                             Spaces.padding[16],
-                            Spaces.gap[16]]}
+                            Spaces.gap[16],
+                            // NOUVEAU-DIRIGEANT (Adel « 262- B ») : même marque que le coach.
+                            nouveauxDuStaff.has(user.documentId)
+                              ? { borderColor: Colors.success500, borderWidth: 1 }
+                              : null]}
                         >
                           <View style={[
                             Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 0.7 }]}
@@ -4505,13 +4509,20 @@ function ClubDetails({ navigation, route }) {
                               name={[user.firstname, user.lastname].filter(Boolean).join(' ')}
                               size={40}
                             />
-                            <Text
-                              numberOfLines={2}
-                              style={[Fonts.p1Bold, Fonts.neutral00]}
-                            >
-                              {/* Recette L11 : un coach invité n'a qu'un prénom. */}
-                              {[user.firstname, user.lastname].filter(Boolean).join(' ')}
-                            </Text>
+                            <View style={[Alignments.fill]}>
+                              <Text
+                                numberOfLines={2}
+                                style={[Fonts.p1Bold, Fonts.neutral00]}
+                              >
+                                {/* Recette L11 : un coach invité n'a qu'un prénom. */}
+                                {[user.firstname, user.lastname].filter(Boolean).join(' ')}
+                              </Text>
+                              {nouveauxDuStaff.has(user.documentId) ? (
+                                <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+                                  {t('staffInvitation.newMember', 'Nouveau')}
+                                </Text>
+                              ) : null}
+                            </View>
                           </View>
                           {canEdit ? (
                             <View style={[Alignments.row, Spaces.gap[8]]}>
