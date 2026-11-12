@@ -290,10 +290,11 @@ export const getFilterSports = (teamSportNames) => {
 };
 
 /**
- * AMICAUX-FORMAT (« 4 A » et « 5 A ») — le tri par sport et par format, au SERVEUR.
- * Rend les clauses Strapi à poser sous `filters.$and`. Une annonce SANS format
- * reste toujours dans la liste filtrée (« 5 A ») : ne rien dire, c'est être
- * ouvert à tout, comme une catégorie non cochée.
+ * AMICAUX-FORMAT (« 4 A ») — le tri par sport et par format, au SERVEUR.
+ * Rend les clauses Strapi à poser sous `filters.$and`.
+ * T9-RETOURS-A (12/11, M1193, remplace « 5 A ») : une annonce SANS format
+ * (« À convenir ») ne sort PAS sous un filtre de format ; elle sort quand aucun
+ * format n'est choisi (aucune clause).
  * @param {{ format?: any, sport?: any }} [filters]
  * @returns {any[]}
  */
@@ -304,15 +305,13 @@ export const buildFormatServerFilters = ({ format, sport } = {}) => {
 
   const wanted = String(format ?? '').trim();
   if (!wanted) return clauses;
-  const withoutFormat = [{ format: { $null: true } }, { format: { $eq: '' } }];
   if (wanted === OTHER_FORMATS_FILTER) {
     const codes = getSportFormats(sportName).map((item) => item.code);
-    const outsideCatalog = codes.length > 0
-      ? { format: { $notIn: codes } }
-      : { format: { $notNull: true } };
-    clauses.push({ $or: [outsideCatalog, ...withoutFormat] });
+    clauses.push({
+      format: { ...(codes.length > 0 ? { $notIn: codes } : {}), $ne: '', $notNull: true },
+    });
   } else {
-    clauses.push({ $or: [{ format: { $eq: wanted } }, ...withoutFormat] });
+    clauses.push({ format: { $eq: wanted } });
   }
   return clauses;
 };

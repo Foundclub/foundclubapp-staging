@@ -36,8 +36,9 @@ describe('RESA-L6A — la lecture publique (E-P01, E-P02, E-P03)', () => {
       apres: '18:00', cadre: '', date: '2026-10-14', q: 'five', rayon: 10, sport: null,
     });
     expect(mockClient.get).toHaveBeenCalledWith('/public-complexes', {
+      // T9-RETOURS-A (« 277 A ») : la vue joueur, la nuit sous le jour de sa plage.
       params: {
-        apres: '18:00', date: '2026-10-14', q: 'five', rayon: 10,
+        apres: '18:00', date: '2026-10-14', q: 'five', rayon: 10, vue: 'nuit',
       },
     });
     expect(corps).toEqual({ data: { complexes: [], date: '2026-10-14' } });
@@ -51,7 +52,8 @@ describe('RESA-L6A — la lecture publique (E-P01, E-P02, E-P03)', () => {
     await lireCreneauxDuJour('le-five', 't-1', '2026-10-14');
     expect(mockClient.get).toHaveBeenCalledWith(
       '/public-complexes/le-five/terrains/t-1/creneaux',
-      { params: { date: '2026-10-14' } },
+      // T9-RETOURS-A (« 277 A ») : la vue joueur, la nuit sous le jour de sa plage.
+      { params: { date: '2026-10-14', vue: 'nuit' } },
     );
   });
 });

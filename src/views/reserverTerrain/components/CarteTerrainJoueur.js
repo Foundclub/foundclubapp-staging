@@ -107,7 +107,7 @@ function CarteTerrainJoueur({
                   ...SANS_ECHAPPEMENT,
                 },
               )}
-              key={creneau.from}
+              key={creneau.startsAt || creneau.from}
               libelle={texteHeure(creneau.from)}
               onPress={() => onCreneau(creneau)}
               testID={`terrain-${terrain?.documentId}-creneau-${creneau.from}`}
