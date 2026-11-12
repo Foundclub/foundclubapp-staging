@@ -1194,7 +1194,7 @@ function Profile({ navigation, route }) {
           return;
         }
         // GUIDE-PROGRESSIONS : en lancer un autre range celui en cours, avec sa progression ;
-        // rien n'est perdu, donc plus de question (« switchConfirm » ne sert plus).
+        // rien n'est perdu, donc plus de question (ses textes sont retirés).
         if (!tour.hasGuideHistory || (isGuideInProgress && !isThisInProgress)) {
           tour.startTour(guideKey);
           return;

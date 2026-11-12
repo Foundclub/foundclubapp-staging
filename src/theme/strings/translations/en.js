@@ -18232,10 +18232,6 @@ export default {
       },
       resume: 'Pick up where I left off',
       review: 'Review without creating',
-      switchConfirm: {
-        confirm: 'Start',
-        message: 'The paused guide stops and its progress starts again from zero. Nothing you created is deleted.',
-      },
     },
     contactSupport: {
       ecrire: 'Write to support',
