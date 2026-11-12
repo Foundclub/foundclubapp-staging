@@ -2,7 +2,8 @@
  * INVITE-STAFF (10/11/2026, maquette validée, écran C) — dans la fiche club, rubrique Staff :
  * « Invitations en attente ». On n'y voit que ce que l'inviteur a tapé (prénom, 2 derniers
  * chiffres), jamais le profil de la personne : elle apparaît dans le staff quand elle accepte.
- * Un refus ne s'y distingue pas d'une invitation sans réponse (« 2A »).
+ * Une invitation refusée en sort, sans notification (« 274 A », 12/11/2026, remplace « 2A ») :
+ * c'est le serveur qui ne la renvoie plus (INVITE-REFUS).
  */
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';

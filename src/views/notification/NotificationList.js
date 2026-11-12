@@ -525,12 +525,16 @@ function NotificationList() {
                 testID={String(notification.documentId || notification.id)}
               />
             ) : null}
-            {/* INVITE-STAFF (10/11, maquette E) : « Refuser » / « Voir et accepter ». */}
-            {notification.type === 'staffInvitation' && !notification.data?.answered ? (
+            {/* INVITE-STAFF (10/11, maquette E) : « Refuser » / « Voir et accepter ».
+                INVITE-REFUS (12/11) : monté aussi une fois répondue (`answered`, posé par le
+                serveur), pour que la cloche relue n'efface pas la feuille ouverte ; il n'y
+                affiche alors plus aucun bouton. */}
+            {notification.type === 'staffInvitation' ? (
               <ActionsInvitationDeStaff
                 data={/** @type {Record<string, any>} */ (notification.data)}
                 navigation={nav}
                 relire={refreshNotifications}
+                repondue={Boolean(notification.data?.answered)}
                 testID={String(notification.documentId || notification.id)}
               />
             ) : null}
