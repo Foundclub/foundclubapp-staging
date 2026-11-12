@@ -57,7 +57,10 @@ const JOUR = 56;
  * E-P03 — « CHOISIR UN CRÉNEAU » — RESA-L6A (14/10/2026), planche EP03 et P00 bloc 3, plan E-P03.
  * Le calendrier d'un terrain sur 14 jours (l'écran de départ, BookingCalendar.js, est mort) :
  *   · l'en-tête « TERRAIN 1 » et « Le Five de Montrivage · Foot à 5 » ;
- *   · la bande de 14 jours (un jour déjà lu sans créneau libre est en pointillé) ;
+ *   · la bande de 14 jours (un jour déjà lu sans créneau libre est en pointillé) —
+ *     REGLES-RESERVATION (12/11/2026, D47) : elle s'arrête aux jours que le complexe ouvre
+ *     (`rules.bookingDaysAhead`) ;
+ *     la case suivante, en pointillé gris, dit « Pas encore ouvert » et quand ce jour ouvrira ;
  *   · les créneaux du jour : libre, choisi, pris (il ne se touche pas — le joueur ne voit
  *     jamais qui ni pourquoi, D7), trop tard ici (la feuille d'appel), fermé ; un jour tout fermé
  *     le dit ;
@@ -81,8 +84,13 @@ function ReserverCreneau() {
   const { slug, terrainId } = params;
   const surOrdinateur = useIsDesktop();
   const aujourdhui = jourDeParis();
-  const jours = quatorzeJours(t, aujourdhui);
+  const complexe = useComplexePublic(slug)?.data;
+  // REGLES-RESERVATION (D47) : le complexe ouvre ses créneaux N jours à l'avance (90 sans
+  // réglage, ou un serveur plus ancien) ; le serveur refuse au-delà.
+  const joursPermis = Number(complexe?.rules?.bookingDaysAhead) || 90;
+  const jours = quatorzeJours(t, aujourdhui).slice(0, joursPermis + 1);
   const dernierJour = jours[jours.length - 1].date;
+  const premierJourFerme = joursPermis + 1 < 14 ? ajouterJours(aujourdhui, joursPermis + 1) : null;
 
   const [date, setDate] = useState(
     params.date && params.date >= aujourdhui && params.date <= dernierJour
@@ -100,7 +108,6 @@ function ReserverCreneau() {
   const [joursSansLibre, setJoursSansLibre] = useState(() => new Set());
 
   const { userData } = useAuth();
-  const complexe = useComplexePublic(slug)?.data;
   // CORR-RESA (78 A) : un joueur plus jeune que l'âge du complexe le lit AVANT de choisir un
   // créneau
   // (le serveur refusait seulement au bout du parcours).
@@ -272,6 +279,91 @@ function ReserverCreneau() {
     </View>
   );
 
+  const pasEncoreOuvert = Boolean(premierJourFerme) && date === premierJourFerme;
+  const caseFermee = premierJourFerme ? (
+    <TouchableOpacity
+      accessibilityLabel={t(
+        'reserverTerrain.creneau.jourPasOuvertA11y',
+        '{{jour}}, pas encore ouvert',
+        { jour: texteJourLong(t, premierJourFerme), ...SANS_ECHAPPEMENT },
+      )}
+      accessibilityRole="button"
+      accessibilityState={{ selected: pasEncoreOuvert }}
+      onPress={() => changerDeJour(premierJourFerme)}
+      style={[
+        Alignments.alignCenter,
+        Alignments.justifyCenter,
+        {
+          backgroundColor: pasEncoreOuvert ? Colors.primary700 : 'transparent',
+          borderColor: withAlpha(Colors.neutral300, 0.45),
+          borderRadius: 12,
+          borderStyle: pasEncoreOuvert ? 'solid' : 'dashed',
+          borderWidth: 1,
+          height: JOUR,
+          width: JOUR,
+        },
+      ]}
+      testID={`jour-pas-ouvert-${premierJourFerme}`}
+    >
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        {quatorzeJours(t, aujourdhui)[joursPermis + 1]?.court}
+      </Text>
+      <Text style={[Fonts.p1Bold, pasEncoreOuvert ? Fonts.neutral00 : Fonts.neutral300]}>
+        {quatorzeJours(t, aujourdhui)[joursPermis + 1]?.numero}
+      </Text>
+    </TouchableOpacity>
+  ) : null;
+  const enMinuscule = (/** @type {string} */ texte) => (
+    texte ? texte.charAt(0).toLocaleLowerCase() + texte.slice(1) : texte
+  );
+  const carteFermee = pasEncoreOuvert && premierJourFerme ? (
+    <View
+      style={{
+        alignItems: 'center',
+        backgroundColor: withAlpha(Colors.primary800, 0.6),
+        borderColor: withAlpha(Colors.primary500, 0.24),
+        borderRadius: 20,
+        borderWidth: 1,
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 24,
+      }}
+      testID="creneau-pas-encore-ouvert"
+    >
+      <Text style={[Fonts.p1Bold, Fonts.neutral00, { textAlign: 'center' }]}>
+        {t('reserverTerrain.creneau.pasEncoreOuvert', 'Pas encore ouvert')}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral200, { textAlign: 'center' }]}>
+        {t(
+          'reserverTerrain.creneau.pasEncoreOuvertTexte',
+          // eslint-disable-next-line max-len
+          '{{complexe}} ouvre ses réservations {{count}} jours à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
+          {
+            complexe: String(
+              complexe?.name || t('reserverTerrain.echec.leComplexe', 'Le complexe'),
+            ),
+            count: joursPermis,
+            // eslint-disable-next-line max-len
+            defaultValue_one: '{{complexe}} ouvre ses réservations {{count}} jour à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
+            // eslint-disable-next-line max-len
+            defaultValue_other: '{{complexe}} ouvre ses réservations {{count}} jours à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
+            jour: enMinuscule(texteJourLong(t, premierJourFerme)),
+            ouverture: enMinuscule(texteJourLong(t, ajouterJours(premierJourFerme, -joursPermis))),
+            ...SANS_ECHAPPEMENT,
+          },
+        )}
+      </Text>
+      <Button
+        onPress={() => changerDeJour(dernierJour)}
+        title={t('reserverTerrain.creneau.revenirAu', 'Revenir au {{jour}}', {
+          jour: enMinuscule(texteJourLong(t, dernierJour)),
+          ...SANS_ECHAPPEMENT,
+        })}
+        variant="Secondary"
+      />
+    </View>
+  ) : null;
+
   const bandeDesJours = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={[Alignments.row, { gap: 8 }]}>
@@ -320,6 +412,7 @@ function ReserverCreneau() {
             </TouchableOpacity>
           );
         })}
+        {caseFermee}
       </View>
     </ScrollView>
   );
@@ -641,8 +734,8 @@ function ReserverCreneau() {
             </Text>
           </View>
         ) : null}
-        {grille()}
-        {prixMontre ? (
+        {carteFermee || grille()}
+        {prixMontre && !pasEncoreOuvert ? (
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t('reserverTerrain.prix.surPlace', '{{prix}}, à régler sur place', {
               prix: prixMontre.principal,

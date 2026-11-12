@@ -150,6 +150,9 @@ describe('RESA-L5A1 E-G16 — les réglages (état 1, RA6 état 1)', () => {
       complexeId: 'cx-five',
       donnees: {
         autoBanNoShows: 0,
+        // REGLES-RESERVATION (12/11/2026, D47) : « Réserver à l'avance », 90 = « Sans limite » (le
+        // défaut d'un complexe qui ne l'a jamais réglé ; un serveur plus ancien l'ignore).
+        bookingDaysAhead: 90,
         cancellationDelayHours: 48,
         collectDeadlineHours: 24,
         dayBeforeConfirmation: false,

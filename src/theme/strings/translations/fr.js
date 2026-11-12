@@ -8363,6 +8363,11 @@ export default {
       auPlusTard: 'Réserver au plus tard',
       // eslint-disable-next-line max-len
       auPlusTardAide: 'Un joueur ne peut plus réserver un créneau qui commence dans moins de ce délai.',
+      avance: 'Réserver à l’avance',
+      avanceAide: '« Sans limite » : un joueur réserve jusqu’à 90 jours à l’avance.',
+      avanceJours: 'Jusqu’à N jours à l’avance',
+      avanceQuestion: 'Jusqu’à quand un joueur peut-il réserver ?',
+      avanceSansLimite: 'Sans limite (jusqu’à l’heure du créneau)',
       aVenir: 'Réservations à venir par personne',
       aVenirAide: 'Les demandes et les collectes en cours comptent.',
       bannir: 'Bannir automatiquement après',
@@ -8374,11 +8379,20 @@ export default {
       dateLimite: 'Date limite de collecte au plus tard',
       // eslint-disable-next-line max-len
       dateLimiteAide: 'Une collecte attend que ses joueurs la rejoignent. Elle doit être complète au plus tard ce délai avant le créneau ; sinon elle s’arrête et le créneau reste libre.',
+      // eslint-disable-next-line max-len
+      echeanceAide: 'Le groupe peut trouver ses joueurs jusqu’à l’heure du créneau ; sinon la réservation s’arrête et le créneau reste libre.',
+      echeanceAvant: 'Plus tôt',
+      echeanceHeure: 'Jusqu’à l’heure du créneau',
+      echeanceQuestion: 'Une réservation en construction attend ses joueurs',
       echec: 'Les réglages ne sont pas partis. Réessaie.',
       enregistres: 'Réglages enregistrés. Ils valent pour les prochaines réservations.',
       erreur: 'Impossible de charger tes réglages.',
       heuresAvant: '{{heures}} h avant le créneau',
       jamais: 'Jamais',
+      // eslint-disable-next-line max-len
+      joursAide: 'Un joueur ne voit que ces jours. Au-delà, l’app lui dit quand le jour suivant ouvrira.',
+      jours_one: '{{count}} jour',
+      jours_other: '{{count}} jours',
       lireRegles: 'Lire les règles d’utilisation des complexes',
       message: 'Ton message aux joueurs',
       // eslint-disable-next-line max-len
@@ -8387,6 +8401,7 @@ export default {
       moins: 'Moins : {{reglage}}',
       nonHonorees: 'Non honorées',
       nonHonoreesCompte: '{{nombre}} réservations non honorées',
+      nombreDeJours: 'Nombre de jours',
       notifications: 'Notifications',
       plus: 'Plus : {{reglage}}',
       // eslint-disable-next-line max-len
@@ -20396,6 +20411,7 @@ export default {
       fermerPhotos: 'Fermer les photos',
       jourFerme: 'Fermé ce jour-là : le complexe a fermé ce terrain.',
       jourFermeMotif: 'Fermé ce jour-là : {{motif}}',
+      jourPasOuvertA11y: '{{jour}}, pas encore ouvert',
       jourSansLibreA11y: '{{jour}}, aucun créneau libre',
       jourSuivant: 'Voir le jour suivant',
       libre: 'Libre',
@@ -20406,9 +20422,15 @@ export default {
         soir: 'Soir',
       },
       nLibres: '{{nombre}} libres',
+      pasEncoreOuvert: 'Pas encore ouvert',
+      // eslint-disable-next-line max-len
+      pasEncoreOuvertTexte_one: '{{complexe}} ouvre ses réservations {{count}} jour à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
+      // eslint-disable-next-line max-len
+      pasEncoreOuvertTexte_other: '{{complexe}} ouvre ses réservations {{count}} jours à l’avance. Le {{jour}} sera réservable à partir du {{ouverture}}.',
       pris: 'Pris',
       prisPendantLeChoix: 'Ce créneau vient d’être pris. Choisis-en un autre.',
       reserveAuxAges: 'Réservé aux {{age}} ans et plus.',
+      revenirAu: 'Revenir au {{jour}}',
       surDemande: 'Sur demande : le complexe te répond',
       tropTard: 'Trop tard ici',
       // eslint-disable-next-line max-len
@@ -20480,6 +20502,7 @@ export default {
       voirMesReservations: 'Voir mes réservations',
     },
     etat: {
+      acceptee: 'Acceptée',
       annulee: 'Annulée',
       annuleeParLeComplexe: 'Annulée par le complexe',
       annuleeParToi: 'Annulée par toi',

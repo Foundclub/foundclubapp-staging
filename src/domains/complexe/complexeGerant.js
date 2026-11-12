@@ -30,12 +30,18 @@ export const CHOIX_AGE_MINIMUM = Object.freeze([13, 14, 15, 16, 17, 18]);
 export const REGLES_DU_SERVEUR = Object.freeze({
   bornes: Object.freeze({
     autoBanNoShows: { max: 10, min: 0 },
+    // REGLES-RESERVATION (12/11/2026) : le compteur de « Jusqu'à N jours à l'avance »
+    // s'arrête à 89 ;
+    // 90 (le maximum du serveur) est « Sans limite », choisi par sa puce.
+    bookingDaysAhead: { max: 89, min: 1 },
+    // « Plus tôt » : 2 à 72 h ; 0 (« Jusqu'à l'heure du créneau ») se choisit par sa puce.
     collectDeadlineHours: { max: 72, min: 2 },
     maxUpcomingPerUser: { max: 10, min: 1 },
     minLeadTimeHours: { max: 24, min: 0 },
   }),
   defauts: Object.freeze({
     autoBanNoShows: 3,
+    bookingDaysAhead: 90,
     cancellationDelayHours: 24,
     collectDeadlineHours: 24,
     dayBeforeConfirmation: true,
@@ -45,6 +51,14 @@ export const REGLES_DU_SERVEUR = Object.freeze({
     morningDigest: true,
   }),
 });
+
+/**
+ * REGLES-RESERVATION (12/11/2026) — les deux valeurs « sans limite » que le gérant choisit par
+ * une puce : réserver jusqu'à 90 jours à l'avance, et une réservation en construction jusqu'à
+ * l'heure du créneau.
+ */
+export const SANS_LIMITE_JOURS = 90;
+export const JUSQU_A_L_HEURE = 0;
 
 /** Les règles d'un complexe neuf (les défauts du serveur, `RULE_DEFAULTS`). */
 export const REGLES_PAR_DEFAUT = Object.freeze({ ageMinimum: 18, annulation: 24 });

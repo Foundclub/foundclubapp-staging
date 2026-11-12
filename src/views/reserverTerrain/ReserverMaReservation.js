@@ -343,10 +343,14 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           ? t('reserverTerrain.maReservation.titreParticipant', 'Réservation')
           : t('reserverTerrain.maReservation.titre', 'Ma réservation')).toUpperCase()}
       </Text>
-      <PastilleEtat
-        compte={enCollecte && collecte ? `${collecte.presents}/${collecte.quorum}` : null}
-        etat={etat}
-      />
+      <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+        <PastilleEtat
+          compte={enCollecte && collecte ? `${collecte.presents}/${collecte.quorum}` : null}
+          etat={etat}
+        />
+        {/* REGLES-RESERVATION : l'en-tête « Acceptée » de la maquette (ACCEPTER-CONSTRUCTION). */}
+        {enCollecte && collecte?.acceptedAt ? <PastilleEtat etat="acceptee" /> : null}
+      </View>
       {enCollecte && collecte ? (
         <View style={{ gap: 6 }}>
           <View
