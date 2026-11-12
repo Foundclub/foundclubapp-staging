@@ -8014,12 +8014,12 @@ export default {
     apercu: {
       encore_one: 'Encore {{count}} réservation avant « {{recompense}} »',
       encore_other: 'Encore {{count}} réservations avant « {{recompense}} »',
-      encoreSansRecompense_one: 'Encore {{count}} réservation avant ta récompense',
-      encoreSansRecompense_other: 'Encore {{count}} réservations avant ta récompense',
       encorePartie_one: 'Encore {{count}} réservation avant ta partie offerte',
       encorePartie_other: 'Encore {{count}} réservations avant ta partie offerte',
       encoreRemise_one: 'Encore {{count}} réservation avant {{pourcent}} % de réduction',
       encoreRemise_other: 'Encore {{count}} réservations avant {{pourcent}} % de réduction',
+      encoreSansRecompense_one: 'Encore {{count}} réservation avant ta récompense',
+      encoreSansRecompense_other: 'Encore {{count}} réservations avant ta récompense',
       titre: 'Ce que voit le joueur',
     },
     erreur: 'Impossible de charger les clients.',
@@ -8115,6 +8115,7 @@ export default {
       accepteeLe: 'Acceptée par toi le {{le}} : le créneau est gardé pour ce groupe.',
       accepteeMessage: 'Réservation acceptée : le créneau est gardé pour ce groupe.',
       accepter: 'Accepter maintenant',
+      // eslint-disable-next-line max-len
       accepterAide: 'Accepter garde le créneau à ce groupe ; la réservation reste en construction jusqu’à « On a assez de joueurs ».',
       accepterCourt: 'Accepter',
       aujourdhui: 'Aujourd’hui',
@@ -8427,19 +8428,19 @@ export default {
       erreur: 'Impossible de charger tes réglages.',
       heuresAvant: '{{heures}} h avant le créneau',
       jamais: 'Jamais',
-      // eslint-disable-next-line max-len
-      joursAide: 'Un joueur ne voit que ces jours. Au-delà, l’app lui dit quand le jour suivant ouvrira.',
       jours_one: '{{count}} jour',
       jours_other: '{{count}} jours',
+      // eslint-disable-next-line max-len
+      joursAide: 'Un joueur ne voit que ces jours. Au-delà, l’app lui dit quand le jour suivant ouvrira.',
       lireRegles: 'Lire les règles d’utilisation des complexes',
       message: 'Ton message aux joueurs',
       // eslint-disable-next-line max-len
       messageAide: 'Les joueurs le lisent sur ta page, avant de réserver et en rejoignant une partie.',
       messageChamp: 'Ce que les joueurs doivent savoir (facultatif)',
       moins: 'Moins : {{reglage}}',
+      nombreDeJours: 'Nombre de jours',
       nonHonorees: 'Non honorées',
       nonHonoreesCompte: '{{nombre}} réservations non honorées',
-      nombreDeJours: 'Nombre de jours',
       notifications: 'Notifications',
       plus: 'Plus : {{reglage}}',
       // eslint-disable-next-line max-len
@@ -13411,6 +13412,7 @@ export default {
       marquerRemiseTitre: 'Marquer la récompense de {{nom}} comme remise ?',
     },
     joueur: {
+      // eslint-disable-next-line max-len
       debloque: 'Bonus débloqué : {{bonus}}. Tu l’utilises au récapitulatif de ta prochaine réservation. Prochain bonus : {{compte}} sur {{seuil}}.',
     },
     maResa: {
@@ -20558,6 +20560,7 @@ export default {
       voirLesCreneauxA11y: '{{nom}} : voir les créneaux',
     },
     construction: {
+      // eslint-disable-next-line max-len
       acceptee: 'Acceptée par {{complexe}}. Le créneau t’est gardé. Dis « On a assez de joueurs » quand ton groupe est prêt.',
       assezQuestion: 'Vous avez assez de joueurs ?',
       combienEnPlus: 'Combien en plus, trouvés en dehors de l’app ?',

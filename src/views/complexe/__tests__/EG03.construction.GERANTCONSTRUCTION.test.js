@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- témoin de GERANT-CONSTRUCTION : libellés de cas et attentes longs (récolte T10, lint au plafond) */
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 

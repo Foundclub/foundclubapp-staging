@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- témoin de GERANT-CONSTRUCTION : libellés de cas et attentes longs (récolte T10, lint au plafond) */
 import {
   etatDuCreneau, libelleDuCreneau, lignesDeLaFrise,
 } from '@/domains/complexe/complexeReservation';
