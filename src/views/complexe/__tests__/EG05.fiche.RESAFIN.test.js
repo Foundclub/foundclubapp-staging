@@ -208,6 +208,57 @@ describe('RESA-FIN-APP (4) E-G05 — « Valider la partie offerte » depuis la f
   });
 });
 
+// FIDELITE-2 (12/11/2026, maquette 237 « Récompense à remettre ») : quand le serveur dit
+// que le réserveur a une récompense LIBRE à remettre (`recompenseARemettre`), le bouton
+// dit « Marquer comme remise » ; c'est le MÊME geste (la confirmation, puis « valider » de
+// E-G14). Sans ce champ : le libellé d'avant, « Valider la partie offerte ».
+describe('FIDELITE-2 E-G05 — récompense libre : « Marquer comme remise »', () => {
+  const avecRecompense = (/** @type {Record<string, any>} */ autres = {}) => {
+    mockFiche = {
+      ...mockFiche,
+      data: fiche({ booker: { ...fiche().booker, documentId: 'u-julien' }, ...autres }),
+    };
+    mockFidelite = {
+      data: {
+        aValider: [{
+          count: 10,
+          joueur: { documentId: 'u-julien', firstname: 'Julien', lastname: 'Marchal' },
+          reachedAt: '2026-10-13T08:00:00.000Z',
+          threshold: 10,
+        }],
+        bientot: [],
+        dernieresValidees: [],
+        programme: {
+          active: true,
+          counts: 'participants',
+          reward: '1 pizza offerte après le match',
+          threshold: 10,
+        },
+      },
+      isLoading: false,
+    };
+    mockValider.mockResolvedValue({ data: { count: 0, threshold: 10 } });
+  };
+
+  it('« Marquer comme remise », puis le même geste', async () => {
+    avecRecompense({ recompenseARemettre: { reward: '1 pizza offerte après le match' } });
+    const arbre = await monter();
+    const vus = lisibles(arbre);
+    expect(vus).toContain('Marquer comme remise');
+    expect(vus).not.toContain('Valider la partie offerte');
+    await appuyerDans(arbre, 'fiche-valider-recompense');
+    await appuyerDans(arbre, 'fiche-valider-confirmer');
+    expect(mockValider).toHaveBeenCalledWith({ complexeId: 'cx-five', joueurId: 'u-julien' });
+  });
+
+  it('caractérisant : sans `recompenseARemettre`, « Valider la partie offerte »', async () => {
+    avecRecompense();
+    const vus = lisibles(await monter());
+    expect(vus).toContain('Valider la partie offerte');
+    expect(vus).not.toContain('Marquer comme remise');
+  });
+});
+
 describe('RESA-FIN-APP (5) E-G05 — une demande expirée ne propose plus de geste voué à l’échec', () => {
   beforeEach(() => {
     mockFiche = {

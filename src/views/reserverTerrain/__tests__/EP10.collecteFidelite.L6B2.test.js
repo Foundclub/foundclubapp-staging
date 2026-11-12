@@ -191,6 +191,45 @@ describe('E-P10 — À venir', () => {
   });
 });
 
+// FIDELITE-2 (12/11/2026, maquette 237) — « Ma fidélité » : la carte d'un complexe où le joueur
+// a un bonus débloqué porte la pastille « 1 bonus » (verte) à côté du nom ; sans bonus, rien.
+describe('FIDELITE-2 — E-P10, la pastille « 1 bonus »', () => {
+  const carteAuto = (/** @type {any[]} */ bonus) => ({
+    bonus,
+    complexe: { logo: null, name: 'Le Five de Montrivage', slug: 'le-five-de-montrivage' },
+    count: 0,
+    disponible: false,
+    restant: 10,
+    reward: null,
+    rewardType: 'partie',
+    threshold: 10,
+  });
+  const unBonus = {
+    percent: null,
+    reachedAt: '2026-10-13T20:00:00.000Z',
+    restant: 1,
+    rewardType: 'partie',
+    scope: 'joueur',
+  };
+
+  it('un bonus débloqué : « 1 bonus » sur la carte, à côté du nom', async () => {
+    mockFidelite = { data: [carteAuto([unBonus])] };
+    const arbre = await monter();
+    expect(parRepere(arbre, 'ma-fidelite-pastille-bonus')).toBeTruthy();
+    const vus = lisibles(arbre);
+    expect(vus).toContain('1 bonus');
+    expect(vus.indexOf('1 bonus')).toBe(vus.indexOf('Le Five de Montrivage') + 1);
+  });
+
+  it('deux bonus : « 2 bonus » ; sans bonus : pas de pastille', async () => {
+    mockFidelite = { data: [carteAuto([unBonus, unBonus])] };
+    expect(lisibles(await monter())).toContain('2 bonus');
+    mockFidelite = { data: [carteAuto([])] };
+    const arbre = await monter();
+    expect(parRepere(arbre, 'ma-fidelite-pastille-bonus')).toBeNull();
+  });
+});
+
 describe('E-P10 — En collecte (état 2)', () => {
   it('chaque collecte : sa jauge, sa date limite, « En construction · 6/10 »', async () => {
     const arbre = await monter();

@@ -735,10 +735,11 @@ function FicheReservation({
         <View testID="fiche-valider-recompense">
           <Button
             onPress={() => ouvrir('valider')}
-            title={texteInsecable(t(
-              'complexeReservations.fiche.validerRecompense',
-              'Valider la partie offerte',
-            ))}
+            // FIDELITE-2 (maquette 237) : une récompense LIBRE à remettre (le serveur rend
+            // `recompenseARemettre`) se marque « remise » ; le même geste.
+            title={texteInsecable(r?.recompenseARemettre
+              ? t('fidelite.fiche.marquerRemise', 'Marquer comme remise')
+              : t('complexeReservations.fiche.validerRecompense', 'Valider la partie offerte'))}
             variant="Secondary"
           />
         </View>

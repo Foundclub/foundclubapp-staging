@@ -59,9 +59,18 @@ export const RECOMPENSE_MAX = 40;
 /** L'aperçu du joueur (RC-G10) le montre à 2 réservations de sa récompense (`BIENTOT_ECART`). */
 const ECART_DE_L_APERCU = 2;
 
-/** « Créer mon programme » : actif, au bout de 10, réserveur ET participants (Q2, défaut). */
+/**
+ * « Créer mon programme » : actif, au bout de 10, réserveur ET participants (Q2, défaut) ;
+ * FIDELITE-2 (12/11/2026, maquette 237) : « Partie offerte », 1 partie, la part du joueur.
+ */
 export const PROGRAMME_PAR_DEFAUT = Object.freeze({
-  active: true, counts: 'participants', reward: '', threshold: 10,
+  active: true,
+  counts: 'participants',
+  reward: '',
+  rewardType: 'partie',
+  rewardUses: 1,
+  scope: 'joueur',
+  threshold: 10,
 });
 
 /**
@@ -214,6 +223,28 @@ export const libelleDuBonus = (t, bonus) => {
     });
   }
   return t('fidelite.bonus.partie', 'Partie offerte ({{part}})', { part, ...SANS_ECHAPPEMENT });
+};
+
+/**
+ * FIDELITE-2 — la pastille d'une réservation remisée (maquette 237, « Ma réservation, avec son
+ * bonus ») : « Partie offerte · ta part », « Réduction de 20 % · le terrain entier ». Rien sans
+ * remise automatique.
+ * @param {Traduire} t - Traduction.
+ * @param {{ percent?: number | null, rewardType?: string, scope?: string }
+ *   | null | undefined} bonus - La remise figée de la réservation.
+ * @returns {string} Le libellé.
+ */
+export const pastilleDuBonus = (t, bonus) => {
+  if (!bonus || !estAutomatique(bonus.rewardType)) return '';
+  const part = bonus.scope === 'terrain'
+    ? t('fidelite.bonus.terrain', 'le terrain entier')
+    : t('fidelite.bonus.taPart', 'ta part');
+  if (bonus.rewardType === 'remise') {
+    return t('fidelite.pastille.remise', 'Réduction de {{pourcent}} % · {{part}}', {
+      part, pourcent: Number(bonus.percent) || 0, ...SANS_ECHAPPEMENT,
+    });
+  }
+  return t('fidelite.pastille.partie', 'Partie offerte · {{part}}', { part, ...SANS_ECHAPPEMENT });
 };
 
 /**

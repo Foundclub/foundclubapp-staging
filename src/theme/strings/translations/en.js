@@ -12622,12 +12622,19 @@ export default {
     },
     fiche: {
       appliquee: 'Loyalty applied: {{bonus}}',
+      marquerRemise: 'Mark as handed over',
     },
     joueur: {
       debloque: 'Bonus unlocked: {{bonus}}. Use it on the summary of your next booking. Next bonus: {{compte}} of {{seuil}}.',
     },
     maResa: {
       revient: 'If you cancel, your loyalty bonus comes back to you.',
+    },
+    pastille: {
+      nombre_one: '{{count}} bonus',
+      nombre_other: '{{count}} bonuses',
+      partie: 'Free game · {{part}}',
+      remise: '{{pourcent}}% off · {{part}}',
     },
     recap: {
       bonus: '{{bonus}} at {{complexe}}',

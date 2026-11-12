@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 
 import { formatEuros, texteDuree } from '@/domains/complexe/complexeTerrain';
-import { reglerSurPlaceAvecRemise } from '@/domains/complexe/fideliteDuComplexe';
+import { pastilleDuBonus, reglerSurPlaceAvecRemise } from '@/domains/complexe/fideliteDuComplexe';
 import {
   lignesAReglerSurPlace, optionsModifiables, peutModifierLesOptions,
 } from '@/domains/complexe/optionsTerrain';
@@ -388,6 +388,25 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
         />
         {/* REGLES-RESERVATION : l'en-tête « Acceptée » de la maquette (ACCEPTER-CONSTRUCTION). */}
         {enCollecte && collecte?.acceptedAt ? <PastilleEtat etat="acceptee" /> : null}
+        {/* FIDELITE-2 (maquette 237) : « Partie offerte · ta part », jusqu'au jour J. */}
+        {pastilleDuBonus(t, reservation?.loyalty) ? (
+          <View
+            style={{
+              alignSelf: 'flex-start',
+              backgroundColor: withAlpha(Colors.success500, 0.14),
+              borderColor: withAlpha(Colors.success500, 0.6),
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+            }}
+            testID="ma-resa-pastille-fidelite"
+          >
+            <Text style={[Fonts.p3Bold, Fonts.success500]}>
+              {texteInsecable(pastilleDuBonus(t, reservation?.loyalty))}
+            </Text>
+          </View>
+        ) : null}
       </View>
       {enCollecte && collecte ? (
         <View style={{ gap: 6 }}>

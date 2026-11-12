@@ -13414,12 +13414,19 @@ export default {
     },
     fiche: {
       appliquee: 'Fidélité appliquée : {{bonus}}',
+      marquerRemise: 'Marquer comme remise',
     },
     joueur: {
       debloque: 'Bonus débloqué : {{bonus}}. Tu l’utilises au récapitulatif de ta prochaine réservation. Prochain bonus : {{compte}} sur {{seuil}}.',
     },
     maResa: {
       revient: 'Si tu annules, ton bonus fidélité te revient.',
+    },
+    pastille: {
+      nombre_one: '{{count}} bonus',
+      nombre_other: '{{count}} bonus',
+      partie: 'Partie offerte · {{part}}',
+      remise: 'Réduction de {{pourcent}} % · {{part}}',
     },
     recap: {
       bonus: '{{bonus}} à {{complexe}}',
