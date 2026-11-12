@@ -238,7 +238,12 @@ describe('E-P02 — la carte d’identité et le segment « Réserver »', () =>
       parRepere(arbre, 'terrain-t-1-creneau-20:30').props.onPress();
     });
     expect(mockNavigate).toHaveBeenLastCalledWith(RouteNames.ReserverCreneau, {
-      date: '2026-10-14', from: '20:30', slug: 'le-five-de-montrivage', terrainId: 't-1',
+      // T9-RETOURS-A : le début du créneau voyage (il repère un créneau de nuit).
+      date: '2026-10-14',
+      from: '20:30',
+      slug: 'le-five-de-montrivage',
+      startsAt: '2026-10-14T20:30:00.000Z',
+      terrainId: 't-1',
     });
   });
 

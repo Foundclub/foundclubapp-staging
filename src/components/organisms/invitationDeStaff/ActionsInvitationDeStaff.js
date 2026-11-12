@@ -8,6 +8,9 @@
  *   H · refus (rien ne change, le club n'est pas prévenu), ou refus du serveur (mineur,
  *       invitation périmée, club complet, compte protégé).
  * Rien ne change sans le geste de la personne : aucune écriture à l'affichage.
+ * INVITE-REFUS (M1190, 12/11/2026) : après une réponse, ou quand le serveur dit l'invitation
+ * close ou périmée, la carte n'offre plus ses deux boutons, tout de suite ; la cloche se relit
+ * (le serveur y a posé `data.answered`). Les feuilles restent affichées.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,11 +42,13 @@ import {
  * @param {Record<string, any>} props.data - `notification.data` (invitationId, clubName, role…).
  * @param {any} [props.navigation] - pour « Ouvrir le club ».
  * @param {() => void} [props.relire] - relit la cloche après une réponse.
+ * @param {boolean} [props.repondue] - `data.answered` : plus de boutons ; une feuille déjà
+ *   ouverte reste affichée (la cloche relue ne la fait pas disparaître).
  * @param {string} [props.testID] - préfixe des testID.
  * @returns {import('react').ReactElement | null} les boutons et leurs feuilles.
  */
 function ActionsInvitationDeStaff({
-  data, navigation, relire, testID = '',
+  data, navigation, relire, repondue = false, testID = '',
 }) {
   const { t } = useTranslation();
   const { Alignments, Spaces } = useTheme();
@@ -53,9 +58,11 @@ function ActionsInvitationDeStaff({
   const [enCours, setEnCours] = useState(false);
   const [refusServeur, setRefusServeur] = useState({ texte: '', titre: '' });
   const [echeance, setEcheance] = useState('');
+  const [eteinte, setEteinte] = useState(false);
 
   const documentId = String(data?.invitationId || '').trim();
-  if (!documentId) return null;
+  const sansBoutons = eteinte || repondue;
+  if (!documentId || (sansBoutons && !phase)) return null;
 
   const invitation = {
     clubName: data?.clubName,
@@ -66,6 +73,11 @@ function ActionsInvitationDeStaff({
   };
 
   const fermer = () => setPhase('');
+  // Plus rien à répondre : la carte s'éteint, la cloche se relit.
+  const eteindre = () => {
+    setEteinte(true);
+    relire?.();
+  };
 
   const ouvrir = async () => {
     setPhase('question');
@@ -76,6 +88,7 @@ function ActionsInvitationDeStaff({
       if (!encore) {
         setRefusServeur(messageDeRefusServeur(t, 'STAFF_INVITE_NOT_FOUND'));
         setPhase('bloquee');
+        eteindre();
         return;
       }
       setEcheance(dateCourte(encore.expiresAt));
@@ -95,10 +108,12 @@ function ActionsInvitationDeStaff({
         await refuseStaffInvitation(documentId);
         setPhase('refusee');
       }
-      relire?.();
+      eteindre();
     } catch (/** @type {any} */ error) {
-      setRefusServeur(messageDeRefusServeur(t, String(error?.code || '')));
+      const code = String(error?.code || '');
+      setRefusServeur(messageDeRefusServeur(t, code));
       setPhase('bloquee');
+      if (code === 'STAFF_INVITE_NOT_FOUND' || code === 'STAFF_INVITE_EXPIRED') eteindre();
     } finally {
       setEnCours(false);
     }
@@ -132,18 +147,22 @@ function ActionsInvitationDeStaff({
       style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[12]]}
       testID={testID || undefined}
     >
-      <Button
-        onPress={() => repondre('refuse')}
-        style={{ flex: 1 }}
-        title={t('staffInvitation.received.refuse')}
-        variant="Secondary"
-      />
-      <Button
-        onPress={ouvrir}
-        style={{ flex: 1 }}
-        title={t('staffInvitation.received.open')}
-        variant="Primary"
-      />
+      {sansBoutons ? null : (
+        <>
+          <Button
+            onPress={() => repondre('refuse')}
+            style={{ flex: 1 }}
+            title={t('staffInvitation.received.refuse')}
+            variant="Secondary"
+          />
+          <Button
+            onPress={ouvrir}
+            style={{ flex: 1 }}
+            title={t('staffInvitation.received.open')}
+            variant="Primary"
+          />
+        </>
+      )}
 
       <FeuilleDeSucces
         actionPrincipale={{

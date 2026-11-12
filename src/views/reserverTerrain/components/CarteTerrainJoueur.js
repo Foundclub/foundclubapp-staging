@@ -156,7 +156,7 @@ function CarteTerrainJoueur({
                   ...SANS_ECHAPPEMENT,
                 },
               )}
-              key={creneau.from}
+              key={creneau.startsAt || creneau.from}
               libelle={prixDuRaccourci(creneau) === null
                 ? texteHeure(creneau.from)
                 : t('reserverTerrain.complexe.raccourci', '{{heure}} · {{prix}}', {

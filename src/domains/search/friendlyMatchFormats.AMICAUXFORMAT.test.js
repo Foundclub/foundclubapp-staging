@@ -91,16 +91,18 @@ describe('AMICAUX-FORMAT — la recherche filtrée, au serveur (4 A, 5 A)', () =
     expect(buildFormatServerFilters()).toEqual([]);
   });
 
-  it('un sport et un format : les annonces de ce format ET celles sans format', () => {
+  // « 5 A » remplacée par le retour M1193 du 12/11 (T9-RETOURS-A) : plus d'annonce sans format
+  // sous un filtre de format.
+  it('un sport et un format : les annonces de ce format seulement', () => {
     expect(buildFormatServerFilters({ format: '7v7', sport: 'Football' })).toEqual([
       { activity: { name: { $eqi: 'Football' } } },
-      { $or: [{ format: { $eq: '7v7' } }, { format: { $null: true } }, { format: { $eq: '' } }] },
+      { format: { $eq: '7v7' } },
     ]);
   });
 
-  it('« Autres formats » : tout ce qui n’est pas au catalogue du sport, plus les annonces sans format', () => {
+  it('« Autres formats » : tout ce qui n’est pas au catalogue du sport, sans les annonces sans format', () => {
     expect(buildFormatServerFilters({ format: OTHER_FORMATS_FILTER, sport: 'Basketball' })[1]).toEqual({
-      $or: [{ format: { $notIn: ['5v5', '3x3'] } }, { format: { $null: true } }, { format: { $eq: '' } }],
+      format: { $ne: '', $notIn: ['5v5', '3x3'], $notNull: true },
     });
   });
 

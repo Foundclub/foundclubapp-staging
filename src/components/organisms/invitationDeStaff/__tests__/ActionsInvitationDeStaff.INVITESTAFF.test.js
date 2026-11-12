@@ -146,7 +146,8 @@ describe('INVITE-STAFF — la carte de la cloche', () => {
     expect(refuseStaffInvitation).toHaveBeenCalledWith('inv-1');
     expect(acceptStaffInvitation).not.toHaveBeenCalled();
     expect(feuilleOuverte().titre).toBe('Invitation refusée');
-    expect(feuilleOuverte().texte).toContain('Le club n’est pas prévenu.');
+    // INVITE-REFUS (« 274 B », 12/11) : le club voit le refus dans son Staff.
+    expect(feuilleOuverte().texte).toContain('Le club verra que tu as refusé.');
   });
 
   it('un mineur : le serveur refuse, la feuille dit pourquoi', async () => {

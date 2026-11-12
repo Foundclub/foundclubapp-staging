@@ -217,7 +217,7 @@ const buildSearchFilter = (search) => {
 /**
  * Liste publique des annonces (Q12 : visible sans compte).
  * AMICAUX-FORMAT (« 4 A ») : `sport` et `format` se trient ICI, au serveur, et une
- * annonce sans format reste dans la liste (« 5 A », buildFormatServerFilters).
+ * annonce sans format en sort dès qu'un format est choisi (T9-RETOURS-A, 12/11).
  * @param {{
  *  format?: string, page?: number, pageSize?: number, search?: string,
  *  sport?: string, status?: string

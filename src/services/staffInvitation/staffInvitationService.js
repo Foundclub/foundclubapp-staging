@@ -72,13 +72,15 @@ export const sendStaffInvitation = ({
 );
 
 /**
- * Les invitations en attente d'un club (rubrique du Staff).
+ * Les invitations en attente d'un club (rubrique du Staff), et les refusées (INVITE-REFUS,
+ * « 274 B ») : `withRefused` les demande ; sans lui, le serveur ne renvoie que les en attente
+ * (l'app du train 9 lirait « En attente » sur une refusée).
  * @param {string} clubId - le club.
  * @returns {Promise<any[]>} la liste.
  */
 export const getSentStaffInvitations = async (clubId) => {
   const data = await unwrap(
-    () => client.get('/staff-invitations/sent', { params: { clubId } }),
+    () => client.get('/staff-invitations/sent', { params: { clubId, withRefused: 1 } }),
     i18next.t('staffInvitation.errors.sent', 'Impossible de charger les invitations en attente.'),
   );
   return Array.isArray(data?.invitations) ? data.invitations : [];
