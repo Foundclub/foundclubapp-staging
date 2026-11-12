@@ -247,39 +247,47 @@ function SearchAlerts({ navigation }) {
     fetchAlerts();
   }, []);
 
+  // HAUT-DEFILE-F1 (12/11, « 245 B ») — le titre et le lien du guide défilent en tête de la liste ;
+  // ils restaient figés au-dessus (~130 px sur 844). « Créer une alerte » reste posé en bas.
+  // Témoin : __tests__/SearchAlerts.HAUTDEFILEF1.test.js.
+  const enTete = (
+    <View style={[Spaces.paddingTop[24], Spaces.marginBottom[8]]}>
+      <Text style={[Fonts.h1, Fonts.neutral00]}>{t('searchAlerts.title', 'Mes Alertes')}</Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => setIsGuideVisible(true)}
+        style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
+      >
+        <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
+          {t('searchAlerts.guide.linkLong', 'Comment créer une alerte ?')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
       contentContainerStyle={[Alignments.fill]}
     >
-      <View style={[Spaces.paddingHorizontal[16], Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
-        <Text style={[Fonts.h1, Fonts.neutral00]}>{t('searchAlerts.title', 'Mes Alertes')}</Text>
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={() => setIsGuideVisible(true)}
-          style={[Alignments.justifyCenter, { alignSelf: 'flex-start', minHeight: 44 }]}
-        >
-          <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
-            {t('searchAlerts.guide.linkLong', 'Comment créer une alerte ?')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {loading && !refreshing ? (
-        <Loader />
+        <>
+          <View style={Spaces.paddingHorizontal[16]}>{enTete}</View>
+          <Loader />
+        </>
       ) : (
         <FlatList
           contentContainerStyle={[
             Spaces.gap[16],
             Spaces.paddingHorizontal[16],
             Spaces.paddingBottom[80],
-            alerts.length === 0 && Alignments.fill,
-            alerts.length === 0 && Alignments.mainCenter,
+            // HAUT-DEFILE-F1 : sans alerte, le contenu ne se centre plus en bloc (le titre, en
+            // tête de la liste, irait au milieu) : l'état vide se pose sous le titre.
           ]}
           data={alerts}
           keyExtractor={(item) => (item.documentId || item.id?.toString() || Math.random().toString())}
           ListEmptyComponent={(
-            <View style={[Alignments.alignCenter, Spaces.gap[16]]}>
+            <View style={[Alignments.alignCenter, Spaces.gap[16], Spaces.paddingTop[40]]}>
               <Image
                 source={Images.search}
                 style={{
@@ -291,6 +299,7 @@ function SearchAlerts({ navigation }) {
               </Text>
             </View>
                     )}
+          ListHeaderComponent={enTete}
           refreshControl={(
             <RefreshControl
               colors={[Colors.primary500]}

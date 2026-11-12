@@ -8324,35 +8324,6 @@ function EventDetails({ navigation, route }) {
       keyboardAvoiding
       withHeaderPadding
     >
-      {/* 🧨 S6 (recette 2.6.27) — LA PASTILLE RESPIRE SOUS LA BARRE.
-          `ScreenContainer` pose un rembourrage haut EGAL a la hauteur de la
-          barre, et le `gap` du conteneur s applique ENTRE les enfants, jamais
-          AVANT le premier : cette rangee demarrait donc pile au ras de la barre.
-          Or les deux boutons (44x44 dans une bande de 44 pt) debordent d environ
-          2,7 px dessous sur un iPhone a Dynamic Island, et la pastille centree
-          passe sous le drapeau. 12 px de separation VERTICALE suffisent.
-          ⛔ Ni `ScreenContainer` ni `Tag` ne bougent : ils sont partages, le
-          defaut ne l est pas. Et surtout PAS de plafond de largeur ici, qui
-          tronquerait « SEANCE D ESSAI ». */}
-      <View
-        style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}
-        testID="event-type-tag-row"
-      >
-        <Tag
-          style={{}}
-          text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
-          textStyle={Fonts.p2}
-        />
-        {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
-            RETIREE : l'adversaire vit desormais dans l'encart de la carte,
-            face au club (« Test FC — FC Bonneveine »). La garder ferait dire
-            trois fois la meme chose — encart, titre, et cette ligne.
-            ✅ Rien a nettoyer dans fr.js : `eventDetails.opponentLine` n'y a
-            JAMAIS ete ajoutee (verifie — aucune occurrence dans
-            src/theme/strings/translations/). Elle ne vivait que comme repli
-            de t() ici meme ; elle part avec la ligne. */}
-      </View>
-
       {/* D64 : ce cadre ne contient plus que la liste, et c'est le geste du lot.
           D53 y tenait le menu d'organisation en SECOND enfant, colle au bas du
           cadre. Or une ScrollView porte `flexGrow: 1` (son style de base dans
@@ -8381,6 +8352,37 @@ function EventDetails({ navigation, route }) {
           )}
           showsVerticalScrollIndicator={false}
         >
+          {/* HAUT-DEFILE-F1 (12/11, « 245 B ») : la pastille défile en tête de la liste ; elle
+              restait figée entre la barre et la liste (~40 px). La marge de S6 reste. Témoin :
+              EventDetailsP7Detection.test.js, « HAUT-DEFILE-F1 ». */}
+          {/* 🧨 S6 (recette 2.6.27) — LA PASTILLE RESPIRE SOUS LA BARRE.
+              `ScreenContainer` pose un rembourrage haut EGAL a la hauteur de la
+              barre, et le `gap` du conteneur s applique ENTRE les enfants, jamais
+              AVANT le premier : cette rangee demarrait donc pile au ras de la barre.
+              Or les deux boutons (44x44 dans une bande de 44 pt) debordent d environ
+              2,7 px dessous sur un iPhone a Dynamic Island, et la pastille centree
+              passe sous le drapeau. 12 px de separation VERTICALE suffisent.
+              ⛔ Ni `ScreenContainer` ni `Tag` ne bougent : ils sont partages, le
+              defaut ne l est pas. Et surtout PAS de plafond de largeur ici, qui
+              tronquerait « SEANCE D ESSAI ». */}
+          <View
+            style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}
+            testID="event-type-tag-row"
+          >
+            <Tag
+              style={{}}
+              text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
+              textStyle={Fonts.p2}
+            />
+            {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
+                RETIREE : l'adversaire vit desormais dans l'encart de la carte,
+                face au club (« Test FC — FC Bonneveine »). La garder ferait dire
+                trois fois la meme chose — encart, titre, et cette ligne.
+                ✅ Rien a nettoyer dans fr.js : `eventDetails.opponentLine` n'y a
+                JAMAIS ete ajoutee (verifie — aucune occurrence dans
+                src/theme/strings/translations/). Elle ne vivait que comme repli
+                de t() ici meme ; elle part avec la ligne. */}
+          </View>
           <WithDataWrapper
             error={error}
             errorMessage={eventLoadErrorMessage}

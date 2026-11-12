@@ -1420,3 +1420,24 @@ describe('R9 - LA BARRE DU HAUT PORTE ENFIN UN FOND, SUR CET ECRAN SEULEMENT', (
     expect(margeHaute).toBe(SpacesReel.marginTop[12].marginTop);
   });
 });
+
+// HAUT-DEFILE-F1 (12/11/2026, décision d'Adel « 245 B » : « le haut défile ») — la pastille de type
+// (« DÉTECTION », « SÉANCE D'ESSAI ») restait FIGÉE entre la barre du haut et la liste : ~40 px de
+// plus sur un iPhone, en plus de la barre (~106 px), soit ~146 px sur 844 (17 %). Elle passe en
+// tête de ce qui défile ; la barre de la flèche reste (modèle : Installations, 10/11) et le pied
+// d'écran des réponses (« Je viens », etc.) reste posé en bas : barre d'action, exception.
+describe('HAUT-DEFILE-F1 — fiche Événement : le haut défile', () => {
+  afterEach(demonter);
+
+  test('la pastille de type est DANS la liste qui défile, en tête, marge de S6 gardée', () => {
+    const root = monter({ event: buildDetection() });
+    const { ScrollView } = jest.requireActual('react-native');
+    const liste = root.findAll((/** @type {any} */ n) => n.type === ScrollView
+      && n.findAll((/** @type {any} */ m) => m.props?.testID === 'event-type-tag-row').length > 0);
+    expect(liste).toHaveLength(1);
+    const enfants = [liste[0].props.children].flat(Infinity).filter(Boolean);
+    expect(enfants[0].props.testID).toBe('event-type-tag-row');
+    const marge = Object.assign({}, ...[enfants[0].props.style].flat(Infinity).filter(Boolean));
+    expect(marge.marginTop).toBe(SpacesReel.marginTop[12].marginTop);
+  });
+});

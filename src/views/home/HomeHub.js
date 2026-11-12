@@ -2724,18 +2724,6 @@ function HomeHubContent({ auth, navigation, route }) {
       contentWidth="wide"
       responsivePadding
     >
-      {/* GUIDE-ENTETE : la bulle du guide se pose sous le logo, la cloche et l’avatar. */}
-      <TourTarget id="screen.header">
-        <View style={[Spaces.marginTop[16], Spaces.marginBottom[24], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          {/* A01 — League masquee : le logo est un simple logo ; ICI, il remonte en haut. */}
-          <LeagueHeaderSwitch onPress={scrollToTop} />
-          <View style={{ alignItems: 'center', flexDirection: 'row' }}>
-            <NotificationBadge />
-            <ProfileButton hasAlert={cotisationAPayer} />
-          </View>
-        </View>
-      </TourTarget>
-
       <ScrollView
         bounces={false}
         contentContainerStyle={[Spaces.gap[24], { paddingBottom: scrollBottomPadding }]}
@@ -2745,6 +2733,21 @@ function HomeHubContent({ auth, navigation, route }) {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
+        {/* GUIDE-ENTETE : la bulle du guide se pose sous le logo, la cloche et l’avatar.
+            HAUT-DEFILE-F1 (12/11, « 245 B ») : la rangée défile en tête de la liste, comme
+            l'en-tête de Rechercher (CORR-RECHERCHE, 30/10) ; elle restait figée au-dessus (~80 px).
+            Sortie de l'écran, le guide ne s'y ancre plus (headerBottomOf l'ignore). Le `gap` de
+            la liste remplace sa marge du bas. Témoin : __tests__/HomeHub.HAUTDEFILEF1.test.js. */}
+        <TourTarget id="screen.header">
+          <View style={[Spaces.marginTop[16], Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+            {/* A01 — League masquee : le logo est un simple logo ; ICI, il remonte en haut. */}
+            <LeagueHeaderSwitch onPress={scrollToTop} />
+            <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+              <NotificationBadge />
+              <ProfileButton hasAlert={cotisationAPayer} />
+            </View>
+          </View>
+        </TourTarget>
         {/* COLL-C4A (02/10) — EN TÊTE de l'accueil de chaque rôle du club : la dernière
             actualité de la Ville qu'il n'a ni ouverte ni masquée (le serveur la choisit). */}
         <BandeauActualiteMembre

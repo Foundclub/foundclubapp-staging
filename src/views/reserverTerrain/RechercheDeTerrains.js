@@ -35,6 +35,7 @@ import BlocRechercheDeJoueurs from '@/views/reserverTerrain/components/BlocReche
 import CarteComplexeRecherche from '@/views/reserverTerrain/components/CarteComplexeRecherche';
 import CarteDesComplexes from '@/views/reserverTerrain/components/CarteDesComplexes';
 import PuceChoix from '@/views/reserverTerrain/components/PuceChoix';
+import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -173,6 +174,11 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
   } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const surOrdinateur = useIsDesktop();
+  // HAUT-DEFILE-F1 (12/11, « 245 B ») — l'en-tête de la recherche (logo, cloche, profil, onglets)
+  // défile en tête du panneau, comme dans les 5 autres listes (CORR-RECHERCHE). Non réclamé, il
+  // restait figé au-dessus ; et après une autre liste, qui l'avait réclamé, il disparaissait.
+  // Témoin : __tests__/EP01.HAUTDEFILEF1.enTete.test.js.
+  const enTeteDeRecherche = useEnTeteDeRecherche();
   // RESA-CARTE : la barre d'onglets flottante (téléphone et site) couvre le bas de l'écran ; la
   // liste et la carte s'arrêtent au-dessus d'elle, comme les autres panneaux de la recherche.
   const { sceneBottomInset } = useBottomDockLayout();
@@ -1180,6 +1186,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
         showsVerticalScrollIndicator={false}
         style={carteEnPlace ? { flexGrow: 0 } : [Alignments.fill]}
       >
+        {enTeteDeRecherche}
         {/* RESA-L6B-1 (19/10) — le raccourci « Mes réservations » (E-P10, planche EP10 état 5 :
             « raccourci aussi dans E-P01 » ; sa place n'est pas dessinée : en tête du panneau).
             RESA-L6B-2 (20/10) — « Mes favoris » (E-P11, planche EP11 : « depuis le raccourci de la
