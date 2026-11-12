@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { REFERENCE_TABLE_STALE_MS } from '@/services/queryOptions';
+
 import { getActivities } from './activityService';
 
 /**
@@ -10,5 +12,6 @@ import { getActivities } from './activityService';
 export const useGetActivities = (options = {}) => useQuery({
   queryFn: () => getActivities(),
   queryKey: ['activities'],
+  staleTime: REFERENCE_TABLE_STALE_MS,
   ...options,
 });

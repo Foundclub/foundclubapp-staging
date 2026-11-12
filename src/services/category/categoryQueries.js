@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { REFERENCE_TABLE_STALE_MS } from '@/services/queryOptions';
+
 import { getCategories } from './categoryService';
 
 /**
@@ -10,5 +12,6 @@ import { getCategories } from './categoryService';
 export const useGetCategories = (options = {}) => useQuery({
   queryFn: () => getCategories(),
   queryKey: ['categories'],
+  staleTime: REFERENCE_TABLE_STALE_MS,
   ...options,
 });

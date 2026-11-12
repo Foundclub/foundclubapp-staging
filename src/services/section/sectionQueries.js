@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { REFERENCE_TABLE_STALE_MS } from '@/services/queryOptions';
+
 import { getSections } from './sectionService';
 
 /**
@@ -10,5 +12,6 @@ import { getSections } from './sectionService';
 export const useGetSections = (options = {}) => useQuery({
   queryFn: () => getSections(),
   queryKey: ['sections'],
+  staleTime: REFERENCE_TABLE_STALE_MS,
   ...options,
 });

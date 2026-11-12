@@ -372,6 +372,49 @@ export const resolveNotificationRefreshAction = (notificationType) => {
 };
 
 /**
+ * PERF-2 (D70) — une fiche d'evenement en cache PORTE-t-elle cet evenement (un tournoi et ses
+ * etapes : `childStageEvents`, `parentEvent`) ? Parcours borne : 6 niveaux, 2 000 noeuds.
+ * @param {unknown} data La donnee en cache.
+ * @param {string} eventId L'evenement recherche.
+ * @returns {boolean} Vrai si un objet de la donnee a ce `documentId`.
+ */
+const porteLEvenement = (data, eventId) => {
+  const pile = [{ niveau: 0, valeur: data }];
+  let vus = 0;
+  while (pile.length && vus < 2000) {
+    const { niveau, valeur } = /** @type {{ niveau: number, valeur: any }} */ (pile.pop());
+    vus += 1;
+    if (valeur && typeof valeur === 'object') {
+      if (!Array.isArray(valeur) && String(valeur.documentId ?? '') === eventId) return true;
+      if (niveau < 6) {
+        Object.values(valeur)
+          .forEach((enfant) => pile.push({ niveau: niveau + 1, valeur: enfant }));
+      }
+    }
+  }
+  return false;
+};
+
+/**
+ * Le filtre d'invalidation d'une racine. PERF-2 (D70) — `['event']` nu relisait TOUTES les fiches
+ * d'evenement montees (chaque bulle d'un fil, chaque fiche de la pile) pour une action qui n'en
+ * touche qu'une. Quand l'appelant nomme l'evenement, seules sa fiche (et `['event', id, 'edit']`)
+ * et les fiches qui le portent se relisent. Les autres racines restent telles quelles.
+ * Temoin : __tests__/afterAction.PERF2.test.js.
+ * @param {string[]} queryKey La racine declaree.
+ * @param {string} eventId L'evenement de l'action ('' si inconnu).
+ * @returns {import('@tanstack/react-query').InvalidateQueryFilters} Le filtre.
+ */
+const filtreDeRacine = (queryKey, eventId) => {
+  if (!eventId || queryKey.length !== 1 || queryKey[0] !== 'event') return { queryKey };
+  return {
+    predicate: (query) => String(query.queryKey[1] ?? '') === eventId
+      || porteLEvenement(query.state.data, eventId),
+    queryKey,
+  };
+};
+
+/**
  * Marque perimes les caches devenus faux apres une action reussie.
  *
  * ⚠️ Ne pas attendre le resultat ne perd RIEN : `invalidateQueries` marque les
@@ -382,9 +425,11 @@ export const resolveNotificationRefreshAction = (notificationType) => {
  * d'attente pure, jusqu'a 1,8 s sur reseau reel.)
  * @param {import('@tanstack/react-query').QueryClient} queryClient - Le cache de l'app.
  * @param {string} action - Une cle de `AFTER_ACTION_CACHES`.
+ * @param {{ eventId?: string | null }} [cible] - PERF-2 : l'evenement que l'action touche,
+ *   s'il est connu.
  * @returns {Promise<void>}
  */
-export const invalidateAfterAction = async (queryClient, action) => {
+export const invalidateAfterAction = async (queryClient, action, cible = {}) => {
   const queryKeys = AFTER_ACTION_CACHES[action];
 
   if (!Array.isArray(queryKeys) || queryKeys.length === 0) {
@@ -395,8 +440,9 @@ export const invalidateAfterAction = async (queryClient, action) => {
     return;
   }
 
+  const eventId = String(cible?.eventId ?? '').trim();
   await Promise.all(
-    queryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    queryKeys.map((queryKey) => queryClient.invalidateQueries(filtreDeRacine(queryKey, eventId))),
   );
 };
 

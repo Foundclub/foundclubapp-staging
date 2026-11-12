@@ -52,14 +52,16 @@ export const EVENT_ANSWER_MUTATION_KEYS = Object.freeze({
  * cet appel posait `['planning','personal']`. Le planning PLEIN ECRAN, qui
  * pose `['planning','fullscreen',…]`, suit donc enfin.
  *
- * ⛔ L identifiant d evenement n est plus utile : la correspondance de
- * react-query est PREFIXEE, `['event']` couvre `['event', id]`. Le garder
- * serait un parametre mort que le prochain lecteur croirait signifiant.
+ * PERF-2 (D70, 12/11) — l identifiant d evenement SERT de nouveau : sans lui,
+ * `['event']` relisait TOUTES les fiches montees (chaque bulle d un fil) pour une
+ * seule reponse. Avec lui, seules sa fiche et celles qui le portent se relisent
+ * (`afterAction.js`, `filtreDeRacine`). Sans identifiant : toute la racine.
  * @param {import('@tanstack/react-query').QueryClient} queryClient
+ * @param {string} [eventId] - L evenement repondu.
  * @returns {void}
  */
-export const invalidateEventAnswerQueries = (queryClient) => {
-  invalidateAfterAction(queryClient, 'answerEvent').catch(() => {});
+export const invalidateEventAnswerQueries = (queryClient, eventId) => {
+  invalidateAfterAction(queryClient, 'answerEvent', { eventId }).catch(() => {});
 };
 
 /**
@@ -98,8 +100,8 @@ export const useEventAnswerMutations = (onAnswered) => {
         getParticipationErrorMessage(error, t('common.errorOccurred')),
       );
     },
-    onSuccess: () => {
-      invalidateEventAnswerQueries(queryClient);
+    onSuccess: (_data, /** @type {string} */ eventId) => {
+      invalidateEventAnswerQueries(queryClient, eventId);
       onAnswered?.();
     },
   });
@@ -115,8 +117,8 @@ export const useEventAnswerMutations = (onAnswered) => {
         getParticipationErrorMessage(error, t('common.errorOccurred')),
       );
     },
-    onSuccess: () => {
-      invalidateEventAnswerQueries(queryClient);
+    onSuccess: (_data, variables) => {
+      invalidateEventAnswerQueries(queryClient, variables?.eventId);
       onAnswered?.();
     },
   });

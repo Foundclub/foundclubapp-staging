@@ -194,7 +194,7 @@ function PlayerConvocationScreen() {
     // les listes, le planning, l'accueil, et cette convocation. Les deux cles
     // ecrites ici a la main laissaient les autres ecrans sur l'ancienne reponse.
     onSuccess: () => {
-      invalidateAfterAction(queryClient, 'answerEvent').catch(() => {});
+      invalidateAfterAction(queryClient, 'answerEvent', { eventId }).catch(() => {});
     },
   });
 
