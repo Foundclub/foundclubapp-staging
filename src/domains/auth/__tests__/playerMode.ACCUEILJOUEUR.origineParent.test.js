@@ -53,13 +53,14 @@ describe('qui voit la bascule parent', () => {
 
   test('joueur né Joueur passé en mode parent (par Mon compte) : le retour reste offert', () => {
     writeDisplayModeRequest('j-2', 'parent', 'player');
-    expect(readParentOrigin('j-2')).toBe('player');
     expect(offersParentSwitch({
       accountRoleKey: 'player', displayModeRequest: 'parent', origin: 'player',
     })).toBe(true);
-    // Revenu en joueur : la bascule se tait de nouveau.
+    // T9-RETOURS-B (12/11, M1207) : il a CHOISI le mode parent ; revenu en joueur, la bascule
+    // reste (avant : « la bascule se tait de nouveau », le contrôle s'effaçait de lui-même).
+    expect(readParentOrigin('j-2')).toBe('parent');
     writeDisplayModeRequest('j-2', null, 'player');
-    expect(readParentOrigin('j-2')).toBe('player');
+    expect(readParentOrigin('j-2')).toBe('parent');
   });
 
   test('parent pur (compte Parent) : son bandeau ne passe pas par ce réglage', () => {
@@ -88,8 +89,11 @@ describe('qui voit la bascule parent', () => {
 
   test('ancien compte sans origine, en mode joueur : « joueur », et ça ne bouge plus', () => {
     expect(readParentOrigin('a-2')).toBe('player');
-    writeDisplayModeRequest('a-2', 'parent', 'player');
+    writeDisplayModeRequest('a-2', null, 'player');
     expect(mockStockage.get('user.parent_origin.a-2')).toBe('player');
+    // T9-RETOURS-B (12/11, M1207) : choisir le mode parent, lui, le fait « parent ».
+    writeDisplayModeRequest('a-2', 'parent', 'player');
+    expect(mockStockage.get('user.parent_origin.a-2')).toBe('parent');
   });
 
   test('dirigeant ou entraîneur : inchangé, la bascule reste offerte', () => {

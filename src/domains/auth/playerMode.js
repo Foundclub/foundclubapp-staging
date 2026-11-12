@@ -134,13 +134,19 @@ export const writeParentOrigin = (documentId, origin) => {
  * la dit. Les autres rôles n'en ont pas besoin : rien n'est écrit pour eux.
  * @param {unknown} documentId - Le compte.
  * @param {unknown} accountRoleKey - Le rôle du COMPTE.
+ * @param {DisplayModeRequest} mode - Le mode demandé (« parent » : l'origine devient « parent »).
  * @returns {void}
  */
-const figerOrigine = (documentId, accountRoleKey) => {
+const figerOrigine = (documentId, accountRoleKey, mode) => {
   const key = originKeyFor(documentId);
   if (!key || accountRoleKey !== 'player') return;
   try {
-    if (!storage.getString(key)) storage.set(key, readParentOrigin(documentId));
+    // T9-RETOURS-B (12/11/2026, M1207) : un Joueur qui CHOISIT le mode parent (« Mon compte »)
+    // en garde la bascule dans les deux sens ; avant, « Joueur » l'effaçait d'elle-même.
+    // Un né Joueur qui ne l'a jamais choisi n'en voit toujours aucune (D19).
+    // 🧪 `__tests__/playerMode.T9RETOURSB.test.js`.
+    if (mode === 'parent') storage.set(key, 'parent');
+    else if (!storage.getString(key)) storage.set(key, readParentOrigin(documentId));
   } catch {
     // Stockage indisponible : le mode ne s'écrira pas non plus.
   }
@@ -158,7 +164,7 @@ const figerOrigine = (documentId, accountRoleKey) => {
 export const writeDisplayModeRequest = (documentId, mode, accountRoleKey) => {
   const key = keyFor(documentId);
   if (!key) return;
-  figerOrigine(documentId, accountRoleKey);
+  figerOrigine(documentId, accountRoleKey, mode);
   try {
     if (mode === 'player') {
       storage.set(key, ENABLED_VALUE);
