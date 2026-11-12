@@ -8,6 +8,7 @@
  * l'adresse de son serveur, la raison du chargement à l'appel (les témoins sans `.env`) ne le
  * concerne pas.
  */
+import * as selecteurDePhotos from '../../platform/media';
 import * as servicesDesMessages from '../chat/chatService';
 import clientDuSite from '../client';
 import * as servicesDesFermetures from '../facilityClosure/facilityClosureService';
@@ -29,3 +30,9 @@ export const fermetures = () => servicesDesFermetures;
  * @returns {any} Le module.
  */
 export const messages = () => servicesDesMessages;
+
+/**
+ * Le selecteur de photos — PHOTO-SITE (12/11, D90), la photo d'un groupe ou d'un enfant.
+ * @returns {any} Le module.
+ */
+export const media = () => selecteurDePhotos;

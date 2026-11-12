@@ -1,5 +1,6 @@
 /**
- * LES TROIS DÉPENDANCES DE complexeService.js CHARGÉES À L'APPEL — pour l'app et jest.
+ * LES DÉPENDANCES DE complexeService.js (et du choix d'une photo, PHOTO-SITE) CHARGÉES À
+ * L'APPEL — pour l'app et jest.
  * RESA-L7-1 (20/10/2026), chantier Réservation.
  *
  * Le client HTTP exige l'adresse du serveur dès son chargement : importé en tête, il fait échouer
@@ -34,3 +35,12 @@ export const fermetures = () => require('../facilityClosure/facilityClosureServi
  */
 // eslint-disable-next-line global-require
 export const messages = () => require('../chat/chatService');
+
+/**
+ * Le selecteur de photos (`@/platform/media`), charge a l'appel — PHOTO-SITE (12/11, D90), la
+ * photo d'un groupe ou d'un enfant (`domains/messaging/photoDuGroupe.js`). Au telephone, il tire
+ * les modules natifs du selecteur de documents, que les temoins des ecrans ne doublent pas.
+ * @returns {any} Le module.
+ */
+// eslint-disable-next-line global-require
+export const media = () => require('@/platform/media');
