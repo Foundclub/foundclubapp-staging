@@ -22,6 +22,7 @@ import {
   titreDuJour,
 } from '@/domains/complexe/complexeReservation';
 import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
+import { lignesAReglerSurPlace } from '@/domains/complexe/optionsTerrain';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -35,6 +36,7 @@ import EcrireAuClient from '@/views/complexe/components/EcrireAuClient';
 import FeuilleMotif from '@/views/complexe/components/FeuilleMotif';
 import FeuilleNonHonoree from '@/views/complexe/components/FeuilleNonHonoree';
 import PastillesReservation from '@/views/complexe/components/PastillesReservation';
+import BlocReglerSurPlace from '@/views/reserverTerrain/components/BlocReglerSurPlace';
 
 import {
   useAnnulerNonHonoree,
@@ -253,6 +255,10 @@ function FicheReservation({
         montant: formatEuros(r.price.amount), ...SANS_ECHAPPEMENT,
       });
   }
+  // RESA-OPTIONS (D61) : les options à préparer et le total à encaisser ; sans option, rien.
+  const aPreparer = /** @type {any[]} */ (Array.isArray(r.options) ? r.options : [])
+    .filter((option) => Number(option?.quantity) > 0);
+  const aEncaisser = lignesAReglerSurPlace(t, r.price, Number(r.players) || 1, aPreparer);
   const ligneTerrain = [
     String(r.terrain?.name || ''),
     // RESA-FIN-APP : « Foot à 5 », comme partout (plan §1.1), plus « Football à 5 ».
@@ -535,6 +541,29 @@ function FicheReservation({
             </Text>
           ) : null}
         </View>
+        {aPreparer.length ? (
+          <View
+            style={[carte, Spaces.padding[16], { borderColor: Colors.primary500, gap: 6 }]}
+            testID="fiche-options-a-preparer"
+          >
+            {legende(t('complexeOptions.aPreparer', 'Options à préparer'))}
+            {aPreparer.map((option) => (
+              <View key={option.id} style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+                <GlyphIcon color={Colors.primary200} name="check" size={16} />
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {`${option.name} × ${option.quantity}`}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {aEncaisser ? (
+          <BlocReglerSurPlace
+            bloc={aEncaisser}
+            resume
+            titre={t('complexeOptions.aEncaisserSurPlace', 'À encaisser sur place')}
+          />
+        ) : null}
         {qui}
         {historique.length ? (
           <View style={{ gap: 6 }}>

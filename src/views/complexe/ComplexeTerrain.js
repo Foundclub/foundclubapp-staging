@@ -35,6 +35,7 @@ import ChoixDuSport from '@/components/organisms/choixDuSport/ChoixDuSport';
 import PhoneInput from '@/components/organisms/phoneInput/PhoneInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import BandeauComplexe from '@/views/complexe/components/BandeauComplexe';
+import BlocOptionsTerrain from '@/views/complexe/components/BlocOptionsTerrain';
 import FeuilleRetrait from '@/views/complexe/components/FeuilleRetrait';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -127,6 +128,8 @@ function ComplexeTerrain() {
   const [photoRefus, setPhotoRefus] = useState('');
   const [envoiPhoto, setEnvoiPhoto] = useState(false);
   const [feuilleSports, setFeuilleSports] = useState(false);
+  // RESA-OPTIONS (D61) : les options du complexe que ce terrain propose.
+  const [optionIds, setOptionIds] = useState(/** @type {string[]} */ ([]));
 
   // Modifier : la fiche se remplit UNE fois avec le terrain lu (jamais par-dessus une saisie).
   useEffect(() => {
@@ -141,6 +144,7 @@ function ComplexeTerrain() {
     setTelephone(existant.bookingPhone || '');
     setUnite(existant.priceUnit === 'joueur' ? 'joueur' : 'creneau');
     setPrix(prixEnSaisie(existant.basePrice));
+    setOptionIds(Array.isArray(existant.optionIds) ? existant.optionIds : []);
     setRempli(true);
   }, [existant, rempli]);
 
@@ -274,6 +278,13 @@ function ComplexeTerrain() {
     return notes;
   };
 
+  // RESA-OPTIONS : `optionIds` part avec la fiche dès que le complexe a des options (ou que le
+  // terrain en avait) ; sans option nulle part, le corps reste celui d'avant.
+  const catalogue = Array.isArray(complexe.data?.options) ? complexe.data.options : [];
+  const avecOptions = (/** @type {Record<string, any>} */ donnees) => (
+    catalogue.length || existant?.optionIds?.length ? { ...donnees, optionIds } : donnees
+  );
+
   // RESA-FIN-APP-2 (E-G08) : l'erreur d'un champ du haut se lit sous ce champ ; la fiche y remonte.
   const fiche = useRef(/** @type {ScrollView | null} */ (null));
   const enregistrerLaFiche = async () => {
@@ -290,7 +301,7 @@ function ComplexeTerrain() {
     try {
       const corps = await enregistrer.mutateAsync({
         complexeId,
-        donnees: payloadDuTerrain({
+        donnees: avecOptions(payloadDuTerrain({
           joueurs,
           lieu: String(lieu),
           mode,
@@ -301,7 +312,7 @@ function ComplexeTerrain() {
           telephone,
           texteTelephone,
           unite,
-        }),
+        })),
         terrainId: existant?.documentId,
       });
       if (!existant) {
@@ -723,6 +734,13 @@ function ComplexeTerrain() {
         {blocTerrain}
         {blocMode}
         {blocPrix}
+        <BlocOptionsTerrain
+          actives={optionIds}
+          catalogue={catalogue}
+          complexeId={complexeId}
+          nomDuComplexe={String(complexe.data?.name || '')}
+          onActives={setOptionIds}
+        />
         {enregistre ? (
           <BandeauComplexe
             texte={t('complexeGerant.terrain.enregistre', 'Modifications enregistrées.')}

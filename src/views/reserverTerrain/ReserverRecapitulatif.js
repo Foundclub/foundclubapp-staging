@@ -8,6 +8,11 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { formatEuros, libelleSport } from '@/domains/complexe/complexeTerrain';
 import {
+  choixDesOptions,
+  lignesAReglerSurPlace,
+  quantitesInitiales,
+} from '@/domains/complexe/optionsTerrain';
+import {
   contenuDEchec,
   demandeDeReservation,
   parametresDEchec,
@@ -26,7 +31,9 @@ import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import BlocOptions from '@/views/reserverTerrain/components/BlocOptions';
 import BlocPourQui from '@/views/reserverTerrain/components/BlocPourQui';
+import BlocReglerSurPlace from '@/views/reserverTerrain/components/BlocReglerSurPlace';
 import BlocTonGroupe from '@/views/reserverTerrain/components/BlocTonGroupe';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -121,6 +128,21 @@ function ReserverRecapitulatif() {
   const [equipe, setEquipe] = useState(/** @type {any} */ (null));
   const [equipeEnCours, setEquipeEnCours] = useState(/** @type {string | null} */ (null));
   const [refusEquipe, setRefusEquipe] = useState(/** @type {string | null} */ (null));
+  // RESA-OPTIONS (D61) : les options que CE terrain propose (le récapitulatif du serveur) et leurs
+  // compteurs ; une option obligatoire part à 1.
+  const offertes = /** @type {any[]} */ (Array.isArray(apercu?.options) ? apercu.options : []);
+  const [quantites, setQuantites] = useState(/** @type {Record<string, number>} */ ({}));
+  const offertesLues = offertes.map((option) => option.id).join('|');
+  useEffect(() => {
+    setQuantites(quantitesInitiales(offertes));
+    // Les compteurs repartent quand les options proposées changent, pas à chaque rendu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offertesLues]);
+  const choisies = offertes.map((option) => ({
+    ...option,
+    quantity: Number(quantites[option.id]) || 0,
+  }));
+  const aReglerSurPlace = lignesAReglerSurPlace(t, apercu?.price, capacite, choisies);
   const slugDuComplexe = params.slug || apercu?.complexe?.slug || null;
   const ageMinimum = Number(useComplexePublic(slugDuComplexe)?.data?.rules?.minAge) || null;
 
@@ -238,6 +260,7 @@ function ReserverRecapitulatif() {
           from: String(apercu.from || params.from),
           joueurs: capacite >= 2 ? capacite : null,
           mot,
+          options: choixDesOptions(offertes, quantites),
           partagerNumero: partager,
           peutPartagerNumero,
           terrainId: String(apercu?.terrain?.documentId || params.terrainId),
@@ -443,6 +466,21 @@ function ReserverRecapitulatif() {
           paie={texteCeQuePaieLeGroupe(t, apercu.price, capacite)}
           requis={capacite}
         />
+
+        {offertes.length ? (
+          <BlocOptions
+            offertes={offertes}
+            onQuantite={(id, quantite) => setQuantites((avant) => ({ ...avant, [id]: quantite }))}
+            quantites={quantites}
+          />
+        ) : null}
+        {aReglerSurPlace ? (
+          <BlocReglerSurPlace
+            bloc={aReglerSurPlace}
+            indicatif
+            titre={t('complexeOptions.aReglerSurPlace', 'À régler sur place')}
+          />
+        ) : null}
 
         <View style={{ gap: 6 }}>
           <Input

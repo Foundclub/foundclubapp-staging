@@ -8485,6 +8485,56 @@ export default {
     verifie: 'Vérifié',
     voirMaPage: 'Voir ma page',
   },
+  // RESA-OPTIONS (12/11/2026) : les options d'un terrain (D61).
+  complexeOptions: {
+    active: '{{nombre}} active sur {{total}}',
+    activer: 'Proposer « {{nom}} » sur ce terrain',
+    actives: '{{nombre}} actives sur {{total}}',
+    aEncaisserSurPlace: 'À encaisser sur place',
+    aPreparer: 'Options à préparer',
+    aReglerSurPlace: 'À régler sur place',
+    creer: '+ Créer une option',
+    creerLOption: 'Créer l’option',
+    dit: 'Les options de ton complexe. Active celles que ce terrain propose.',
+    ditVide: 'Chasubles, ballon, arbitre… : crée une option, elle servira aussi à tes autres '
+      + 'terrains.',
+    echec: 'L’option n’est pas enregistrée. Réessaie.',
+    enregistrerLOption: 'Enregistrer l’option',
+    feuilleModifier: 'Modifier l’option',
+    feuilleNouvelle: 'Nouvelle option',
+    indicatif: 'Indicatif : le complexe encaisse sur place. L’app n’encaisse rien.',
+    lePrixCompte: 'Le prix compte',
+    lesOptions: 'Options',
+    ligneTerrain: 'Terrain · {{nombre}} joueurs',
+    modifierAide: 'Modifier ou retirer cette option',
+    moins: 'Un de moins : {{nom}}',
+    nom: 'Nom',
+    nomExemple: 'Location de chasubles',
+    nomFaux: 'Donne un nom à l’option (2 caractères au moins).',
+    obligatoire: 'obligatoire',
+    obligatoireDit: 'Comptée dans chaque réservation (arbitre, éclairage).',
+    obligatoireTitre: 'Obligatoire',
+    parReservation: '{{prix}} par réservation',
+    parUnite: '{{prix}} par unité',
+    pied: 'Les joueurs les choisissent au récapitulatif. Elles s’ajoutent au prix, à régler '
+      + 'sur place. Changer le nom ou le prix d’une option la change sur tous les '
+      + 'terrains ; les réservations déjà faites gardent leur prix.',
+    plus: 'Un de plus : {{nom}}',
+    pourToutLeComplexe: 'Enregistrée pour tout {{complexe}} : tu pourras l’activer sur tes autres '
+      + 'terrains d’un geste.',
+    pourToutLeComplexeSansNom: 'Enregistrée pour tout ton complexe : tu pourras l’activer '
+      + 'sur tes autres terrains d’un geste.',
+    prix: 'Prix (€)',
+    prixFaux: 'Le prix : de 0 à 999 €, deux décimales au plus.',
+    retirer: 'Retirer l’option',
+    retirerDit: 'Elle sort de tous tes terrains. Les réservations déjà faites la gardent.',
+    titre: 'Options',
+    total: 'Total',
+    uniteAide: 'Par unité : le joueur choisit combien il en veut (ballons, boissons). Par '
+      + 'réservation : une seule fois (chasubles, éclairage).',
+    uniteParReservation: 'Par réservation',
+    uniteParUnite: 'Par unité',
+  },
   complexeReservations: {
     accueil: {
       hier_one: 'Hier : {{count}} réservation. Quelqu’un n’est pas venu ?',

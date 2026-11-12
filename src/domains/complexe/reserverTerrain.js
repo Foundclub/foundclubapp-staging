@@ -613,10 +613,11 @@ export const epinglesDesComplexes = (cartes, pages, telephone) => (
  * @param {{ collecte?: { collectDeadline?: string | null, externalPlayers?: number | null,
  *   quorum?: number | null } | null,
  *   date: string, equipe?: string | null, from: string, joueurs?: number | null,
- *   mot?: string | null, partagerNumero?: boolean, peutPartagerNumero?: boolean,
+ *   mot?: string | null, options?: Array<{ id: string, quantity: number }>,
+ *   partagerNumero?: boolean, peutPartagerNumero?: boolean,
  *   terrainId: string }} choix - Le récapitulatif rempli.
  * @returns {{ collectDeadline?: string, date: string, externalPlayers?: number, from: string,
- *   note: string | null,
+ *   note: string | null, options?: Array<{ id: string, quantity: number }>,
  *   phoneShared: boolean, players?: number, quorum?: number, team?: string,
  *   terrain: string }} Le corps.
  */
@@ -632,6 +633,8 @@ export const demandeDeReservation = (choix) => {
   // RESA-JOUEUR (« On est combien, toi compris ? ») : les joueurs venus d'ailleurs, avec la
   // collecte seulement.
   const dAilleurs = Number(choix?.collecte?.externalPlayers);
+  // RESA-OPTIONS (D61) : les options choisies ; sans option, le corps reste celui d'avant.
+  const options = Array.isArray(choix?.options) ? choix.options : [];
   return {
     ...(collecte ? { collectDeadline: echeance } : {}),
     date: String(choix.date),
@@ -640,6 +643,7 @@ export const demandeDeReservation = (choix) => {
       : {}),
     from: String(choix.from),
     note: mot || null,
+    ...(options.length ? { options } : {}),
     phoneShared: choix?.peutPartagerNumero === true && choix?.partagerNumero === true,
     ...(Number.isInteger(joueurs) && joueurs > 0 ? { players: joueurs } : {}),
     ...(collecte ? { quorum } : {}),

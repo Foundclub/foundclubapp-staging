@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import { formatEuros } from '@/domains/complexe/complexeTerrain';
+import { lignesAReglerSurPlace } from '@/domains/complexe/optionsTerrain';
 import {
   apercuDeLaFidelite,
   jourEtHeure,
@@ -36,6 +37,7 @@ import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDef
 import BlocConstruction from '@/views/reserverTerrain/components/BlocConstruction';
 import BlocDEchec from '@/views/reserverTerrain/components/BlocDEchec';
 import BlocParticipants from '@/views/reserverTerrain/components/BlocParticipants';
+import BlocReglerSurPlace from '@/views/reserverTerrain/components/BlocReglerSurPlace';
 import CarteDAction from '@/views/reserverTerrain/components/CarteDAction';
 import FeuilleAnnonce from '@/views/reserverTerrain/components/FeuilleAnnonce';
 import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
@@ -422,6 +424,13 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
       ...SANS_ECHAPPEMENT,
     })
     : '';
+  // RESA-OPTIONS (D61) : les options choisies, figées à la réservation ; sans option, rien de plus.
+  const aReglerSurPlace = lignesAReglerSurPlace(
+    t,
+    reservation?.price,
+    Number(reservation?.players) || Number(reservation?.terrain?.capacity) || 1,
+    reservation?.options,
+  );
   const lienAgenda = lienAgendaGoogle({
     debut: reservation.startsAt,
     details: t(
@@ -830,6 +839,12 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           {enTete}
           {enTeteDEchec}
           {quandOu}
+          {aReglerSurPlace ? (
+            <BlocReglerSurPlace
+              bloc={aReglerSurPlace}
+              titre={t('complexeOptions.aReglerSurPlace', 'À régler sur place')}
+            />
+          ) : null}
           {tuViens}
           {!varianteDEnTete ? <BlocParticipants groupe={groupe} /> : null}
           {actions}
