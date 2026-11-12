@@ -19,7 +19,10 @@ import { getZonedDateParts } from '@/utils/parisTime';
  */
 
 /** @typedef {any} Traduire - La traduction (le TFunction d'i18next). */
-/** @typedef {{ active: boolean, counts: string, reward: string, threshold: number }} Programme */
+/**
+ * @typedef {{ active: boolean, counts: string, percent?: number, reward?: string,
+ *   rewardType?: string, rewardUses?: number, scope?: string, threshold: number }} Programme
+ */
 
 /** « Au bout de » : de 2 à 50 réservations (`SEUIL_MIN`, `SEUIL_MAX` du serveur). */
 export const SEUIL_MIN = 2;
@@ -72,7 +75,8 @@ const recompenseNette = (texte) => String(texte || '').replace(/\s+/g, ' ').trim
 /**
  * Le corps de « Enregistrer » : la liste blanche du serveur, rien d'autre (RC-T01) ; x ramené
  * entre 2 et 50.
- * @param {{ active?: boolean, counts?: string, reward?: string, threshold?: number }} saisie - Le
+ * @param {{ active?: boolean, counts?: string, percent?: number, reward?: string,
+ *   rewardType?: string, rewardUses?: number, scope?: string, threshold?: number }} saisie - Le
  *   réglage de l'écran.
  * @returns {Programme} Le corps.
  */
@@ -121,7 +125,8 @@ export const avertissementsDuProgramme = (enregistre, saisie) => {
  * « Ce que voit le joueur » (RC-G10) : un joueur à 2 réservations de sa récompense — « 8/10 » et
  * « Encore 2 réservations avant « 1 partie offerte » ».
  * @param {Traduire} t - Traduction.
- * @param {{ reward?: string, threshold?: number }} programme - Le réglage.
+ * @param {{ percent?: number, reward?: string, rewardType?: string,
+ *   threshold?: number }} programme - Le réglage.
  * @returns {{ compte: number, seuil: number, texte: string }} L'aperçu.
  */
 export const apercuDuJoueur = (t, programme) => {

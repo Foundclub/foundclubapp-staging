@@ -616,7 +616,8 @@ export const epinglesDesComplexes = (cartes, pages, telephone) => (
  *   joueurs?: number | null,
  *   mot?: string | null, options?: Array<{ id: string, quantity: number }>,
  *   partagerNumero?: boolean, peutPartagerNumero?: boolean,
- *   terrainId: string }} choix - Le récapitulatif rempli.
+ *   terrainId: string, fidelite?: boolean }} choix - Le récapitulatif rempli (FIDELITE : utiliser
+ *   son bonus).
  * @returns {{ collectDeadline?: string, date: string, durationMinutes?: number,
  *   externalPlayers?: number, from: string,
  *   note: string | null, options?: Array<{ id: string, quantity: number }>,

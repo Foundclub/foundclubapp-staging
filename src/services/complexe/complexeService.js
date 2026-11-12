@@ -405,6 +405,18 @@ export const reglerFidelite = async (complexeId, programme) => corps(
 );
 
 /**
+ * FIDELITE (12/11/2026, D63) — « Statistiques · Fidélité » : par mois (les 6 derniers : bonus
+ * débloqués, utilisés, montant offert ou remisé) et par client (parties, débloqués, utilisés,
+ * montant).
+ * @param {string} complexeId - documentId du complexe.
+ * @returns {Promise<any>} `{ data: { mois[{ mois, debloques, utilises, montant }],
+ *   clients[{ documentId, nom, parties, debloques, utilises, montant }] } }`.
+ */
+export const lireStatistiquesFidelite = async (complexeId) => corps(
+  client().get(`/complexes/${enc(complexeId)}/fidelite/statistiques`),
+);
+
+/**
  * « Valider la partie offerte » d'un joueur arrivé à x (E-G14) : son compteur repart de zéro.
  * @param {string} complexeId - documentId du complexe.
  * @param {string} joueurId - documentId du joueur.
