@@ -80,6 +80,9 @@ export const readPlayerModeRequest = (documentId) => (
  * compte garde alors « Basculer en mode parent » dans « Mon compte » (rien n'est perdu). Sortie :
  * un champ du profil côté serveur, si Adel le veut.
  * 🧪 Témoin : `__tests__/playerMode.ACCUEILJOUEUR.origineParent.test.js`.
+ * ponytail: depuis T9-RETOURS-B (12/11, Adel « 284 »), l'origine ne décide plus la bascule
+ * (`offersParentSwitch`) ; elle reste écrite, sans effet, pour ne pas toucher
+ * `FeuillePratiqueAussi` dans ce lot. Sortie : la retirer avec ses écritures.
  */
 const ORIGIN_PREFIX = 'user.parent_origin.';
 
@@ -134,19 +137,13 @@ export const writeParentOrigin = (documentId, origin) => {
  * la dit. Les autres rôles n'en ont pas besoin : rien n'est écrit pour eux.
  * @param {unknown} documentId - Le compte.
  * @param {unknown} accountRoleKey - Le rôle du COMPTE.
- * @param {DisplayModeRequest} mode - Le mode demandé (« parent » : l'origine devient « parent »).
  * @returns {void}
  */
-const figerOrigine = (documentId, accountRoleKey, mode) => {
+const figerOrigine = (documentId, accountRoleKey) => {
   const key = originKeyFor(documentId);
   if (!key || accountRoleKey !== 'player') return;
   try {
-    // T9-RETOURS-B (12/11/2026, M1207) : un Joueur qui CHOISIT le mode parent (« Mon compte »)
-    // en garde la bascule dans les deux sens ; avant, « Joueur » l'effaçait d'elle-même.
-    // Un né Joueur qui ne l'a jamais choisi n'en voit toujours aucune (D19).
-    // 🧪 `__tests__/playerMode.T9RETOURSB.test.js`.
-    if (mode === 'parent') storage.set(key, 'parent');
-    else if (!storage.getString(key)) storage.set(key, readParentOrigin(documentId));
+    if (!storage.getString(key)) storage.set(key, readParentOrigin(documentId));
   } catch {
     // Stockage indisponible : le mode ne s'écrira pas non plus.
   }
@@ -164,7 +161,7 @@ const figerOrigine = (documentId, accountRoleKey, mode) => {
 export const writeDisplayModeRequest = (documentId, mode, accountRoleKey) => {
   const key = keyFor(documentId);
   if (!key) return;
-  figerOrigine(documentId, accountRoleKey, mode);
+  figerOrigine(documentId, accountRoleKey);
   try {
     if (mode === 'player') {
       storage.set(key, ENABLED_VALUE);
@@ -269,20 +266,17 @@ export const useParentOrigin = (documentId) => useSyncExternalStore(
 );
 
 /**
- * ACCUEIL-JOUEUR — La bascule parent de l'accueil s'offre-t-elle ? À un compte Joueur, seulement
- * s'il est né Parent, ou s'il est en mode parent en ce moment (son chemin de retour). Aux autres
- * rôles : la règle d'avant (`canUseParentMode`).
- * @param {{
- *   accountRoleKey: unknown,
- *   displayModeRequest: DisplayModeRequest,
- *   origin: ParentOrigin | null,
- * }} input - Le rôle du compte, le mode demandé, l'origine.
- * @returns {boolean} Vrai si la bascule s'affiche.
+ * La bascule parent de l'accueil s'offre-t-elle à ce rôle ? Les appelants y ajoutent « au moins
+ * un enfant » (`useMesEnfantsEnBref` : fiches déclarées + liens parent, déjà lus par l'accueil).
+ * T9-RETOURS-B (12/11/2026, M1207, règle d'Adel « 284 ») : un compte Joueur qui a au moins un
+ * enfant voit « Ton mode : Parent | Joueur » dans les deux modes, d'où qu'il vienne. Avant
+ * (ACCUEIL-JOUEUR, 09/11) : seulement s'il était né Parent ou en mode parent, et toucher
+ * « Joueur » effaçait la bascule. L'origine (`readParentOrigin`) ne décide plus rien ici.
+ * 🧪 `__tests__/playerMode.T9RETOURSB.test.js`.
+ * @param {{ accountRoleKey: unknown }} input - Le rôle du compte.
+ * @returns {boolean} Vrai si le rôle a droit à la bascule.
  */
-export const offersParentSwitch = ({ accountRoleKey, displayModeRequest, origin }) => {
-  if (accountRoleKey !== 'player') return canUseParentMode(accountRoleKey);
-  return origin === 'parent' || displayModeRequest === 'parent';
-};
+export const offersParentSwitch = ({ accountRoleKey }) => canUseParentMode(accountRoleKey);
 
 /**
  * Le rôle d'AFFICHAGE : `player` ou `parent` quand ce mode est demandé ET possible, sinon le

@@ -329,9 +329,20 @@ describe('RESA-L5A1 E-G02 — la bascule et les cases « Gérer »', () => {
     expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: RouteNames.HomeTab }] });
   });
 
-  it('RB-3 3d · joueur NÉ JOUEUR avec un enfant : 2 positions, pas de « Parent »', async () => {
+  // T9-RETOURS-B (12/11/2026, Adel « 284 ») : « Parent » dès qu'il y a un enfant, d'où que vienne
+  // le compte (avant : 2 positions pour un né Joueur) ; sans enfant, pas de « Parent ».
+  it('RB-3 3d · joueur NÉ JOUEUR avec un enfant : 3 positions, « Parent » compris', async () => {
     mockEnfants = { lignes: [{ prenom: 'Léa' }], reste: 0, total: 1 };
     mockValeurs.set('user.parent_origin.u-1', 'player');
+    const lus = textes(await monter());
+    expect(lus.slice(lus.indexOf('TON MODE'), lus.indexOf('TON MODE') + 5)).toEqual([
+      'TON MODE', 'Complexe', 'Joueur', 'Parent', 'Tu gères Le Five de Montrivage.',
+    ]);
+  });
+
+  it('RB-3 3d bis · joueur sans enfant : 2 positions, pas de « Parent »', async () => {
+    mockEnfants = { lignes: [], reste: 0, total: 0 };
+    mockValeurs.set('user.parent_origin.u-1', 'parent');
     const lus = textes(await monter());
     expect(lus.slice(lus.indexOf('TON MODE'), lus.indexOf('TON MODE') + 4)).toEqual([
       'TON MODE', 'Complexe', 'Joueur', 'Tu gères Le Five de Montrivage.',

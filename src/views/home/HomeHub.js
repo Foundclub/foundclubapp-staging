@@ -2769,7 +2769,9 @@ function HomeHubContent({ auth, navigation, route }) {
             Joueur. » (2c).
             ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur) — la bascule parent ne s'offre
             qu'à un compte né Parent (ou en mode parent, pour revenir) : `offersParentSwitch`.
-            Un compte né Joueur qui a des enfants passe par « Mon compte ». */}
+            Un compte né Joueur qui a des enfants passe par « Mon compte ».
+            T9-RETOURS-B (12/11/2026, Adel « 284 ») : remplacé — la bascule dès qu'il y a au moins
+            un enfant, dans les deux modes ; « Mon compte » garde son bouton. */}
         {COMPLEXES_GERANT ? (
           <BasculeComplexe
             accountRoleKey={getUserRoleKey(roleName)}
