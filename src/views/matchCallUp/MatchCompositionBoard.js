@@ -740,7 +740,7 @@ function MatchCompositionBoard() {
       // ⚠️ On ne l'attend pas : `invalidateQueries` marque les requetes de
       //   facon SYNCHRONE, seule la relecture est asynchrone, et le
       //   `queryClient` est un singleton qui survit au demontage de cet ecran.
-      invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
+      invalidateAfterAction(queryClient, 'publishComposition', { eventId }).catch(() => {});
 
       // 🧩 Le serveur vient de poster la bulle de composition dans le fil de
       // l'equipe (`publishLineupShareToTeamChat`) — mais il ne rend PAS l'id du

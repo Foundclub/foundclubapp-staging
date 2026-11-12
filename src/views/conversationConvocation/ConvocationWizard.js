@@ -393,7 +393,7 @@ function ConvocationWizard({
       const draft = rendezVousTouche ? { ...pack, rendezVous } : pack;
       await saveEventCompositionDraft(eventId, { draft, teamId });
       await publishEventConvocation(eventId, { teamId });
-      invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
+      invalidateAfterAction(queryClient, 'publishComposition', { eventId }).catch(() => {});
 
       // CONVOC-RDV — `rdv doublon B` (chef d'orchestre, 08/10) : le rendez-vous part AUSSI en
       // message, que le serveur le range ou non. Un joueur en 2.6.70 / 2.6.71 ne lit pas la ligne

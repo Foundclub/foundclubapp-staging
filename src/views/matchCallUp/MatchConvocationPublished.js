@@ -164,7 +164,7 @@ function MatchConvocationPublished() {
       // l'invalidation va rechercher. Le reste vit dans `admin`.
       // ⚠️ Non attendu : le marquage est SYNCHRONE, seule la relecture ne l'est
       //    pas — et l'ecran reste monte pour la recevoir.
-      invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
+      invalidateAfterAction(queryClient, 'publishComposition', { eventId }).catch(() => {});
 
       Alert.alert(
         t('matchConvocation.published.alerts.resent.title'),

@@ -229,8 +229,11 @@ const LATENCE_RELECTURE_MS = 40;
  * @returns {Promise<any>} Le compteur des relectures reellement parties.
  */
 const poserDesRelecturesLentes = async (client) => {
+  // PERF-2 (D70, 12/11) — la fiche est posee sous SA vraie cle (`['event', id]`, celle que lit
+  // `EventDetails`) : `publishComposition` ne relit plus que la fiche de l'evenement publie, et
+  // aucune requete de l'app ne porte la cle nue `['event']`.
   const racines = [
-    ['event'], ['events'], ['eventComposition'], ['eventConvocation'], ['home-summary'],
+    ['event', 'evt_1'], ['events'], ['eventComposition'], ['eventConvocation'], ['home-summary'],
   ];
   const lectures = jest.fn();
 

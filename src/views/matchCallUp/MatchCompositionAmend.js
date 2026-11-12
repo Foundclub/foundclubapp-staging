@@ -161,7 +161,7 @@ function MatchCompositionAmend() {
       // la donnee a moins de 30 s (`EVENT_DETAILS_STALE_MS`).
       // ⚠️ Non attendu : le marquage est SYNCHRONE, la relecture se termine
       //    apres le depart de cet ecran, et le `queryClient` est un singleton.
-      invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
+      invalidateAfterAction(queryClient, 'publishComposition', { eventId }).catch(() => {});
 
       Alert.alert(
         t('matchConvocation.amend.alerts.republished.title'),
