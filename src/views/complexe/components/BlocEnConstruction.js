@@ -17,7 +17,9 @@ import EcrireAuClient from '@/views/complexe/components/EcrireAuClient';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { usePartagerAnnonce, useReservationsDuComplexe } from '@/services/complexe/complexeQueries';
+import {
+  useDeciderDemande, usePartagerAnnonce, useReservationsDuComplexe,
+} from '@/services/complexe/complexeQueries';
 
 /**
  * La jauge orange d'une réservation en construction (« 7 sur 10 »).
@@ -48,8 +50,37 @@ export function JaugeDeConstruction({ part }) {
 }
 
 /**
+ * Une pastille de la ligne (« Jour J », « Sur demande », « Acceptée »).
+ * @param {{ texte: string }} props - Le texte.
+ * @returns {import('react').ReactElement} La pastille.
+ */
+function Pastille({ texte }) {
+  const { Colors, Fonts } = useTheme();
+  return (
+    <Text
+      style={[
+        Fonts.p3Bold,
+        {
+          backgroundColor: withAlpha(Colors.warning500, 0.18),
+          borderRadius: 10,
+          color: Colors.warning500,
+          overflow: 'hidden',
+          paddingHorizontal: 8,
+          paddingVertical: 2,
+        },
+      ]}
+    >
+      {texte}
+    </Text>
+  );
+}
+
+/**
  * Une réservation en construction : la toucher ouvre sa fiche ; « Écrire au client », « Partager
  * l'annonce » (dans son canal) ou, sans annonce ouverte, « Voir la fiche ».
+ * ACCEPTER-CONSTRUCTION (12/11/2026, Adel « 263 A ») : un terrain sur demande pas encore accepté —
+ * « Sur demande », « Accepter » et « Voir la fiche » (maquette gerant-accueil.png) ; accepté :
+ * « Acceptée » et les gestes d'avant.
  * @param {{ aujourdhui: string, complexeId: string, ligne: any, navigation: any }} props - Le jour,
  *   le complexe, la ligne du serveur (`vue=construction`) et la navigation.
  * @returns {import('react').ReactElement} La ligne.
@@ -60,8 +91,12 @@ function LigneEnConstruction({
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const partager = usePartagerAnnonce();
+  const decider = useDeciderDemande();
   const [message, setMessage] = useState('');
   const [refus, setRefus] = useState('');
+  const [accepteeIci, setAccepteeIci] = useState(false);
+  const acceptee = Boolean(ligne.construction?.acceptedAt) || accepteeIci;
+  const aAccepter = ligne.construction?.surDemande === true && !acceptee;
   const jourJ = ligne.date === aujourdhui;
   const jour = jourJ
     ? t('complexeGerant.construction.aujourdhui', 'Aujourd’hui')
@@ -74,6 +109,23 @@ function LigneEnConstruction({
   const ouvrirLaFiche = () => navigation.navigate(RouteNames.ComplexeReservation, {
     complexeId, reservationId: ligne.documentId,
   });
+  const accepter = async () => {
+    setMessage('');
+    setRefus('');
+    try {
+      await decider.mutateAsync({
+        complexeId, decision: 'accepter', reservationId: ligne.documentId,
+      });
+      setAccepteeIci(true);
+      setMessage(t(
+        'complexeGerant.construction.accepteeMessage',
+        'Réservation acceptée : le créneau est gardé pour ce groupe.',
+      ));
+    } catch (erreur) {
+      const repli = t('complexeReservations.fiche.erreurGeste', 'Le geste n’a pas pu être fait.');
+      setRefus(messageDeRefusResa(t, erreur, repli));
+    }
+  };
   const partagerLAnnonce = async () => {
     setMessage('');
     setRefus('');
@@ -93,60 +145,71 @@ function LigneEnConstruction({
         style={[Alignments.row, Alignments.alignCenter, { gap: 8, minHeight: 44 }]}
       >
         <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>{titre}</Text>
-        {jourJ ? (
-          <Text
-            style={[
-              Fonts.p3Bold,
-              {
-                backgroundColor: withAlpha(Colors.warning500, 0.18),
-                borderRadius: 10,
-                color: Colors.warning500,
-                overflow: 'hidden',
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-              },
-            ]}
-          >
-            {t('complexeGerant.construction.jourJ', 'Jour J')}
-          </Text>
+        {jourJ ? <Pastille texte={t('complexeGerant.construction.jourJ', 'Jour J')} /> : null}
+        {aAccepter ? (
+          <Pastille texte={t('complexeGerant.construction.surDemande', 'Sur demande')} />
+        ) : null}
+        {acceptee ? (
+          <Pastille texte={t('complexeGerant.construction.acceptee', 'Acceptée')} />
         ) : null}
       </TouchableOpacity>
       <Text style={[Fonts.p3, Fonts.neutral200]}>{detail}</Text>
       <JaugeDeConstruction part={partDeLaJauge(ligne.construction)} />
       {message ? <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{message}</Text> : null}
       {refus ? <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>{refus}</Text> : null}
-      <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-        <View style={{ flexBasis: 140, flexGrow: 1 }}>
-          <EcrireAuClient
-            complexeId={complexeId}
-            navigation={navigation}
-            reservationId={ligne.documentId}
-            size="sm"
-            testID={`complexe-accueil-construction-ecrire-${ligne.documentId}`}
-            title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
-          />
-        </View>
-        <View style={{ flexBasis: 140, flexGrow: 1 }}>
-          {peutPartagerLAnnonce(ligne) && ligne.annonce ? (
+      {aAccepter ? (
+        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+          <View style={{ flexBasis: 140, flexGrow: 1 }}>
             <Button
-              icon="share"
-              iconPosition="before"
-              isLoading={Boolean(partager.isPending)}
-              onPress={partagerLAnnonce}
+              isLoading={Boolean(decider.isPending)}
+              onPress={accepter}
               size="sm"
-              title={t('complexeGerant.construction.partager', 'Partager l’annonce')}
-              variant="Secondary"
+              title={t('complexeGerant.construction.accepterCourt', 'Accepter')}
             />
-          ) : (
+          </View>
+          <View style={{ flexBasis: 140, flexGrow: 1 }}>
             <Button
               onPress={ouvrirLaFiche}
               size="sm"
               title={t('complexeGerant.construction.voirFiche', 'Voir la fiche')}
               variant="Secondary"
             />
-          )}
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+          <View style={{ flexBasis: 140, flexGrow: 1 }}>
+            <EcrireAuClient
+              complexeId={complexeId}
+              navigation={navigation}
+              reservationId={ligne.documentId}
+              size="sm"
+              testID={`complexe-accueil-construction-ecrire-${ligne.documentId}`}
+              title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
+            />
+          </View>
+          <View style={{ flexBasis: 140, flexGrow: 1 }}>
+            {peutPartagerLAnnonce(ligne) && ligne.annonce ? (
+              <Button
+                icon="share"
+                iconPosition="before"
+                isLoading={Boolean(partager.isPending)}
+                onPress={partagerLAnnonce}
+                size="sm"
+                title={t('complexeGerant.construction.partager', 'Partager l’annonce')}
+                variant="Secondary"
+              />
+            ) : (
+              <Button
+                onPress={ouvrirLaFiche}
+                size="sm"
+                title={t('complexeGerant.construction.voirFiche', 'Voir la fiche')}
+                variant="Secondary"
+              />
+            )}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -155,8 +218,7 @@ function LigneEnConstruction({
  * 🏗️ GERANT-CONSTRUCTION (11/11/2026, D50) — LE BLOC « EN CONSTRUCTION » DE L'ACCUEIL DU GÉRANT
  * (maquette gerant-accueil.png) : dès qu'une réservation est en construction dans son complexe, il
  * la voit et peut agir (lui écrire, partager l'annonce, ouvrir la fiche). Sans elle : rien.
- * ponytail: pas de « Accepter » pour un terrain sur demande pendant la construction (la maquette le
- * dessine ; le serveur n'a pas cet état « acceptée, en construction ») ; sortie : un geste serveur.
+ * ACCEPTER-CONSTRUCTION (12/11/2026) : « Accepter » un terrain sur demande pendant la construction.
  * @param {{ aujourdhui: string, carte: object, complexeId: string | null, navigation: any,
  *   titreSection: (libelle: string) => import('react').ReactElement }} props - Le jour, le style
  *   des cartes de l'accueil, le complexe, la navigation et l'intertitre de l'accueil.

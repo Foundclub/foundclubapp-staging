@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les phrases de la maquette, comparées entières */
 import renderer, { act } from 'react-test-renderer';
 
 import ComplexeAccueil from '@/views/complexe/ComplexeAccueil';
@@ -27,8 +28,10 @@ jest.mock('@/domains/auth/useAuth', () => ({
 /** @type {Record<string, any>} */
 let mockListes = {};
 const mockPartager = jest.fn();
+const mockDecider = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useChiffresDuComplexe: () => ({ data: undefined, isLoading: false }),
+  useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
   useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useMesComplexes: () => ({
     data: [jest.requireActual('@/testSupport/temoinComplexe').COMPLEXE_FIVE], isLoading: false, refetch: jest.fn(),
@@ -162,6 +165,28 @@ describe('GERANT-CONSTRUCTION — le bloc « En construction » de l’accueil',
     expect(mockPartager).toHaveBeenCalledWith({ complexeId: 'cx-five', reservationId: 'r-c1' });
     expect(lisibles(arbre)).toContain('Annonce partagée dans ton canal.');
     expect(() => pressable(arbre, 'Écrire au client')).not.toThrow();
+  });
+
+  // ACCEPTER-CONSTRUCTION (12/11, Adel « 263 A ») : maquette gerant-accueil.png, 2e ligne.
+  it('ACCEPTER-CONSTRUCTION · sur demande : « Sur demande », « Accepter », « Voir la fiche »', async () => {
+    mockDecider.mockResolvedValue({ data: {} });
+    mockListes.construction = pages([{ ...LIGNE, construction: { ...LIGNE.construction, surDemande: true } }]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Sur demande');
+    expect(() => pressable(arbre, 'Voir la fiche')).not.toThrow();
+    await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
+    expect(mockDecider).toHaveBeenCalledWith({ complexeId: 'cx-five', decision: 'accepter', reservationId: 'r-c1' });
+    expect(lisibles(arbre)).toContain('Réservation acceptée : le créneau est gardé pour ce groupe.');
+  });
+
+  it('ACCEPTER-CONSTRUCTION · déjà acceptée : « Acceptée », les gestes d’avant reviennent', async () => {
+    mockListes.construction = pages([{
+      ...LIGNE, construction: { ...LIGNE.construction, acceptedAt: '2026-10-14T15:24:00.000Z', surDemande: true },
+    }]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Acceptée');
+    expect(() => pressable(arbre, 'Partager l’annonce')).not.toThrow();
+    expect(lisibles(arbre)).not.toContain('Sur demande');
   });
 
   it('sans réservation en construction (ou avant que la liste soit lue) : aucun bloc', async () => {

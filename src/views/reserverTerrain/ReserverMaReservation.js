@@ -367,11 +367,18 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
             />
           </View>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t(
-              'reserverTerrain.maReservation.dateLimite',
-              'Date limite : {{echeance}} · le créneau reste libre jusque-là',
-              { echeance: jourEtHeure(t, collecte.collectDeadline), ...SANS_ECHAPPEMENT },
-            )}
+            {/* ACCEPTER-CONSTRUCTION : acceptée par le complexe, le créneau lui est gardé. */}
+            {collecte.acceptedAt
+              ? t(
+                'reserverTerrain.maReservation.dateLimiteGardee',
+                'Date limite : {{echeance}} · le créneau t’est gardé jusque-là',
+                { echeance: jourEtHeure(t, collecte.collectDeadline), ...SANS_ECHAPPEMENT },
+              )
+              : t(
+                'reserverTerrain.maReservation.dateLimite',
+                'Date limite : {{echeance}} · le créneau reste libre jusque-là',
+                { echeance: jourEtHeure(t, collecte.collectDeadline), ...SANS_ECHAPPEMENT },
+              )}
           </Text>
         </View>
       ) : null}
@@ -645,6 +652,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
         {collecte ? (
           <BlocConstruction
             collecte={collecte}
+            complexe={nomDuComplexe}
             paie={texteCeQuePaieLeGroupe(t, reservation?.price, Number(collecte.quorum) || 0)}
             reservationId={String(reservation.documentId)}
           />

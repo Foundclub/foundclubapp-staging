@@ -16,6 +16,7 @@ import {
   nomCourt,
   nonHonoreesLisibles,
   plageHoraire,
+  quand,
   quandCourt,
   STATUTS,
   STATUTS_COLLECTE,
@@ -384,6 +385,25 @@ function FicheReservation({
 
   // GERANT-CONSTRUCTION (maquette gerant-fiche.png) — la jauge, ce qui manque, l'évolution.
   const evolution = enConstruction ? evolutionDeLaConstruction(t, r) : [];
+  // ACCEPTER-CONSTRUCTION (Adel « 263 A ») : un terrain sur demande s'accepte avant que le groupe
+  // soit complet ; le créneau est alors gardé jusqu'à l'échéance.
+  const acceptee = enConstruction ? quand(r.construction.acceptedAt) : '';
+  const peutAccepterLaConstruction = enConstruction && aVenir && r.construction.surDemande === true
+    && !r.construction.acceptedAt;
+  const accepterLaConstruction = async () => {
+    setMessage('');
+    setConflit('');
+    try {
+      await decider.mutateAsync({ complexeId, decision: 'accepter', reservationId });
+      setMessage(t(
+        'complexeGerant.construction.accepteeMessage',
+        'Réservation acceptée : le créneau est gardé pour ce groupe.',
+      ));
+      lecture.refetch?.();
+    } catch (erreur) {
+      setConflit(messageDeRefusResa(t, erreur, repli));
+    }
+  };
   const construction = enConstruction ? (
     <View
       style={[
@@ -403,6 +423,15 @@ function FicheReservation({
         </Text>
       </View>
       <JaugeDeConstruction part={partDeLaJauge(r.construction)} />
+      {acceptee ? (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="fiche-construction-acceptee">
+          {t(
+            'complexeGerant.construction.accepteeLe',
+            'Acceptée par toi le {{le}} : le créneau est gardé pour ce groupe.',
+            { le: acceptee, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
       <View style={{ gap: 8, marginTop: 6 }}>
         {legende(t('complexeGerant.construction.evolution', 'Évolution').toUpperCase())}
         {evolution.map((ligne) => (
@@ -483,28 +512,46 @@ function FicheReservation({
     // GERANT-CONSTRUCTION (maquette gerant-fiche.png) : « Écrire au client », « Partager
     // l'annonce » (dans son canal) s'il y a une annonce ouverte.
     pied = (
-      <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-        <View style={{ flexBasis: 140, flexGrow: 1 }}>
-          <EcrireAuClient
-            complexeId={complexeId || ''}
-            navigation={/** @type {any} */ (navigation)}
-            reservationId={reservationId}
-            testID="fiche-ecrire"
-            title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
-          />
-        </View>
-        {peutPartagerLAnnonce(r) ? (
-          <View style={{ flexBasis: 140, flexGrow: 1 }} testID="fiche-partager-annonce">
+      <View style={{ gap: 8 }}>
+        {peutAccepterLaConstruction ? (
+          <View style={{ gap: 6 }} testID="fiche-accepter-construction">
             <Button
-              icon="share"
-              iconPosition="before"
-              isLoading={Boolean(partager.isPending)}
-              onPress={partagerDansLeCanal}
-              title={t('complexeGerant.construction.partager', 'Partager l’annonce')}
-              variant="Secondary"
+              isLoading={Boolean(decider.isPending)}
+              onPress={accepterLaConstruction}
+              title={t('complexeGerant.construction.accepter', 'Accepter maintenant')}
             />
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'complexeGerant.construction.accepterAide',
+                'Accepter garde le créneau à ce groupe ; la réservation reste en construction '
+                  + 'jusqu’à « On a assez de joueurs ».',
+              )}
+            </Text>
           </View>
         ) : null}
+        <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
+          <View style={{ flexBasis: 140, flexGrow: 1 }}>
+            <EcrireAuClient
+              complexeId={complexeId || ''}
+              navigation={/** @type {any} */ (navigation)}
+              reservationId={reservationId}
+              testID="fiche-ecrire"
+              title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
+            />
+          </View>
+          {peutPartagerLAnnonce(r) ? (
+            <View style={{ flexBasis: 140, flexGrow: 1 }} testID="fiche-partager-annonce">
+              <Button
+                icon="share"
+                iconPosition="before"
+                isLoading={Boolean(partager.isPending)}
+                onPress={partagerDansLeCanal}
+                title={t('complexeGerant.construction.partager', 'Partager l’annonce')}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
+        </View>
       </View>
     );
   } else if (confirmeeAVenir) {

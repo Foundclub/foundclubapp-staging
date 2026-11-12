@@ -286,6 +286,33 @@ describe('E-P07 — en collecte (état 2)', () => {
     });
   });
 
+  // ACCEPTER-CONSTRUCTION (12/11, Adel « 263 A ») : le complexe a accepté — le créneau lui est
+  // gardé jusqu'à la date limite ; « un autre groupe peut prendre ce créneau » n'est plus vrai.
+  it('ACCEPTER-CONSTRUCTION · acceptée : la mention, le créneau gardé', async () => {
+    mockGroupe = {
+      data: groupe({
+        collecte: {
+          acceptedAt: '2026-10-14T15:24:00.000Z',
+          collectDeadline: '2026-10-15T16:00:00.000Z',
+          failure: null,
+          presents: 7,
+          quorum: 10,
+          reachedAt: null,
+        },
+        counts: { absents: 1, presents: 7, sansReponse: 2 },
+        status: 'en_collecte',
+      }),
+    };
+    const vus = lisibles(await monter());
+    expect(vus).toEqual(expect.arrayContaining([
+      'Acceptée par Le Five de Montrivage. Le créneau t’est gardé. '
+        + 'Dis « On a assez de joueurs » quand ton groupe est prêt.',
+      'Date limite : jeudi 18 h · le créneau t’est gardé jusque-là',
+    ]));
+    expect(vus)
+      .not.toContain('Tant que ce n’est pas confirmé, un autre groupe peut prendre ce créneau.');
+  });
+
   it('RESA-JOUEUR · « J’ai trouvé des joueurs » : combien, puis l’annonce', async () => {
     mockConstruire.mockResolvedValue({});
     const arbre = await monter();

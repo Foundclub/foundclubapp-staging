@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les phrases de la maquette, comparées entières */
 import renderer, { act } from 'react-test-renderer';
 
 import ComplexeReservation from '@/views/complexe/ComplexeReservation';
@@ -19,12 +20,13 @@ jest.mock('@react-navigation/native', () => ({
 let mockFiche = /** @type {any} */ ({});
 const mockPartager = jest.fn();
 const mockEcrire = jest.fn();
+const mockDecider = jest.fn();
 jest.mock('@/services/complexe/complexeQueries', () => ({
   useAnnulerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useAnnulerReservation: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useComplexeChoisi: jest.requireActual('@/testSupport/temoinComplexe').complexeChoisiDeTemoin,
   useComplexeGere: () => ({ data: null }),
-  useDeciderDemande: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useDeciderDemande: () => ({ isPending: false, mutateAsync: mockDecider }),
   useEcrireAuReserveur: () => ({ isPending: false, mutateAsync: mockEcrire }),
   useFideliteDuComplexe: () => ({ data: null, isLoading: false }),
   useMarquerNonHonoree: () => ({ isPending: false, mutateAsync: jest.fn() }),
@@ -161,6 +163,35 @@ describe('GERANT-CONSTRUCTION — la fiche « en construction »', () => {
     const pastille = parRepere(arbre, 'pastille-etat-en_collecte');
     expect(lisibles({ root: pastille })).toContain('En construction');
     expect(lisibles(arbre)).not.toContain('En collecte');
+  });
+
+  // ACCEPTER-CONSTRUCTION (12/11, Adel « 263 A », maquette « Accepter maintenant ») : un terrain
+  // sur demande s'accepte avant que le groupe soit complet ; le créneau est gardé.
+  it('ACCEPTER-CONSTRUCTION · sur demande : « Accepter maintenant », puis le message', async () => {
+    mockDecider.mockResolvedValue({ data: {} });
+    mockFiche = { ...mockFiche, data: fiche({ construction: { ...fiche().construction, surDemande: true } }) };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain(
+      'Accepter garde le créneau à ce groupe ; la réservation reste en construction jusqu’à « On a assez de joueurs ».',
+    );
+    await act(async () => { pressable(arbre, 'Accepter maintenant').props.onPress(); });
+    expect(mockDecider).toHaveBeenCalledWith({ complexeId: 'cx-five', decision: 'accepter', reservationId: 'r-c1' });
+    expect(lisibles(arbre)).toContain('Réservation acceptée : le créneau est gardé pour ce groupe.');
+  });
+
+  it('ACCEPTER-CONSTRUCTION · déjà acceptée : la mention, plus de bouton ; automatique : rien', async () => {
+    mockFiche = {
+      ...mockFiche,
+      data: fiche({
+        construction: { ...fiche().construction, acceptedAt: '2026-10-14T15:24:00.000Z', surDemande: true },
+      }),
+    };
+    let arbre = await monter();
+    expect(lisibles(arbre)).toContain('Acceptée par toi le 14/10 à 17 h 24 : le créneau est gardé pour ce groupe.');
+    expect(() => pressable(arbre, 'Accepter maintenant')).toThrow();
+    mockFiche = { ...mockFiche, data: fiche({ construction: { ...fiche().construction, surDemande: false } }) };
+    arbre = await monter();
+    expect(() => pressable(arbre, 'Accepter maintenant')).toThrow();
   });
 
   it('une réservation confirmée ne montre pas le bloc', async () => {
