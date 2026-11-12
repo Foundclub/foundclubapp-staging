@@ -410,13 +410,10 @@ function MyActivitiesScreen({ navigation }) {
     );
   };
 
-  return (
-    <ScreenContainer
-      bgImage="bg2"
-      bottomInsetMode="scroll-edge"
-      // REPRISE-PLACE (01/11, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
-      contentContainerStyle={[Alignments.fill]}
-    >
+  // HAUT-DEFILE-F1 (12/11, « 245 B ») — le titre et, pour le staff, les sous-onglets défilent en
+  // tête de la liste ; ils restaient figés au-dessus. Témoin : MyActivitiesScreen.HAUTDEFILEF1.
+  const enTete = (
+    <View style={Spaces.marginBottom[8]}>
       <View style={[Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>
           {isStaff
@@ -439,13 +436,28 @@ function MyActivitiesScreen({ navigation }) {
           value={activeTab}
         />
       ) : null}
+    </View>
+  );
 
-      {loading ? <Loader /> : (
+  return (
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="scroll-edge"
+      // REPRISE-PLACE (01/11, point 6) : le conteneur pose déjà 24 sur les côtés (40 avant).
+      contentContainerStyle={[Alignments.fill]}
+    >
+      {loading ? (
+        <>
+          {enTete}
+          <Loader />
+        </>
+      ) : (
         <FlatList
           contentContainerStyle={[Spaces.gap[8], { flexGrow: 1, paddingBottom: 160 + retraitBas }]}
           data={items}
           keyExtractor={(item) => item.key}
           ListEmptyComponent={renderEmpty()}
+          ListHeaderComponent={enTete}
           onRefresh={() => fetchActivities(true)}
           refreshing={refreshing}
           renderItem={({ item }) => (
