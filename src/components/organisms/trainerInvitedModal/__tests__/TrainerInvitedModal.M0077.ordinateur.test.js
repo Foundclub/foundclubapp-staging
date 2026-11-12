@@ -94,23 +94,24 @@ describe('M0077 — inviter depuis un ordinateur', () => {
     expect(onInvite).not.toHaveBeenCalled();
   });
 
-  // INVITE-COACH-EXISTANT (10/11) : un numéro déjà inscrit n'est PAS ajouté ; la feuille ne dit
-  // pas « Ajout réussi ! », elle dit ce qui se passe et ce qu'il faut faire.
-  it('numéro déjà inscrit : pas de « Ajout réussi ! », et Copier marche', async () => {
+  // INVITE-STAFF (10/11) : les appelants fournissent le titre et le texte de l'invitation envoyée
+  // (la prop `dejaInscrit` d'INVITE-COACH-EXISTANT, sans appelant, est retirée par MENAGE-T10).
+  it('titre et texte fournis par l appelant : affichés, et Copier marche', async () => {
     act(() => {
       renderer.create(
         <TrainerInvitedModal
-          dejaInscrit
           isVisible
           messageDInvitation={MESSAGE}
           onClose={jest.fn()}
           onInvite={jest.fn()}
+          texte="Invitation envoyée à Léa."
+          titre="Invitation envoyée"
           trainerName="Léa"
         />,
       );
     });
-    expect(derniere().titre).toBe('addCoach.alerts.invitation.title');
-    expect(derniere().texte).toBe('addCoach.alerts.invitation.description');
+    expect(derniere().titre).toBe('Invitation envoyée');
+    expect(derniere().texte).toBe('Invitation envoyée à Léa.');
     await act(async () => { await derniere().actionPrincipale.onPress(); });
     expect(mockCopier).toHaveBeenCalledWith(MESSAGE);
     expect(derniere().texte)
