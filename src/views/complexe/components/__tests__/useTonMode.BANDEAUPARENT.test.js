@@ -72,9 +72,11 @@ afterEach(() => {
 });
 
 describe('BANDEAU-PARENT — la position Parent dans l’espace du complexe', () => {
-  it('Joueur né Joueur avec un enfant : pas de Parent (il passe par « Mon compte »)', () => {
+  // T9-RETOURS-B (12/11/2026, Adel « 284 ») : « Parent » dès qu'il y a un enfant, d'où que vienne
+  // le compte (avant : pas de Parent pour un né Joueur).
+  it('Joueur né Joueur avec un enfant : Parent', () => {
     mockStockage.set('user.parent_origin.j-1', 'player');
-    expect(positionsDe(JOUEUR)).not.toContain('parent');
+    expect(positionsDe(JOUEUR)).toContain('parent');
   });
 
   it('Joueur né Parent avec un enfant : Parent', () => {

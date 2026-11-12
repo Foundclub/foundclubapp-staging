@@ -47,7 +47,6 @@ import {
   offersParentSwitch as offreLaBasculeParent,
   resolveDisplayRoleKey,
   useDisplayModeRequest,
-  useParentOrigin,
   writeDisplayModeRequest,
 } from '@/domains/auth/playerMode';
 import {
@@ -727,13 +726,9 @@ const useAuth = () => {
   const isParentMode = displayRoleKey === 'parent' && userRoleKey !== 'parent';
   const canUsePlayerMode = canAccountUsePlayerMode(userRoleKey, userData);
   const canUseParentMode = canAccountUseParentMode(userRoleKey);
-  // ACCUEIL-JOUEUR (09/11/2026, retour d'un vrai joueur) — la bascule parent de l'accueil ne
-  // s'offre qu'à un compte né Parent (ou en mode parent, pour revenir) ; un compte né Joueur
-  // passe par « Mon compte ». Témoin : `playerMode.ACCUEILJOUEUR.origineParent.test.js`.
-  const parentOrigin = useParentOrigin(userData?.documentId);
-  const offersParentSwitch = offreLaBasculeParent({
-    accountRoleKey: userRoleKey, displayModeRequest, origin: parentOrigin,
-  });
+  // T9-RETOURS-B (12/11/2026, Adel « 284 ») — la bascule parent de l'accueil s'offre à tout rôle
+  // sportif ; l'accueil y ajoute « au moins un enfant ». Témoin : `playerMode.T9RETOURSB.test.js`.
+  const offersParentSwitch = offreLaBasculeParent({ accountRoleKey: userRoleKey });
   const setDisplayMode = useCallback(
     (/** @type {'player' | 'parent' | null} */ mode) => writeDisplayModeRequest(
       userData?.documentId,
