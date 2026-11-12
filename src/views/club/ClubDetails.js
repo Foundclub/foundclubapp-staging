@@ -4415,7 +4415,11 @@ function ClubDetails({ navigation, route }) {
                     </View>
                     {/* INVITE-STAFF (10/11, maquette C) : les invitations en attente. */}
                     {canEdit && club?.documentId ? (
-                      <InvitationsDeStaffEnAttente clubId={club.documentId} clubName={club?.name} />
+                      <InvitationsDeStaffEnAttente
+                        clubId={club.documentId}
+                        clubName={club?.name}
+                        navigation={navigation}
+                      />
                     ) : null}
                     {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
                     {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}

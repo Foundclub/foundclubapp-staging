@@ -22263,6 +22263,8 @@ export default {
     pending: {
       cancel: 'Annuler',
       note: 'Tu vois ce que tu as tapé, pas le profil de la personne. Elle apparaît dans le staff quand elle accepte.',
+      inviteAgain: 'Inviter à nouveau',
+      refusedState: 'Refusée',
       resend: 'Relancer par SMS',
       sentOn: 'envoyée le {{date}}',
       someone: 'Invité·e',
@@ -22278,7 +22280,7 @@ export default {
       refuse: 'Refuser',
     },
     refused: {
-      text: 'Rien n’a changé sur ton compte. Le club n’est pas prévenu.',
+      text: 'Rien n’a changé sur ton compte. Le club verra que tu as refusé.',
       title: 'Invitation refusée',
     },
     roles: {
@@ -22301,8 +22303,9 @@ export default {
       becomeCoachOf: 'Tu deviens coach de l’équipe {{team}} : matchs, entraînements, convocations.',
       becomeDirigeant: 'Tu deviens dirigeant·e du club : équipes, staff et membres.',
       ifAccept: 'Si tu acceptes :',
-      ifRefuse: 'Si tu refuses, rien ne change et le club n’est pas prévenu.',
-      ifRefuseUntil: 'Si tu refuses, rien ne change et le club n’est pas prévenu. Invitation valable jusqu’au {{date}}.',
+      ifRefuse: 'Si tu refuses, rien ne change pour toi, et le club verra que tu as refusé.',
+      ifRefuseUntil: 'Si tu refuses, rien ne change pour toi, et le club verra que tu as refusé. '
+        + 'Invitation valable jusqu’au {{date}}.',
       joinClub: 'Tu entres au club {{club}}.',
       refuse: 'Refuser',
       teamsStay: 'Tes équipes actuelles ne bougent pas.',

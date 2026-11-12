@@ -14,12 +14,14 @@ jest.mock('@/services/client', () => ({
 describe('AMICAUX-FORMAT — getFriendlyMatchAds trie au serveur', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('sport + format : les clauses partent sous $and, avec les annonces sans format', async () => {
+  // « 5 A » remplacée par le retour M1193 du 12/11 (T9-RETOURS-A) : plus d'annonce sans format
+  // sous un filtre de format.
+  it('sport + format : les clauses partent sous $and, sans les annonces sans format', async () => {
     await getFriendlyMatchAds({ format: '7v7', search: 'Marseille', sport: 'Football' });
     const { filters } = /** @type {any} */ (client.get).mock.calls[0][1].params;
     expect(filters.$and).toEqual([
       { activity: { name: { $eqi: 'Football' } } },
-      { $or: [{ format: { $eq: '7v7' } }, { format: { $null: true } }, { format: { $eq: '' } }] },
+      { format: { $eq: '7v7' } },
     ]);
     // La recherche texte garde son propre $or, à côté.
     expect(Array.isArray(filters.$or)).toBe(true);

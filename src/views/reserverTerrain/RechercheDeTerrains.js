@@ -334,6 +334,8 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     navigation.navigate(RouteNames.ReserverCreneau, {
       date: dateLue,
       from: creneau.from,
+      // T9-RETOURS-A : le début repère le créneau de nuit (« 0 h » sous le jour de sa plage).
+      ...(creneau?.startsAt ? { startsAt: creneau.startsAt } : {}),
       slug: carte.slug,
       terrainId: creneau?.terrain?.documentId,
     });

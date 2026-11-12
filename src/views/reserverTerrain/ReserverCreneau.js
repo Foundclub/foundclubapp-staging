@@ -80,7 +80,10 @@ function ReserverCreneau() {
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
-  /** @type {{ date?: string, from?: string, slug?: string, terrainId?: string }} */
+  /**
+   * @type {{ date?: string, from?: string, slug?: string, startsAt?: string,
+   *   terrainId?: string }}
+   */
   const params = /** @type {any} */ (route?.params) || {};
   const { slug, terrainId } = params;
   const surOrdinateur = useIsDesktop();
@@ -98,7 +101,13 @@ function ReserverCreneau() {
       ? params.date
       : aujourdhui,
   );
-  const [choisi, setChoisi] = useState(/** @type {string | null} */ (params.from || null));
+  // T9-RETOURS-A : un créneau se repère par son début (`startsAt`) — sous mercredi, « 0 h »
+  // peut être la fin de la nuit d'hier ET celle de la nuit qui vient.
+  // ponytail: un lien qui ne porte que `from` choisit tous les créneaux de cette heure ;
+  // l'app passe toujours `startsAt`.
+  const [choisi, setChoisi] = useState(
+    /** @type {string | null} */ (params.startsAt || params.from || null),
+  );
   const [bandeau, setBandeau] = useState(/** @type {string | null} */ (null));
   const [tropTard, setTropTard] = useState(
     /** @type {{ creneau: any, telephone: string } | null} */ (null),
@@ -129,9 +138,14 @@ function ReserverCreneau() {
   const creneaux = Array.isArray(lecture?.data?.slots) ? lecture.data.slots : [];
   const libres = creneaux.filter((/** @type {any} */ creneau) => creneau?.state === 'libre');
   const parTelephone = terrain?.bookingMode === 'telephone';
+  const estChoisi = (/** @type {any} */ creneau) => Boolean(choisi)
+    && (creneau?.startsAt === choisi || creneau?.from === choisi);
   const creneauChoisi = creneaux.find(
-    (/** @type {any} */ creneau) => creneau.from === choisi && creneau.state === 'libre',
+    (/** @type {any} */ creneau) => estChoisi(creneau) && creneau.state === 'libre',
   ) || null;
+  // « 277 A » : un créneau d'après minuit s'affiche sous le jour de sa plage, mais se réserve à sa
+  // VRAIE date (`date` du serveur, vue=nuit).
+  const jourDe = (/** @type {any} */ creneau) => creneau?.date || date;
   const telephoneDuComplexe = String(complexe?.phoneNumber || '').trim();
 
   useEffect(() => {
@@ -160,21 +174,28 @@ function ReserverCreneau() {
     }
     if (creneau.state !== 'libre') return;
     if (parTelephone) {
-      setFeuille({ creneau: { ...creneau, date }, telephone: terrain?.phone || null });
+      setFeuille({
+        creneau: { ...creneau, date: jourDe(creneau) },
+        telephone: terrain?.phone || null,
+      });
       return;
     }
-    setChoisi(creneau.from);
+    setChoisi(creneau.startsAt || creneau.from);
   };
 
   const continuer = async () => {
     if (!creneauChoisi || sansNaissance) return;
     setBandeau(null);
-    const demande = { date, from: creneauChoisi.from, terrain: String(terrainId) };
+    const demande = {
+      date: jourDe(creneauChoisi),
+      from: creneauChoisi.from,
+      terrain: String(terrainId),
+    };
     try {
       const reponse = await apercu.mutateAsync(demande);
       navigation.navigate(RouteNames.ReserverRecapitulatif, {
         apercu: reponse,
-        date,
+        date: demande.date,
         from: creneauChoisi.from,
         slug,
         terrainId,
@@ -206,7 +227,7 @@ function ReserverCreneau() {
       }
       if (variante === 'telephone') {
         setFeuille({
-          creneau: { ...creneauChoisi, date },
+          creneau: { ...creneauChoisi, date: jourDe(creneauChoisi) },
           telephone: /** @type {any} */ (erreur)?.details?.phone || terrain?.phone || null,
         });
         return;
@@ -540,38 +561,38 @@ function ReserverCreneau() {
               <Text style={[Fonts.p3, Fonts.primary200]}>{texteLibres(t, moment.libres)}</Text>
             </View>
             {moment.creneaux.map((/** @type {any} */ creneau) => {
-              const estChoisi = creneau.from === choisi && creneau.state === 'libre';
+              const choisiIci = estChoisi(creneau) && creneau.state === 'libre';
               const touchable = creneau.state === 'libre' || creneau.state === 'trop-tard';
               const pris = creneau.state === 'pris';
               const ferme = creneau.state === 'ferme';
               const tard = creneau.state === 'trop-tard';
               let etat = libelleEtatDuCreneau(t, creneau.state);
-              if (estChoisi) etat = t('reserverTerrain.creneau.choisi', 'Choisi');
+              if (choisiIci) etat = t('reserverTerrain.creneau.choisi', 'Choisi');
               let couleurDuBord = withAlpha(Colors.primary500, 0.6);
               if (ferme || tard) couleurDuBord = withAlpha(Colors.warning500, 0.6);
               if (pris) couleurDuBord = withAlpha(Colors.primary200, 0.35);
               let styleDeLEtat = Fonts.primary200;
               if (tard || ferme) styleDeLEtat = Fonts.warning500;
-              if (estChoisi) styleDeLEtat = Fonts.primary900;
+              if (choisiIci) styleDeLEtat = Fonts.primary900;
               const prix = prixDUneLigne(creneau.price);
               const texteDuCreneau = texteCreneau(creneau.from, creneau.to);
               return (
                 <TouchableOpacity
                   accessibilityLabel={[texteDuCreneau, prix, etat].filter(Boolean).join(', ')}
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: !touchable, selected: estChoisi }}
+                  accessibilityState={{ disabled: !touchable, selected: choisiIci }}
                   disabled={!touchable}
-                  key={creneau.from}
+                  key={creneau.startsAt || creneau.from}
                   onPress={() => toucherUnCreneau(creneau)}
                   style={[
                     Alignments.row,
                     Alignments.wrap,
                     Alignments.alignCenter,
                     {
-                      backgroundColor: estChoisi
+                      backgroundColor: choisiIci
                         ? Colors.primary500
                         : withAlpha(Colors.primary500, pris ? 0.03 : 0.08),
-                      borderColor: estChoisi ? Colors.primary500 : couleurDuBord,
+                      borderColor: choisiIci ? Colors.primary500 : couleurDuBord,
                       borderRadius: 12,
                       borderStyle: pris ? 'dashed' : 'solid',
                       borderWidth: 1,
@@ -582,12 +603,14 @@ function ReserverCreneau() {
                       rowGap: 2,
                     },
                   ]}
-                  testID={`creneau-${creneau.from}`}
+                  testID={jourDe(creneau) !== date
+                    ? `creneau-${jourDe(creneau)}-${creneau.from}`
+                    : `creneau-${creneau.from}`}
                 >
                   <Text
                     style={[
                       Fonts.p1Bold,
-                      estChoisi ? Fonts.primary900 : Fonts.neutral00,
+                      choisiIci ? Fonts.primary900 : Fonts.neutral00,
                       pris ? { textDecorationLine: 'line-through' } : null,
                       { flexGrow: 1 },
                     ]}
@@ -595,7 +618,7 @@ function ReserverCreneau() {
                     {texteDuCreneau}
                   </Text>
                   {prix ? (
-                    <Text style={[Fonts.p2Bold, estChoisi ? Fonts.primary900 : Fonts.neutral100]}>
+                    <Text style={[Fonts.p2Bold, choisiIci ? Fonts.primary900 : Fonts.neutral100]}>
                       {prix}
                     </Text>
                   ) : null}
@@ -639,7 +662,7 @@ function ReserverCreneau() {
         <Text style={[Fonts.p2Bold, Fonts.neutral00, { flexGrow: 1 }]}>
           {t('reserverTerrain.creneau.choix', '{{jour}} · {{creneau}}', {
             creneau: texteCreneau(creneauChoisi.from, creneauChoisi.to),
-            jour: texteJourCourt(t, date),
+            jour: texteJourCourt(t, jourDe(creneauChoisi)),
             ...SANS_ECHAPPEMENT,
           })}
         </Text>
@@ -789,7 +812,7 @@ function ReserverCreneau() {
                     complexe?.name || t('reserverTerrain.echec.leComplexe', 'Le complexe'),
                   ),
                   creneau: texteCreneau(tropTard.creneau?.from, tropTard.creneau?.to),
-                  jour: texteJourCourt(t, date),
+                  jour: texteJourCourt(t, jourDe(tropTard.creneau)),
                   ...SANS_ECHAPPEMENT,
                 },
               )

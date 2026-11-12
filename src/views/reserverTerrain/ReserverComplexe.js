@@ -170,13 +170,15 @@ function ReserverComplexe() {
   const versLeCalendrier = (/** @type {any} */ terrain, /** @type {any} */ creneau = null) => {
     navigation.navigate(RouteNames.ReserverCreneau, {
       ...(creneau ? { date: aujourdhui, from: creneau.from } : {}),
+      // T9-RETOURS-A : le début repère le créneau de nuit (« 0 h » sous le jour de sa plage).
+      ...(creneau?.startsAt ? { startsAt: creneau.startsAt } : {}),
       slug,
       terrainId: terrain.documentId,
     });
   };
   const toucherUnCreneau = (/** @type {any} */ terrain, /** @type {any} */ creneau) => {
     if (terrain?.bookingMode === 'telephone') {
-      setFeuille({ creneau: { ...creneau, date: aujourdhui }, terrain });
+      setFeuille({ creneau: { ...creneau, date: creneau?.date || aujourdhui }, terrain });
       return;
     }
     versLeCalendrier(terrain, creneau);
