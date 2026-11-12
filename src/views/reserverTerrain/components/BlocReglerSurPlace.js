@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -12,13 +12,15 @@ import useTheme from '@/theme/themeContext';
  * @param {object} props - Les propriétés.
  * @param {{ lignes: Array<{ cle: string, libelle: string, montant: string }>, options: string,
  *   total: string }} props.bloc - Le bloc de `lignesAReglerSurPlace`.
+ * @param {{ libelle: string, onPress: () => void, testID: string } | null} [props.action] -
+ *   RESA-OPTIONS-2 : un lien à droite du titre (« Modifier les options » dans Ma réservation).
  * @param {boolean} [props.indicatif] - « Indicatif : le complexe encaisse… » (récapitulatif).
  * @param {boolean} [props.resume] - Le terrain puis « Options » en une ligne (fiche du gérant).
  * @param {string} props.titre - « À régler sur place », « À encaisser sur place ».
  * @returns {import('react').ReactElement} Le bloc.
  */
 function BlocReglerSurPlace({
-  bloc, indicatif = false, resume = false, titre,
+  action = null, bloc, indicatif = false, resume = false, titre,
 }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
@@ -61,9 +63,21 @@ function BlocReglerSurPlace({
       }}
       testID="bloc-regler-sur-place"
     >
-      <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
-        {titre.toUpperCase()}
-      </Text>
+      <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifyBetween, { gap: 8 }]}>
+        <Text style={[Fonts.p3Bold, Fonts.primary200, { letterSpacing: 0.5 }]}>
+          {titre.toUpperCase()}
+        </Text>
+        {action ? (
+          <TouchableOpacity
+            accessibilityRole="link"
+            onPress={action.onPress}
+            style={{ justifyContent: 'center', minHeight: 44 }}
+            testID={action.testID}
+          >
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>{action.libelle}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
       {lignes.map((une) => ligne(une.cle, une.libelle, une.montant))}
       <View style={{ backgroundColor: withAlpha(Colors.neutral00, 0.12), height: 1 }} />
       {ligne('total', t('complexeOptions.total', 'Total'), bloc.total, true)}

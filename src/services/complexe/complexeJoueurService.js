@@ -25,6 +25,8 @@ const client = {
   delete: (/** @type {any[]} */ ...args) => chargerLeClient().delete(...args),
   get: (/** @type {any[]} */ ...args) => chargerLeClient().get(...args),
   post: (/** @type {any[]} */ ...args) => chargerLeClient().post(...args),
+  // RESA-OPTIONS-2 : « Modifier les options » (PUT).
+  put: (/** @type {any[]} */ ...args) => chargerLeClient().put(...args),
 };
 
 /**
@@ -130,6 +132,17 @@ export const lireMaReservation = async (reservationId) => corps(
  */
 export const annulerMaReservation = async (reservationId) => corps(
   client.post(`/reservations-terrain/${enc(reservationId)}/annuler`, {}),
+);
+
+/**
+ * RESA-OPTIONS-2 (12/11/2026) — E-P07 « Modifier les options » : la liste ENTIÈRE (absente = 0),
+ * tant que l'annulation est gratuite ; après : 409 COMPLEXE_RESERVATION_CANCEL_TOO_LATE.
+ * @param {string} reservationId - documentId de la réservation.
+ * @param {Array<{ id: string, quantity: number }>} options - Le choix.
+ * @returns {Promise<any>} `{ data: réservation vue par son réserveur }`.
+ */
+export const modifierMesOptions = async (reservationId, options) => corps(
+  client.put(`/reservations-terrain/${enc(reservationId)}/options`, { data: { options } }),
 );
 
 /**

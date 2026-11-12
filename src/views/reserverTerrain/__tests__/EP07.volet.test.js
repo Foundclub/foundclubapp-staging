@@ -32,9 +32,12 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
       isLoading: false,
     };
   },
+  // RESA-OPTIONS-2 (12/11) : « Modifier les options », le terrain public (photo, options).
+  useModifierMesOptions: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useOuvrirUnFil: () => ({ isPending: false, mutateAsync: jest.fn() }),
   usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useRepondreALaPartie: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useTerrainsPublics: () => ({ data: [] }),
 }));
 
 jest.mock('@/platform/maps/externalMap', () => ({ openExternalMap: jest.fn() }));

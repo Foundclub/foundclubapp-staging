@@ -56,9 +56,12 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   useLienDInvitation: () => ({ isPending: false, mutateAsync: mockLien }),
   useMaRelationAuComplexe: () => mockRelation,
   useMaReservation: () => mockLecture,
+  // RESA-OPTIONS-2 (12/11) : « Modifier les options », le terrain public (photo, options).
+  useModifierMesOptions: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useOuvrirUnFil: () => ({ isPending: false, mutateAsync: mockFil }),
   usePublierUneAnnonce: () => ({ isPending: false, mutateAsync: mockPublier }),
   useRepondreALaPartie: () => ({ isPending: false, mutateAsync: mockRepondre }),
+  useTerrainsPublics: () => ({ data: [] }),
 }));
 jest.mock('@/platform/maps/externalMap', () => ({ openExternalMap: jest.fn() }));
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));

@@ -2,11 +2,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Linking, ScrollView, Text, TouchableOpacity, View,
+  Image, Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { formatEuros } from '@/domains/complexe/complexeTerrain';
-import { lignesAReglerSurPlace } from '@/domains/complexe/optionsTerrain';
+import {
+  lignesAReglerSurPlace, optionsModifiables, peutModifierLesOptions,
+} from '@/domains/complexe/optionsTerrain';
 import {
   apercuDeLaFidelite,
   jourEtHeure,
@@ -41,6 +43,7 @@ import BlocReglerSurPlace from '@/views/reserverTerrain/components/BlocReglerSur
 import CarteDAction from '@/views/reserverTerrain/components/CarteDAction';
 import FeuilleAnnonce from '@/views/reserverTerrain/components/FeuilleAnnonce';
 import FeuilleInviterParLien from '@/views/reserverTerrain/components/FeuilleInviterParLien';
+import FeuilleModifierOptions from '@/views/reserverTerrain/components/FeuilleModifierOptions';
 import PastilleEtat from '@/views/reserverTerrain/components/PastilleEtat';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
@@ -54,6 +57,7 @@ import {
   useMaReservation,
   useOuvrirUnFil,
   useRepondreALaPartie,
+  useTerrainsPublics,
 } from '@/services/complexe/complexeJoueurQueries';
 
 import texteInsecable from '@/utils/texteInsecable';
@@ -120,6 +124,8 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const annuler = useAnnulerMaReservation();
   const reservation = lecture?.data || null;
   const complexePublic = useComplexePublic(reservation?.complexe?.slug)?.data;
+  // RESA-OPTIONS-2 : le terrain de la page publique — ses options d'aujourd'hui et ses photos.
+  const terrainsPublics = useTerrainsPublics(reservation?.complexe?.slug)?.data;
   const groupe = useGroupeDeLaReservation(params.reservationId)?.data || null;
   const relation = useMaRelationAuComplexe(reservation?.complexe?.slug)?.data || null;
   const ouvrirUnFil = useOuvrirUnFil();
@@ -127,7 +133,7 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   const [confirmation, setConfirmation] = useState(false);
   const [refusTropTard, setRefusTropTard] = useState(/** @type {any} */ (null));
   const [bandeau, setBandeau] = useState(/** @type {string | null} */ (null));
-  const [feuille, setFeuille] = useState(/** @type {'annonce' | 'lien' | null} */ (
+  const [feuille, setFeuille] = useState(/** @type {'annonce' | 'lien' | 'options' | null} */ (
     params.ouvrir === 'annonce' ? 'annonce' : null
   ));
   const [refusDuFil, setRefusDuFil] = useState(/** @type {string | null} */ (null));
@@ -335,8 +341,25 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
   // Les blocs
   // -------------------------------------------------------------------------------------------
 
+  const terrainPublic = (Array.isArray(terrainsPublics) ? terrainsPublics : [])
+    .find((un) => un?.documentId && un.documentId === terrainId) || null;
+  // RESA-OPTIONS-2 (D79, maquette « Acceptée par le complexe ») : la photo du terrain en tête, la
+  // première de la page publique ; aucune sur un écran d'échec ni sans photo.
+  const photoDuTerrain = !varianteDEnTete && Array.isArray(terrainPublic?.photos)
+    ? terrainPublic.photos.find(Boolean) || null
+    : null;
   const enTete = (
     <View style={{ gap: 8 }}>
+      {photoDuTerrain ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          accessible={false}
+          resizeMode="cover"
+          source={{ uri: String(photoDuTerrain) }}
+          style={{ borderRadius: 20, height: 120, width: '100%' }}
+          testID="ma-reservation-photo"
+        />
+      ) : null}
       <Text
         accessibilityRole="header"
         style={[Fonts.h2Black, Fonts.neutral00, { letterSpacing: 1 }]}
@@ -442,6 +465,16 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
     Number(reservation?.players) || Number(reservation?.terrain?.capacity) || 1,
     reservation?.options,
   );
+  // RESA-OPTIONS-2 (décision a de « 233- oui ») : « Modifier les options » tant que l'annulation
+  // est gratuite ; une option déjà prise garde son prix figé.
+  const modifiables = optionsModifiables(terrainPublic?.options, reservation?.options);
+  const lienDesOptions = !varianteDEnTete && peutModifierLesOptions({
+    commence, etat, modifiables, participant, reservation,
+  }) ? {
+      libelle: t('complexeOptions.modifier', 'Modifier les options'),
+      onPress: () => setFeuille('options'),
+      testID: 'ma-reservation-modifier-options',
+    } : null;
   const lienAgenda = lienAgendaGoogle({
     debut: reservation.startsAt,
     details: t(
@@ -853,9 +886,21 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           {quandOu}
           {aReglerSurPlace ? (
             <BlocReglerSurPlace
+              action={lienDesOptions}
               bloc={aReglerSurPlace}
               titre={t('complexeOptions.aReglerSurPlace', 'À régler sur place')}
             />
+          ) : null}
+          {/* RESA-OPTIONS-2 : sans option prise, le lien seul (ajouter des options). */}
+          {!aReglerSurPlace && lienDesOptions ? (
+            <View style={{ alignSelf: 'flex-start' }} testID={lienDesOptions.testID}>
+              <Button
+                onPress={lienDesOptions.onPress}
+                size="sm"
+                title={lienDesOptions.libelle}
+                variant="Secondary"
+              />
+            </View>
           ) : null}
           {tuViens}
           {!varianteDEnTete ? <BlocParticipants groupe={groupe} /> : null}
@@ -915,6 +960,14 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           />
         </View>
       </BottomModal>
+      {feuille === 'options' && lienDesOptions ? (
+        <FeuilleModifierOptions
+          close={() => setFeuille(null)}
+          figees={Array.isArray(reservation?.options) ? reservation.options : []}
+          modifiables={modifiables}
+          reservationId={String(reservation.documentId)}
+        />
+      ) : null}
       {feuille === 'lien' && !participant ? (
         <FeuilleInviterParLien
           close={() => setFeuille(null)}

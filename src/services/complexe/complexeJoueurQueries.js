@@ -32,6 +32,7 @@ import {
   lireTerrainsPublics,
   lireUneAnnonce,
   listerLesAnnonces,
+  modifierMesOptions,
   ouvrirLaDiscussion,
   publierUneAnnonce,
   quitterLeCanal,
@@ -216,6 +217,18 @@ export const useReserverUnCreneau = () => useGesteDuJoueur(
  */
 export const useAnnulerMaReservation = () => useGesteDuJoueur(
   (reservationId) => annulerMaReservation(reservationId),
+);
+
+/**
+ * RESA-OPTIONS-2 (12/11/2026) — E-P07 « Modifier les options » de SA réservation (la liste
+ * entière) ; la réservation rendue remplace la lue.
+ * @returns {import('@tanstack/react-query').UseMutationResult<any, any, any>} La mutation ;
+ *   `mutateAsync({ reservationId, options })`.
+ */
+export const useModifierMesOptions = () => useGesteDuJoueur(
+  (/** @type {{ options: Array<{ id: string, quantity: number }>, reservationId: string }} */ {
+    options, reservationId,
+  }) => modifierMesOptions(reservationId, options),
 );
 
 /**

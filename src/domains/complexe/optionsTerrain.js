@@ -164,3 +164,62 @@ export const lignesAReglerSurPlace = (t, prix, requis, choisies) => {
     total: formatEuros((terrain || 0) + sommeOptions),
   };
 };
+
+/**
+ * RESA-OPTIONS-2 (12/11/2026) — « Modifier les options » de Ma réservation (décision a de « 233-
+ * oui ») : ce que la feuille propose. Une option DÉJÀ prise garde le nom et le prix figés à son
+ * ajout (décision b), même retirée du terrain depuis ; les autres options du terrain viennent au
+ * prix du moment. L'obligation se lit au terrain d'aujourd'hui. Même règle que le serveur
+ * (`modifiableOptions`), qui reste le juge.
+ * @param {Option[] | null | undefined} offertes - Les options du terrain (page publique).
+ * @param {OptionChoisie[] | null | undefined} figees - Les options de la réservation.
+ * @returns {Option[]} Les options de la feuille.
+ */
+export const optionsModifiables = (offertes, figees) => {
+  const duTerrain = Array.isArray(offertes) ? offertes : [];
+  const prises = Array.isArray(figees) ? figees : [];
+  const aujourdhui = new Map(duTerrain.map((option) => [String(option.id), option]));
+  const ids = new Set(prises.map((option) => String(option.id)));
+  return [
+    ...prises.map((option) => ({
+      id: option.id,
+      name: option.name,
+      price: option.price,
+      required: aujourdhui.get(String(option.id))?.required === true,
+      unit: option.unit,
+    })),
+    ...duTerrain.filter((option) => !ids.has(String(option.id))),
+  ];
+};
+
+/**
+ * Les compteurs au départ de la feuille : la quantité figée, sinon le minimum (1 si obligatoire).
+ * @param {Option[]} modifiables - Les options de la feuille.
+ * @param {OptionChoisie[] | null | undefined} figees - Les options de la réservation.
+ * @returns {Record<string, number>} La quantité par option.
+ */
+export const quantitesDesFigees = (modifiables, figees) => {
+  const prises = new Map((Array.isArray(figees) ? figees : [])
+    .map((option) => [String(option.id), Number(option.quantity) || 0]));
+  return Object.fromEntries(modifiables.map((option) => [
+    String(option.id),
+    Math.max(minDeLOption(option), prises.get(String(option.id)) || 0),
+  ]));
+};
+
+const ETATS_MODIFIABLES = Object.freeze(['confirmee', 'enAttente', 'enCollecte']);
+
+/**
+ * Le lien « Modifier les options » : le réserveur, avant le début, tant que l'annulation est
+ * gratuite (`canCancel` du serveur pour une réservation confirmée ; une demande et une réservation
+ * en construction se retirent jusqu'au début), et s'il y a au moins une option à proposer.
+ * @param {{ commence: boolean, etat: string, modifiables: Option[], participant: boolean,
+ *   reservation: { canCancel?: boolean } | null | undefined }} cas - L'état de l'écran.
+ * @returns {boolean} Vrai si le lien se montre.
+ */
+export const peutModifierLesOptions = ({
+  commence, etat, modifiables, participant, reservation,
+}) => (
+  !participant && !commence && modifiables.length > 0 && ETATS_MODIFIABLES.includes(etat)
+  && (etat !== 'confirmee' || reservation?.canCancel === true)
+);

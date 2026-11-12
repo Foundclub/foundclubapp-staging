@@ -30,6 +30,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import PastilleMode from '@/views/complexe/components/PastilleMode';
@@ -75,7 +76,7 @@ const JOUR = 56;
  * @returns {import('react').ReactElement} L'écran.
  */
 function ReserverCreneau() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());
   const route = useRoute();
@@ -305,6 +306,10 @@ function ReserverCreneau() {
       ]}
       testID={`jour-pas-ouvert-${premierJourFerme}`}
     >
+      {/* RESA-OPTIONS-2 (D79) : le cadenas de la maquette, l'icône `lockShut` du jeu de l'app. */}
+      <View testID="cadenas-du-jour-pas-ouvert">
+        <GlyphIcon color={Colors.neutral300} name="lockShut" size={12} />
+      </View>
       <Text style={[Fonts.p3, Fonts.neutral300]}>
         {quatorzeJours(t, aujourdhui)[joursPermis + 1]?.court}
       </Text>
@@ -313,8 +318,11 @@ function ReserverCreneau() {
       </Text>
     </TouchableOpacity>
   ) : null;
+  // RESA-OPTIONS-2 (D79) : « le lundi 19 octobre » en français ; en anglais, le jour garde sa
+  // majuscule (« Monday 19 October can be booked… »).
+  const enAnglais = String(i18n?.language || '').toLowerCase().startsWith('en');
   const enMinuscule = (/** @type {string} */ texte) => (
-    texte ? texte.charAt(0).toLocaleLowerCase() + texte.slice(1) : texte
+    texte && !enAnglais ? texte.charAt(0).toLocaleLowerCase() + texte.slice(1) : texte
   );
   const carteFermee = pasEncoreOuvert && premierJourFerme ? (
     <View
@@ -330,6 +338,19 @@ function ReserverCreneau() {
       }}
       testID="creneau-pas-encore-ouvert"
     >
+      <View
+        style={{
+          alignItems: 'center',
+          backgroundColor: withAlpha(Colors.primary200, 0.12),
+          borderRadius: 28,
+          height: 56,
+          justifyContent: 'center',
+          width: 56,
+        }}
+        testID="creneau-pas-encore-ouvert-cadenas"
+      >
+        <GlyphIcon color={Colors.primary200} name="lockShut" size={24} />
+      </View>
       <Text style={[Fonts.p1Bold, Fonts.neutral00, { textAlign: 'center' }]}>
         {t('reserverTerrain.creneau.pasEncoreOuvert', 'Pas encore ouvert')}
       </Text>
