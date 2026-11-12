@@ -346,3 +346,65 @@ describe('RESA-FIN-APP (1) E-P03 — « Voir le jour suivant » dessiné en un s
     expect(dessins(arbre, 'Voir le jour suivant')).toEqual([enUnMot('Voir le jour suivant')]);
   });
 });
+
+// T9-RETOURS-A (12/11/2026, M1199, décision « 277 A ») — une plage du mercredi de 17 h à 2 h : le
+// serveur (vue=nuit) rend 0 h - 1 h SOUS MERCREDI, avec sa vraie `date` (jeudi). On le choisit sous
+// mercredi ; le pied, le récapitulatif et la réservation disent sa VRAIE date (jeudi 0 h). Le 0 h
+// d'aujourd'hui (fin de la nuit d'hier) et celui de la nuit qui vient ne se confondent pas.
+describe('T9-RETOURS-A — la nuit sous le jour de sa plage', () => {
+  /**
+   * Un créneau d'après minuit, daté du jeudi.
+   * @param {string} from - Début.
+   * @param {string} to - Fin.
+   * @param {string} debut - Son instant.
+   * @returns {any} Le créneau.
+   */
+  const nuit = (from, to, debut) => creneau(from, to, 'libre', {
+    date: '2026-10-15',
+    startsAt: debut,
+  });
+  beforeEach(() => {
+    mockCreneauxParJour = {
+      '2026-10-14': jour('2026-10-14', [
+        creneau('00:00', '01:00', 'libre', {
+          date: '2026-10-14',
+          startsAt: '2026-10-13T22:00:00.000Z',
+        }),
+        creneau('23:00', '24:00', 'libre', {
+          date: '2026-10-14',
+          startsAt: '2026-10-14T21:00:00.000Z',
+        }),
+        nuit('00:00', '01:00', '2026-10-14T22:00:00.000Z'),
+      ]),
+    };
+  });
+
+  it('choisir 0 h sous mercredi : seul ce créneau est choisi ; le pied dit jeudi', async () => {
+    const arbre = await monter();
+    await toucher(parRepere(arbre, 'creneau-2026-10-15-00:00'));
+    const vus = lisibles(arbre);
+    expect(vus.filter((texte) => texte === 'Choisi')).toHaveLength(1);
+    expect(vus).toContain('Jeudi 15/10 · 0 h – 1 h');
+  });
+
+  it('« Continuer » : le récapitulatif et la réservation à la vraie date (jeudi 0 h)', async () => {
+    const arbre = await monter();
+    await toucher(parRepere(arbre, 'creneau-2026-10-15-00:00'));
+    await toucher(pressable(arbre, 'Continuer'));
+    expect(mockApercu).toHaveBeenCalledWith({ date: '2026-10-15', from: '00:00', terrain: 't-1' });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      RouteNames.ReserverRecapitulatif,
+      expect.objectContaining({ date: '2026-10-15', from: '00:00' }),
+    );
+  });
+
+  it('venu de la recherche avec son début : la nuit, pas le 0 h d’aujourd’hui', async () => {
+    mockParams = {
+      ...mockParams,
+      date: '2026-10-14',
+      from: '00:00',
+      startsAt: '2026-10-14T22:00:00.000Z',
+    };
+    expect(lisibles(await monter())).toContain('Jeudi 15/10 · 0 h – 1 h');
+  });
+});

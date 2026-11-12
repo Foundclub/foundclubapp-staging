@@ -311,6 +311,8 @@ describe('RESA-CARTE — E-P01, la bascule Liste / Carte (téléphone)', () => {
       date: '2026-10-20',
       from: '19:00',
       slug: 'le-five-de-montrivage',
+      // T9-RETOURS-A : le début du créneau voyage (il repère un créneau de nuit).
+      startsAt: '2026-10-14T17:00:00.000Z',
       terrainId: 't-1',
     });
   });

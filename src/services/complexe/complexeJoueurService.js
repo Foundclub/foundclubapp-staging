@@ -56,7 +56,9 @@ const remplis = (filtres) => Object.fromEntries(
  * @returns {Promise<any>} `{ data: { complexes: [...], date } }`.
  */
 export const chercherDesTerrains = async (filtres) => corps(
-  client.get('/public-complexes', { params: remplis(filtres) }),
+  // T9-RETOURS-A (« 277 A ») : `vue=nuit` range la nuit sous le jour de sa plage
+  // (vraie `date` par créneau).
+  client.get('/public-complexes', { params: remplis({ ...filtres, vue: 'nuit' }) }),
 );
 
 /**
@@ -87,7 +89,8 @@ export const lireTerrainsPublics = async (slug) => corps(
  */
 export const lireCreneauxDuJour = async (slug, terrainId, date) => corps(
   client.get(`/public-complexes/${enc(slug)}/terrains/${enc(terrainId)}/creneaux`, {
-    params: { date },
+    // T9-RETOURS-A (« 277 A ») : la vue joueur, chaque créneau avec sa vraie `date`.
+    params: { date, vue: 'nuit' },
   }),
 );
 
