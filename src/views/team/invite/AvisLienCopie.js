@@ -39,7 +39,12 @@ function AvisLienCopie({ etat }) {
         paddingVertical: 10,
       }}
       >
-        <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
+        <Text style={[Fonts.p2Bold, {
+          // Texte foncé sur le vert (le blanc s'y lit mal) ; blanc sur le rouge de l'échec.
+          color: etat === 'copie' ? Colors.primary900 : Colors.neutral00,
+          textAlign: 'center',
+        }]}
+        >
           {texte}
         </Text>
       </View>

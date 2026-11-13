@@ -307,11 +307,13 @@ function RequestsHub({ navigation, route }) {
     created: tourCreated, currentStep: tourStep, tourStatus,
   } = useTour();
   const coachFirstName = tourCreated?.['staff.invited']?.firstName;
+  // GUIDES-SITE-CORR-2 S12 : l'exemple ne porte jamais le prénom de la personne connectée.
+  const viewerFirstName = userData?.firstname;
   const exampleItem = useMemo(() => (
     tourStatus === 'active' && tourStep?.tourExample === 'membershipRequest'
-      ? exampleMembershipRequest({ coachFirstName })
+      ? exampleMembershipRequest({ coachFirstName, viewerFirstName })
       : null
-  ), [coachFirstName, tourStatus, tourStep?.tourExample]);
+  ), [coachFirstName, tourStatus, tourStep?.tourExample, viewerFirstName]);
 
   const filteredItems = useMemo(() => {
     const items = requestsQuery?.data?.items || [];
