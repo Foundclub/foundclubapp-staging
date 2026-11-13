@@ -5116,7 +5116,12 @@ function Conversation({ navigation, route }) {
             // CORR-SOCLE (point 1) : sans colonne déclarée, une photo élargissait le fil au-delà
             // du cadre (390 px dans 350 à 390 de large). Témoin : ConversationWebMSG1W.test.js.
             gridTemplateColumns: 'minmax(0, 1fr)',
-            gridTemplateRows: 'auto minmax(0, 1fr) auto',
+            // CHAT-EVT-ENTETE (13/11, M1205) — QUATRE rangees, toujours : l'en-tete, le
+            // bandeau du chat d'evenement (vide, donc haut de 0, pour tout autre fil), les
+            // messages, la saisie. Avec trois, le bandeau prenait la rangee elastique des
+            // messages : un grand bloc vide « ville · Voir l'événement », pris pour l'en-tete.
+            // Temoins : web chat-evt-entete.spec.ts, ConversationWebMSG1W.test.js (CORR-SOCLE).
+            gridTemplateRows: 'auto auto minmax(0, 1fr) auto',
             minHeight: 0,
             minWidth: 0,
             overflow: 'hidden',
@@ -5303,14 +5308,18 @@ function Conversation({ navigation, route }) {
               </div>
             )}
           </header>
-          {estUnChatDEvenement ? (
-            <BandeauDuChatDEvenement
-              info={chatDeLEvenement}
-              onVoirLEvenement={(eventId) => (
-                navigation.navigate(RouteNames.EventDetails, { eventId })
-              )}
-            />
-          ) : null}
+          {/* La 2e rangee de la grille : presente meme vide, pour que les messages restent dans la
+              rangee elastique (CHAT-EVT-ENTETE). */}
+          <div data-testid="rangee-du-bandeau">
+            {estUnChatDEvenement ? (
+              <BandeauDuChatDEvenement
+                info={chatDeLEvenement}
+                onVoirLEvenement={(eventId) => (
+                  navigation.navigate(RouteNames.EventDetails, { eventId })
+                )}
+              />
+            ) : null}
+          </div>
 
           <div
             style={{
