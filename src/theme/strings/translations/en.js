@@ -23491,6 +23491,7 @@ export default {
       contactTrainers: 'Contact the coaches',
       contactTrainersError: 'Unable to open the conversation right now.',
       convocations: 'Call-ups',
+      copyInviteLink: 'Copy the invite link',
       defaultComposition: 'Default line-up',
       edit: 'Edit',
       facilities: 'Facilities',
@@ -23768,6 +23769,7 @@ export default {
       emptySearch: 'No one by that name in your club.',
       emptyTeamHint: 'Invite a club member, or share an invite link.',
       errorTitle: 'Unable to invite',
+      linkCopied: 'Link copied: paste it in your team group.',
       searchPlaceholder: 'Search a club member',
       sentBadge: 'Invitation sent',
       sentMessage: "{{name}} will receive a notification. They'll join the team if they accept.",
@@ -24822,10 +24824,12 @@ export default {
       'm2-more': "The team's actions are in this menu.",
       'm2-pick': "Send it to your team's group chat. Everyone joins in one tap.",
       'm2-pick-next': 'Continue',
-      'm2-pick-site': "Send it to your team's group chat: your computer's share window opens; "
-        + 'otherwise the message is copied, paste it into your group.',
+      'm2-pick-site': "The link is copied: paste it into your team's group chat. Everyone joins "
+        + 'in one tap.',
       'm2-sent': 'Did you send it? If so, tap “Yes, it’s sent”. Otherwise, reopen this menu to share it.',
       'm2-sent-next': 'Yes, it’s sent',
+      'm2-sent-site': "Link copied: paste it into your team's group chat. Done? Tap “Yes, it’s "
+        + 'sent”. Otherwise, reopen this menu to copy it.',
       'm2-share': 'The easiest way: an invitation link.',
       'm3-access': 'For a training session, keep Private: your team and guests.',
       'm3-card': 'Tap "Add an event".',

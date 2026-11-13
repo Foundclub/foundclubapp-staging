@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Dimensions,
+  Platform,
   Text,
   View,
 } from 'react-native';
@@ -51,6 +52,7 @@ import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
+import { useIsDesktop } from '@/responsive';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -127,6 +129,7 @@ function TeamInviteSheetBody({
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
   const { t } = useTranslation();
+  const estOrdinateur = useIsDesktop();
   const invitedTeamId = String(team?.documentId || teamId || '').trim();
 
   const [search, setSearch] = useState('');
@@ -466,7 +469,10 @@ function TeamInviteSheetBody({
       {/* LES SORTIES, AVANT LA LISTE : toujours atteignables sans défiler. */}
       <Button
         onPress={onShareLink}
-        title={t('teamDetails.actions.shareInviteLink', 'Partager un lien d\'invitation')}
+        // GUIDES-SITE-CORR-2 (M1096) : sur un ordinateur, le lien se copie (teamInviteShare).
+        title={Platform.OS === 'web' && estOrdinateur
+          ? t('teamDetails.actions.copyInviteLink', 'Copier le lien d’invitation')
+          : t('teamDetails.actions.shareInviteLink', 'Partager un lien d\'invitation')}
         variant="SecondaryLight"
       />
       <View style={[Alignments.row, Spaces.gap[8]]}>

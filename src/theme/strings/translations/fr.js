@@ -24701,6 +24701,7 @@ export default {
       contactTrainers: 'Contacter les entraîneur·e·s',
       contactTrainersError: "Impossible d'ouvrir la conversation pour le moment.",
       convocations: 'Convocations',
+      copyInviteLink: 'Copier le lien d’invitation',
       defaultComposition: 'Composition type',
       edit: 'Modifier',
       facilities: 'Installations',
@@ -24991,6 +24992,7 @@ export default {
       emptySearch: 'Personne de ce nom dans ton club.',
       emptyTeamHint: "Invite un membre du club, ou partage un lien d'invitation.",
       errorTitle: 'Invitation impossible',
+      linkCopied: 'Lien copié : colle-le dans le groupe de ton équipe.',
       searchPlaceholder: 'Rechercher un membre du club',
       sentBadge: 'Invitation envoyée',
       sentMessage: '{{name}} va recevoir une notification.'
@@ -25917,10 +25919,12 @@ export default {
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
       'm2-pick-next': 'Continuer',
-      'm2-pick-site': 'Envoie-le sur le groupe de ton équipe : la fenêtre de partage de ton '
-        + 'ordinateur s’ouvre ; sinon le message est copié, colle-le dans ton groupe.',
+      'm2-pick-site': 'Le lien est copié : colle-le dans le groupe de ton équipe. Chacun·e rejoint '
+        + 'en un geste.',
       'm2-sent': 'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le partager.',
       'm2-sent-next': 'Oui, c’est envoyé',
+      'm2-sent-site': 'Lien copié : colle-le dans le groupe de ton équipe. C’est fait ? Touche '
+        + '« Oui, c’est envoyé ». Sinon, rouvre ce menu pour le copier.',
       'm2-share': 'Le plus simple : un lien d’invitation.',
       'm3-access': 'Pour un entraînement, garde Privé : ton équipe et tes invités.',
       'm3-card': 'Touche « Ajouter un événement ».',

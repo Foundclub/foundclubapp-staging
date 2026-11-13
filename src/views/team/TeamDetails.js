@@ -18,6 +18,7 @@ import {
   TextInput,
   TouchableOpacity,
   useWindowDimensions,
+  Platform,
   View,
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
@@ -66,6 +67,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
 import { federalMatchDeadlineTs, federalMatchResult } from '@/views/team/federalCalendar';
+import AvisLienCopie from '@/views/team/invite/AvisLienCopie';
 import TeamInviteSheet from '@/views/team/invite/TeamInviteSheet';
 import TeamAttendancePanel, {
   TeamAttendanceSheetSummary,
@@ -1696,14 +1698,23 @@ function TeamDetails({ navigation, route }) {
   // serveur : il ouvre la feuille de partage du telephone avec un lien
   // d installation. Il s adresse a quelqu un QUI N A PAS L APP ; l invitation
   // ci-dessus s adresse a quelqu un QUI A DEJA UN COMPTE.
-  const handleShareInvitationLink = useCallback(() => {
+  // GUIDES-SITE-CORR-2 (M1096) : sur un ordinateur, le lien est copié (teamInviteShare) ; rien ne
+  // s'ouvre, donc la fiche dit « Lien copié » (ou l'échec) quelques secondes.
+  const [lienCopie, setLienCopie] = useState(/** @type {'' | 'copie' | 'echec'} */ (''));
+  const lienCopieTimerRef = useRef(/** @type {any} */ (null));
+  useEffect(() => () => clearTimeout(lienCopieTimerRef.current), []);
+  const handleShareInvitationLink = useCallback(async () => {
     setIsTeamActionsPanelOpen(false);
     setIsInviteSheetOpen(false);
-    inviteTeamPlayers({
+    const resultat = await Promise.resolve(inviteTeamPlayers({
       clubName: team?.club?.name,
       teamId: team?.documentId || teamId,
       teamName: team?.name,
-    });
+    }));
+    if (!resultat?.envoi) return;
+    clearTimeout(lienCopieTimerRef.current);
+    setLienCopie(resultat.envoi);
+    lienCopieTimerRef.current = setTimeout(() => setLienCopie(''), 5000);
   }, [inviteTeamPlayers, team?.club?.name, team?.documentId, team?.name, teamId]);
 
   const handleOpenCreateTrainerModal = useCallback(() => {
@@ -4912,10 +4923,13 @@ function TeamDetails({ navigation, route }) {
                   <TourTarget id="teamActions.shareLink">
                     {renderTeamActionRow({
                       icon: 'share',
-                      label: t(
-                        'teamDetails.actions.shareInviteLink',
-                        'Partager un lien d\'invitation',
-                      ),
+                      // M1096 : sur un ordinateur, le bouton copie (teamInviteShare) et le dit.
+                      label: Platform.OS === 'web' && isDesktopStats
+                        ? t('teamDetails.actions.copyInviteLink', 'Copier le lien d’invitation')
+                        : t(
+                          'teamDetails.actions.shareInviteLink',
+                          'Partager un lien d\'invitation',
+                        ),
                       onPress: () => {
                         emitGuidanceInteraction('teamActions.shareLink');
                         handleShareInvitationLink();
@@ -5861,6 +5875,7 @@ function TeamDetails({ navigation, route }) {
           </ScrollView>
         </View>
       </Modal>
+      <AvisLienCopie etat={lienCopie} />
     </ScreenContainer>
   );
 }
