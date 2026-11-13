@@ -229,7 +229,7 @@ describe('C05 (Q2-15) — « Événements à partir du » hors de la plage du pl
 // GUIDES-SITE-CORR-2 S24 (tournée du site, 09/11, D 390 rang 023) : à 390 px, les vues se lisaient
 // « Sem… », « 3 jo… » (largeurs égales, 16 px de marge). Le mode `fitLabels` (6 px de marge ; sur
 // le site, chaque segment part de la largeur de son libellé) garde les trois mots entiers.
-test('S24 — le sélecteur Semaine / 3 jours / Mois garde ses libellés entiers (fitLabels)', async () => {
+test('S24 — Semaine / 3 jours / Mois : libellés entiers (fitLabels)', async () => {
   await monter({ '2026-10-19': [evenement('2026-10-22')] });
   expect(selecteur().fitLabels).toBe(true);
   expect(selecteur().centerContent).toBe(true);

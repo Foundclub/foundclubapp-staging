@@ -12,13 +12,13 @@ import {
   Image,
   Keyboard,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   useWindowDimensions,
-  Platform,
   View,
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';

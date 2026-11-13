@@ -52,7 +52,6 @@ import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
-import { useIsDesktop } from '@/responsive';
 
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -79,6 +78,8 @@ import {
   acceptTeamMembershipRequest,
   inviteToTeam,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+
+import { useIsDesktop } from '@/responsive';
 
 /**
  * La fraction de DALLE que la zone défilante peut occuper pour valoir 85 % de

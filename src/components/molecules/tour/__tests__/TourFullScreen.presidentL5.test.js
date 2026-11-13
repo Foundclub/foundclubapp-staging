@@ -146,7 +146,7 @@ describe('ouverture', () => {
 describe('palier : 3 états, jamais « prêt » sur rien', () => {
   it('tout est fait', () => {
     const texts = textsOf('milestone');
-    // GUIDES-SITE-CORR-2 S13 : espace insécable avant « % » (le signe ne part plus seul à la ligne).
+    // GUIDES-SITE-CORR-2 S13 : espace insécable avant « % » (il ne part plus seul à la ligne).
     expect(texts).toContain('Ton club est prêt à 100\u00a0%');
     expect(texts).not.toContain('{{');
   });

@@ -43,7 +43,7 @@ test('S15 : le récapitulatif de la campagne nomme le bouton à toucher', () => 
 
 // S28, remplacé par M1096 (GUIDES-SITE-CORR-2, décision du chef du 10/11) : sur un ordinateur, la
 // fenêtre Partager de Windows ne se fermait pas ; le lien est copié, et les bulles le disent.
-test('S28 / M1096 : sur un ordinateur, les bulles disent « Lien copié » ; ailleurs, le partage', () => {
+test('S28 / M1096 : ordinateur, les bulles disent « Lien copié » ; ailleurs, le partage', () => {
   const largeurAvant = global.window;
   try {
     global.window = /** @type {any} */ ({ innerWidth: 1280 });

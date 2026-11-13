@@ -53,7 +53,7 @@ afterEach(() => {
 });
 
 describe('M1096 — site sur un ordinateur : le lien est copié, pas partagé', () => {
-  it('1280 px : aucune fenêtre de partage ; le message et le lien vont au presse-papiers', async () => {
+  it('1280 px : aucune fenêtre de partage ; message et lien au presse-papiers', async () => {
     poserLargeur(1280);
     const result = await shareTeamInviteLink({ teamId: 'team-1', teamName: 'U13' });
     expect(mockShare).not.toHaveBeenCalled();

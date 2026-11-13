@@ -13,10 +13,11 @@ import {
   wizardStep,
 } from '@/domains/tour/guideCommon';
 import { exampleMatch } from '@/domains/tour/tourExamples';
-import { isDesktopWeb } from '@/responsive/isDesktopWeb';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { RouteNames } from '@/navigation/routeNames';
+
+import { isDesktopWeb } from '@/responsive/isDesktopWeb';
 
 /**
  * Guide E · Entraîneur·e (TUTOE, pack `design_handoff_tutoriels/02_GUIDE_E_ENTRAINEUR.md`,
@@ -585,7 +586,8 @@ const STEPS = [
       return isDesktopWeb()
         ? t(
           'm2-pick-site',
-          'Le lien est copié : colle-le dans le groupe de ton équipe. Chacun·e rejoint en un geste.',
+          'Le lien est copié : colle-le dans le groupe de ton équipe. Chacun·e rejoint en un '
+            + 'geste.',
         )
         : t('m2-pick', 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.');
     },
