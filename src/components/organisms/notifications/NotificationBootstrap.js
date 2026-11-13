@@ -9,6 +9,7 @@ import { navigate } from '@/navigation/navigationService';
 
 import { getNotificationRuntimeSnapshot } from '@/services/notifications/notificationRuntimeSnapshot';
 
+import { brancherActivationNotifications } from '@/utils/notifications/preDemandeNotifications';
 import { formatBootMeta } from '@/utils/performance/bootPerformance';
 
 import {
@@ -74,6 +75,14 @@ function NotificationBootstrapEnabled() {
   useBlockingOverlayLifecycle(calendarPrompt.descriptor.id, isCalendarPromptVisible, {
     releaseDelayMs: 320,
   });
+
+  // NOTIF-COMPTE (D122) — la rangée « Notifications » de « Mon compte » passe par ici.
+  const activerRef = React.useRef(activerNotifications);
+  activerRef.current = activerNotifications;
+  React.useEffect(
+    () => brancherActivationNotifications(() => activerRef.current()),
+    [],
+  );
 
   React.useEffect(() => {
     if (!isCalendarPromptVisible) return;

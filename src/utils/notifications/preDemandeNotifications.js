@@ -100,6 +100,32 @@ export const proposerPreDemandeNotifications = (moment) => {
   ecouteurs.forEach((ecouteur) => ecouteur(moment));
 };
 
+// NOTIF-COMPTE (D122, 13/11) — la rangée « Notifications » de « Mon compte » emprunte la MÊME
+// activation que notre écran (`activerNotifications` de useNotifications, branchée par
+// NotificationBootstrap) : demande système si jamais demandée, puis jeton enregistré par la
+// route du démarrage. Un seul crochet useNotifications reste monté.
+/** @type {null | (() => Promise<string>)} */
+let activation = null;
+
+/**
+ * Branche l'activation (NotificationBootstrap, une seule fois).
+ * @param {() => Promise<string>} fonction - `activerNotifications` de useNotifications.
+ * @returns {() => void} - Débrancher.
+ */
+export const brancherActivationNotifications = (fonction) => {
+  activation = fonction;
+  return () => { if (activation === fonction) activation = null; };
+};
+
+/**
+ * Active les notifications depuis le compte ; sans activation branchée (site, push éteint),
+ * ne fait rien.
+ * @returns {Promise<string>} - Le statut rendu par l'activation, ou 'skipped'.
+ */
+export const activerNotificationsDepuisLeCompte = async () => (
+  activation ? activation() : 'skipped'
+);
+
 const TYPES_CONVOCATION = ['eventConvocationPublished'];
 const TYPES_MESSAGE = [
   'newClubMessage', 'newGroupMessage', 'newLeagueMatchMessage', 'newTeamMessage', 'newWhisper',
