@@ -26359,7 +26359,7 @@ export default {
         subtitle: '{{count}} missions sur {{count}}, l’essentiel est fait.',
         subtitlePartial: '{{done}} missions sur {{total}} : les autres attendent que l’app te le '
           + 'permette.',
-        title: 'Ton club est prêt à 100 %',
+        title: 'Ton club est prêt à 100\u00a0%',
         titleNone: 'Aucune mission faite pour l’instant',
         titlePartial: 'Une partie est faite',
       },

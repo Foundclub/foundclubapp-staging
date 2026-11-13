@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, Text, TouchableOpacity, View,
+  ScrollView, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, {
@@ -19,6 +19,7 @@ import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import { navigate as navigateRoot } from '@/navigation/navigationService';
 
 import { useTour } from '@/context/useTour';
+import { isDesktopWidth } from '@/responsive/breakpoints';
 
 // T3-GUIDE-SITE : sur un grand écran, une colonne lisible plutôt que toute la largeur.
 const FULL_SCREEN_MAX_WIDTH = 560;
@@ -153,6 +154,10 @@ function TourFullScreen({ kind }) {
   const shown = kind === 'milestone' && isLater ? 'closing' : kind;
   const { t: translate } = useTranslation();
   const insets = useSafeAreaInsets();
+  // GUIDES-SITE-CORR-2 S13 (tournée du site, 09/11) : à 1360 × 900, le 5e bonus et « Plus tard ? »
+  // passaient sous « Continuer ». Sur un ordinateur, le palier range missions et bonus côte à côte.
+  const { width: largeur } = useWindowDimensions();
+  const deuxColonnes = shown === 'milestone' && isDesktopWidth(largeur);
   const {
     completeCurrentStep, created, finishGuide, flags, gauge, missions, missionStatus, pauseTour,
     profileKey, skippedSubMissions,
@@ -313,53 +318,61 @@ function TourFullScreen({ kind }) {
               { count: essentials.length },
             )}
         </Text>
-        <View style={{ rowGap: 8 }}>
-          {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => {
-            const isBlocked = missionStatus?.[mission.id] === 'blocked';
-            const isPassed = passedMissionIds.has(mission.id);
-            let right;
-            if (isBlocked) right = t(`tourCatalog.${guideKey}.palier.blocked`, 'Plus tard');
-            else if (isPassed) right = t(`tourCatalog.${guideKey}.palier.skipped`, 'Passée');
-            return (
-              <MissionRow
-                done={!isBlocked && !isPassed}
-                key={mission.id}
-                label={mission.title}
-                marker={String(index + 1)}
-                right={right}
-              />
-            );
-          })}
-        </View>
-        {bonuses.length > 0 ? (
-          <View style={{ rowGap: 8 }}>
-            <Text style={[Fonts.p3Black, {
-              color: Colors.gold500,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-            }]}
-            >
-              {t(`tourCatalog.${guideKey}.palier.bonus`, '{{count}} bonus · on te montre où ça se '
-                + 'trouve', { count: bonuses.length })}
-            </Text>
-            {bonuses.map((/** @type {any} */ mission) => (
-              <MissionRow
-                bonus
-                key={mission.id}
-                label={mission.title}
-                marker="+"
-                right={mission.estimatedSeconds ? `~${mission.estimatedSeconds} s` : undefined}
-              />
-            ))}
-            {/* GUIDE-FINITIONS-2 n° 29 : « Plus tard » dit où les retrouver. */}
-            <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              {t(
-                `tourCatalog.${guideKey}.palier.laterHint`,
-                'Plus tard ? Les bonus t’attendent dans Mon compte › Guide entraîneur·e.',
-              )}
-            </Text>
+        <View style={deuxColonnes
+          ? { alignItems: 'flex-start', columnGap: 24, flexDirection: 'row' }
+          : { rowGap: 18 }}
+        >
+          <View style={[{ rowGap: 8 }, deuxColonnes ? { flex: 1 } : null]}>
+            {essentials.map((/** @type {any} */ mission, /** @type {number} */ index) => {
+              const isBlocked = missionStatus?.[mission.id] === 'blocked';
+              const isPassed = passedMissionIds.has(mission.id);
+              let right;
+              if (isBlocked) right = t(`tourCatalog.${guideKey}.palier.blocked`, 'Plus tard');
+              else if (isPassed) right = t(`tourCatalog.${guideKey}.palier.skipped`, 'Passée');
+              return (
+                <MissionRow
+                  done={!isBlocked && !isPassed}
+                  key={mission.id}
+                  label={mission.title}
+                  marker={String(index + 1)}
+                  right={right}
+                />
+              );
+            })}
           </View>
-        ) : null}
+          {bonuses.length > 0 ? (
+            <View style={[{ rowGap: 8 }, deuxColonnes ? { flex: 1 } : null]}>
+              <Text style={[Fonts.p3Black, {
+                color: Colors.gold500,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+              }]}
+              >
+                {t(
+                  `tourCatalog.${guideKey}.palier.bonus`,
+                  '{{count}} bonus · on te montre où ça se trouve',
+                  { count: bonuses.length },
+                )}
+              </Text>
+              {bonuses.map((/** @type {any} */ mission) => (
+                <MissionRow
+                  bonus
+                  key={mission.id}
+                  label={mission.title}
+                  marker="+"
+                  right={mission.estimatedSeconds ? `~${mission.estimatedSeconds} s` : undefined}
+                />
+              ))}
+              {/* GUIDE-FINITIONS-2 n° 29 : « Plus tard » dit où les retrouver. */}
+              <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+                {t(
+                  `tourCatalog.${guideKey}.palier.laterHint`,
+                  'Plus tard ? Les bonus t’attendent dans Mon compte › Guide entraîneur·e.',
+                )}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </>
     );
     cta = (
@@ -507,8 +520,10 @@ function TourFullScreen({ kind }) {
       <Svg height="100%" style={{ position: 'absolute' }} width="100%">
         <Defs>
           <LinearGradient id="tourFullScreen" x1="0" x2="0" y1="0" y2="1">
-            <Stop offset="0" stopColor={Colors.primary900} stopOpacity={0.95} />
-            <Stop offset="1" stopColor={Colors.primary800} stopOpacity={0.98} />
+            {/* GUIDES-SITE-CORR-2 S13 : fond opaque ; la fenêtre « Félicitations » de dessous
+                transparaissait à travers le palier. */}
+            <Stop offset="0" stopColor={Colors.primary900} stopOpacity={1} />
+            <Stop offset="1" stopColor={Colors.primary800} stopOpacity={1} />
           </LinearGradient>
         </Defs>
         <Rect fill="url(#tourFullScreen)" height="100%" width="100%" x={0} y={0} />
@@ -518,7 +533,7 @@ function TourFullScreen({ kind }) {
       <ScrollView
         contentContainerStyle={{
           alignSelf: 'center',
-          maxWidth: FULL_SCREEN_MAX_WIDTH,
+          maxWidth: deuxColonnes ? (FULL_SCREEN_MAX_WIDTH * 2) + 24 : FULL_SCREEN_MAX_WIDTH,
           paddingBottom: 16,
           paddingHorizontal: 22,
           paddingTop: Math.max(64, insets.top + 24) - insets.top,
