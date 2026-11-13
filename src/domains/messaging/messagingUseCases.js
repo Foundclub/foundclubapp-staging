@@ -160,7 +160,8 @@ export const isFriendlyMatchChat = (chat) => {
  */
 export const complexeVuDuClient = (chat, meId) => {
   const complexe = String(chat?.groupName || '').trim();
-  const coteComplexe = (Array.isArray(chat?.groupAdmins) ? chat.groupAdmins : [])
+  const admins = chat?.groupAdmins;
+  const coteComplexe = (Array.isArray(admins) ? admins : [])
     .map((admin) => (typeof admin === 'string' ? admin : admin?.documentId));
   return complexe && meId && coteComplexe.length && !coteComplexe.includes(meId) ? complexe : '';
 };
