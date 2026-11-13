@@ -11,8 +11,8 @@
  * vaut exactement son contenu — donc rien ne défile — et la feuille est plus
  * courte que ce contenu de la hauteur du titre. D'où les trois contraintes :
  *   1. le titre est le PREMIER ENFANT du contenu (aucun en-tête fixe) ;
- *   2. le plafond se calcule sur la FENÊTRE (le composant le mesure sur la dalle
- *      entière, barres système comprises) ;
+ *   2. le plafond de la liste : celui de BottomModal, qui suit la hauteur de la
+ *      feuille (D41, 13/11 ; 85 % de la fenêtre avant, d'où un filet vide) ;
  *   3. les SORTIES (lien, numéro, QR) sont AVANT la liste : atteignables sans
  *      défiler, quelle que soit la longueur de la liste.
  * ⚠️ Jest ne calcule aucune mise en page : c'est l'émulateur qui tranche.
@@ -29,7 +29,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  Dimensions,
   Text,
   View,
 } from 'react-native';
@@ -77,19 +76,6 @@ import {
   acceptTeamMembershipRequest,
   inviteToTeam,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
-
-/**
- * La fraction de DALLE que la zone défilante peut occuper pour valoir 85 % de
- * la FENÊTRE. Sur un écran où les deux se valent, c'est 0,85.
- * @returns {number} la fraction à passer à `maxContentHeightRatio`.
- */
-const computeSheetCeiling = () => {
-  const screenHeight = Dimensions.get('screen').height;
-  const windowHeight = Dimensions.get('window').height;
-  return screenHeight > 0
-    ? Math.min(0.85, (windowHeight / screenHeight) * 0.85)
-    : 0.85;
-};
 
 /**
  * « 15/10 » (ou « 15/10 » en anglais britannique).
@@ -720,7 +706,6 @@ function TeamInviteSheet({
     <BottomModal
       close={close}
       isVisible={isVisible}
-      maxContentHeightRatio={computeSheetCeiling()}
     >
       <TeamInviteSheetBody
         clubData={clubData}

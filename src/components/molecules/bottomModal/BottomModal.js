@@ -243,7 +243,8 @@ function ChampsSuivisParLeClavier({
  * reduire le contenu au clavier sans animer la position d'une grande feuille.
  * @param {'interactive' | 'extend' | 'fillParent'} [props.keyboardBehavior]
  * @param {number} [props.maxContentHeightRatio] - Fraction de la hauteur d'ecran
- * que la zone defilante peut occuper. Sans effet avec `snapPoints`.
+ * que la zone defilante peut occuper. Sans effet avec `snapPoints`. Sans elle : la hauteur que la
+ * feuille peut prendre (D41).
  * @param {React.MutableRefObject<any>} [props.scrollViewRef] - Optional ref forwarded to BottomSheetScrollView
  * @param {object} [props.scrollViewProps] - Optional extra props forwarded to BottomSheetScrollView
  * @param {(string|number)[]} [props.snapPoints] - Array of snap points for the modal
@@ -268,14 +269,9 @@ function BottomModal({
   hideCloseButton = true,
   isVisible,
   keyboardBehavior = 'interactive',
-  // R5 (D1) — LE PLAFOND DE LA ZONE DEFILANTE DEVIENT REGLABLE, PAR EXCEPTION.
-  // Ce composant sert 70 appelants : remonter le plafond POUR TOUT LE MONDE
-  // changerait 70 ecrans sans qu aucun temoin ne le voie. La prop est donc
-  // OPT-IN, et son defaut est EXACTEMENT la valeur d avant.
-  // Seule la feuille « Gerer l evenement » la passe (EventDetails.js) : elle
-  // porte 5 a 7 rangees dont deux a note de 2-3 lignes, et ses dernieres
-  // actions tombaient sous le pli (constat de recette de la 2.6.26).
-  maxContentHeightRatio = 0.7,
+  // R5 (D1) — un appelant peut donner son plafond (fraction de l'ECRAN) : il le garde tel quel.
+  // Sans lui, D41 (plus bas, `plafondDuDefilement`).
+  maxContentHeightRatio,
   onDismissed,
   onOpened,
   preventStartupPresentation = false,
@@ -563,6 +559,32 @@ function BottomModal({
   }, [insets.top, remonteeSurLeClavier, snapPoints]);
   // T3-MATCH-CLAVIER — voir le haut du fichier.
   const suitLeChampTouche = poseAndroid && scrollable && keyboardHeight > 0;
+  // D41 BOTTOMMODAL-PLAFOND (13/11) — sans cran, la bibliothèque donne à la feuille la hauteur de
+  // TOUT le contenu qui défile, bornée à son conteneur moins `topInset` et `bottomInset`
+  // (useAnimatedDetents, useAnimatedLayout). La zone qui défile s'arrêtait, elle, à 70 % de
+  // l'écran : le reste de la feuille était une bande vide (SUPADM, INVIT2, GUIDE-E-CORR-2 : trois
+  // rustines, retirées).
+  // Par défaut, elle reçoit donc le plafond de la feuille ; un contenu court garde sa hauteur.
+  // ponytail: conteneur estimé par la fenêtre, comme `crans` ; un écart de quelques points sur
+  // Android laisserait un filet vide ou cacherait autant de bas de liste, qui défile. Sortie :
+  // lire la hauteur du conteneur dans `animatedLayoutState` si un appareil montre l'écart.
+  // Android, clavier ouvert, feuille que la bibliothèque ne pose pas sur lui (≤ 14 en
+  // `adjustResize`, `extend`) : la fenêtre rétrécit sans que `Dimensions` le dise ; l'ancien
+  // plafond y reste, au point près (ponytail: non mesuré sur appareil, d'où la prudence).
+  // Témoin : __tests__/BottomModal.D41.plafond.test.js.
+  const auDessusDuClavier = Dimensions.get('window').height - (insets.top + 20)
+    - remonteeSurLeClavier;
+  const hauteurUtile = auDessusDuClavier - sheetBottomInset;
+  const clavierNonSuivi = Platform.OS === 'android' && !poseAndroid && keyboardHeight > 0;
+  let plafondDuDefilement = clavierNonSuivi
+    ? Math.min(Dimensions.get('screen').height * 0.7, hauteurUtile)
+    : hauteurUtile;
+  if (maxContentHeightRatio !== undefined) {
+    const plafondDonne = Dimensions.get('screen').height * maxContentHeightRatio;
+    plafondDuDefilement = suitLeChampTouche
+      ? Math.min(plafondDonne, auDessusDuClavier)
+      : plafondDonne;
+  }
   // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
   const systemBottomInset = (useSafeAreaBottomInset ? insets.bottom : 0) + sheetBottomInset;
   // RECETTEWEB retour 5 (26/10) — EN HAUTEUR AUTOMATIQUE (sans snapPoints), `@gorhom/bottom-sheet`
@@ -698,16 +720,7 @@ function BottomModal({
             keyboardShouldPersistTaps="handled"
             ref={defilementRef}
             style={[
-              snapPoints
-                ? Alignments.fill
-                : {
-                  maxHeight: suitLeChampTouche
-                    ? Math.min(
-                      Dimensions.get('screen').height * maxContentHeightRatio,
-                      Dimensions.get('window').height - (insets.top + 20) - remonteeSurLeClavier,
-                    )
-                    : Dimensions.get('screen').height * maxContentHeightRatio,
-                },
+              snapPoints ? Alignments.fill : { maxHeight: plafondDuDefilement },
             ]}
             // eslint-disable-next-line react/jsx-props-no-spreading
             {...scrollViewProps}
