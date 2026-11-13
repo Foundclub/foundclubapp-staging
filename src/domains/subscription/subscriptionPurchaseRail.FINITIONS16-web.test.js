@@ -1,8 +1,9 @@
 // FINITIONS16 « 🔒 le parcours de paiement ne bouge pas », RE-POINTÉ (13/11/2026, décision du chef,
 // option A, récolte du train 10). Jusqu'au train 9, le site achetait depuis « Mon abonnement »
 // (web/src/views/profile/SubscriptionOverview.tsx), derrière la garde
-// `canPurchaseFromWeb = isBillingTestModeEnabled || isStripeWebRail`. ABONNEMENT-MODELE (D89) y pose
-// le carrousel de l'inscription : l'achat passe désormais par CE rail partagé. Le verrou le suit.
+// `canPurchaseFromWeb = isBillingTestModeEnabled || isStripeWebRail`. ABONNEMENT-MODELE (D89)
+// y pose le carrousel de l'inscription : l'achat passe désormais par CE rail partagé.
+// Le verrou le suit.
 //
 // Ce que le témoin tient, sur le SITE, pour chaque environnement et chaque valeur de
 // FC_FORCE_REVENUECAT_RAIL :
@@ -14,7 +15,9 @@ import '@/theme/strings';
 
 const ENVIRONNEMENTS = ['local', 'staging', 'production', 'development', 'preview', '', undefined];
 const FORCAGES = ['', 'true'];
-const CLUB_100_AN = { billingPeriod: 'yearly', planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB' };
+const CLUB_100_AN = {
+  billingPeriod: 'yearly', planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB',
+};
 
 /**
  * Le rail chargé pour un environnement, avec ses doublures.
@@ -25,7 +28,9 @@ const chargerLeRail = (runtimeEnv) => {
   /** @type {Record<string, any>} */
   let charge = {};
   jest.isolateModules(() => {
-    jest.doMock('react-native', () => ({ Linking: { openURL: jest.fn() }, Platform: { OS: 'web' } }));
+    jest.doMock('react-native', () => ({
+      Linking: { openURL: jest.fn() }, Platform: { OS: 'web' },
+    }));
     jest.doMock('@/constants/runtimeFlags', () => ({ APP_RUNTIME_ENV: runtimeEnv }));
     jest.doMock('@/domains/subscription/subscriptionRevenueCat', () => ({
       isRevenueCatEnabled: jest.fn(() => true),
@@ -34,12 +39,15 @@ const chargerLeRail = (runtimeEnv) => {
     }));
     jest.doMock('@/services/subscription/subscriptionService', () => ({
       changeSubscriptionPlan: jest.fn(async () => ({})),
-      createStripeWebCheckoutSession: jest.fn(async () => ({ id: 'cs_1', url: 'https://checkout.stripe.test/cs_1' })),
+      createStripeWebCheckoutSession: jest.fn(async () => ({
+        id: 'cs_1', url: 'https://checkout.stripe.test/cs_1',
+      })),
       increaseSubscriptionLicenseeCount: jest.fn(),
       openSubscriptionBillingPortal: jest.fn(),
       restoreSubscriptionPurchases: jest.fn(),
       validateSubscriptionPurchase: jest.fn(async () => ({})),
     }));
+    /* eslint-disable global-require -- les modules se chargent DANS isolateModules, après doMock */
     charge = {
       billing: require('@/domains/subscription/subscriptionBilling'),
       rail: require('./subscriptionPurchaseRail'),
@@ -47,17 +55,22 @@ const chargerLeRail = (runtimeEnv) => {
       rn: require('react-native'),
       service: require('@/services/subscription/subscriptionService'),
     };
+    /* eslint-enable global-require */
   });
   return charge;
 };
 
-const CAS = ENVIRONNEMENTS.flatMap((runtimeEnv) => FORCAGES.map((force) => [String(runtimeEnv), runtimeEnv, force]));
+const CAS = ENVIRONNEMENTS.flatMap((runtimeEnv) => FORCAGES.map((force) => [
+  String(runtimeEnv), runtimeEnv, force,
+]));
 
-describe('FINITIONS16 (re-pointé) — un achat sur le site ne part que par TRUSTED_TEST ou STRIPE_WEB', () => {
+describe('FINITIONS16 (re-pointé) — achat du site : TRUSTED_TEST ou STRIPE_WEB seulement', () => {
   const forcageAvant = process.env.FC_FORCE_REVENUECAT_RAIL;
 
   beforeEach(() => {
-    global.window = /** @type {any} */ ({ location: { assign: jest.fn(), origin: 'https://staging.foundclub.app' } });
+    global.window = /** @type {any} */ ({
+      location: { assign: jest.fn(), origin: 'https://staging.foundclub.app' },
+    });
   });
 
   afterEach(() => {
@@ -68,16 +81,19 @@ describe('FINITIONS16 (re-pointé) — un achat sur le site ne part que par TRUS
 
   it.each(CAS)('environnement %s, forçage « %s »', async (_nom, runtimeEnv, force) => {
     process.env.FC_FORCE_REVENUECAT_RAIL = force;
-    const { billing, rail, revenueCat, rn, service } = chargerLeRail(runtimeEnv);
+    const {
+      billing, rail, revenueCat, rn, service,
+    } = chargerLeRail(runtimeEnv);
     const { STRIPE_WEB, TRUSTED_TEST } = rail.SUBSCRIPTION_PURCHASE_RAILS;
 
     // 1. Deux rails, et seulement deux, sur le site.
     const actif = rail.getActiveSubscriptionPurchaseRail(runtimeEnv);
-    expect([TRUSTED_TEST, STRIPE_WEB]).toContain(actif);
+    expect([STRIPE_WEB, TRUSTED_TEST]).toContain(actif);
 
     // 2. L'ancienne garde du site (train 9) : vraie exactement quand le rail est l'un des deux.
-    const ancienneGarde = billing.isSubscriptionBillingTestModeEnabled(runtimeEnv) || actif === STRIPE_WEB;
-    expect(ancienneGarde).toBe([TRUSTED_TEST, STRIPE_WEB].includes(actif));
+    const ancienneGarde = billing.isSubscriptionBillingTestModeEnabled(runtimeEnv)
+      || actif === STRIPE_WEB;
+    expect(ancienneGarde).toBe([STRIPE_WEB, TRUSTED_TEST].includes(actif));
     expect(rail.isSubscriptionPurchaseAvailable()).toBe(ancienneGarde);
 
     // 3. L'achat, puis le changement d'offre : par ce rail seulement.
