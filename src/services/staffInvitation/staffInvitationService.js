@@ -44,15 +44,19 @@ const unwrap = async (call, fallbackMessage) => {
 
 /**
  * Envoyer une invitation de staff.
+ * INVITE-RENVOI (D117) : `fromInvitationId` renvoie une invitation refusée sans numéro ; le
+ * serveur reprend numéro, prénom, rôle et équipe de l'ancienne. Un serveur plus ancien l'ignore
+ * et répond STAFF_INVITE_PHONE_INVALID.
  * @param {{
- *   clubId: string, firstname?: string, phoneCountry?: string, phoneNumber: string,
- *   role: 'coach'|'dirigeant', teamId?: string|null,
+ *   clubId: string, firstname?: string, fromInvitationId?: string, phoneCountry?: string,
+ *   phoneNumber?: string, role: 'coach'|'dirigeant', teamId?: string|null,
  * }} params - la saisie.
  * @returns {Promise<{ sent: true, invitation: object }>} l'invitation (même forme partout).
  */
 export const sendStaffInvitation = ({
   clubId,
   firstname,
+  fromInvitationId,
   phoneCountry,
   phoneNumber,
   role,
@@ -62,6 +66,7 @@ export const sendStaffInvitation = ({
     data: {
       clubId,
       firstname: firstname || undefined,
+      fromInvitationId: fromInvitationId || undefined,
       phoneCountry,
       phoneNumber,
       role,

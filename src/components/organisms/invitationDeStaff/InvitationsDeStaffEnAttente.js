@@ -3,28 +3,33 @@
  * « Invitations en attente ». On n'y voit que ce que l'inviteur a tapé (prénom, 2 derniers
  * chiffres), jamais le profil de la personne : elle apparaît dans le staff quand elle accepte.
  * INVITE-REFUS (« 274 B », 12/11/2026, remplace « 2A ») : une invitation refusée (serveur :
- * `state: 'refused'`) reste visible, « Refusée », avec « Inviter à nouveau » qui rouvre le
- * formulaire (le numéro n'est jamais renvoyé : on le retape). Elle ne compte pas dans
- * « Invitations en attente · N ». Le club n'a reçu aucune notification.
+ * `state: 'refused'`) reste visible, « Refusée », avec « Inviter à nouveau ». Elle ne compte pas
+ * dans « Invitations en attente · N ». Le club n'a reçu aucune notification.
+ * INVITE-RENVOI (D117, 13/11) : « Inviter à nouveau » renvoie en un geste (`fromInvitationId`,
+ * le serveur reprend numéro, prénom, rôle et équipe), puis la feuille « Invitation envoyée ».
  */
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import TrainerInvitedModal from '@/components/organisms/trainerInvitedModal/TrainerInvitedModal';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
   cancelStaffInvitation,
   getSentStaffInvitations,
+  sendStaffInvitation,
 } from '@/services/staffInvitation/staffInvitationService';
 
-import { dateCourte } from './textesInvitationDeStaff';
+import { dateCourte, detailsDeLInvitationEnvoyee } from './textesInvitationDeStaff';
 
 export const STAFF_INVITATIONS_SENT_KEY = 'staffInvitationsSent';
 
@@ -64,9 +69,12 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '', navigation }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
-  const { inviteTrainer } = useAuth();
+  const { invitationDuStaff, inviteTrainer } = useAuth();
 
   const { invitations, refetch } = useInvitationsDeStaffEnvoyees(clubId);
+  // INVITE-RENVOI : l'invitation repartie (réponse du serveur), et la carte en cours d'envoi.
+  const [renvoyee, setRenvoyee] = useState(/** @type {any} */ (null));
+  const [enCours, setEnCours] = useState('');
 
   const annuler = useMutation({
     meta: { preventToastError: true },
@@ -76,11 +84,8 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '', navigation }) {
     },
   });
 
-  if (!invitations.length) return null;
-  const enAttente = invitations.filter((/** @type {any} */ item) => item?.state !== 'refused');
-
   // Mêmes écrans que les « + » de la fiche club (ClubDetails) : coach, ou dirigeant·e.
-  const inviterANouveau = (/** @type {any} */ invitation) => {
+  const ouvrirLeFormulaire = (/** @type {any} */ invitation) => {
     if (invitation.role === 'dirigeant') {
       navigation?.navigate(RouteNames.AddClubManager, { clubId, clubName, staffType: 'manager' });
       return;
@@ -91,6 +96,62 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '', navigation }) {
       ...(invitation.team?.documentId ? { teamId: invitation.team.documentId } : {}),
     });
   };
+
+  const inviterANouveau = async (/** @type {any} */ invitation) => {
+    if (enCours) return;
+    setEnCours(invitation.documentId);
+    try {
+      const reponse = await sendStaffInvitation({
+        clubId,
+        firstname: invitation.firstname,
+        fromInvitationId: invitation.documentId,
+        role: invitation.role,
+        teamId: invitation.team?.documentId,
+      });
+      setRenvoyee({ ...(reponse?.invitation || {}), role: invitation.role });
+      refetch();
+    } catch {
+      // ponytail: tout échec (serveur d'avant le train 11, abonnement, réseau) retombe sur le
+      // formulaire d'aujourd'hui, qui sait montrer chaque erreur ; sortie : traiter les codes ici.
+      ouvrirLeFormulaire(invitation);
+    } finally {
+      setEnCours('');
+    }
+  };
+
+  const estDirigeant = renvoyee?.role === 'dirigeant';
+  const prenom = renvoyee?.firstname || (estDirigeant
+    ? t('addCoach.roles.manager')
+    : t('addCoach.fallbacks.inviteFirstname', 'Coach / Prof'));
+  // La même feuille « Invitation envoyée » que le formulaire (AddCoach).
+  const feuille = renvoyee ? (
+    <TrainerInvitedModal
+      details={detailsDeLInvitationEnvoyee(t, renvoyee, renvoyee.role)}
+      isManager={estDirigeant}
+      isVisible
+      libelleInviter={t('staffInvitation.sent.actions.sms')}
+      messageDInvitation={invitationDuStaff?.({
+        clubId, clubName, firstname: prenom, isManager: estDirigeant,
+      })?.message || ''}
+      onClose={() => setRenvoyee(null)}
+      onInvite={() => {
+        // Le numéro n'est jamais renvoyé à l'inviteur : il choisit le destinataire.
+        inviteTrainer({
+          clubId, clubName, firstname: prenom, isManager: estDirigeant, phoneNumber: undefined,
+        });
+        setRenvoyee(null);
+      }}
+      texte={t('staffInvitation.sent.explain')}
+      titre={t('staffInvitation.sent.title', {
+        name: renvoyee.firstname || t('staffInvitation.sent.fallbackName'),
+        ...SANS_ECHAPPEMENT,
+      })}
+      trainerName={renvoyee.firstname || ''}
+    />
+  ) : null;
+
+  if (!invitations.length) return feuille;
+  const enAttente = invitations.filter((/** @type {any} */ item) => item?.state !== 'refused');
 
   return (
     <View style={[Spaces.gap[8]]}>
@@ -166,6 +227,7 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '', navigation }) {
             </View>
             {refusee ? (
               <Button
+                isLoading={enCours === invitation.documentId}
                 onPress={() => inviterANouveau(invitation)}
                 title={t('staffInvitation.pending.inviteAgain')}
                 variant="Primary"
@@ -200,6 +262,7 @@ function InvitationsDeStaffEnAttente({ clubId, clubName = '', navigation }) {
         );
       })}
       <Text style={[Fonts.p3, Fonts.neutral300]}>{t('staffInvitation.pending.note')}</Text>
+      {feuille}
     </View>
   );
 }

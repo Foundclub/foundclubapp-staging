@@ -59,6 +59,21 @@ jest.mock('@tanstack/react-query', () => ({
   }),
 }));
 
+// INVITE-RENVOI (D117, 13/11) : « Inviter à nouveau » tente d'abord le renvoi en un geste. Ici,
+// le serveur d'avant le train 11 (il exige le numéro) : l'app retombe sur le formulaire, ce que
+// ce témoin vérifiait déjà. Le renvoi réussi est dans INVITERENVOI.test.js.
+jest.mock('@/services/staffInvitation/staffInvitationService', () => ({
+  cancelStaffInvitation: jest.fn(),
+  getSentStaffInvitations: jest.fn(),
+  sendStaffInvitation: () => Promise.reject(Object.assign(new Error('x'), {
+    code: 'STAFF_INVITE_PHONE_INVALID', status: 400,
+  })),
+}));
+
+// INVITE-RENVOI (13/11) : la rubrique monte la feuille « Invitation envoyée » ; doublure, comme
+// les témoins d'AddCoach (la vraie tire react-native-gesture-handler).
+jest.mock('@/components/organisms/trainerInvitedModal/TrainerInvitedModal', () => () => null);
+
 jest.mock('@/components/atoms/button/Button', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
@@ -159,14 +174,14 @@ describe('INVITE-REFUS — 274 B : la refusée reste, « Refusée », avec « In
   it('« Inviter à nouveau » ouvre le formulaire du bon rôle (coach, puis dirigeant)', async () => {
     const arbre = await monter([REFUSEE, { ...REFUSEE, documentId: 'inv-dir', role: 'dirigeant' }]);
     await act(async () => {
-      carte(arbre, 'inv-refusee').findByProps({ title: 'Inviter à nouveau' }).props.onPress();
+      await carte(arbre, 'inv-refusee').findByProps({ title: 'Inviter à nouveau' }).props.onPress();
     });
     expect(mockNavigate).toHaveBeenLastCalledWith(
       'AddCoach',
       { clubId: 'club-crt5', clubName: 'CR-T5 Club Offres' },
     );
     await act(async () => {
-      carte(arbre, 'inv-dir').findByProps({ title: 'Inviter à nouveau' }).props.onPress();
+      await carte(arbre, 'inv-dir').findByProps({ title: 'Inviter à nouveau' }).props.onPress();
     });
     expect(mockNavigate).toHaveBeenLastCalledWith(
       'AddClubManager',
@@ -179,7 +194,7 @@ describe('INVITE-REFUS — 274 B : la refusée reste, « Refusée », avec « In
   it('« Inviter à nouveau » d un coach d équipe garde l équipe', async () => {
     const arbre = await monter([{ ...REFUSEE, team: { documentId: 't-u13', name: 'U13 A' } }]);
     await act(async () => {
-      carte(arbre, 'inv-refusee').findByProps({ title: 'Inviter à nouveau' }).props.onPress();
+      await carte(arbre, 'inv-refusee').findByProps({ title: 'Inviter à nouveau' }).props.onPress();
     });
     expect(mockNavigate).toHaveBeenLastCalledWith(
       'AddCoach',
