@@ -25145,10 +25145,14 @@ export default {
       'm1-partners': '2/5 · Your partners. Open “Our partners”.',
       'm1-partners-have': '2/5 · You already have your partner: it is in this list. “+” adds '
         + 'another one later. On to your facilities.',
+      'm1-partners-have-back': '2/5 · You already have your partner, in “Our partners”. Tap '
+        + '“Next”: on to your facilities.',
       'm1-partners-home': '2/5 · Your partners. Open “Manage my club”, then “Our '
         + 'partners”.',
       'm1-partners-taken': 'Your free partner is already here: the next one needs the Club plan. '
         + 'Skip this part.',
+      'm1-partners-taken-back': 'Your free partner is already here, in “Our partners”: the next '
+        + 'one needs the Club plan. Skip this part.',
       'm1-pb1': 'Go back to your facilities.',
       'm1-pback': 'Go back to the club page.',
       'm1-pcap': 'Capacity: how many teams can play at the same time, and the busiest moment. '

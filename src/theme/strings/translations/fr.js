@@ -26252,10 +26252,14 @@ export default {
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
       'm1-partners-have': '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en '
         + 'ajoute un autre plus tard. On passe à tes installations.',
+      'm1-partners-have-back': '2/5 · Tu as déjà ton partenaire, dans « Nos partenaires ». Touche '
+        + '« Suivant » : on passe à tes installations.',
       'm1-partners-home': '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos '
         + 'partenaires ».',
       'm1-partners-taken': 'Ton partenaire offert est déjà là : le suivant demande l’offre Club. '
         + 'Passe cette partie.',
+      'm1-partners-taken-back': 'Ton partenaire offert est déjà là, dans « Nos partenaires » : le '
+        + 'suivant demande l’offre Club. Passe cette partie.',
       'm1-pb1': 'Reviens à tes installations.',
       'm1-pback': 'Reviens sur la fiche du club.',
       'm1-pcap': 'La capacité : combien d’équipes peuvent jouer en même temps, et le moment le '

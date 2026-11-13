@@ -160,6 +160,18 @@ const PARTNER_EXISTING = { goto: 'm1-partners-have', key: 'sponsor.existing', ty
 const isPartnerToDo = (ctx) => !ctx?.created?.['sponsor.created']
   && !ctx?.created?.['sponsor.existing'];
 
+/**
+ * GUIDES-SITE-CORR-2 S22 (tournée du site, 09/11, D 390 rang 015) : après un retour du navigateur,
+ * la liste des partenaires n'est plus à l'écran ; la bulle disait encore « il est dans cette
+ * liste », sans cadre. Liste fermée, la bulle encadre « Nos partenaires » de la fiche et le dit.
+ * @param {() => string} text - Texte du repli.
+ * @returns {{ targets: string[], text: string }} Repli de l'étape.
+ */
+const partnersListClosed = (text) => ({
+  targets: ['club.m.partners'],
+  get text() { return text(); },
+});
+
 const PART_PARTNERS = [
   {
     advanceOn: [
@@ -193,6 +205,11 @@ const PART_PARTNERS = [
     when: isPartnerToDo,
   },
   {
+    fallback: partnersListClosed(() => t(
+      'm1-partners-taken-back',
+      'Ton partenaire offert est déjà là, dans « Nos partenaires » : le suivant demande l’offre '
+        + 'Club. Passe cette partie.',
+    )),
     id: 'm1-partners-taken',
     lookOnly: true,
     missionId: MISSION_ID,
@@ -210,6 +227,11 @@ const PART_PARTNERS = [
       && !ctx?.created?.['sponsor.created'],
   },
   {
+    fallback: partnersListClosed(() => t(
+      'm1-partners-have-back',
+      '2/5 · Tu as déjà ton partenaire, dans « Nos partenaires ». Touche « Suivant » : on passe '
+        + 'à tes installations.',
+    )),
     id: 'm1-partners-have',
     lookOnly: true,
     missionId: MISSION_ID,
