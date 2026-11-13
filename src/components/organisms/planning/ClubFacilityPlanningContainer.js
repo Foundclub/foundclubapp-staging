@@ -365,6 +365,8 @@ function ClubFacilityPlanningContainer({
           <TourTarget id="planning.views" style={{ flex: 1 }}>
             <SegmentedControl
               centerContent
+              // GUIDES-SITE-CORR-2 S24 : « Sem… », « 3 jo… » à 390 px ; libellés entiers.
+              fitLabels
               onChange={choisirLaVue}
               options={viewOptions}
               value={viewMode}
