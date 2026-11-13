@@ -826,6 +826,10 @@ const COMPACT_EVENT_CARD_FIELDS = [
   'bookingStatus',
   'capacity',
   'currentPlayers',
+  // EVT-AUTRE-PLANNING (13/11, M1179) — le nom d'un « Autre » : `EventCardNew` en fait
+  // le titre de la carte ; sans lui, la liste du planning disait le nom de l'equipe.
+  // Temoin : eventService.compactEVTAUTREPLAN.test.js.
+  'customName',
   'date',
   'documentId',
   'endTime',
