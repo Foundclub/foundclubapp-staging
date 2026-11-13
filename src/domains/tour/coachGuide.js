@@ -991,6 +991,20 @@ const STEPS = [
       { goto: 'b1-vide', key: 'event.participants.empty', type: 'action' },
     ],
     completesMission: true,
+    // GUIDE-BULLE-RELANCE (décision d'Adel « 318 B », 13/11) : sur le SITE, un entraînement n'a
+    // pas de bouton « Relancer » (pas de relance depuis l'ordinateur). La fiche du site pose
+    // alors l'ancre `event.relance.telephone` ; le téléphone ne la pose jamais. « Passer ce
+    // bonus » est le bouton de toute bulle de bonus (`skipMission`).
+    fallback: {
+      targets: ['event.relance.telephone'],
+      get text() {
+        return t(
+          'b1-relance-site',
+          'Pour relancer tes joueur·se·s, fais-le depuis ton téléphone, sur cette séance. Ici, '
+            + 'tu peux passer ce bonus.',
+        );
+      },
+    },
     id: 'b1-relance',
     missionId: 'coach_b1',
     resumeFrom: 'b1-dock',

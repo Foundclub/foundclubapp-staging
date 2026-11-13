@@ -25850,6 +25850,8 @@ export default {
       'b1-card-none': 'Aucune séance à venir dans ton planning : programme-en une avec ce bouton, ou passe ce bonus.',
       'b1-dock': 'Pour savoir qui vient : ouvre le planning.',
       'b1-relance': 'Plus bas : les participants. Personne n’a encore répondu : relance-les en un clic.',
+      'b1-relance-site': 'Pour relancer tes joueur·se·s, fais-le depuis ton téléphone, '
+        + 'sur cette séance. Ici, tu peux passer ce bonus.',
       'b1-vide': 'Ici, tu verras qui vient dès que tes joueur·se·s répondront.',
       'b2-dock': 'Tes matchs sont dans le planning : ouvre-le.',
       'b2-list': 'Coche au moins la moitié d’une équipe, puis Suivant.',
