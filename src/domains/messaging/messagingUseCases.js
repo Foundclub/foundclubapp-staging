@@ -150,6 +150,22 @@ export const isFriendlyMatchChat = (chat) => {
 };
 
 /**
+ * MESSAGERIE-COMPLEXE / D91 — le nom du complexe quand JE suis le client d'un fil complexe ↔ client
+ * (un tête-à-tête qui porte `groupName` et son côté complexe `groupAdmins`, sans moi) ; sinon ''.
+ * Une seule règle pour le titre (« Gérant - <complexe> ») et la pastille (AvatarDuFil).
+ * @param {{ groupAdmins?: Array<{ documentId?: string } | string> | null,
+ *   groupName?: string | null } | null | undefined} chat - Le fil.
+ * @param {string | undefined} meId - Mon identifiant.
+ * @returns {string} Le nom du complexe, ou ''.
+ */
+export const complexeVuDuClient = (chat, meId) => {
+  const complexe = String(chat?.groupName || '').trim();
+  const coteComplexe = (Array.isArray(chat?.groupAdmins) ? chat.groupAdmins : [])
+    .map((admin) => (typeof admin === 'string' ? admin : admin?.documentId));
+  return complexe && meId && coteComplexe.length && !coteComplexe.includes(meId) ? complexe : '';
+};
+
+/**
  * Conversation name generator
  * @param {object} params - Parameters for generating the conversation name
  * @param {Club} [params.chatClub] - The chat club object
@@ -227,10 +243,11 @@ export const getConversationName = ({
       // MESSAGERIE-COMPLEXE (10/11, décision du chef) — le fil complexe ↔ client porte le nom du
       // complexe (`groupName`) et son côté complexe (`groupAdmins`) : le client lit « Gérant -
       // <complexe> », jamais la personne du gérant ; le gérant lit le nom du client (ci-dessous).
-      const complexe = String(chatGroupName || '').trim();
-      const coteComplexe = (Array.isArray(chatGroupAdmins) ? chatGroupAdmins : [])
-        .map((admin) => (typeof admin === 'string' ? admin : admin?.documentId));
-      if (complexe && meId && coteComplexe.length && !coteComplexe.includes(meId)) {
+      const complexe = complexeVuDuClient(
+        { groupAdmins: chatGroupAdmins, groupName: chatGroupName },
+        meId,
+      );
+      if (complexe) {
         return i18next.t(
           'messagingUseCases.conversationName.gerantDuComplexe',
           'Gérant - {{complexe}}',
