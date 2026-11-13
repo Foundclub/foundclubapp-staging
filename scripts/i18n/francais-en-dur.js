@@ -179,12 +179,10 @@ const total = (comptes) => Object.values(comptes).reduce((somme, n) => somme + n
 // dans l'un de ces fichiers fait toujours rougir la porte.
 // ponytail: tolérance par fichier, pas par ligne ; un fichier renommé la perd (sortie :
 // la reporter sous son nouveau nom).
-const EXCEPTIONS_D78 = Object.freeze({
-  'src/domains/complexe/reglesDesComplexes.js': 41,
-  'src/domains/search/friendlyMatchFormats.js': 1,
-  'src/domains/subscription/subscriptionBilling.js': 4,
-  'src/views/event/components/EventChatInfos.js': 2,
-});
+// GO Adel « 306 A » (13/11/2026) : la baseline est recalée sur la tête du train 10 (589 lignes),
+// ces 48 lignes comprises. La tolérance est donc VIDÉE : gardée, elle les tolérerait deux fois et
+// laisserait passer jusqu'à 48 lignes neuves dans ces 4 fichiers (témoin « 306 A »).
+const EXCEPTIONS_D78 = Object.freeze({});
 
 const fichiersEnHausse = (comptes, plafonds) => Object.entries(comptes)
   .filter(([f, n]) => n > (plafonds[f] || 0) + (EXCEPTIONS_D78[f] || 0))
@@ -238,5 +236,5 @@ const run = () => {
 if (require.main === module) run();
 
 module.exports = {
-  estFrancais, EXCEPTIONS_D78, fichiersEnHausse, normaliser, textesFrancais,
+  estFrancais, EXCEPTIONS_D78, fichiersEnHausse, mesurer, normaliser, textesFrancais,
 };
