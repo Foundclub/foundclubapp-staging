@@ -170,7 +170,8 @@ function EventListSeparator() {
  * @param {import('react').ReactElement | null} [props.customEmptyComponent] - Custom empty state (optional)
  * @param {number} [props.refreshSignal]
  * @param {boolean} [props.screenActive]
- * @param {boolean} [props.annuaire] - ANNUAIRE-E1 : posé par l'annuaire du site seulement. La liste
+ * @param {boolean} [props.annuaire] - ANNUAIRE-E1 : posé par l'annuaire du site, et par la fiche
+ *   d'équipe sur le site (EQUIPE-PLANNING-SITE, M1226 : une page qui défile déjà). La liste
  *   défile AVEC la page (cartes à plat, « Voir plus ») au lieu de défiler dans sa propre boîte :
  *   sans borne, une liste de l'app réclamait toutes ses pages d'un coup (banc du 25/09).
  * @param {import('react').ReactElement | null} [props.entete] - R17-EVT-1-BIS (20/10) : posé en
