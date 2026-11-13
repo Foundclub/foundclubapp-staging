@@ -5116,10 +5116,11 @@ function Conversation({ navigation, route }) {
             // CORR-SOCLE (point 1) : sans colonne déclarée, une photo élargissait le fil au-delà
             // du cadre (390 px dans 350 à 390 de large). Témoin : ConversationWebMSG1W.test.js.
             gridTemplateColumns: 'minmax(0, 1fr)',
-            // CHAT-EVT-ENTETE (13/11, M1205) — QUATRE rangees, toujours : l'en-tete, le bandeau du
-            // chat d'evenement (vide, donc haut de 0, pour tout autre fil), les messages, la saisie.
-            // Avec trois, le bandeau prenait la rangee elastique des messages : un grand bloc vide
-            // « ville · Voir l'événement », pris pour l'en-tete. Temoin : web chat-evt-entete.spec.ts.
+            // CHAT-EVT-ENTETE (13/11, M1205) — QUATRE rangees, toujours : l'en-tete, le
+            // bandeau du chat d'evenement (vide, donc haut de 0, pour tout autre fil), les
+            // messages, la saisie. Avec trois, le bandeau prenait la rangee elastique des
+            // messages : un grand bloc vide « ville · Voir l'événement », pris pour l'en-tete.
+            // Temoins : web chat-evt-entete.spec.ts, ConversationWebMSG1W.test.js (CORR-SOCLE).
             gridTemplateRows: 'auto auto minmax(0, 1fr) auto',
             minHeight: 0,
             minWidth: 0,
