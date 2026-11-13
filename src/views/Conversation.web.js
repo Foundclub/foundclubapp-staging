@@ -181,6 +181,7 @@ import {
 import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
 import { confirmerDansLApp } from '@/utils/fenetreDeLApp'
 import { getImageUrl } from '@/utils/imageUrl'
+import BoutonCommunautes from '@/views/communautes/BoutonCommunautes';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -1068,25 +1069,29 @@ function ColonneDesConversations({
           >
             {t('conversation.web.fil.titreListe', 'Messages')}
           </h2>
-          <button
-            aria-label={t('conversation.web.fil.nouvelleDiscussion', 'Nouvelle discussion')}
-            onClick={() => navigation.navigate(RouteNames.NewConversation)}
-            style={{
-              alignItems: 'center',
-              background: PALETTE_DU_FIL.accent,
-              border: 0,
-              borderRadius: 999,
-              cursor: 'pointer',
-              display: 'flex',
-              height: 36,
-              justifyContent: 'center',
-              padding: 0,
-              width: 36,
-            }}
-            type="button"
-          >
-            <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={20} />
-          </button>
+          {/* COMMUNAUTES-L2 (13/11, D76) : « Communautés » si le serveur en rend une. */}
+          <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
+            <BoutonCommunautes navigation={navigation} taille={36} />
+            <button
+              aria-label={t('conversation.web.fil.nouvelleDiscussion', 'Nouvelle discussion')}
+              onClick={() => navigation.navigate(RouteNames.NewConversation)}
+              style={{
+                alignItems: 'center',
+                background: PALETTE_DU_FIL.accent,
+                border: 0,
+                borderRadius: 999,
+                cursor: 'pointer',
+                display: 'flex',
+                height: 36,
+                justifyContent: 'center',
+                padding: 0,
+                width: 36,
+              }}
+              type="button"
+            >
+              <GlyphIcon color={PALETTE_DU_FIL.encre} name="plus2" size={20} />
+            </button>
+          </div>
         </div>
       </div>
       <nav ref={listeRef} style={{ overflowY: 'auto' }}>

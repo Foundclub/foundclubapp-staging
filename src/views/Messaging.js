@@ -72,6 +72,7 @@ import AvatarDuFil from '@/views/chat/AvatarDuFil';
 import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessages';
 import LigneAssistance from '@/views/chat/LigneAssistance';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
+import BoutonCommunautes from '@/views/communautes/BoutonCommunautes';
 
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -1186,31 +1187,35 @@ function Messaging({ navigation, route }) {
                         <Text style={[stylesDeLaListe.titreDeLaPage, Fonts.neutral00]}>
                           {t('messaging.title')}
                         </Text>
-                        {canCreateConversation ? (
-                          <TourTarget id="msg-new">
-                            <TouchableOpacity
-                              accessibilityLabel={libelleNouvelleConversation}
-                              accessibilityRole="button"
-                              activeOpacity={0.85}
-                              onPress={ouvrirNouvelleConversation}
-                              style={{
-                                alignItems: 'center',
-                                backgroundColor: Colors.primary500,
-                                borderRadius: 22,
-                                height: 44,
-                                justifyContent: 'center',
-                                width: 44,
-                              }}
-                              testID="messaging-nouvelle-conversation"
-                            >
-                              <Image
-                                resizeMode="contain"
-                                source={Images.plus}
-                                style={{ height: 18, tintColor: Colors.primary900, width: 18 }}
-                              />
-                            </TouchableOpacity>
-                          </TourTarget>
-                        ) : null}
+                        {/* COMMUNAUTES-L2 (13/11) : « Communautés » si le serveur en rend une. */}
+                        <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
+                          <BoutonCommunautes navigation={navigation} />
+                          {canCreateConversation ? (
+                            <TourTarget id="msg-new">
+                              <TouchableOpacity
+                                accessibilityLabel={libelleNouvelleConversation}
+                                accessibilityRole="button"
+                                activeOpacity={0.85}
+                                onPress={ouvrirNouvelleConversation}
+                                style={{
+                                  alignItems: 'center',
+                                  backgroundColor: Colors.primary500,
+                                  borderRadius: 22,
+                                  height: 44,
+                                  justifyContent: 'center',
+                                  width: 44,
+                                }}
+                                testID="messaging-nouvelle-conversation"
+                              >
+                                <Image
+                                  resizeMode="contain"
+                                  source={Images.plus}
+                                  style={{ height: 18, tintColor: Colors.primary900, width: 18 }}
+                                />
+                              </TouchableOpacity>
+                            </TourTarget>
+                          ) : null}
+                        </View>
                       </View>
                       {espaceVille ? null : renderChatScopeFilter()}
                       {renderSearch()}
