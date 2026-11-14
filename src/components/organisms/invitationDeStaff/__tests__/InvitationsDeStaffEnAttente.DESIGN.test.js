@@ -75,6 +75,10 @@ jest.mock('@/services/staffInvitation/staffInvitationService', () => ({
   getSentStaffInvitations: jest.fn(),
 }));
 
+// INVITE-RENVOI (13/11) : la rubrique monte la feuille « Invitation envoyée » ; doublure, comme
+// les témoins d'AddCoach (la vraie tire react-native-gesture-handler).
+jest.mock('@/components/organisms/trainerInvitedModal/TrainerInvitedModal', () => () => null);
+
 jest.mock('@/components/atoms/button/Button', () => {
   const reactActuel = jest.requireActual('react');
   const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
