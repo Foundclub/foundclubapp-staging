@@ -1637,6 +1637,8 @@ function EventDetails({ navigation, route }) {
     if (!isSignedIn) {
       openPublicAuthFlow(navigation, {
         origin: RouteNames.EventDetails,
+        // T-FICHE-2 (chef d'orchestre, Q2 « B », 14/11) : la connexion ramène sur la fiche.
+        retourApresConnexion: true,
         source: 'event-details-login',
       });
       return;

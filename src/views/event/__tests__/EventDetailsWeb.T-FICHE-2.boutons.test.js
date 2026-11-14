@@ -413,3 +413,16 @@ test('« Mode tournoi » : l équipe du club s inscrit par « Inscrire une équi
   act(() => { bouton.props.onClick(); });
   expect(mockFeuilleEquipe).toHaveBeenLastCalledWith('choose');
 });
+
+// T-FICHE-2, suite 2 (chef d'orchestre, Q2 « B », 14/11) : « Se connecter pour participer » demande
+// lui aussi le retour sur la fiche ; son texte, sa place et son tunnel ne changent pas.
+test('visiteur : « Se connecter pour participer » ouvre la connexion et demande le retour sur la fiche', () => {
+  const arbre = monter(tournoiAutonome(), VISITEUR_ANONYME);
+  cliquer(arbre, 'Se connecter pour participer');
+  expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {
+    params: expect.objectContaining({
+      origin: 'EventDetails', retourApresConnexion: true, source: 'event-details-login',
+    }),
+    screen: 'Login',
+  });
+});
