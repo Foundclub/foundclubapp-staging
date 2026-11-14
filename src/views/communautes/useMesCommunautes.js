@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { communautesActives } from '@/domains/messaging/communautes';
+
 import { getMesCommunautes } from '@/services/chat/communauteService';
 
 /**
@@ -8,13 +10,15 @@ import { getMesCommunautes } from '@/services/chat/communauteService';
  * d'aujourd'hui. Sorti de `BoutonCommunautes` (L2) pour servir aussi la ligne de la communauté.
  * @param {any} navigation - Pour relire au retour (`focus`).
  * @param {boolean} [actif] - Faux : aucun appel (l'écran a déjà lu `mine`).
+ * K8 : interrupteur FC_COMMUNAUTES_V1 éteint ⇒ aucun appel, null (la messagerie du train 10).
  * @returns {any[] | null} Mes communautés, ou null.
  */
 export default function useMesCommunautes(navigation, actif = true) {
   const [communautes, setCommunautes] = useState(/** @type {any[] | null} */ (null));
+  const allume = actif && communautesActives();
 
   useEffect(() => {
-    if (!actif) return undefined;
+    if (!allume) return undefined;
     let vivant = true;
     const charger = () => getMesCommunautes()
       .then((liste) => {
@@ -29,7 +33,7 @@ export default function useMesCommunautes(navigation, actif = true) {
       vivant = false;
       if (typeof desabonner === 'function') desabonner();
     };
-  }, [actif, navigation]);
+  }, [allume, navigation]);
 
   return communautes;
 }

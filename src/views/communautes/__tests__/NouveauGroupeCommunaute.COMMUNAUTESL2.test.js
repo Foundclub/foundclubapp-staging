@@ -69,6 +69,16 @@ const monter = async (element) => {
   return arbre;
 };
 
+// RECOLTE-T11 K8 (14/11/2026, Adel « 337- B ») : ces témoins décrivent l'interrupteur
+// FC_COMMUNAUTES_V1 ALLUMÉ (la recette) ; le bloc « K8 » en fin de fichier, ÉTEINT (la prod).
+beforeEach(() => {
+  process.env.FC_COMMUNAUTES_V1 = '1';
+});
+afterEach(() => {
+  // `delete` ne retire rien du process.env de jest : on remet la valeur vide.
+  process.env.FC_COMMUNAUTES_V1 = '';
+});
+
 afterEach(() => {
   montes.splice(0).forEach((arbre) => act(() => arbre.unmount()));
   jest.clearAllMocks();
@@ -212,5 +222,26 @@ describe('COMMUNAUTES-L2 — Communautés et Nouveau groupe', () => {
       'Une des personnes choisies ne peut pas entrer dans ce groupe.',
     );
     expect(replace).not.toHaveBeenCalled();
+  });
+});
+
+// RECOLTE-T11 K8 — interrupteur ÉTEINT (la prod) : rien des Communautés, et aucun appel au serveur.
+describe('K8 — interrupteur FC_COMMUNAUTES_V1 éteint', () => {
+  beforeEach(() => {
+    process.env.FC_COMMUNAUTES_V1 = '0';
+  });
+
+  test('K8-N — « Nouveau groupe » ne montre rien, ne lit rien, renvoie aux Messages', async () => {
+    const navigation = { goBack: jest.fn(), navigate: jest.fn(), replace: jest.fn() };
+    const arbre = await monter(
+      <NouveauGroupeCommunaute
+        navigation={navigation}
+        route={{ params: { genre: 'club', id: 'club-1', nom: 'AS Demo' } }}
+      />,
+    );
+    expect(arbre.toJSON()).toBeNull();
+    expect(mockGetCandidats).not.toHaveBeenCalled();
+    expect(mockCreer).not.toHaveBeenCalled();
+    expect(navigation.navigate).toHaveBeenCalledWith('Chat');
   });
 });

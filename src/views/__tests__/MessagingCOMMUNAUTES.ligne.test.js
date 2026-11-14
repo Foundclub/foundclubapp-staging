@@ -224,6 +224,16 @@ const parLibelle = (arbre, libelle) => arbre.root
   .findAllByType(TouchableOpacity)
   .filter((/** @type {any} */ n) => n.props?.accessibilityLabel === libelle);
 
+// RECOLTE-T11 K8 (14/11/2026, Adel « 337- B ») : ces témoins décrivent l'interrupteur
+// FC_COMMUNAUTES_V1 ALLUMÉ (la recette) ; le bloc « K8 » en fin de fichier, ÉTEINT (la prod).
+beforeEach(() => {
+  process.env.FC_COMMUNAUTES_V1 = '1';
+});
+afterEach(() => {
+  // `delete` ne retire rien du process.env de jest : on remet la valeur vide.
+  process.env.FC_COMMUNAUTES_V1 = '';
+});
+
 beforeEach(() => {
   mockNavigate.mockClear();
   mockGetMesCommunautes.mockReset();
@@ -267,5 +277,23 @@ describe('COMMUNAUTES-L4 — écran 1 : la ligne de la communauté', () => {
     expect(textesDe(ligne(arbre, 'fil-u13'))).toEqual(avant);
     act(() => ligne(arbre, 'fil-u13').props.onPress());
     expect(mockNavigate).toHaveBeenCalledWith('Conversation', expect.objectContaining({ chatId: 'fil-u13' }));
+  });
+});
+
+// RECOLTE-T11 K8 — interrupteur ÉTEINT (la prod) : rien des Communautés, et aucun appel au serveur.
+describe('K8 — interrupteur FC_COMMUNAUTES_V1 éteint', () => {
+  beforeEach(() => {
+    process.env.FC_COMMUNAUTES_V1 = '0';
+  });
+
+  test('K8-L — la ligne du canal est celle d aujourd hui et ouvre le fil ; aucun bouton, aucun appel', async () => {
+    mockGetMesCommunautes.mockResolvedValue([COMMUNAUTE]);
+    const arbre = await monter([FIL_CLUB, FIL_U13]);
+    expect(lignes(arbre)).toEqual(['liste-fil-fil-club', 'liste-fil-fil-u13']);
+    expect(textesDe(ligne(arbre, 'fil-club'))).not.toContain('Communauté');
+    act(() => ligne(arbre, 'fil-club').props.onPress());
+    expect(mockNavigate).toHaveBeenCalledWith('Conversation', expect.objectContaining({ chatId: 'fil-club' }));
+    expect(parLibelle(arbre, 'Communautés')).toHaveLength(0);
+    expect(mockGetMesCommunautes).not.toHaveBeenCalled();
   });
 });

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   basculerMembre,
+  communautesActives,
   corpsDeCreation,
   etapeUnPrete,
   filtrerCandidats,
@@ -30,6 +31,7 @@ import useTheme from '@/theme/themeContext';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { GRAS_FAMILLE, REGULIER_FAMILLE } from '@/components/molecules/bulleDuFil/typographieDuFil';
 import EnTeteCommunaute from '@/views/communautes/EnTeteCommunaute';
+import RetourAuxMessages from '@/views/communautes/RetourAuxMessages';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -534,4 +536,14 @@ const styles = StyleSheet.create({
   },
 });
 
-export default NouveauGroupeCommunaute;
+/**
+ * RECOLTE-T11 K8 : interrupteur FC_COMMUNAUTES_V1 éteint ⇒ rien, aucun appel, retour aux Messages.
+ * @param {{ navigation: any, route?: any }} props
+ * @returns {import('react').ReactElement} L'écran, ou le retour aux Messages.
+ */
+function NouveauGroupeCommunauteSiAllume({ navigation, route }) {
+  if (!communautesActives()) return <RetourAuxMessages navigation={navigation} />;
+  return <NouveauGroupeCommunaute navigation={navigation} route={route} />;
+}
+
+export default NouveauGroupeCommunauteSiAllume;

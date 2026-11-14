@@ -89,6 +89,7 @@ class TestPreparerBuild(DepotJetable):
             "TOMTOM_API_KEY=tt",
             "REVENUECAT_APPLE_API_KEY=appl_x",
             "FC_FORCE_REVENUECAT_RAIL=",
+            "FC_COMMUNAUTES_V1=0",
             "DELETE_ACCOUNT_URL=https://api.foundclubpro.com/suppression.html",
             "CONTACT_URL=https://foundclubpro.com",
         ])
@@ -96,6 +97,13 @@ class TestPreparerBuild(DepotJetable):
 
         r = lancer(PREPARER, ["env"], self.dossier, dict(cles, API_ENV="staging"))
         self.assertIn("CIBLE API DU BUILD : https://api-staging.foundclubpro.com/api", r.stdout)
+        # RECOLTE-T11 K8 (Adel « 337- B ») : les Communautés allumées sur une build de recette,
+        # éteintes pour la prod (ci-dessus) ; FC_COMMUNAUTES_V1 posée dans Codemagic l'emporte.
+        lignes = (self.dossier / ".env.production").read_bytes().decode("utf-8").splitlines()
+        self.assertIn("FC_COMMUNAUTES_V1=1", lignes)
+        lancer(PREPARER, ["env"], self.dossier, dict(cles, API_ENV="staging", FC_COMMUNAUTES_V1="0"))
+        lignes = (self.dossier / ".env.production").read_bytes().decode("utf-8").splitlines()
+        self.assertIn("FC_COMMUNAUTES_V1=0", lignes)
         # La valeur d'un secret ne s'imprime jamais.
         self.assertNotIn("appl_x", r.stdout)
 

@@ -281,6 +281,16 @@ const monter = async (params = {}) => {
   return { arbre, navigation };
 };
 
+// RECOLTE-T11 K8 (14/11/2026, Adel « 337- B ») : ces témoins décrivent l'interrupteur
+// FC_COMMUNAUTES_V1 ALLUMÉ (la recette) ; le bloc « K8 » en fin de fichier, ÉTEINT (la prod).
+beforeEach(() => {
+  process.env.FC_COMMUNAUTES_V1 = '1';
+});
+afterEach(() => {
+  // `delete` ne retire rien du process.env de jest : on remet la valeur vide.
+  process.env.FC_COMMUNAUTES_V1 = '';
+});
+
 beforeEach(() => {
   queryClient = creerQueryClientDeTest();
   mockLargeur = 1280;
@@ -375,5 +385,29 @@ describe('COMMUNAUTES-L4 — écran 1 sur le site : la ligne de la communauté',
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Communautes, { genre: 'club', id: 'club-1' });
     // L'autre fil ne change pas.
     expect(texteDe(parTestId(arbre, 'MSG1W-ligne-equipe')[0])).not.toContain('Communauté');
+  });
+});
+
+// RECOLTE-T11 K8 — interrupteur ÉTEINT (la prod) : rien des Communautés, et aucun appel au serveur.
+describe('K8 — interrupteur FC_COMMUNAUTES_V1 éteint, sur le site', () => {
+  beforeEach(() => {
+    process.env.FC_COMMUNAUTES_V1 = '0';
+    mockGetMesCommunautes.mockReset();
+    mockListeIPH09 = [
+      filDeTest('equipe', 'team', '2026-10-01T10:00:00Z'),
+      filDeTest('club', 'club', '2026-10-02T10:00:00Z', { club: { documentId: 'club-1', name: 'AS Bellevue' }, unreadCount: 1 }),
+    ];
+  });
+
+  test('K8-C — la ligne du canal ouvre le fil, comme au train 10 ; aucun bouton, aucun appel', async () => {
+    mockGetMesCommunautes.mockResolvedValue([COMMUNAUTE]);
+    const { arbre, navigation } = await monter();
+    expect(lignesDe(arbre)).toEqual(['MSG1W-ligne-club', 'MSG1W-ligne-equipe']);
+    expect(parTestId(arbre, 'MSG1W-communaute-club')).toHaveLength(0);
+    expect(texteDe(parTestId(arbre, 'MSG1W-ligne-club')[0])).not.toContain('Communauté');
+    expect(parTestId(arbre, 'messaging-communautes')).toHaveLength(0);
+    await act(async () => { parTestId(arbre, 'MSG1W-ligne-club')[0].props.onClick(); });
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({ chatId: 'club' }));
+    expect(mockGetMesCommunautes).not.toHaveBeenCalled();
   });
 });

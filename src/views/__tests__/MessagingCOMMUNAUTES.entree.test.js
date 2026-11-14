@@ -180,6 +180,16 @@ const parLibelle = (arbre, libelle) => arbre.root
   .findAllByType(TouchableOpacity)
   .filter((/** @type {any} */ n) => n.props?.accessibilityLabel === libelle);
 
+// RECOLTE-T11 K8 (14/11/2026, Adel « 337- B ») : ces témoins décrivent l'interrupteur
+// FC_COMMUNAUTES_V1 ALLUMÉ (la recette) ; le bloc « K8 » en fin de fichier, ÉTEINT (la prod).
+beforeEach(() => {
+  process.env.FC_COMMUNAUTES_V1 = '1';
+});
+afterEach(() => {
+  // `delete` ne retire rien du process.env de jest : on remet la valeur vide.
+  process.env.FC_COMMUNAUTES_V1 = '';
+});
+
 beforeEach(() => {
   mockNavigate.mockClear();
   mockGetMesCommunautes.mockReset();
@@ -223,5 +233,26 @@ describe('COMMUNAUTES-L2 — l entrée « Communautés » de « Messages »', ()
     expect(bouton).toHaveLength(1);
     act(() => bouton[0].props.onPress());
     expect(mockNavigate).toHaveBeenCalledWith('Communautes');
+  });
+});
+
+// RECOLTE-T11 K8 — interrupteur ÉTEINT (la prod) : rien des Communautés, et aucun appel au serveur.
+describe('K8 — interrupteur FC_COMMUNAUTES_V1 éteint', () => {
+  beforeEach(() => {
+    process.env.FC_COMMUNAUTES_V1 = '0';
+  });
+
+  test('K8-E — une communauté rendue par le serveur, mais ni bouton ni appel', async () => {
+    mockGetMesCommunautes.mockResolvedValue([
+      {
+        documentId: 'club-1',
+        genre: 'club',
+        groupes: [],
+        nom: 'AS Demo',
+      },
+    ]);
+    const arbre = await monter({});
+    expect(parLibelle(arbre, 'Communautés')).toHaveLength(0);
+    expect(mockGetMesCommunautes).not.toHaveBeenCalled();
   });
 });
