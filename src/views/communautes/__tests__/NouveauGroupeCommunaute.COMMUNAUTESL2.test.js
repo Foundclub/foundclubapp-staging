@@ -7,6 +7,10 @@ import NouveauGroupeCommunaute from '../NouveauGroupeCommunaute';
 // COMMUNAUTES-L2 (13/11/2026, D76 ; maquette v3, écrans 2, 3 et 4) — de « Communautés » au fil
 // créé.
 
+// L4 (14/11) : « Communautés » monte plus de modules ; sous charge (2 workers, PC partagé), le
+// premier témoin a dépassé 5 s une fois sur trois.
+jest.setTimeout(20000);
+
 const mockGetMesCommunautes = jest.fn();
 const mockGetCandidats = jest.fn();
 const mockCreer = jest.fn();
@@ -14,6 +18,18 @@ jest.mock('@/services/chat/communauteService', () => ({
   creerGroupeCommunaute: (...args) => mockCreer(...args),
   getCandidatsCommunaute: (...args) => mockGetCandidats(...args),
   getMesCommunautes: (...args) => mockGetMesCommunautes(...args),
+}));
+// L4 (14/11) : « Communautés » lit aussi le compte, la liste des messages (aperçus) et le « lu ».
+jest.mock('@/services/chat/chatQueriesCompat', () => ({
+  useGetChats: () => ({ data: undefined }),
+}));
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ allMyTeams: [], userData: { documentId: 'moi' } }),
+}));
+jest.mock('@/domains/messaging/useMessaging', () => ({
+  __esModule: true,
+  default: () => ({ sendReadReceipt: jest.fn(), updateLastReadMessage: jest.fn() }),
 }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -101,8 +117,10 @@ describe('COMMUNAUTES-L2 — Communautés et Nouveau groupe', () => {
     act(() => parTestID(arbre, 'communaute-ligne-fil-u13')[0].props.onPress());
     expect(navigate).toHaveBeenLastCalledWith('Conversation', { chatId: 'fil-u13', title: 'U13' });
     act(() => parTestID(arbre, 'communaute-ligne-annonces-club-1')[0].props.onPress());
+    // L4 (écran 5) : la communauté en sous-titre d'Annonces.
     expect(navigate).toHaveBeenLastCalledWith('Conversation', {
       chatId: 'fil-club',
+      subTitle: 'AS Demo',
       title: 'Annonces',
     });
     expect(parTestID(arbre, 'communaute-nouveau-groupe-club-1')).toHaveLength(1);

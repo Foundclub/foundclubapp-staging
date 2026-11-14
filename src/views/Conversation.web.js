@@ -19,6 +19,12 @@ import {
 } from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
+import {
+  communauteDeLaLigne,
+  communautesSansLigne,
+  nonLusDeLaCommunaute,
+  resumeDesGroupes,
+} from '@/domains/messaging/communautes';
 import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
 import { filLuParDesParents, libelleDuRole, mentionDuFil } from '@/domains/messaging/roleDuMembre';
@@ -182,6 +188,7 @@ import { areSameEntityId, getEntityDocumentId } from '@/utils/entityId'
 import { confirmerDansLApp } from '@/utils/fenetreDeLApp'
 import { getImageUrl } from '@/utils/imageUrl'
 import BoutonCommunautes from '@/views/communautes/BoutonCommunautes';
+import useMesCommunautes from '@/views/communautes/useMesCommunautes';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -888,6 +895,8 @@ function ColonneDesConversations({
   const [recherche, setRecherche] = useState('');
   const [portee, setPortee] = useState('all');
   const [afficheArchivees, setAfficheArchivees] = useState(false);
+  // COMMUNAUTES-L4 (14/11, maquette v3 écran 1) — la ligne du canal devient celle de sa communauté.
+  const communautes = useMesCommunautes(navigation);
   const [menu, setMenu] = useState(
     /** @type {{ declencheur: HTMLElement, fil: any, x: number, y: number } | null} */ (null),
   );
@@ -1071,7 +1080,11 @@ function ColonneDesConversations({
           </h2>
           {/* COMMUNAUTES-L2 (13/11, D76) : « Communautés » si le serveur en rend une. */}
           <div style={{ alignItems: 'center', display: 'flex', gap: 8 }}>
-            <BoutonCommunautes navigation={navigation} taille={36} />
+            <BoutonCommunautes
+              communautes={communautesSansLigne(communautes, actifs)}
+              navigation={navigation}
+              taille={36}
+            />
             <button
               aria-label={t('conversation.web.fil.nouvelleDiscussion', 'Nouvelle discussion')}
               onClick={() => navigation.navigate(RouteNames.NewConversation)}
@@ -1242,10 +1255,15 @@ function ColonneDesConversations({
         ) : null}
         {fils.map((/** @type {any} */ fil) => {
           const id = String(fil?.documentId || '');
-          const titre = nomDuFil(fil);
+          // COMMUNAUTES-L4 — la ligne d'une Annonces porte sa communauté (même fil, même place).
+          const communaute = communauteDeLaLigne(communautes, id);
+          const titre = communaute?.nom || nomDuFil(fil);
           const dernier = getChatLastMessage(fil);
           const deMoi = Boolean(meId) && dernier?.sender?.documentId === meId;
-          const nonLus = formatThreadUnreadBadge(fil?.unreadCount);
+          const nonLus = formatThreadUnreadBadge(communaute
+            ? nonLusDeLaCommunaute(communaute, fil?.unreadCount)
+            : fil?.unreadCount);
+          const resume = communaute ? resumeDesGroupes(t, communaute) : '';
           const ouvert = id === chatId;
           const epingle = estEpinglePourMoi(fil, meId);
           // REPRISE-MESSAGERIE p88 (01/11) : signé par la Ville, l'aperçu dit le nom de la Ville,
@@ -1263,6 +1281,13 @@ function ColonneDesConversations({
                 aria-current={ouvert ? 'page' : undefined}
                 data-testid={`MSG1W-ligne-${id}`}
                 onClick={() => {
+                  if (communaute) {
+                    navigation.navigate(RouteNames.Communautes, {
+                      genre: communaute.genre,
+                      id: communaute.documentId,
+                    });
+                    return;
+                  }
                   if (ouvert) return;
                   navigation.navigate(RouteNames.Conversation, {
                     chatId: id,
@@ -1362,6 +1387,24 @@ function ColonneDesConversations({
                   <span style={{ alignItems: 'center', display: 'flex', gap: 6 }}>
                     {/* FIN-PLACE (02/11/2026) : sur la ligne du nom, la casquette le coupait («
                        Complexe T… »). */}
+                    {communaute ? (
+                      <span
+                        data-testid={`MSG1W-communaute-${id}`}
+                        style={{
+                          background: withAlpha(colors.primary500, 0.18),
+                          borderRadius: 4,
+                          color: PALETTE_DU_FIL.accent,
+                          flexShrink: 0,
+                          fontFamily: 'Montserrat-Bold, sans-serif',
+                          fontSize: 10,
+                          padding: '2px 8px',
+                        }}
+                      >
+                        {communaute.genre === 'complexe'
+                          ? t('communautes.puceComplexe', 'Complexe')
+                          : t('communautes.puceCommunaute', 'Communauté')}
+                      </span>
+                    ) : null}
                     {casquette ? (
                       <span
                         data-testid={`MSG1W-casquette-${id}`}
@@ -1392,6 +1435,11 @@ function ColonneDesConversations({
                         whiteSpace: 'nowrap',
                       }}
                     >
+                      {communaute && dernier ? (
+                        <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                          {`${t('communautes.annonces', 'Annonces')} · `}
+                        </span>
+                      ) : null}
                       {prenom ? (
                         <span style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{`${prenom} : `}</span>
                       ) : null}
@@ -1426,6 +1474,15 @@ function ColonneDesConversations({
                       </span>
                     ) : null}
                   </span>
+                  {/* COMMUNAUTES-L4 — « 5 groupes · 3 avec du nouveau » (maquette v3, écran 1). */}
+                  {resume ? (
+                    <span
+                      data-testid={`MSG1W-communaute-resume-${id}`}
+                      style={{ color: PALETTE_DU_FIL.texteDoux, fontSize: 13 }}
+                    >
+                      {resume}
+                    </span>
+                  ) : null}
                 </span>
               </button>
               {/* ARCHIVEES — le « … » de la ligne (au survol, au clavier, toujours au doigt). */}

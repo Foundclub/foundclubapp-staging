@@ -3451,6 +3451,14 @@ function Conversation({ navigation, route }) {
     setIsMenuVisible(false);
     setIsGroupManagementVisible(true);
   };
+  // COMMUNAUTES-L4 (14/11) — « Infos du groupe » depuis l'appui long d'un groupe de la communauté
+  // (maquette v3, écran 2) : le fil s'ouvre avec `ouvrirInfos`, ses infos s'ouvrent une fois.
+  const ouvrirInfosDemande = Boolean(route?.params?.ouvrirInfos);
+  useEffect(() => {
+    if (!ouvrirInfosDemande || !isGroupChat) return;
+    navigation.setParams?.({ ouvrirInfos: undefined });
+    setIsGroupManagementVisible(true);
+  }, [isGroupChat, navigation, ouvrirInfosDemande]);
 
   const handleSaveGroupName = async (/** @type {string} */ nom) => {
     const nextGroupName = String(nom || '').trim();

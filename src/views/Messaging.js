@@ -24,6 +24,12 @@ import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import {
   casquetteDuFil, casquettesMelees, libelleDeCasquette,
 } from '@/domains/messaging/casquette';
+import {
+  communauteDeLaLigne,
+  communautesSansLigne,
+  nonLusDeLaCommunaute,
+  resumeDesGroupes,
+} from '@/domains/messaging/communautes';
 import { estUnTeteATete, extraitDuMessageCite } from '@/domains/messaging/habillageDuFil';
 import {
   estArchivePourMoi,
@@ -73,6 +79,7 @@ import BoiteAssistanceDansMessages from '@/views/chat/BoiteAssistanceDansMessage
 import LigneAssistance from '@/views/chat/LigneAssistance';
 import CanauxDeLaVille from '@/views/collectivite/components/CanauxDeLaVille';
 import BoutonCommunautes from '@/views/communautes/BoutonCommunautes';
+import useMesCommunautes from '@/views/communautes/useMesCommunautes';
 
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -274,6 +281,8 @@ function Messaging({ navigation, route }) {
     [filsSansAssistance, userData?.documentId],
   );
   const [afficheArchivees, setAfficheArchivees] = useState(false);
+  // COMMUNAUTES-L4 (14/11, maquette v3 écran 1) — la ligne du canal devient celle de sa communauté.
+  const communautes = useMesCommunautes(navigation);
   // R17-CANAUX (décision d'Adel « B ») — « Toute la ville » n'est pas montré à un mineur connu.
   const mineur = estMineurConnu(userData);
   const nombreArchivees = useMemo(() => filsDeLaMessagerie(filsArchives, {
@@ -867,7 +876,12 @@ function Messaging({ navigation, route }) {
     // curseur de lecture). Quand il le dit, il gagne sur le « lu » garde en
     // local, qui ne connait que le dernier message.
     // P6-09 : `Number(null)` vaut 0 ; un compteur absent laisse décider le « lu » local.
-    const serverUnreadCount = chat?.unreadCount == null ? NaN : Number(chat.unreadCount);
+    // COMMUNAUTES-L4 — la ligne d'une Annonces porte sa communauté : nom, puce, résumé, total.
+    const communaute = communauteDeLaLigne(communautes, chat?.documentId);
+    const compteur = communaute
+      ? nonLusDeLaCommunaute(communaute, chat?.unreadCount)
+      : chat?.unreadCount;
+    const serverUnreadCount = compteur == null ? NaN : Number(compteur);
     const hasServerUnreadCount = Number.isFinite(serverUnreadCount);
     const unreadBadge = formatThreadUnreadBadge(serverUnreadCount);
     const hasUnread = hasServerUnreadCount
@@ -891,17 +905,19 @@ function Messaging({ navigation, route }) {
       )
       : '';
     const sourdine = withAlpha(Colors.neutral00, 0.58);
-    const titreDeLaLigne = titreDuFil(t, { chat, espaceVille }) || getConversationName({
-      chatClub: chat.club,
-      chatGroupAdmins: chat.groupAdmins,
-      chatGroupName: chat.groupName,
-      chatLeagueMatch: chat.league_match,
-      chatMultisportClub: chat.multisportClub,
-      chatParticipants: chat.participants,
-      chatTeam: chat.team,
-      chatType: chat.type,
-      meId: userData?.documentId,
-    });
+    const titreDeLaLigne = communaute?.nom
+      || titreDuFil(t, { chat, espaceVille })
+      || getConversationName({
+        chatClub: chat.club,
+        chatGroupAdmins: chat.groupAdmins,
+        chatGroupName: chat.groupName,
+        chatLeagueMatch: chat.league_match,
+        chatMultisportClub: chat.multisportClub,
+        chatParticipants: chat.participants,
+        chatTeam: chat.team,
+        chatType: chat.type,
+        meId: userData?.documentId,
+      });
 
     // R17-CANAUX — « Toute la ville » : ni glisser pour épingler, ni glisser pour archiver.
     const avecGestes = chat?.type !== CANAL_VILLE;
@@ -921,7 +937,12 @@ function Messaging({ navigation, route }) {
             nonLu: Boolean(hasUnread),
             titre: String(titreDeLaLigne || ''),
           })}
-          onPress={() => handleChatPress(chat)}
+          onPress={() => (communaute
+            ? navigation.navigate(RouteNames.Communautes, {
+              genre: communaute.genre,
+              id: communaute.documentId,
+            })
+            : handleChatPress(chat))}
           style={stylesDeLaListe.ligne}
           testID={`liste-fil-${chat.documentId}`}
         >
@@ -964,6 +985,21 @@ function Messaging({ navigation, route }) {
                 <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>LIGUE</Text>
               </View>
               )}
+              {communaute ? (
+                <View
+                  style={[
+                    stylesDeLaListe.puceLigue,
+                    { backgroundColor: withAlpha(Colors.primary500, 0.18) },
+                  ]}
+                  testID={`liste-communaute-${chat.documentId}`}
+                >
+                  <Text style={[Fonts.p4Bold, { color: Colors.primary500, fontSize: 10 }]}>
+                    {communaute.genre === 'complexe'
+                      ? t('communautes.puceComplexe', 'Complexe')
+                      : t('communautes.puceCommunaute', 'Communauté')}
+                  </Text>
+                </View>
+              ) : null}
               {etiquettesDeCasquette && casquetteDuFil(chat) ? (
                 <View
                   style={[
@@ -1033,6 +1069,11 @@ function Messaging({ navigation, route }) {
                       { color: sourdine },
                     ]}
                   >
+                    {communaute && lastMessage ? (
+                      <Text style={{ color: withAlpha(Colors.neutral00, 0.8) }}>
+                        {`${t('communautes.annonces', 'Annonces')} · `}
+                      </Text>
+                    ) : null}
                     {auteurDuDernier && !extrait.icone ? (
                       <Text style={{ color: withAlpha(Colors.neutral00, 0.8) }}>
                         {`${auteurDuDernier} : `}
@@ -1077,6 +1118,16 @@ function Messaging({ navigation, route }) {
                   </View>
                 ) : null}
               </View>
+            ) : null}
+            {/* COMMUNAUTES-L4 — « 5 groupes · 3 avec du nouveau » (maquette v3, écran 1). */}
+            {communaute && resumeDesGroupes(t, communaute) ? (
+              <Text
+                numberOfLines={1}
+                style={[stylesDeLaListe.apercuTexte, { color: withAlpha(Colors.neutral00, 0.5) }]}
+                testID={`liste-communaute-resume-${chat.documentId}`}
+              >
+                {resumeDesGroupes(t, communaute)}
+              </Text>
             ) : null}
           </View>
           {avecGestes ? renderWebChatActions({
@@ -1189,7 +1240,10 @@ function Messaging({ navigation, route }) {
                         </Text>
                         {/* COMMUNAUTES-L2 (13/11) : « Communautés » si le serveur en rend une. */}
                         <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
-                          <BoutonCommunautes navigation={navigation} />
+                          <BoutonCommunautes
+                            communautes={communautesSansLigne(communautes, allChats)}
+                            navigation={navigation}
+                          />
                           {canCreateConversation ? (
                             <TourTarget id="msg-new">
                               <TouchableOpacity

@@ -283,9 +283,11 @@ const FIL_DE_CLUB = {
 
 /**
  * Monte le VRAI écran.
+ * @param {Record<string, unknown>} [params] - Les paramètres de la route.
+ * @param {jest.Mock} [setParams] - `navigation.setParams` (COMMUNAUTES-L4 : `ouvrirInfos`).
  * @returns {{ecran: any, gifted: any}} L'arbre rendu et les dernières props de GiftedChat.
  */
-const monterLaConversation = () => {
+const monterLaConversation = (params = { chatId: 'chat-1' }, setParams = jest.fn()) => {
   // eslint-disable-next-line global-require
   const { QueryClient, QueryClientProvider } = require('@tanstack/react-query');
   // eslint-disable-next-line global-require
@@ -313,8 +315,9 @@ const monterLaConversation = () => {
             goBack: jest.fn(),
             navigate: jest.fn(),
             setOptions: jest.fn(),
+            setParams,
           },
-          route: { params: { chatId: 'chat-1' } },
+          route: { params },
         }),
       ),
     );
@@ -831,6 +834,20 @@ describe('MSG1A — §3.16 infos du groupe et menu ⋮', () => {
       titre.props.onPress();
     });
     expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(true);
+  });
+
+  // COMMUNAUTES-L4 (14/11) — l'appui long d'un groupe de la communauté (écran 2) : « Infos du
+  // groupe » ouvre le fil avec `ouvrirInfos`, et les infos s'ouvrent seules, une fois.
+  test('GI-L4 — ouvrirInfos ouvre les infos du groupe, puis le paramètre est effacé', () => {
+    const setParams = jest.fn();
+    const { ecran } = monterLaConversation({ chatId: 'chat-1', ouvrirInfos: true }, setParams);
+    expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(true);
+    expect(setParams).toHaveBeenCalledWith({ ouvrirInfos: undefined });
+  });
+
+  test('GI-L4b — sans ouvrirInfos, les infos restent fermées (comme avant)', () => {
+    const { ecran } = monterLaConversation();
+    expect(ecran.root.findByType(InfosDuGroupe).props.visible).toBe(false);
   });
 
   test('GI2 — le ⋮ d un groupe : « Infos du groupe » et « Signaler », sans « Fermer »', () => {
