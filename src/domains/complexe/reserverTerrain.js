@@ -861,7 +861,9 @@ const detailsDe = (erreur) => (
 );
 
 /** Les détails d'un refus qui peuvent voyager jusqu'à E-P13 (liste blanche ; jamais `reason`). */
-const DETAILS_PERMIS = Object.freeze(['code', 'max', 'minAge', 'phone']);
+// RETOUCHES-T11B (14/11) : jamais `phone` — sur le site, ces paramètres deviennent l'adresse de la
+// page ; E-P13 relit le numéro sur la page publique du complexe (son `slug`).
+const DETAILS_PERMIS = Object.freeze(['code', 'max', 'minAge']);
 
 /**
  * Les paramètres de route de E-P13 : la variante, le refus du serveur réduit à ce que l'écran
@@ -869,7 +871,7 @@ const DETAILS_PERMIS = Object.freeze(['code', 'max', 'minAge', 'phone']);
  * seulement (les paramètres de route se sérialisent). ⛔ RC-P08 : la raison privée d'un
  * bannissement (`details.reason`) ne part jamais.
  * @param {{ complexe?: string | null, creneau?: { from?: string, to?: string } | null,
- *   date?: string | null, erreur?: any, slug?: string | null, telephone?: string | null,
+ *   date?: string | null, erreur?: any, slug?: string | null,
  *   terrain?: { documentId?: string, name?: string } | null, variante: string }} source - Ce
  *   que l'écran sait.
  * @returns {Record<string, any>} Les paramètres.
@@ -887,7 +889,6 @@ export const parametresDEchec = (source) => {
     from: source?.creneau?.from || undefined,
     message: message || undefined,
     slug: source?.slug || undefined,
-    telephone: source?.telephone || undefined,
     terrain: source?.terrain?.name || undefined,
     terrainId: source?.terrain?.documentId || undefined,
     to: source?.creneau?.to || undefined,

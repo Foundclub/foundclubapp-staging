@@ -319,11 +319,13 @@ function NouveauGroupeCommunaute({ navigation, route }) {
                 {t('communautes.toutSelectionner', 'Tout sélectionner')}
               </Text>
               <Text style={[styles.aide, { color: sourdine }]}>
-                {t('communautes.toutSelectionnerAide', '{{nom}} · {{total}} membres', {
-                  nom: nomCommunaute,
-                  total: candidats.length,
-                  ...SANS_ECHAPPEMENT,
-                })}
+                {t(
+                  'communautes.toutSelectionnerAide',
+                  candidats.length > 1
+                    ? '{{nom}} · {{count}} membres'
+                    : '{{nom}} · {{count}} membre',
+                  { count: candidats.length, nom: nomCommunaute, ...SANS_ECHAPPEMENT },
+                )}
               </Text>
             </View>
             <View
@@ -377,6 +379,16 @@ function NouveauGroupeCommunaute({ navigation, route }) {
             + 'Les groupes de parents, de covoiturage et de staff sont réservés aux adultes.',
         )}
       </Text>
+      {/* RETOUCHES-T11B (14/11) : le bouton grisé dit pourquoi (minimum de 2 membres). */}
+      {choisis.length < MEMBRES_MINIMUM ? (
+        <Text style={[styles.aide, { color: sourdine }]} testID="nouveau-groupe-minimum">
+          {t(
+            'communautes.minimumMembres',
+            'Il faut au moins {{minimum}} membres pour créer un groupe.',
+            { minimum: MEMBRES_MINIMUM },
+          )}
+        </Text>
+      ) : null}
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityState={{ disabled: envoi || choisis.length < MEMBRES_MINIMUM }}
@@ -392,7 +404,11 @@ function NouveauGroupeCommunaute({ navigation, route }) {
         testID="nouveau-groupe-creer"
       >
         <Text style={[styles.texteBouton, { color: Colors.primary900 }]}>
-          {t('communautes.creerAvec', 'Créer avec {{nombre}} membres', { nombre: choisis.length })}
+          {t(
+            'communautes.creerAvec',
+            choisis.length > 1 ? 'Créer avec {{count}} membres' : 'Créer avec {{count}} membre',
+            { count: choisis.length },
+          )}
         </Text>
       </TouchableOpacity>
     </>
@@ -407,11 +423,11 @@ function NouveauGroupeCommunaute({ navigation, route }) {
         onRetour={() => (etape === 2 ? setEtape(1) : navigation.goBack())}
         sousTitre={
           etape === 2
-            ? t('communautes.cochesSur', '{{nom}} · {{nombre}} cochés', {
-              nom: nom.trim(),
-              nombre: choisis.length,
-              ...SANS_ECHAPPEMENT,
-            })
+            ? t(
+              'communautes.cochesSur',
+              choisis.length > 1 ? '{{nom}} · {{count}} cochés' : '{{nom}} · {{count}} coché',
+              { count: choisis.length, nom: nom.trim(), ...SANS_ECHAPPEMENT },
+            )
             : nomCommunaute
         }
         titre={

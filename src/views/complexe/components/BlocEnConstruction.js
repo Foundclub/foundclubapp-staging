@@ -21,6 +21,9 @@ import {
   useDeciderDemande, usePartagerAnnonce, useReservationsDuComplexe,
 } from '@/services/complexe/complexeQueries';
 
+// RETOUCHES-T11B : la largeur sous laquelle « Partager l’annonce » (icône comprise) serait coupé.
+const LARGEUR_BOUTON_PARTAGER = 205;
+
 /**
  * La jauge orange d'une réservation en construction (« 7 sur 10 »).
  * @param {{ part: number }} props - La part remplie, de 0 à 1.
@@ -177,8 +180,10 @@ function LigneEnConstruction({
           </View>
         </View>
       ) : (
+        // RETOUCHES-T11B (14/11, capture 18) : sous ~205 px par bouton (390 px), les deux
+        // boutons passent l'un sous l'autre au lieu de couper « Partager l’annonce ».
         <View style={[Alignments.row, Alignments.wrap, { gap: 8 }]}>
-          <View style={{ flexBasis: 140, flexGrow: 1 }}>
+          <View style={{ flexBasis: LARGEUR_BOUTON_PARTAGER, flexGrow: 1 }}>
             <EcrireAuClient
               complexeId={complexeId}
               navigation={navigation}
@@ -188,7 +193,7 @@ function LigneEnConstruction({
               title={t('complexeReservations.fiche.ecrireAuReserveur', 'Écrire au client')}
             />
           </View>
-          <View style={{ flexBasis: 140, flexGrow: 1 }}>
+          <View style={{ flexBasis: LARGEUR_BOUTON_PARTAGER, flexGrow: 1 }}>
             {peutPartagerLAnnonce(ligne) && ligne.annonce ? (
               <Button
                 icon="share"

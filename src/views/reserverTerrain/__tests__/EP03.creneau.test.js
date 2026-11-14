@@ -277,7 +277,7 @@ describe('E-P03 — « Continuer » demande le récapitulatif au serveur', () =>
       from: '18:00',
       message: 'x',
       slug: 'le-five-de-montrivage',
-      telephone: '+33639981234',
+      // RETOUCHES-T11B défaut 7 : plus de numéro dans les paramètres (l'adresse du site).
       terrain: 'Terrain 1',
       terrainId: 't-1',
       to: '19:00',

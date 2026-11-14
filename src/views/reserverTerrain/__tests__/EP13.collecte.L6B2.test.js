@@ -28,6 +28,10 @@ jest.mock('@/views/search/searchRouteHelpers', () => ({
   navigateToSearchHub: (/** @type {any[]} */ ...args) => mockVersLaRecherche(...args),
 }));
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
+// RETOUCHES-T11B : E-P13 lit le numéro du complexe sur sa page publique (plus dans l'adresse).
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useComplexePublic: () => ({ data: undefined }),
+}));
 jest.mock('@/components/templates/ScreenContainer', () => (
   function FauxConteneur(/** @type {any} */ { children }) {
     return children;

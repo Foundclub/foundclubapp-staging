@@ -206,9 +206,17 @@ describe('COMMUNAUTES-L4 — les écrans de lecture', () => {
     expect(textes(arbre.root)).toContain(
       'Tu es dans la communauté du Five Lyon Est parce que tu l’as mis en favori.',
     );
+    // RETOUCHES-T11B défaut 4 (tournée du 14/11) : après « Quitter la communauté », l'écran
+    // RESTE sur Communautés (le retour arrière menait à l'Accueil sur le site) ; la liste est
+    // relue, la communauté quittée disparaît et les autres s'affichent.
+    mockGetMesCommunautes.mockResolvedValue([CLUB]);
     await act(async () => { await parTestID(arbre, 'communaute-quitter-cx-1')[0].props.onPress(); });
     expect(mockQuitterLaCommunaute).toHaveBeenCalledWith({ groupes: ['g-jeudi'], slug: 'five-lyon-est' });
-    expect(navigation.goBack).toHaveBeenCalled();
+    expect(navigation.goBack).not.toHaveBeenCalled();
+    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(mockGetMesCommunautes).toHaveBeenCalledTimes(2);
+    expect(existe(arbre, 'communaute-quitter-cx-1')).toBe(false);
+    expect(existe(arbre, 'communaute-ligne-annonces-club-1')).toBe(true);
   });
 
   test('P4b — le gérant ne voit pas le bandeau', async () => {

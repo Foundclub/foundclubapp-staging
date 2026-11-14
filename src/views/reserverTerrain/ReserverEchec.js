@@ -17,6 +17,8 @@ import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useComplexePublic } from '@/services/complexe/complexeJoueurQueries';
+
 import { useIsDesktop } from '@/responsive';
 
 const COLONNE = 560;
@@ -30,7 +32,7 @@ const COLONNE = 560;
  * complexe, pas d'« Écrire au complexe »), refusée (le motif tel quel), sans réponse, annulée par
  * le complexe, fermeture, annulée par toi, complexe ou terrain parti, panne, réseau.
  * « Fermer » ramène à l'écran précédent. Ordinateur : la colonne centrée.
- * Paramètres (`parametresDEchec`) : `variante`, `details`, `message`, `complexe`, `telephone`,
+ * Paramètres (`parametresDEchec`) : `variante`, `details`, `message`, `complexe`,
  * `slug`, `terrainId`, `terrain`, `date`, `from`, `to`, et `motif` / `fermeture` (une réservation).
  * ⛔ Pas dans ce lot : les variantes de la collecte (serveur L3), « Voir mes réservations » (E-P10,
  * L6b), « Écrire au complexe » (la conversation de la réservation, serveur L3). Caché par
@@ -46,13 +48,16 @@ function ReserverEchec() {
   /** @type {Record<string, any>} */
   const params = /** @type {any} */ (route?.params) || {};
   const surOrdinateur = useIsDesktop();
+  // RETOUCHES-T11B (14/11) : le numéro ne voyage plus dans l'adresse ; la page publique du complexe
+  // (déjà en cache depuis E-P02) le donne.
+  const complexePublic = useComplexePublic(params.slug);
 
   const contenu = contenuDEchec(t, String(params.variante || 'panne'), {
     complexe: params.complexe,
     erreur: { details: params.details || {}, message: params.message || '' },
     fermeture: params.fermeture,
     motif: params.motif,
-    telephone: params.telephone,
+    telephone: complexePublic?.data?.phoneNumber,
     terrain: params.terrain,
   });
 

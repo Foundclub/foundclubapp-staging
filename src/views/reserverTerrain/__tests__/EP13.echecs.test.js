@@ -29,6 +29,12 @@ jest.mock('@/views/search/searchRouteHelpers', () => ({
 }));
 
 jest.mock('@/responsive', () => ({ useIsDesktop: () => false }));
+// RETOUCHES-T11B défaut 7 : le numéro ne voyage plus dans les paramètres (l'adresse du site) ;
+// l'écran le lit sur la page publique du complexe (même clé de cache que la page E-P02).
+const mockComplexePublic = jest.fn();
+jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
+  useComplexePublic: (/** @type {any} */ slug) => mockComplexePublic(slug),
+}));
 jest.mock('@/components/templates/ScreenContainer', () => (
   function FauxConteneur(/** @type {any} */ { children }) {
     return children;
@@ -46,7 +52,6 @@ const CRENEAU = {
   date: '2026-10-14',
   from: '18:00',
   slug: 'le-five-de-montrivage',
-  telephone: '+33639981234',
   terrain: 'Terrain 1',
   terrainId: 't-1',
   to: '19:00',
@@ -81,6 +86,11 @@ const appuyer = async (arbre, libelle) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockComplexePublic.mockImplementation((/** @type {any} */ slug) => (
+    slug === 'le-five-de-montrivage'
+      ? { data: { phoneNumber: '+33639981234' } }
+      : { data: undefined }
+  ));
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 

@@ -173,7 +173,6 @@ function ReserverRecapitulatif() {
         date: source?.date || params.date,
         erreur,
         slug: params.slug,
-        telephone: source?.complexe?.phoneNumber,
         terrain: source?.terrain || { documentId: params.terrainId },
         variante: varianteDEchec(erreur),
       }),

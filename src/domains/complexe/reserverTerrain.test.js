@@ -347,7 +347,6 @@ describe('les paramètres de E-P13 (ce que l’écran des échecs doit savoir)',
       from: '18:00',
       message: 'm',
       slug: 'le-five',
-      telephone: '+33639981234',
       terrain: 'Terrain 1',
       terrainId: 't-1',
       to: '19:00',
@@ -362,6 +361,26 @@ describe('les paramètres de E-P13 (ce que l’écran des échecs doit savoir)',
     });
     expect(JSON.stringify(params)).not.toContain('secret');
     expect(params).toEqual({ details: { code: 'COMPLEXE_RESERVATION_BANNED' }, variante: 'banni' });
+  });
+
+  // RETOUCHES-T11B défaut 7 (tournée du 14/11, capture 44) : sur le site, les paramètres de
+  // E-P13 deviennent l'adresse de la page ; « Collecte arrêtée » y montrait `telephone=` en
+  // clair. L'écran relit le numéro sur la page publique du complexe (son `slug`).
+  it('⛔ jamais un numéro dans les paramètres (ni `telephone`, ni `details.phone`)', () => {
+    const params = parametresDEchec({
+      complexe: 'Le Five de Montrivage',
+      erreur: { details: { code: 'COMPLEXE_RESERVATION_TOO_LATE', phone: '+33639981234' } },
+      slug: 'le-five',
+      telephone: '+33639981234',
+      variante: 'collecteArretee',
+    });
+    expect(JSON.stringify(params)).not.toContain('39981234');
+    expect(params).toEqual({
+      complexe: 'Le Five de Montrivage',
+      details: { code: 'COMPLEXE_RESERVATION_TOO_LATE' },
+      slug: 'le-five',
+      variante: 'collecteArretee',
+    });
   });
 });
 

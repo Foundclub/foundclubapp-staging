@@ -298,7 +298,6 @@ function ReserverMaReservation({ dansUnVolet = false, reservationId = null } = {
           creneau: { from: reservation.from, to: reservation.to },
           date: reservation.date,
           slug,
-          telephone,
           terrain: reservation.terrain,
           // RESA-FIN-APP : retirer une DEMANDE n'annule aucune réservation (tournée 2).
           variante: (enCollecte && 'collecteArretee')

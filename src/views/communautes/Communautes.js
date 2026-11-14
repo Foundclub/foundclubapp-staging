@@ -253,7 +253,9 @@ function Communautes({ navigation, route = undefined }) {
           .map((/** @type {any} */ g) => g.chat),
         slug: c.slug,
       });
-      navigation.goBack();
+      // RETOUCHES-T11B (14/11) : on reste sur Communautés ; la liste relue ne la montre plus et
+      // « affichees » retombe sur toutes les autres (le retour arrière menait à l'Accueil).
+      await charger();
     } catch {
       setErreur(true);
     }

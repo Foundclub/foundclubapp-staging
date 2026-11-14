@@ -299,6 +299,33 @@ function FicheReservation({
       ligne?.joueur?.documentId === r.booker.documentId
     )) || null
     : null;
+  // RETOUCHES-T11B (14/11) : libre (le serveur n'envoie pas de rewardType pour un programme libre),
+  // partie ou remise ; le texte du geste suit ce type, pas la ligne « récompense » du serveur.
+  const typeDuBonus = fidelite.data?.programme?.rewardType || 'libre';
+  const texteDuGeste = () => {
+    if (typeDuBonus === 'libre') return t('fidelite.fiche.marquerRemise', 'Marquer comme remise');
+    if (typeDuBonus === 'remise') {
+      return t('complexeReservations.fiche.validerReduction', 'Valider la réduction');
+    }
+    return t('complexeReservations.fiche.validerRecompense', 'Valider la partie offerte');
+  };
+  const titreDuGeste = () => {
+    if (typeDuBonus === 'libre') {
+      return t(
+        'fidelite.fiche.marquerRemiseTitre',
+        'Marquer la récompense de {{nom}} comme remise ?',
+        options,
+      );
+    }
+    if (typeDuBonus === 'remise') {
+      return t(
+        'complexeFidelite.valider.titreReduction',
+        'Valider la réduction de {{nom}} ?',
+        options,
+      );
+    }
+    return t('complexeFidelite.valider.titre', 'Valider la partie offerte de {{nom}} ?', options);
+  };
 
   // ── « Qui » ────────────────────────────────────────────────────────────────────────────
   const qui = exterieur ? (
@@ -735,11 +762,8 @@ function FicheReservation({
         <View testID="fiche-valider-recompense">
           <Button
             onPress={() => ouvrir('valider')}
-            // FIDELITE-2 (maquette 237) : une récompense LIBRE à remettre (le serveur rend
-            // `recompenseARemettre`) se marque « remise » ; le même geste.
-            title={texteInsecable(r?.recompenseARemettre
-              ? t('fidelite.fiche.marquerRemise', 'Marquer comme remise')
-              : t('complexeReservations.fiche.validerRecompense', 'Valider la partie offerte'))}
+            // FIDELITE-2 (maquette 237) : une récompense LIBRE se marque « remise ».
+            title={texteInsecable(texteDuGeste())}
             variant="Secondary"
           />
         </View>
@@ -902,17 +926,7 @@ function FicheReservation({
         <View style={{ gap: 16 }}>
           <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
             {/* FIDELITE-2 (Q1 B du chef, 12/11) : une récompense LIBRE se « marque remise ». */}
-            {r?.recompenseARemettre
-              ? t(
-                'fidelite.fiche.marquerRemiseTitre',
-                'Marquer la récompense de {{nom}} comme remise ?',
-                options,
-              )
-              : t(
-                'complexeFidelite.valider.titre',
-                'Valider la partie offerte de {{nom}} ?',
-                options,
-              )}
+            {titreDuGeste()}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t('complexeFidelite.valider.dit', 'Son compteur repart à 0.')}

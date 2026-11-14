@@ -192,8 +192,10 @@ describe('RESA-FIN-APP (4) E-G05 — « Valider la partie offerte » depuis la f
     const arbre = await monter();
     expect(lisibles(arbre)).toContain('Récompense disponible : 1 partie offerte');
     await appuyerDans(arbre, 'fiche-valider-recompense');
+    // RETOUCHES-T11B : un programme sans rewardType est LIBRE (« 1 partie offerte » est son texte
+    // libre) ; la feuille dit donc « Marquer la récompense … comme remise ? ».
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'Valider la partie offerte de Julien M. ?', 'Son compteur repart à 0.',
+      'Marquer la récompense de Julien M. comme remise ?', 'Son compteur repart à 0.',
     ]));
     await appuyerDans(arbre, 'fiche-valider-confirmer');
     expect(mockValider).toHaveBeenCalledWith({ complexeId: 'cx-five', joueurId: 'u-julien' });
@@ -255,14 +257,33 @@ describe('FIDELITE-2 E-G05 — récompense libre : « Marquer comme remise »', 
     expect(mockValider).toHaveBeenCalledWith({ complexeId: 'cx-five', joueurId: 'u-julien' });
   });
 
-  it('caractérisant : sans `recompenseARemettre`, « Valider la partie offerte »', async () => {
+  // RETOUCHES-T11B défaut 3 (tournée du 14/11, capture 26) : le texte suit le TYPE du
+  // programme (rewardType), pas la présence d'une ligne « récompense » côté serveur. Un client
+  // passé au-dessus du seuil sans ligne (la tâche horaire ne regarde que les parties des 26
+  // dernières heures) a pourtant une récompense libre à remettre.
+  it('programme libre SANS `recompenseARemettre` : toujours « Marquer comme remise »', async () => {
     avecRecompense();
     const arbre = await monter();
     const vus = lisibles(arbre);
-    expect(vus).toContain('Valider la partie offerte');
-    expect(vus).not.toContain('Marquer comme remise');
+    expect(vus).toContain('Marquer comme remise');
+    expect(vus).not.toContain('Valider la partie offerte');
+    await appuyerDans(arbre, 'fiche-valider-recompense');
+    expect(lisibles(arbre)).toContain('Marquer la récompense de Julien M. comme remise ?');
+  });
+
+  it('le texte suit rewardType : « partie » et « remise »', async () => {
+    avecRecompense();
+    mockFidelite.data.programme = { ...mockFidelite.data.programme, rewardType: 'partie' };
+    let arbre = await monter();
+    expect(lisibles(arbre)).toContain('Valider la partie offerte');
     await appuyerDans(arbre, 'fiche-valider-recompense');
     expect(lisibles(arbre)).toContain('Valider la partie offerte de Julien M. ?');
+    act(() => arbre.unmount());
+    mockFidelite.data.programme = { ...mockFidelite.data.programme, rewardType: 'remise' };
+    arbre = await monter();
+    expect(lisibles(arbre)).toContain('Valider la réduction');
+    await appuyerDans(arbre, 'fiche-valider-recompense');
+    expect(lisibles(arbre)).toContain('Valider la réduction de Julien M. ?');
   });
 });
 

@@ -285,7 +285,6 @@ function ReserverCreneau() {
           date,
           erreur,
           slug,
-          telephone: telephoneDuComplexe,
           terrain,
           variante,
         }),
