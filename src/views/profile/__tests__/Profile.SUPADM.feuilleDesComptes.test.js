@@ -197,12 +197,11 @@ const authSuperAdmin = {
 };
 
 describe('SUPADM — la liste « Changer de compte » remplit sa feuille', () => {
-  it('la zone qui défile a le plafond de la feuille : l écran moins sa marge du haut', () => {
+  // D41 (13/11) : ce plafond est celui de BottomModal pour toute feuille sans cran (témoin :
+  // BottomModal.D41.plafond.test.js) ; la feuille ne passe plus le sien.
+  it('la zone qui défile a le plafond de la feuille : celui de BottomModal, sans réglage à part', () => {
     mockAuth = authSuperAdmin;
     const { SafeAreaInsetsContext } = jest.requireActual('react-native-safe-area-context');
-    const { Dimensions } = jest.requireActual('react-native');
-    const { height: hauteur } = Dimensions.get('window');
-    const ecran = Dimensions.get('screen').height;
     /** @type {any} */
     let arbre;
     act(() => {
@@ -216,10 +215,8 @@ describe('SUPADM — la liste « Changer de compte » remplit sa feuille', () =>
       );
     });
     expect(mockFeuille).not.toBeNull();
-    const plafond = mockFeuille.maxContentHeightRatio;
-    expect(typeof plafond).toBe('number');
-    // La feuille va jusqu'à `insets.top + 20` du haut : la zone qui défile aussi, au pixel près.
-    expect(Math.round(plafond * ecran)).toBe(Math.round(hauteur - 59 - 20));
+    expect(mockFeuille.maxContentHeightRatio).toBeUndefined();
+    expect(mockFeuille.snapPoints).toBeUndefined();
     act(() => { arbre.unmount(); });
   });
 });

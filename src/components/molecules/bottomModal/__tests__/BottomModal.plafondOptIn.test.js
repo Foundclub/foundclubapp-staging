@@ -12,7 +12,9 @@ import BottomModal from '../BottomModal';
 // 70 % de la hauteur d'ECRAN (`BottomModal.js`) : les dernieres rangees, dont
 // « Annuler l'evenement », tombent sous le pli.
 //
-// ⛔ CE FICHIER NE DEPLACE PAS LE DEFAUT. `BottomModal` sert 70 appelants ; en
+// ⛔ (jusqu'au 13/11) CE FICHIER NE DEPLACAIT PAS LE DEFAUT ; D41 l'a deplace, avec l'inventaire
+// des appelants (.local/bancs/BOTTOMMODAL-PLAFOND-1311). Texte d'origine :
+// `BottomModal` sert 70 appelants ; en
 // remonter le plafond pour tout le monde changerait 70 ecrans sans qu'aucun
 // temoin ne le voie. La prop est donc OPT-IN : qui ne la passe pas garde
 // exactement le rendu d'avant, et c'est le premier temoin ci-dessous qui le
@@ -132,11 +134,14 @@ afterEach(() => {
 });
 
 describe('R5 (D1) — le plafond de la zone defilante', () => {
-  test('sans la prop, il reste a 70 % de la hauteur d ECRAN', () => {
+  // D41 (13/11) : sans la prop, la zone ne s'arrete plus a 70 % de l'ecran (bande vide sous
+  // les longues feuilles) ; elle recoit la hauteur que la feuille peut prendre.
+  // Detail et cas : BottomModal.D41.plafond.test.js.
+  test('sans la prop, il vaut la hauteur que la feuille peut prendre (D41)', () => {
     const zoneDefilante = monterUneFeuille();
 
     expect(styleAplati(zoneDefilante.props.style).maxHeight)
-      .toBe(Dimensions.get('screen').height * 0.7);
+      .toBe(Dimensions.get('window').height - (47 + 20));
   });
 
   test('avec `maxContentHeightRatio`, il monte a la fraction demandee', () => {

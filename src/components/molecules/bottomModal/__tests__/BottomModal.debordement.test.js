@@ -158,11 +158,14 @@ describe('D19 — une feuille du bas dont le contenu deborde', () => {
   // ⛔ L'ETAT DE DEPART, decrit sans jugement : c'est la mise en page que la
   // feuille « Repeter » utilisait, et celle qui a produit le defaut.
   describe('SANS `snapPoints` — la feuille se dimensionne sur son contenu', () => {
-    test('sa zone defilante est plafonnee a 70 % de la hauteur d ECRAN', () => {
+    // D41 (13/11) : 70 % de l'ecran jusqu'au 13/11 ; depuis, la hauteur que la feuille peut
+    // prendre (BottomModal.D41.plafond.test.js). L'en-tete et le pied sont DANS cette zone
+    // (RECETTEWEB, T3-FEUILLES-PIED) : ils ne s'y ajoutent plus par-dessus.
+    test('sa zone defilante est plafonnee a la hauteur que la feuille peut prendre', () => {
       const { zoneDefilante } = monterUneFeuilleQuiDeborde();
 
       expect(styleAplati(zoneDefilante.props.style).maxHeight)
-        .toBe(Dimensions.get('screen').height * 0.7);
+        .toBe(Dimensions.get('window').height - (INSET_HAUT + 20));
     });
 
     // LE POINT QUI FAIT TOUT : ce plafond est une fraction de l'ECRAN, pas de la

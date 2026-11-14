@@ -849,22 +849,17 @@ describe('INVIT2 · A — la feuille entiere, jamais une impasse', () => {
     expect(textesDansLOrdre(feuille)[0]).toBe(TITRE_FEUILLE);
   });
 
-  test('🔴 A2 — le plafond est calcule sur la FENETRE, pas sur la dalle entiere', async () => {
+  // D41 (13/11) : la feuille demandait 85 % de la fenetre, un filet vide restait sous la liste.
+  // Le plafond de BottomModal suit desormais la hauteur de la feuille (temoin :
+  // BottomModal.D41.plafond.test.js) : la feuille ne passe plus le sien.
+  test('🔴 A2 — le plafond est celui de BottomModal (D41), pas une fraction a part', async () => {
     const racine = monterLaFiche();
     await ouvrirLaFeuilleDInvitation(racine);
 
     const feuille = laFeuilleDInvitation(racine);
-    const { Dimensions } = jest.requireActual('react-native');
-    const fenetre = Dimensions.get('window').height;
-    const dalle = Dimensions.get('screen').height;
 
-    // Le defaut du composant (0,7 de la DALLE) peut depasser la fenetre
-    // affichable ; la feuille demande la fraction de dalle qui vaut 85 % de
-    // fenetre (motif « Gerer l'evenement », EventDetails.js).
-    expect(feuille.props.maxContentHeightRatio).toBeCloseTo(
-      Math.min(0.85, (fenetre / dalle) * 0.85),
-      5,
-    );
+    expect(feuille.props.maxContentHeightRatio).toBeUndefined();
+    expect(feuille.props.snapPoints).toBeUndefined();
   });
 
   test('🔴 A3 — le partage de lien est AVANT la liste : atteignable sans defiler', async () => {

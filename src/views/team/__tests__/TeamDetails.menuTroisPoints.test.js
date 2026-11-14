@@ -685,6 +685,8 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
   // et la dernière carte coupée. Même défaut et même remède que « Changer de compte » (SUPADM) :
   // la zone qui défile reçoit le plafond de la feuille (fenêtre moins sa marge du haut, `topInset`
   // de BottomModal = marge + 20), et le bas ne garde que la zone sûre.
+  // D41 (13/11) : ce plafond est celui de BottomModal pour toute feuille sans cran (témoin :
+  // BottomModal.D41.plafond.test.js) ; la feuille ne passe plus le sien.
   test('🔴 GUIDE-E-CORR-2 — la liste remplit la feuille, sans vide en bas', () => {
     const racine = monterLaFiche();
     ouvrirLeMenu(racine);
@@ -693,13 +695,9 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
       (/** @type {any} */ noeud) => noeud.type?.name === 'BottomModalMock'
         && noeud.props?.isVisible === true,
     )[0];
-    const { Dimensions } = jest.requireActual('react-native');
-    const fenetre = Dimensions.get('window').height;
-    const dalle = Dimensions.get('screen').height;
-
-    // Sans fournisseur de zone sûre (témoin) : marge du haut 0, marge du bas 0.
-    expect(feuille.props.maxContentHeightRatio)
-      .toBeCloseTo(Math.max(0.7, (fenetre - 20) / dalle), 5);
+    // Sans fournisseur de zone sûre (témoin) : marge du bas 0.
+    expect(feuille.props.maxContentHeightRatio).toBeUndefined();
+    expect(feuille.props.snapPoints).toBeUndefined();
     expect(feuille.props.contentBottomPaddingOverride).toBeLessThanOrEqual(12);
   });
 });
