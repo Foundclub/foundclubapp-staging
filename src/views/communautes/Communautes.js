@@ -53,12 +53,19 @@ import {
 
 import { confirmerDansLApp } from '@/utils/fenetreDeLApp';
 
-/** @type {Record<string, string>} */
-const SOUS_TITRES_DES_GENRES = {
-  club: 'Communauté du club',
-  complexe: 'Communauté du complexe',
-  omnisport: 'Communauté de l’omnisport',
-  ville: 'Communauté de la Ville',
+/**
+ * Le sous-titre d'une communauté selon son genre. Récolte T11 : les replis vivent DANS `t()`
+ * (porte i18n:no-regression) ; même clé, même repli qu'avant.
+ * @param {(cle: string, repli: string) => string} t
+ * @param {string} genre
+ * @returns {string} Le sous-titre.
+ */
+const sousTitreDuGenre = (t, genre) => {
+  if (genre === 'club') return t('communautes.genre.club', 'Communauté du club');
+  if (genre === 'complexe') return t('communautes.genre.complexe', 'Communauté du complexe');
+  if (genre === 'omnisport') return t('communautes.genre.omnisport', 'Communauté de l’omnisport');
+  if (genre === 'ville') return t('communautes.genre.ville', 'Communauté de la Ville');
+  return t(`communautes.genre.${genre}`, 'Communauté');
 };
 
 /**
@@ -340,7 +347,7 @@ function Communautes({ navigation, route = undefined }) {
             <>
               <Text style={[styles.titreCommunaute, { color: Colors.neutral00 }]}>{c.nom}</Text>
               <Text style={[styles.aide, { color: sourdine }]}>
-                {t(`communautes.genre.${c.genre}`, SOUS_TITRES_DES_GENRES[c.genre] || 'Communauté')}
+                {sousTitreDuGenre(t, c.genre)}
               </Text>
             </>
           )}
@@ -469,10 +476,7 @@ function Communautes({ navigation, route = undefined }) {
       <EnTeteCommunaute
         onRetour={() => navigation.goBack()}
         sousTitre={seule
-          ? t(
-            `communautes.genre.${seule.genre}`,
-            SOUS_TITRES_DES_GENRES[seule.genre] || 'Communauté',
-          )
+          ? sousTitreDuGenre(t, seule.genre)
           : ''}
         titre={seule?.nom || t('communautes.titre', 'Communautés')}
       />

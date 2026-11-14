@@ -35,14 +35,21 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { creerGroupeCommunaute, getCandidatsCommunaute } from '@/services/chat/communauteService';
 
-/** @type {Record<string, string>} */
-const LIBELLES_DES_THEMES = {
-  covoiturage: 'Covoiturage',
-  equipe: 'Équipe',
-  evenement: 'Événement',
-  libre: 'Libre',
-  parents: 'Parents',
-  staff: 'Staff',
+/**
+ * Le libellé d'un thème. Récolte T11 : les replis vivent DANS `t()` (porte i18n:no-regression) ;
+ * même clé, même repli qu'avant.
+ * @param {(cle: string, repli?: string) => string} t
+ * @param {string} cle
+ * @returns {string} Le libellé.
+ */
+const libelleDuTheme = (t, cle) => {
+  if (cle === 'covoiturage') return t('communautes.theme.covoiturage', 'Covoiturage');
+  if (cle === 'equipe') return t('communautes.theme.equipe', 'Équipe');
+  if (cle === 'evenement') return t('communautes.theme.evenement', 'Événement');
+  if (cle === 'libre') return t('communautes.theme.libre', 'Libre');
+  if (cle === 'parents') return t('communautes.theme.parents', 'Parents');
+  if (cle === 'staff') return t('communautes.theme.staff', 'Staff');
+  return t(`communautes.theme.${cle}`);
 };
 
 /**
@@ -91,8 +98,13 @@ function NouveauGroupeCommunaute({ navigation, route }) {
   const [envoi, setEnvoi] = useState(false);
   // `t` peut changer d'identité d'un rendu à l'autre : il ne doit jamais relancer le chargement des
   // candidats.
-  const tRef = useRef(t);
-  tRef.current = t;
+  // Récolte T11 : le repli traduit au rendu, dans un `t(...)` lisible par la porte
+  // i18n:no-regression (il passait par une référence vers `t`, lue dans le `catch`).
+  const repliDesCandidats = useRef('');
+  repliDesCandidats.current = t(
+    'communautes.erreurCandidats',
+    'Impossible de charger les membres.',
+  );
 
   useEffect(() => {
     if (etape !== 2) return undefined;
@@ -111,12 +123,7 @@ function NouveauGroupeCommunaute({ navigation, route }) {
       })
       .catch((e) => {
         if (vivant) {
-          setErreur(
-            messageDuRefus(
-              e,
-              tRef.current('communautes.erreurCandidats', 'Impossible de charger les membres.'),
-            ),
-          );
+          setErreur(messageDuRefus(e, repliDesCandidats.current));
         }
       });
     return () => {
@@ -138,7 +145,7 @@ function NouveauGroupeCommunaute({ navigation, route }) {
   );
   const filet = withAlpha(Colors.neutral00, 0.07);
   const nomDuTheme = (/** @type {string} */ cle) => (
-    t(`communautes.theme.${cle}`, LIBELLES_DES_THEMES[cle])
+    libelleDuTheme(t, cle)
   );
 
   const creer = async () => {
