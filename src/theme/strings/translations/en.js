@@ -24757,6 +24757,7 @@ export default {
       'b1-card-none': 'No upcoming session in your schedule: plan one with this button, or skip this bonus.',
       'b1-dock': "To see who's coming: open the schedule.",
       'b1-relance': 'Further down: the participants. Nobody has answered yet: nudge them in one tap.',
+      'b1-relance-site': 'To nudge your players, do it from your phone, on this session. Here, you can skip this bonus.',
       'b1-vide': "This is where you'll see who's coming as soon as your players answer.",
       'b2-dock': 'Your matches are in the schedule: open it.',
       'b2-list': 'Tick at least half a team, then Next.',

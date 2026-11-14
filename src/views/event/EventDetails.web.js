@@ -1875,6 +1875,12 @@ function EventDetails({ navigation, route }) {
   const equipeSansPersonne = Boolean(attendancePayload) && canViewParticipantNames
     && participantTotals.participating + participantTotals.missing
       + participantTotals.notAnswered === 0;
+  // GUIDE-BULLE-RELANCE (décision d'Adel « 318 B », 13/11) : pas de relance d'entraînement depuis
+  // l'ordinateur ; le guide montre sa bulle de repli sur l'ancre posée plus bas.
+  const relanceAuTelephone = Boolean(trainingOpenConfig.isTraining) && !equipeSansPersonne;
+  const titreParticipants = (
+    <h2 style={sectionTitleStyle}>{t('eventDetails.participants', 'Participants')}</h2>
+  );
   // Le petit titre des cartes de la colonne de gauche (« Participants », « Description »).
   const miniTitreStyle = {
     color: mutedTextColor,
@@ -3222,9 +3228,14 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              {/* GUIDES-SITE-CORR-2 S29 : l'ancre du bonus 1 (b1-vide), comme au téléphone. */}
+              {/* GUIDES-SITE-CORR-2 S29 : l'ancre du bonus 1 (b1-vide), comme au téléphone.
+                  GUIDE-BULLE-RELANCE (« 318 B ») : un entraînement n'a pas de « Relancer » sur le
+                  site ; l'ancre `event.relance.telephone` y montre la bulle de repli du guide
+                  (« depuis ton téléphone » + « Passer ce bonus »). Équipe vide : b1-vide (S29). */}
               <TourTarget id="event.participants">
-                <h2 style={sectionTitleStyle}>{t('eventDetails.participants', 'Participants')}</h2>
+                {relanceAuTelephone ? (
+                  <TourTarget id="event.relance.telephone">{titreParticipants}</TourTarget>
+                ) : titreParticipants}
               </TourTarget>
               <TourReponsesExemple equipeVide={equipeSansPersonne} />
               {/* 👥 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur, planche « Avis des joueurs —
