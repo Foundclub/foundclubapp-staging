@@ -10664,6 +10664,7 @@ export default {
     quickInfo: 'Quick info',
     registerAClubTeam: 'Register a club team',
     registerMyTeam: 'Register my team',
+    registerMyTournamentTeam: 'Register my team',
     registrationsToCheck_one: '{{count}} registration to check',
     registrationsToCheck_other: '{{count}} registrations to check',
     reload: 'Reload',

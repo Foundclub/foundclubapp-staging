@@ -616,6 +616,18 @@ function EventDetails({ navigation, route }) {
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam,
   );
+  // T-FICHE-2 (14/11, chef du tournoi) — un capitaine voyait d'abord « Participer », qui l'inscrit
+  // SEUL. Sur un tournoi à équipes libres (même règle que le serveur), « Mon statut » mène en tête
+  // à son équipe : la créer (même action que « Créer une équipe »), ou la voir s'il en a déjà une
+  // (le serveur refuse une 2ᵉ équipe active par compte). « Participer » reste, en contour.
+  const equipeDuCompteAuTournoi = managedTournamentTeam || currentUserTournamentTeam;
+  const voirMonEquipeEnTete = Boolean(
+    isTournamentEvent
+    && event?.tournamentConfig?.allowCustomTeams !== false
+    && equipeDuCompteAuTournoi?.documentId,
+  );
+  const inscrireMonEquipeEnTete = !voirMonEquipeEnTete && canCreateCustomTournamentTeam;
+  const boutonEquipeEnTete = voirMonEquipeEnTete || inscrireMonEquipeEnTete;
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
@@ -2631,12 +2643,28 @@ function EventDetails({ navigation, route }) {
                       </button>
                     ))
                   ) : null}
+                  {boutonEquipeEnTete ? (
+                    <button
+                      data-testid="event-status-tournament-team"
+                      disabled={inscrireMonEquipeEnTete && createTournamentTeamMutation.isPending}
+                      onClick={voirMonEquipeEnTete
+                        ? () => handleOpenTournamentTeam(equipeDuCompteAuTournoi?.documentId)
+                        : handleCreateTournamentTeam}
+                      style={{ ...primaryButtonStyle, padding: '12px 16px' }}
+                      type="button"
+                    >
+                      {voirMonEquipeEnTete
+                        ? t('eventDetails.seeMyTeam', 'Voir mon équipe')
+                        : t('eventDetails.registerMyTournamentTeam', 'Inscrire mon équipe')}
+                    </button>
+                  ) : null}
                   {afficherParticiper ? (
                     <button
                       disabled={createParticipationMutation.isPending}
                       onClick={handleJoin}
                       style={{
-                        ...primaryButtonStyle,
+                        // T-FICHE-2 : derrière le bouton d'équipe, « Participer » passe en contour.
+                        ...(boutonEquipeEnTete ? outlineButtonStyle : primaryButtonStyle),
                         cursor: createParticipationMutation.isPending ? 'not-allowed' : 'pointer',
                         opacity: createParticipationMutation.isPending ? 0.7 : 1,
                         padding: '12px 16px',
@@ -3507,11 +3535,13 @@ function EventDetails({ navigation, route }) {
                       label: t('eventDetails.organizer', 'Organisateur'),
                       value: quickInfoOrganizerName,
                     }] : []),
-                    {
+                    // T-FICHE-2 (14/11) : la section est celle de l'équipe ;
+                    // sans équipe, ligne masquée.
+                    ...(event?.team ? [{
                       label: 'Section',
-                      value: event?.team?.section?.name
+                      value: event.team.section?.name
                         || t('eventDetails.notSetFeminine', 'Non définie'),
-                    },
+                    }] : []),
                     {
                       label: t('eventDetails.capacity', 'Capacité'),
                       value: event?.capacity ?? t('eventDetails.open2', 'Libre'),

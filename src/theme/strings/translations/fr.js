@@ -11298,6 +11298,7 @@ export default {
     quickInfo: 'Infos rapides',
     registerAClubTeam: 'Inscrire une équipe du club',
     registerMyTeam: 'Inscrire mon équipe',
+    registerMyTournamentTeam: 'Inscrire mon équipe',
     registrationsToCheck_one: '{{count}} inscription à vérifier',
     registrationsToCheck_other: '{{count}} inscriptions à vérifier',
     reload: 'Recharger',

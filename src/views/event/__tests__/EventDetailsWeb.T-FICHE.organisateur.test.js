@@ -7,7 +7,8 @@ import renderer, { act } from 'react-test-renderer';
 // club (`event.club`). La fiche affichait « ÉQUIPE : Non définie » (capture T-VITRINE V1b-390).
 // Décision du chef du tournoi : sans équipe mais avec un club → ligne « ORGANISATEUR » avec le
 // nom du club ; ni équipe ni club → ligne masquée ; avec une équipe → rien ne change.
-// Les autres lignes (Type, Section, Capacité, Prix) restent toutes, dans le même ordre.
+// Les autres lignes (Type, Capacité, Prix) restent toutes, dans le même ordre. T-FICHE-2 (14/11) :
+// sans équipe, « Section » est masquée (chef du tournoi) ; voir EventDetailsWeb.T-FICHE-2.boutons.
 // ==========================================================================
 
 const mockTour = { currentStep: null, isGuide: false, isTourActive: false };
@@ -256,10 +257,10 @@ test('tournoi autonome (club sans équipe) : « Organisateur » = nom du club, p
   expect(lignes).toContainEqual(['Organisateur', 'FoundClub Tournois']);
   expect(libelles(lignes)).not.toContain('Équipe');
   // Rien d autre ne disparaît : la ligne prend la place de « Équipe ».
-  expect(libelles(lignes)).toEqual(['Type', 'Organisateur', 'Section', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+  expect(libelles(lignes)).toEqual(['Type', 'Organisateur', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
 });
 
 test('ni équipe ni club : la ligne est masquée, les autres restent', () => {
   const lignes = infosRapides(monter(evenement({ club: null, team: null })));
-  expect(libelles(lignes)).toEqual(['Type', 'Section', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+  expect(libelles(lignes)).toEqual(['Type', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
 });
