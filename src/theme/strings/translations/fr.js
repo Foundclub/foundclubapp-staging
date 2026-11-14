@@ -19745,6 +19745,24 @@ export default {
       status: 'Statut',
       title: 'Reçus déjà émis',
     },
+    tournament: {
+      cancelledDescription: 'Rien n’a été débité. Tu peux réessayer quand tu veux.',
+      cancelledTitle: 'Paiement annulé',
+      // eslint-disable-next-line max-len
+      confirmingDescription: 'Stripe nous prévient en quelques secondes : cette page se met à jour toute seule.',
+      confirmingTitle: 'Paiement en cours de confirmation',
+      heroTitle: 'Inscription au tournoi',
+      // eslint-disable-next-line max-len
+      noWithdrawal: 'Activité de loisir à date fixe : pas de droit de rétractation (art. L221-28 12° du Code de la consommation).',
+      openTournament: 'Voir la fiche du tournoi',
+      paidDescription: 'Merci ! Cette place est réglée pour l’équipe {{teamName}}.',
+      paidTitle: 'Place payée',
+      // eslint-disable-next-line max-len
+      payForOthers: 'Paiement sécurisé par Stripe. Tu peux aussi payer la place d’un autre joueur en ouvrant son lien.',
+      payStripe: 'Payer ma place',
+      teamFallback: 'du joueur',
+      termsLink: 'Conditions d\'inscription',
+    },
     unavailable: {
       title: 'Paiement indisponible',
     },
@@ -26928,6 +26946,16 @@ export default {
     participant: 'Participant',
     pending: 'En attente',
     pendingInvitations: 'Invitations en attente',
+    places: {
+      copied: 'Lien copié',
+      copiedHint: 'Envoie-le au joueur ou à son parent.',
+      copyFailed: 'Copie impossible',
+      copyLink: 'Copier le lien de paiement',
+      due: 'Place à payer',
+      paid: 'Place payée',
+      payMine: 'Payer ma place',
+      summary: 'Places payées : {{paid}}/{{needed}} pour valider l’équipe ({{amount}} par joueur).',
+    },
     // eslint-disable-next-line max-len
     playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.',
     present: 'Présent',

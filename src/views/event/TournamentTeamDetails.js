@@ -39,6 +39,7 @@ import {
 import { searchScopedUsers, searchUsers } from '@/services/user/userService';
 
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import { TournamentMemberPlace, TournamentPlacesSummary } from './TournamentMemberPlace';
 import {
   getTournamentMemberBuckets,
   getTournamentRosterSummary,
@@ -163,6 +164,11 @@ function TournamentTeamDetails({ navigation, route }) {
   } = useGetTournamentTeam(teamId);
 
   const currentUserDocumentId = userData?.documentId || '';
+  // T-PAIE : les places d'un tournoi payant (absent pour un tournoi gratuit ou un vieux serveur).
+  const placesByMember = useMemo(() => new Map(
+    (team?.payment?.members || [])
+      .map((/** @type {any} */ place) => [place?.memberDocumentId, place]),
+  ), [team?.payment?.members]);
   const allMembers = useMemo(
     () => (Array.isArray(team?.members) ? team.members : [])
       .filter((member) => normalizeTournamentText(member?.responseStatus) !== 'removed'),
@@ -537,6 +543,9 @@ function TournamentTeamDetails({ navigation, route }) {
                 ) : memberStatusMeta.label}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral300]}>{getOriginLabel(member?.origin)}</Text>
+              {variant === 'active' ? (
+                <TournamentMemberPlace place={placesByMember.get(member?.documentId)} />
+              ) : null}
             </View>
           </View>
           {isCurrentUserMember ? (
@@ -689,6 +698,7 @@ function TournamentTeamDetails({ navigation, route }) {
                 <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={`${rosterSummary.requestedCount} demande${rosterSummary.requestedCount > 1 ? 's' : ''}`} textColor="warning500" />
               ) : null}
             </View>
+            <TournamentPlacesSummary payment={team?.payment} />
             {!rosterSummary.meetsMinRoster ? (
               <Text style={[Fonts.p3, Fonts.warning500]}>
                 {`Effectif minimum non atteint: ${rosterSummary.totalCount}/${rosterSummary.minRosterSize}`}
