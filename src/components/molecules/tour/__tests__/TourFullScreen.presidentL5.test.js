@@ -146,7 +146,8 @@ describe('ouverture', () => {
 describe('palier : 3 états, jamais « prêt » sur rien', () => {
   it('tout est fait', () => {
     const texts = textsOf('milestone');
-    expect(texts).toContain('Ton club est prêt à 100 %');
+    // GUIDES-SITE-CORR-2 S13 : espace insécable avant « % » (il ne part plus seul à la ligne).
+    expect(texts).toContain('Ton club est prêt à 100\u00a0%');
     expect(texts).not.toContain('{{');
   });
 
@@ -158,7 +159,7 @@ describe('palier : 3 états, jamais « prêt » sur rien', () => {
     const texts = textsOf('milestone');
     expect(texts).toContain('3 missions sur 4');
     expect(texts).toContain('Une partie est faite');
-    expect(texts).not.toContain('prêt à 100 %');
+    expect(texts).not.toMatch(/prêt à 100/);
   });
 
   it('rien de fait', () => {

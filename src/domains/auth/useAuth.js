@@ -652,14 +652,14 @@ const useAuth = () => {
    * @param {string} [param.clubName]
    * @param {string} [param.teamId]
    * @param {string} [param.teamName]
-   * @returns {void}
+   * @returns {Promise<any> | undefined} ce que le partage a fait (M1096 : `envoi`, sur ordinateur).
    */
   const inviteTeamPlayers = ({ clubName, teamId, teamName }) => {
     // INVIT2 — le lien part sur foundclub.app/i/team/<id>?c=<code> (plus sur
     // install.html du domaine de l'API, dont les fichiers de reconnaissance sont en
     // 404) et la phrase nomme QUI invite. Voir services/teamInvite/teamInviteShare.js.
-    if (!teamId) return;
-    shareTeamInviteLink({
+    if (!teamId) return undefined;
+    return shareTeamInviteLink({
       clubName,
       inviterName: String(userData?.firstname || '').trim(),
       teamId,

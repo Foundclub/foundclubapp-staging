@@ -17,6 +17,8 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { isDesktopWeb } from '@/responsive/isDesktopWeb';
+
 /**
  * Guide E · Entraîneur·e (TUTOE, pack `design_handoff_tutoriels/02_GUIDE_E_ENTRAINEUR.md`,
  * validé par Adel le 26/10 « 2- ok go »). Les ids d'étape sont ceux du
@@ -578,14 +580,14 @@ const STEPS = [
     get nextLabel() { return t('m2-pick-next', 'Continuer'); },
     resumeFrom: 'm2-card',
     get text() {
-      // GUIDES-SITE-CORR S28 (tournée du site, 09/11) : sur un ordinateur, « Partager » ouvre la
-      // fenêtre de partage du système, ou copie le message (navigateur sans partage) ; rien ne le
-      // disait.
-      return Platform.OS === 'web'
+      // GUIDES-SITE-CORR S28 (tournée du site, 09/11), puis GUIDES-SITE-CORR-2 (M1096, 10/11) : la
+      // fenêtre Partager de Windows ne se fermait pas ; sur un ordinateur, le lien est désormais
+      // COPIÉ (teamInviteShare) et la bulle le dit. Le site sur un téléphone garde son partage.
+      return isDesktopWeb()
         ? t(
           'm2-pick-site',
-          'Envoie-le sur le groupe de ton équipe : la fenêtre de partage de ton ordinateur '
-            + 's’ouvre ; sinon le message est copié, colle-le dans ton groupe.',
+          'Le lien est copié : colle-le dans le groupe de ton équipe. Chacun·e rejoint en un '
+            + 'geste.',
         )
         : t('m2-pick', 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.');
     },
@@ -613,6 +615,14 @@ const STEPS = [
     resumeFrom: 'm2-card',
     targets: ['team.more'],
     get text() {
+      // M1096 : sur un ordinateur, on arrive ici juste après la copie du lien ; la bulle le dit.
+      if (isDesktopWeb()) {
+        return t(
+          'm2-sent-site',
+          'Lien copié : colle-le dans le groupe de ton équipe. C’est fait ? Touche « Oui, c’est '
+            + 'envoyé ». Sinon, rouvre ce menu pour le copier.',
+        );
+      }
       return t(
         'm2-sent',
         'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le '

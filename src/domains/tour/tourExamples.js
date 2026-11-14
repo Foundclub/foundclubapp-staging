@@ -85,12 +85,17 @@ export const isExampleMemberId = (id) => String(id || '').startsWith('tour-examp
 /**
  * Guide Dirigeant·e, M4 : la carte d'une demande pour rejoindre le club, fausse et dite fausse.
  * Sans `requestId` ni `requesterId` : rien ne peut partir, et « Voir le profil » ne s'affiche pas.
- * @param {{ coachFirstName?: string }} [context] - Prénom du coach ajouté à M2 (décision 10).
+ * GUIDES-SITE-CORR-2 S12 (tournée du site, 09/11) : le dirigeant de recette s'appelait lui-même
+ * « Karim Benali » ; la fausse demande portait SON nom. Le prénom d'exemple évite aussi le sien.
+ * @param {{ coachFirstName?: string, viewerFirstName?: string }} [context] - Prénom du coach ajouté
+ *   à M2 (décision 10) et prénom de la personne connectée.
  * @returns {any} Ligne de `RequestsHub`, de la forme de `requestMappers`.
  */
-export const exampleMembershipRequest = ({ coachFirstName } = {}) => {
-  const isSameName = String(coachFirstName || '').trim().toLowerCase() === 'karim';
-  const firstName = isSameName ? 'Sami' : 'Karim';
+export const exampleMembershipRequest = ({ coachFirstName, viewerFirstName } = {}) => {
+  const pris = [coachFirstName, viewerFirstName]
+    .map((prenom) => String(prenom || '').trim().toLowerCase());
+  const firstName = ['Karim', 'Sami', 'Yanis']
+    .find((prenom) => !pris.includes(prenom.toLowerCase()));
   const requesterName = `${firstName} Benali`;
   return {
     actions: { primary: 'accept', secondary: 'reject' },

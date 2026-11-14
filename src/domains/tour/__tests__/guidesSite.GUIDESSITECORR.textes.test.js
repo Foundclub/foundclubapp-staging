@@ -41,13 +41,28 @@ test('S15 : le récapitulatif de la campagne nomme le bouton à toucher', () => 
   expect(etape('president', 'c6').text).toMatch(/« Ouvrir la campagne »/);
 });
 
-test('S28 : sur le site, le partage de l invitation dit ce qui s ouvre ou est copié', () => {
-  avecPlateforme('web', () => {
-    expect(etape('coach', 'm2-pick').text).toMatch(/fenêtre de partage.*copié/);
-  });
-  avecPlateforme('ios', () => {
-    expect(etape('coach', 'm2-pick').text).not.toMatch(/ordinateur/);
-  });
+// S28, remplacé par M1096 (GUIDES-SITE-CORR-2, décision du chef du 10/11) : sur un ordinateur, la
+// fenêtre Partager de Windows ne se fermait pas ; le lien est copié, et les bulles le disent.
+test('S28 / M1096 : ordinateur, les bulles disent « Lien copié » ; ailleurs, le partage', () => {
+  const largeurAvant = global.window;
+  try {
+    global.window = /** @type {any} */ ({ innerWidth: 1280 });
+    avecPlateforme('web', () => {
+      expect(etape('coach', 'm2-pick').text).toMatch(/^Le lien est copié/);
+      expect(etape('coach', 'm2-sent').text).toMatch(/^Lien copié/);
+    });
+    global.window = /** @type {any} */ ({ innerWidth: 390 });
+    avecPlateforme('web', () => {
+      expect(etape('coach', 'm2-pick').text).not.toMatch(/copié|ordinateur/);
+      expect(etape('coach', 'm2-sent').text).toMatch(/^Tu l’as envoyé/);
+    });
+    global.window = /** @type {any} */ ({ innerWidth: 1280 });
+    avecPlateforme('ios', () => {
+      expect(etape('coach', 'm2-pick').text).not.toMatch(/copié|ordinateur/);
+    });
+  } finally {
+    global.window = largeurAvant;
+  }
 });
 
 test('S05 : en vue « Mois », les flèches du calendrier ont leur cadre et leur texte', () => {

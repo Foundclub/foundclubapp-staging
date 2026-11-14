@@ -21,6 +21,7 @@ import { createTeamInviteLink } from '@/services/teamInvite/teamInviteService';
 import { resolveShareEnvironment } from '@/utils/shareLinks';
 
 import SharePlatform from '@/platform/share';
+import { isDesktopWeb } from '@/responsive/isDesktopWeb';
 
 const PRODUCTION_INVITE_ORIGIN = 'https://foundclub.app';
 const STAGING_INVITE_ORIGIN = 'https://staging.foundclub.app';
@@ -131,12 +132,34 @@ const signalShareResult = (result, teamId) => {
 };
 
 /**
+ * GUIDES-SITE-CORR-2 (M1096, testeur 10/11, Windows + Chrome) : sur un ordinateur,
+ * `navigator.share` ouvrait la fenêtre Partager de Windows, impossible à fermer, et rendait la main
+ * comme un envoi : le guide passait à la mission 3 sans rien d'envoyé. Sur le site, à la largeur
+ * d'un ordinateur (comme `useIsDesktop`), le lien est COPIÉ et l'écran le dit ; le site sur un
+ * téléphone et l'application gardent la feuille de partage du système.
+ * ponytail: la largeur de la fenêtre dit « ordinateur » ; une tablette large copie aussi, ce qui
+ * reste juste (elle sait coller).
+ * @param {{ message: string, title: string, url: string }} payload - Ce qui part.
+ * @returns {Promise<{ envoi: '' | 'copie' | 'echec', result: any }>} Ce qui s'est passé.
+ */
+const envoyerLeLien = async (payload) => {
+  if (isDesktopWeb()) {
+    const copie = await SharePlatform.copier(payload.message);
+    // « copie » : le guide demande « Tu l'as envoyé ? » (signalShareResult), il ne valide rien.
+    return { envoi: copie ? 'copie' : 'echec', result: copie ? { action: 'copie' } : undefined };
+  }
+  const result = await SharePlatform.share(payload).catch(() => undefined);
+  return { envoi: '', result };
+};
+
+/**
  * Prépare le lien du staff (code serveur) et ouvre la feuille de partage.
  * Sans réseau, le lien part SANS code : il ouvre toujours l'équipe, et la personne
  * pourra demander à la rejoindre.
  * @param {{ clubName?: string, inviterName?: string, teamId: string, teamName?: string }} params
  * - l'équipe.
- * @returns {Promise<{ code: string, url: string | null }>} ce qui a été partagé.
+ * @returns {Promise<{ code: string, envoi?: '' | 'copie' | 'echec', url: string | null }>} ce qui
+ * a été partagé ; `envoi` : copié sur un ordinateur (M1096), ou la copie a échoué.
  */
 export const shareTeamInviteLink = async ({
   clubName, inviterName, teamId, teamName,
@@ -150,16 +173,16 @@ export const shareTeamInviteLink = async ({
   const url = buildTeamInviteUrl({ code, teamId });
   if (!url) return { code, url };
 
-  const result = await SharePlatform.share({
+  const { envoi, result } = await envoyerLeLien({
     message: buildTeamInviteMessage({
       clubName, inviterName, teamName, url,
     }),
     title: String(teamName || ''),
     url,
-  }).catch(() => undefined);
+  });
   signalShareResult(result, teamId);
 
-  return { code, url };
+  return { code, envoi, url };
 };
 
 /**
@@ -174,13 +197,13 @@ export const shareExistingTeamInvite = async ({
 }) => {
   const url = buildTeamInviteUrl({ code, teamId });
   if (!url) return null;
-  const result = await SharePlatform.share({
+  const { result } = await envoyerLeLien({
     message: buildTeamInviteMessage({
       clubName, inviterName, teamName, url,
     }),
     title: String(teamName || ''),
     url,
-  }).catch(() => undefined);
+  });
   // FIN-GUIDE, point 4 : ce repartage ne disait rien au guide, resté sur « Envoie-le ».
   signalShareResult(result, teamId);
   return url;

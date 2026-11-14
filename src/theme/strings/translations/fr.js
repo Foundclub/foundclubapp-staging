@@ -24701,6 +24701,7 @@ export default {
       contactTrainers: 'Contacter les entraîneur·e·s',
       contactTrainersError: "Impossible d'ouvrir la conversation pour le moment.",
       convocations: 'Convocations',
+      copyInviteLink: 'Copier le lien d’invitation',
       defaultComposition: 'Composition type',
       edit: 'Modifier',
       facilities: 'Installations',
@@ -24991,6 +24992,7 @@ export default {
       emptySearch: 'Personne de ce nom dans ton club.',
       emptyTeamHint: "Invite un membre du club, ou partage un lien d'invitation.",
       errorTitle: 'Invitation impossible',
+      linkCopied: 'Lien copié : colle-le dans le groupe de ton équipe.',
       searchPlaceholder: 'Rechercher un membre du club',
       sentBadge: 'Invitation envoyée',
       sentMessage: '{{name}} va recevoir une notification.'
@@ -25917,10 +25919,12 @@ export default {
       'm2-more': 'Les actions de l’équipe sont rangées dans ce menu.',
       'm2-pick': 'Envoie-le sur le groupe de ton équipe. Chacun·e rejoint en un geste.',
       'm2-pick-next': 'Continuer',
-      'm2-pick-site': 'Envoie-le sur le groupe de ton équipe : la fenêtre de partage de ton '
-        + 'ordinateur s’ouvre ; sinon le message est copié, colle-le dans ton groupe.',
+      'm2-pick-site': 'Le lien est copié : colle-le dans le groupe de ton équipe. Chacun·e rejoint '
+        + 'en un geste.',
       'm2-sent': 'Tu l’as envoyé ? Si oui, touche « Oui, c’est envoyé ». Sinon, rouvre ce menu pour le partager.',
       'm2-sent-next': 'Oui, c’est envoyé',
+      'm2-sent-site': 'Lien copié : colle-le dans le groupe de ton équipe. C’est fait ? Touche '
+        + '« Oui, c’est envoyé ». Sinon, rouvre ce menu pour le copier.',
       'm2-share': 'Le plus simple : un lien d’invitation.',
       'm3-access': 'Pour un entraînement, garde Privé : ton équipe et tes invités.',
       'm3-card': 'Touche « Ajouter un événement ».',
@@ -26248,10 +26252,14 @@ export default {
       'm1-partners': '2/5 · Tes partenaires. Ouvre « Nos partenaires ».',
       'm1-partners-have': '2/5 · Tu as déjà ton partenaire : il est dans cette liste. « + » en '
         + 'ajoute un autre plus tard. On passe à tes installations.',
+      'm1-partners-have-back': '2/5 · Tu as déjà ton partenaire, dans « Nos partenaires ». Touche '
+        + '« Suivant » : on passe à tes installations.',
       'm1-partners-home': '2/5 · Tes partenaires. Ouvre « Gérer mon club », puis « Nos '
         + 'partenaires ».',
       'm1-partners-taken': 'Ton partenaire offert est déjà là : le suivant demande l’offre Club. '
         + 'Passe cette partie.',
+      'm1-partners-taken-back': 'Ton partenaire offert est déjà là, dans « Nos partenaires » : le '
+        + 'suivant demande l’offre Club. Passe cette partie.',
       'm1-pb1': 'Reviens à tes installations.',
       'm1-pback': 'Reviens sur la fiche du club.',
       'm1-pcap': 'La capacité : combien d’équipes peuvent jouer en même temps, et le moment le '
@@ -26355,7 +26363,7 @@ export default {
         subtitle: '{{count}} missions sur {{count}}, l’essentiel est fait.',
         subtitlePartial: '{{done}} missions sur {{total}} : les autres attendent que l’app te le '
           + 'permette.',
-        title: 'Ton club est prêt à 100 %',
+        title: 'Ton club est prêt à 100\u00a0%',
         titleNone: 'Aucune mission faite pour l’instant',
         titlePartial: 'Une partie est faite',
       },

@@ -46,6 +46,8 @@ import FacilityClosureBanner from '@/components/molecules/facilityClosure/Facili
 import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import FacilityReportEntry from '@/components/molecules/facilityReport/FacilityReportEntry';
 import OuvrirDansLeGps from '@/components/molecules/ouvrirDansLeGps/OuvrirDansLeGps';
+import TourReponsesExemple from '@/components/molecules/tour/TourReponsesExemple';
+import TourTarget from '@/components/molecules/tour/TourTarget';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import MyTrainingReviewBlock from '@/components/organisms/trainingReview/MyTrainingReviewBlock';
 import TrainingReviewsCard, {
@@ -1867,6 +1869,12 @@ function EventDetails({ navigation, route }) {
   const showTrainingParticipants = Boolean(
     trainingOpenConfig.isTraining && canViewParticipantNames && participantSections.length > 0,
   );
+  // GUIDES-SITE-CORR-2 S29 (tournée du site, 09/11) : bonus 1 du guide Entraîneur, équipe sans
+  // joueur ; la bulle « relance-les en un clic » restait figée, sans bouton « Relancer ». Comme au
+  // téléphone (EventParticipants) : listes reçues et personne d'attendu ⇒ le guide passe à b1-vide.
+  const equipeSansPersonne = Boolean(attendancePayload) && canViewParticipantNames
+    && participantTotals.participating + participantTotals.missing
+      + participantTotals.notAnswered === 0;
   // Le petit titre des cartes de la colonne de gauche (« Participants », « Description »).
   const miniTitreStyle = {
     color: mutedTextColor,
@@ -3214,7 +3222,11 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              <h2 style={sectionTitleStyle}>{t('eventDetails.participants', 'Participants')}</h2>
+              {/* GUIDES-SITE-CORR-2 S29 : l'ancre du bonus 1 (b1-vide), comme au téléphone. */}
+              <TourTarget id="event.participants">
+                <h2 style={sectionTitleStyle}>{t('eventDetails.participants', 'Participants')}</h2>
+              </TourTarget>
+              <TourReponsesExemple equipeVide={equipeSansPersonne} />
               {/* 👥 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur, planche « Avis des joueurs —
                   ordinateur ») — LA SÉANCE À GAUCHE : la carte « Participants » et ses trois
                   tuiles, puis la « Description ». Les avis sont à droite (ST-RETOURS2). Mêmes

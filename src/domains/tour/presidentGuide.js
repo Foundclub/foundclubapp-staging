@@ -61,7 +61,8 @@ const FULL_SCREEN_TEXTS = {
   'palier.subtitle': '{{count}} missions sur {{count}}, l’essentiel est fait.',
   'palier.subtitlePartial': '{{done}} missions sur {{total}} : les autres attendent que l’app te '
     + 'le permette.',
-  'palier.title': 'Ton club est prêt à 100 %',
+  // GUIDES-SITE-CORR-2 S13 : espace insécable, le « % » ne part plus seul à la ligne (390).
+  'palier.title': 'Ton club est prêt à 100\u00a0%',
   'palier.titleNone': 'Aucune mission faite pour l’instant',
   'palier.titlePartial': 'Une partie est faite',
 };
