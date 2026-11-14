@@ -12,6 +12,7 @@ import {
   Image,
   Keyboard,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -3544,11 +3545,14 @@ function TeamDetails({ navigation, route }) {
                     {t('teamDetails.sections.nextEvents')}
                   </Text>
                 </View>
+                {/* EQUIPE-PLANNING-SITE (M1226) : la fiche défile déjà ; sur le site, la liste
+                    à plat défile avec elle (sa FlashList y devenait un cadre de ~200 px). */}
                 <EventListContent
                   additionalFilters={{
                     ...(!isMyTeam ? { sessionStatus: 'open' } : {}),
                     teamIds: [team?.documentId || ''],
                   }}
+                  annuaire={Platform.OS === 'web'}
                   customEmptyComponent={canManageViewedTeam ? (
                     <TouchableOpacity
                       accessibilityRole="button"

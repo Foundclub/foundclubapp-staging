@@ -776,9 +776,14 @@ describe('CORR-SOCLE point 1 — le fil ne déborde pas à droite', () => {
   test.each([390, 1280])('à %i px, la colonne du fil est bornée au cadre', async (largeur) => {
     mockLargeur = largeur;
     const { arbre } = await monter();
+    // CHAT-EVT-ENTETE (13/11) : quatre rangees (en-tete, bandeau du chat d'evenement, messages,
+    // saisie) ; la 2e est presente meme vide, pour que les messages gardent la rangee elastique.
     const [fil] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'section'
-      && n.props?.style?.gridTemplateRows === 'auto minmax(0, 1fr) auto');
+      && n.props?.style?.gridTemplateRows === 'auto auto minmax(0, 1fr) auto');
     expect(fil.props.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+    const enfants = fil.children.filter((/** @type {any} */ n) => typeof n === 'object');
+    expect(enfants[0].type).toBe('header');
+    expect(enfants[1].props['data-testid']).toBe('rangee-du-bandeau');
   });
 });
 
