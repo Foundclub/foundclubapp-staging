@@ -1,3 +1,4 @@
+import { minutesAParis } from '@/domains/complexe/complexeReservation';
 import {
   etendue,
   heureDe,
@@ -358,12 +359,30 @@ export const prixDeLaSemaineParDuree = (plan, prixDeBase, duree) => {
 };
 
 /**
+ * D94 — un créneau qui porte une réservation prend ses vraies heures, quand le serveur les donne.
+ * @param {any} creneau - Un créneau du planning (déjà fondu).
+ * @returns {any} Le créneau, aux heures de sa réservation.
+ */
+const sesVraiesHeures = (creneau) => {
+  const debut = new Date(creneau.reservation?.startsAt || '');
+  const fin = new Date(creneau.reservation?.endsAt || '');
+  if (!(fin.getTime() > debut.getTime())) return creneau;
+  return {
+    ...creneau,
+    endsAt: fin.toISOString(),
+    from: heureDe(minutesAParis(debut)),
+    startsAt: debut.toISOString(),
+    to: heureDe(minutesAParis(fin)),
+  };
+};
+
+/**
  * G4 — LE PLANNING DU GÉRANT : le serveur rend la grille de la durée la plus courte
  * (`slotsForDay`, gestion.ts) ; une réservation de 2 h y arrive en DEUX créneaux d'1 h portant la
  * même réservation. Ils se fondent en UN bloc (du début du premier à la fin du dernier).
- * ponytail: la réservation n'expose pas ses propres heures au planning (`reservationView`) : un 2 h
- * décalé de la grille (17 h 30 – 19 h 30 sur des créneaux d'1 h) s'affiche 17 h – 20 h. Sortie :
- * `startsAt` / `endsAt` dans `reservationView` (serveur), puis les prendre ici.
+ * D94 (12/11) : le bloc prend les vraies heures de la réservation (`reservation.startsAt` /
+ * `endsAt`, gestion.ts `reservationView`) : un 2 h décalé de la grille (17 h 30 – 19 h 30 sur des
+ * créneaux d'1 h) se dessine 17 h 30 – 19 h 30. Serveur d'avant, sans ces clés : la grille.
  * @template {{ endsAt: string, reservation?: any, startsAt: string, to?: string | null }} C
  * @param {C[]} creneaux - Les créneaux d'un terrain, d'un jour, triés par début.
  * @returns {C[]} Les créneaux, une réservation = un bloc.
@@ -375,4 +394,4 @@ export const fondreLesReservations = (creneaux) => creneaux.reduce((fondus, cren
     && precedent.endsAt === creneau.startsAt;
   if (!meme) return [...fondus, creneau];
   return [...fondus.slice(0, -1), { ...precedent, endsAt: creneau.endsAt, to: creneau.to }];
-}, /** @type {C[]} */ ([]));
+}, /** @type {C[]} */ ([])).map(sesVraiesHeures);

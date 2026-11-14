@@ -203,3 +203,34 @@ describe('DT-2 G4 — le planning : une réservation de 2 h = un seul bloc', () 
     }));
   });
 });
+
+// D94 (12/11, chef B) — le serveur donne les vraies heures de la réservation
+// (`reservation.startsAt` / `endsAt`) : un 2 h décalé de la grille (17 h 30 – 19 h 30 sur des
+// créneaux d'1 h) se dessine 17 h 30 – 19 h 30, plus 17 h – 20 h. Serveur d'avant : la grille.
+describe('D94 — le bloc d’une réservation décalée de la grille prend ses vraies heures', () => {
+  // Le 17/11 à Paris = UTC+1.
+  const creneau = (de, a, debutZ, finZ, reservation) => ({
+    endsAt: `2026-11-17T${finZ}:00.000Z`, from: de, reservation, startsAt: `2026-11-17T${debutZ}:00.000Z`, to: a,
+  });
+  const grille = (reservation) => [
+    creneau('16:00', '17:00', '15:00', '16:00', null),
+    creneau('17:00', '18:00', '16:00', '17:00', reservation),
+    creneau('18:00', '19:00', '17:00', '18:00', reservation),
+    creneau('19:00', '20:00', '18:00', '19:00', reservation),
+    creneau('20:00', '21:00', '19:00', '20:00', null),
+  ];
+  it('avec startsAt / endsAt : 17:30-19:30', () => {
+    const decalee = {
+      documentId: 'r-decalee', endsAt: '2026-11-17T18:30:00.000Z', label: 'Julien M. · App', startsAt: '2026-11-17T16:30:00.000Z',
+    };
+    const fondus = fondreLesReservations(grille(decalee));
+    expect(fondus.map((c) => `${c.from}-${c.to}`)).toEqual(['16:00-17:00', '17:30-19:30', '20:00-21:00']);
+    expect(fondus[1]).toEqual(expect.objectContaining({
+      endsAt: '2026-11-17T18:30:00.000Z', reservation: decalee, startsAt: '2026-11-17T16:30:00.000Z',
+    }));
+  });
+  it('serveur d’avant (sans les clés) : le bloc reste celui de la grille', () => {
+    const fondus = fondreLesReservations(grille({ documentId: 'r-ancienne', label: 'Julien M. · App' }));
+    expect(fondus.map((c) => `${c.from}-${c.to}`)).toEqual(['16:00-17:00', '17:00-20:00', '20:00-21:00']);
+  });
+});

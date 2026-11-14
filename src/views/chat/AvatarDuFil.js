@@ -1,6 +1,9 @@
 import { Image, View } from 'react-native';
 
-import { resolveFriendlyMatchOpponent } from '@/domains/messaging/messagingUseCases';
+import {
+  complexeVuDuClient,
+  resolveFriendlyMatchOpponent,
+} from '@/domains/messaging/messagingUseCases';
 import useTheme from '@/theme/themeContext';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
@@ -167,6 +170,14 @@ function AvatarDuFil({
       );
       break;
     case 'whisper': {
+      // D91 (12/11) — le client d'un fil de complexe lit « Gérant - <complexe> » : la pastille
+      // dit le complexe (ses initiales), pas le gérant. ponytail: pas de logo, le fil n'en sert
+      // pas ; sortie : servir le logo du complexe dans l'aperçu du fil, le passer en `logoUrl`.
+      const complexe = complexeVuDuClient(chat, meId);
+      if (complexe) {
+        contenu = <ClubLogoMark name={complexe} size={ecusson} />;
+        break;
+      }
       const participant = chat?.participants?.find((/** @type {any} */ p) => p?.documentId !== meId)
         || chat?.participants?.[0];
       contenu = (
