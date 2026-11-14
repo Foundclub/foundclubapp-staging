@@ -87,6 +87,16 @@ def cmd_version(_args):
     print("Version marketing iOS demandee : {}".format(version))
 
 
+def communautes():
+    # RECOLTE-T11 K8 (14/11/2026, Adel « 337- B ») : l'interrupteur des Communautes de l'app
+    # (FC_COMMUNAUTES_V1, src/domains/messaging/communautes.js). ALLUME sur une build de recette
+    # (api_env staging), ETEINT pour la prod ; une valeur posee dans Codemagic l'emporte.
+    choix = env("FC_COMMUNAUTES_V1")
+    if choix:
+        return choix
+    return "1" if api_env() == "staging" else "0"
+
+
 def cmd_env(args):
     # R9a -- sans la cle RevenueCat, le SDK demarre a vide et la caisse est
     # MORTE dans une build par ailleurs verte. Mieux vaut une build rouge
@@ -109,6 +119,7 @@ def cmd_env(args):
         "TOMTOM_API_KEY=" + env("TOMTOM_API_KEY_PRODUCTION"),
         "REVENUECAT_APPLE_API_KEY=" + env("REVENUECAT_APPLE_API_KEY"),
         "FC_FORCE_REVENUECAT_RAIL=" + env("FC_FORCE_REVENUECAT_RAIL"),
+        "FC_COMMUNAUTES_V1=" + communautes(),
         "DELETE_ACCOUNT_URL=https://api.foundclubpro.com/suppression.html",
         "CONTACT_URL=https://foundclubpro.com",
     ]
@@ -120,6 +131,7 @@ def cmd_env(args):
     print("CIBLE API DU BUILD : {}".format(api_url))
     print("API_URL=" + api_url)
     print("SOCKET_URL=" + socket_url)
+    print("FC_COMMUNAUTES_V1=" + communautes())
 
 
 def cmd_firebase(_args):

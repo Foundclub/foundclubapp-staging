@@ -9,6 +9,28 @@
  * que le serveur dit (`peutCreer`) et on n'envoie que ce que l'écran a réglé.
  */
 
+/**
+ * RECOLTE-T11 K8 (14/11/2026, Adel « 337- B ») — l'interrupteur des Communautés, FC_COMMUNAUTES_V1.
+ * ÉTEINT par défaut (la prod) : ni bouton, ni ligne de communauté, ni écran, et aucun appel à
+ * `/communautes/*` ; la messagerie est celle du train 10. Allumé sur la recette : site
+ * `WEB_FC_COMMUNAUTES_V1=true` (web/vite.config.ts), iPhone `FC_COMMUNAUTES_V1=1`
+ * (scripts/ci/ios/preparer_build.py). Même lecture que FC_CHAT_GROUP_V1 (NewConversation.js), lue
+ * à chaque appel. Témoin : __tests__/communautes.K8interrupteur.test.js.
+ * @returns {boolean} Vrai si les Communautés s'affichent.
+ */
+export const communautesActives = () => lireInterrupteur(process.env.FC_COMMUNAUTES_V1);
+
+/**
+ * La lecture d'un interrupteur : absent, vide ou autre chose que « 1 », « true », « yes » ⇒ éteint.
+ * @param {unknown} brute - La valeur de la variable.
+ * @returns {boolean} Vrai si allumé.
+ */
+export function lireInterrupteur(brute) {
+  if (brute === undefined || brute === null || brute === '') return false;
+  const valeur = String(brute).trim().toLowerCase();
+  return valeur === '1' || valeur === 'true' || valeur === 'yes';
+}
+
 /** Les 6 thèmes de la maquette (écran 3), dans son ordre ; mêmes valeurs que le serveur. */
 export const THEMES_COMMUNAUTE = [
   'equipe',

@@ -19,6 +19,7 @@ import { auteurDeLApercu, estMineurConnu } from '@/domains/collectivite/collecti
 import { prenomDansLeFil } from '@/domains/messaging/anonymatDeLigue';
 import {
   bandeauDuComplexe,
+  communautesActives,
   creationEnAttente,
   dOfficeSansApercu,
   groupesVisibles,
@@ -41,6 +42,7 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { GRAS_FAMILLE, REGULIER_FAMILLE } from '@/components/molecules/bulleDuFil/typographieDuFil';
 import MenuDuFil from '@/views/chat/MenuDuFil';
 import EnTeteCommunaute from '@/views/communautes/EnTeteCommunaute';
+import RetourAuxMessages from '@/views/communautes/RetourAuxMessages';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -663,4 +665,14 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Communautes;
+/**
+ * RECOLTE-T11 K8 : interrupteur FC_COMMUNAUTES_V1 éteint ⇒ rien, aucun appel, retour aux Messages.
+ * @param {{ navigation: any, route?: any }} props
+ * @returns {import('react').ReactElement} L'écran, ou le retour aux Messages.
+ */
+function CommunautesSiAllume({ navigation, route = undefined }) {
+  if (!communautesActives()) return <RetourAuxMessages navigation={navigation} />;
+  return <Communautes navigation={navigation} route={route} />;
+}
+
+export default CommunautesSiAllume;
