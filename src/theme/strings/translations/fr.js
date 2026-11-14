@@ -8010,6 +8010,11 @@ export default {
     vide: 'Aucun complexe pour l’instant.',
   },
   // RESA-L5B-2 (20/10/2026) — la fidélité du complexe (E-G14, serveur RESA-L4).
+  // T-COMPLEXE (14/11/2026, D13 B) : « Tournois et événements » sur la fiche publique du complexe.
+  complexeEvenements: {
+    ouvrir: 'Voir {{nom}}',
+    titre: 'Tournois et événements',
+  },
   complexeFidelite: {
     apercu: {
       encore_one: 'Encore {{count}} réservation avant « {{recompense}} »',

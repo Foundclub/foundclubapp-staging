@@ -48,6 +48,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
   }),
   useCreneauxDuJour: () => ({ data: { slots: [] } }),
   useMaRelationAuComplexe: (/** @type {any[]} */ ...args) => mockLireLaRelation(...args),
+  // T-COMPLEXE : la section « Tournois et événements » (aucun ici).
+  useEvenementsPublics: () => ({ data: [] }),
   usePartenairesPublics: () => mockPartenaires,
   useRetirerDesFavoris: () => ({ isPending: false, mutateAsync: mockRetirer }),
   useSignalerUnComplexe: () => ({ isPending: false, mutateAsync: mockSignaler }),

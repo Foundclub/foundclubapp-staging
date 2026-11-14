@@ -7503,6 +7503,11 @@ export default {
     vide: 'No venue yet.',
   },
   // RESA-L5B-2 (20/10/2026) — the venue's loyalty programme (E-G14, RESA-L4 server).
+  // T-COMPLEXE (14/11/2026, D13 B): "Tournaments and events" on the complex's public page.
+  complexeEvenements: {
+    ouvrir: 'View {{nom}}',
+    titre: 'Tournaments and events',
+  },
   complexeFidelite: {
     apercu: {
       encore_one: '{{count}} more booking before "{{recompense}}"',

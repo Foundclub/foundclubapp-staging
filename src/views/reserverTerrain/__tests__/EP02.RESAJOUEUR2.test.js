@@ -42,6 +42,8 @@ jest.mock('@/services/complexe/complexeJoueurQueries', () => ({
     mockCreneaux[terrainId] || { data: { slots: [] } }
   ),
   useMaRelationAuComplexe: () => ({ data: null }),
+  // T-COMPLEXE : la section « Tournois et événements » (aucun ici).
+  useEvenementsPublics: () => ({ data: [] }),
   usePartenairesPublics: () => ({ data: [] }),
   useRetirerDesFavoris: () => ({ isPending: false, mutateAsync: jest.fn() }),
   useSignalerUnComplexe: () => ({ isPending: false, mutateAsync: jest.fn() }),
