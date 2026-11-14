@@ -462,8 +462,8 @@ function EventWizardRecap({ navigation }) {
   }, [freeUsageSummary, isMatch, quotaTeamDocumentId, subscriptionAccessLevel]);
 
   // EVT-CLUB-ECRANS (14/11, D121) — « tout le club » : `audienceScope` (+ `club`, sans `team` hors
-  // Match / Tournoi) ; un evenement ordinaire part a l'identique.
-  // EVT-CLUB-ECRANS (ecran 2 bis, Q4 B) — la 2e confirmation « Créer et prévenir N personnes ? ».
+  // Match / Tournoi) ; un evenement ordinaire part a l'identique. EVT-CLUB-ECRANS (ecran 2 bis, Q4
+  // B) — la 2e confirmation « Créer et prévenir N personnes ? ».
   const [isClubConfirmOpen, setIsClubConfirmOpen] = useState(false);
   const wizardFormData = useMemo(
     () => applyClubAudienceToFormData(buildWizardFormData(state), state),
@@ -661,12 +661,16 @@ function EventWizardRecap({ navigation }) {
       : `${format(new Date(state.stageDefaultStartTime || state.startTime), 'HH:mm')} - ${format(new Date(state.stageDefaultEndTime || state.endTime), 'HH:mm')}`;
   }
   const hasType = Boolean(state.type?.name);
-  // EVT-CLUB-ECRANS — hors Match / Tournoi, « tout le club » n'a pas d'equipe : la ligne « Pour » la remplace.
+  // EVT-CLUB-ECRANS — hors Match / Tournoi, « tout le club » n'a pas d'equipe : la ligne « Pour »
+  // la remplace.
   const isClubWide = isClubAudienceEvent(state);
   const clubWideWithoutTeam = isClubWide && !keepsTeamWithClubAudience(state.type?.name);
   const clubAudienceTotal = Number(state.clubAudienceCounts?.total);
   const clubAudienceValue = Number.isFinite(clubAudienceTotal)
-    ? t('eventClubAudience.recapValue', { count: clubAudienceTotal, defaultValue: 'Tout le club · {{count}} personnes' })
+    ? t('eventClubAudience.recapValue', {
+      count: clubAudienceTotal,
+      defaultValue: 'Tout le club · {{count}} personnes',
+    })
     : t('eventClubAudience.recapValueNoCount', 'Tout le club');
   const hasTeam = Boolean(
     state.team?.name
@@ -1376,14 +1380,20 @@ function EventWizardRecap({ navigation }) {
               ) : null}
               {clubWideWithoutTeam ? null : (
                 <View style={[Spaces.gap[4]]}>
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.team')}</Text>
-                  <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>{teamValue}</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventWizard.recap.sections.team')}
+                  </Text>
+                  <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>
+                    {teamValue}
+                  </Text>
                 </View>
               )}
               {/* EVT-CLUB-ECRANS (ecran 2 bis) — « Pour · Tout le club · N personnes ». */}
               {isClubWide ? (
                 <View style={[Spaces.gap[4]]} testID="event-wizard-recap-club-audience">
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventClubAudience.recapLabel', 'Pour')}</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventClubAudience.recapLabel', 'Pour')}
+                  </Text>
                   <Text style={[Fonts.p2, Fonts.neutral00]}>{clubAudienceValue}</Text>
                 </View>
               ) : null}
@@ -2053,7 +2063,10 @@ function EventWizardRecap({ navigation }) {
                 : t('eventClubAudience.confirmTitleNoCount', 'Créer et prévenir tout le club ?')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {t('eventClubAudience.confirmIntro', 'Dès que tu valides, chaque membre du club reçoit :')}
+              {t(
+                'eventClubAudience.confirmIntro',
+                'Dès que tu valides, chaque membre du club reçoit :',
+              )}
             </Text>
             <View
               style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[4], cardSurfaceStyle]}
@@ -2066,7 +2079,9 @@ function EventWizardRecap({ navigation }) {
                 {t('eventClubAudience.notifBody', {
                   date: [dateValue, timeValue].filter(Boolean).join(' · '),
                   defaultValue: '{{name}}, {{date}}. Tu viens ?',
-                  name: (isOther && hasCustomName ? normalizeEventCustomName(state.customName) : typeValue),
+                  name: isOther && hasCustomName
+                    ? normalizeEventCustomName(state.customName)
+                    : typeValue,
                   ...SANS_ECHAPPEMENT,
                 })}
               </Text>
@@ -2074,7 +2089,8 @@ function EventWizardRecap({ navigation }) {
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {t(
                 'eventClubAudience.confirmWarning',
-                'Une notification envoyée ne se reprend pas. Si tu annules l’événement ensuite, les membres reçoivent l’annulation.',
+                'Une notification envoyée ne se reprend pas. Si tu annules l’événement ensuite, '
+                  + 'les membres reçoivent l’annulation.',
               )}
             </Text>
             <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>

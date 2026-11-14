@@ -2067,8 +2067,8 @@ function EventDetails({ navigation, route }) {
   );
 
   const renderParticipantsSection = () => {
-    // EVT-CLUB-ECRANS (14/11, ecran 5b) — « tout le club » ET dirigeant (Q1 A / Q10 B) : le tableau unique
-    // du club remplace les listes par equipe. Un evenement ordinaire ne passe jamais ici.
+    // EVT-CLUB-ECRANS (14/11, ecran 5b) — « tout le club » ET dirigeant (Q1 A / Q10 B) : le tableau
+    // unique du club remplace les listes par equipe. Un evenement ordinaire ne passe jamais ici.
     if (canSeeClubAudience(event, userData, USER_ROLES)) {
       return <ClubAudienceResponses event={event} layout="table" />;
     }

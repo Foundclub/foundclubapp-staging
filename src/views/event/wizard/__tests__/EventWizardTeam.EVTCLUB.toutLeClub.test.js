@@ -6,10 +6,10 @@ import { RouteNames } from '@/navigation/routeNames';
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
 import EventWizardTeam from '../EventWizardTeam';
 
-// EVT-CLUB-ECRANS (14/11/2026, D121) — ecrans 1 et 2 de la maquette v2 :
-// la carte « Tous les membres du club » au-dessus de « MES ÉQUIPES » (dirigeant seulement, Q1 A),
-// masquee pendant une recherche, et la feuille « Prevenir tout le club ? » avec les comptes de l'apercu.
-// Doublures : celles de `EventWizardTeam.rendu.test.js` (meme motif), plus l'apercu du serveur.
+// EVT-CLUB-ECRANS (14/11/2026, D121) — ecrans 1 et 2 de la maquette v2 : la carte « Tous les
+// membres du club » au-dessus de « MES ÉQUIPES » (dirigeant seulement, Q1 A), masquee pendant une
+// recherche, et la feuille « Prevenir tout le club ? » avec les comptes de l'apercu. Doublures :
+// celles de `EventWizardTeam.rendu.test.js` (meme motif), plus l'apercu du serveur.
 
 const mockAuth = { estDirigeant: true };
 const mockRecherche = { props: null };
@@ -17,7 +17,12 @@ const mockApercu = {
   data: {
     audienceScope: 'club',
     counts: {
-      children: 51, coaches: 10, members: 6, parents: 41, players: 111, total: 168,
+      children: 51,
+      coaches: 10,
+      members: 6,
+      parents: 41,
+      players: 111,
+      total: 168,
     },
     multisport: false,
   },
@@ -32,7 +37,7 @@ jest.mock('react-i18next', () => ({
       let texte = cle;
       if (typeof repli === 'string') texte = repli;
       else if (repli && typeof repli.defaultValue === 'string') texte = repli.defaultValue;
-      const champs = typeof repli === 'object' && repli ? repli : (valeurs || {});
+      const champs = typeof repli === 'object' && repli ? repli : valeurs || {};
       return texte.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(champs[nom] ?? ''));
     },
   }),
@@ -58,11 +63,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => function GabaritMock(
-  /** @type {any} */ props,
-) {
-  return props.children;
-});
+jest.mock(
+  '@/components/molecules/wizardStepLayout/WizardStepLayout',
+  () => function GabaritMock(/** @type {any} */ props) {
+    return props.children;
+  },
+);
 
 jest.mock('@/domains/auth/useAuth', () => {
   const { USER_ROLES } = jest.requireActual('@/domains/auth/authUseCases');
@@ -74,7 +80,9 @@ jest.mock('@/domains/auth/useAuth', () => {
         club: { documentId: 'club-1', name: 'FC Test' },
         documentId: 'moi',
         role: mockAuth.estDirigeant ? { name: USER_ROLES.president } : { name: USER_ROLES.coach },
-        trainedTeams: [{ club: { documentId: 'club-1', name: 'FC Test' }, documentId: 'eq-1', name: 'U15 A' }],
+        trainedTeams: [
+          { club: { documentId: 'club-1', name: 'FC Test' }, documentId: 'eq-1', name: 'U15 A' },
+        ],
       },
     }),
   };
@@ -90,12 +98,18 @@ jest.mock('@/services/team/teamService', () => ({
 jest.mock('@/services/team/teamQueries', () => ({
   useGetTeams: () => ({
     data: {
-      pages: [{
-        data: [
-          { club: { documentId: 'club-1', name: 'FC Test' }, documentId: 'eq-1', name: 'U15 A' },
-          { club: { documentId: 'club-1', name: 'FC Test' }, documentId: 'eq-2', name: 'Seniors B' },
-        ],
-      }],
+      pages: [
+        {
+          data: [
+            { club: { documentId: 'club-1', name: 'FC Test' }, documentId: 'eq-1', name: 'U15 A' },
+            {
+              club: { documentId: 'club-1', name: 'FC Test' },
+              documentId: 'eq-2',
+              name: 'Seniors B',
+            },
+          ],
+        },
+      ],
     },
     error: null,
     isLoading: false,
@@ -115,39 +129,55 @@ jest.mock('@/services/section/sectionQueries', () => ({
   useGetSections: () => ({ data: [], error: null, isLoading: false }),
 }));
 jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => () => null);
-jest.mock('@/components/molecules/input/Input', () => function ChampMock(/** @type {any} */ props) {
-  mockRecherche.props = props;
-  return null;
-});
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => function FeuilleMock(/** @type {any} */ props) {
-  return props.isVisible ? props.children : null;
-});
-jest.mock('@/components/atoms/button/Button', () => function BoutonMock(/** @type {any} */ props) {
-  const reactActuel = jest.requireActual('react');
-  const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
-  return reactActuel.createElement(
-    PressableRN,
-    { accessibilityRole: 'button', onPress: props.onPress, testID: `bouton:${props.title}` },
-    reactActuel.createElement(TexteRN, null, props.title),
-  );
-});
-jest.mock('@/views/event/wizard/components/EventWizardTeamCard', () => function CarteEquipeMock(
-  /** @type {any} */ props,
-) {
-  const reactActuel = jest.requireActual('react');
-  const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
-  return reactActuel.createElement(
-    PressableRN,
-    { onPress: props.onPress, testID: `equipe:${props.team?.name}` },
-    reactActuel.createElement(TexteRN, null, props.team?.name),
-  );
-});
+jest.mock(
+  '@/components/molecules/input/Input',
+  () => function ChampMock(/** @type {any} */ props) {
+    mockRecherche.props = props;
+    return null;
+  },
+);
+jest.mock(
+  '@/components/molecules/bottomModal/BottomModal',
+  () => function FeuilleMock(/** @type {any} */ props) {
+    return props.isVisible ? props.children : null;
+  },
+);
+jest.mock(
+  '@/components/atoms/button/Button',
+  () => function BoutonMock(/** @type {any} */ props) {
+    const reactActuel = jest.requireActual('react');
+    const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
+    return reactActuel.createElement(
+      PressableRN,
+      { accessibilityRole: 'button', onPress: props.onPress, testID: `bouton:${props.title}` },
+      reactActuel.createElement(TexteRN, null, props.title),
+    );
+  },
+);
+jest.mock(
+  '@/views/event/wizard/components/EventWizardTeamCard',
+  () => function CarteEquipeMock(/** @type {any} */ props) {
+    const reactActuel = jest.requireActual('react');
+    const { Text: TexteRN, TouchableOpacity: PressableRN } = jest.requireActual('react-native');
+    return reactActuel.createElement(
+      PressableRN,
+      { onPress: props.onPress, testID: `equipe:${props.team?.name}` },
+      reactActuel.createElement(TexteRN, null, props.team?.name),
+    );
+  },
+);
 
 const textesSous = (/** @type {any} */ noeud) => {
   const sortie = [];
   const parcourir = (/** @type {any} */ enfant) => {
-    if (typeof enfant === 'string' || typeof enfant === 'number') { sortie.push(String(enfant)); return; }
-    if (Array.isArray(enfant)) { enfant.forEach(parcourir); return; }
+    if (typeof enfant === 'string' || typeof enfant === 'number') {
+      sortie.push(String(enfant));
+      return;
+    }
+    if (Array.isArray(enfant)) {
+      enfant.forEach(parcourir);
+      return;
+    }
     if (enfant?.children) enfant.children.forEach(parcourir);
   };
   parcourir(noeud.children);
@@ -168,24 +198,34 @@ let arbre;
 const navigation = { goBack: jest.fn(), navigate: jest.fn(), setParams: jest.fn() };
 const monter = (nomDuType = 'Autre') => {
   act(() => {
-    arbre = renderer.create(createElement(
-      EventWizardProvider,
-      null,
-      createElement(Sonde),
-      createElement(EventWizardTeam, { navigation, route: { params: {} } }),
-    ));
+    arbre = renderer.create(
+      createElement(
+        EventWizardProvider,
+        null,
+        createElement(Sonde),
+        createElement(EventWizardTeam, { navigation, route: { params: {} } }),
+      ),
+    );
   });
-  act(() => capte.dispatch({ payload: { documentId: `t-${nomDuType}`, name: nomDuType }, type: 'SET_TYPE' }));
+  act(() => capte.dispatch({
+    payload: { documentId: `t-${nomDuType}`, name: nomDuType },
+    type: 'SET_TYPE',
+  }));
 };
 const textes = () => textesSous(arbre.root);
-const appuyer = (testID) => act(() => { arbre.root.findByProps({ testID }).props.onPress(); });
+const appuyer = (testID) => act(() => {
+  arbre.root.findByProps({ testID }).props.onPress();
+});
 
 beforeEach(() => {
   mockAuth.estDirigeant = true;
   navigation.navigate.mockClear();
   if (typeof window !== 'undefined' && window.sessionStorage) window.sessionStorage.clear();
 });
-afterEach(() => { if (arbre) act(() => arbre.unmount()); arbre = null; });
+afterEach(() => {
+  if (arbre) act(() => arbre.unmount());
+  arbre = null;
+});
 
 describe('EVT-CLUB — ecran 1 : la carte « Tous les membres du club »', () => {
   test('le dirigeant la voit, sous « POUR TOUT LE CLUB », au-dessus de « MES ÉQUIPES »', () => {
@@ -253,7 +293,7 @@ describe('EVT-CLUB — ecran 2 : « Prevenir tout le club ? »', () => {
     expect(navigation.navigate.mock.calls[0][0]).not.toBe(RouteNames.EventWizardTeam);
   });
 
-  test('Match (R1 A) : « Oui » reste sur la liste ; l equipe choisie ensuite garde « tout le club »', () => {
+  test('Match (R1 A) : « Oui » reste ici ; l equipe choisie ensuite garde « tout le club »', () => {
     monter('Match');
     appuyer('event-wizard-club-audience-card');
     appuyer('bouton:Oui, tout le club');

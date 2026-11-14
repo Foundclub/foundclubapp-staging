@@ -324,7 +324,7 @@ function EventWizardTeam({ navigation }) {
     && !error
     && hasTeams,
   );
-  const handleConfirmClubAudience = (counts) => {
+  const handleConfirmClubAudience = (/** @type {any} */ counts) => {
     dispatch({
       payload: { audienceScope: 'club', club: organizerClub, counts },
       type: 'SET_CLUB_AUDIENCE',

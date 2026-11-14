@@ -65,7 +65,8 @@ function EventWizardLocation({ navigation, route }) {
   const dateConnue = route?.params?.returnTo === RouteNames.EventWizardRecap
     || isStageEventType(state.type?.name);
 
-  // EVT-CLUB-ECRANS (14/11) — un evenement « tout le club » sans equipe lit les installations de son club.
+  // EVT-CLUB-ECRANS (14/11) — un evenement « tout le club » sans equipe lit les installations de
+  // son club.
   const clubDuLieu = state.team?.club || (isClubAudienceEvent(state) ? state.club : null);
   const clubId = clubDuLieu?.documentId;
   const cmId = clubDuLieu?.parentMultisport?.documentId;

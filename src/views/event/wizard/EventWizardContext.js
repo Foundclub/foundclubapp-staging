@@ -37,7 +37,9 @@ const isTournamentTypeName = (typeName = '') => normalizeTypeLabel(typeName).inc
 const isMatchTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('match');
 const isOtherTypeName = (typeName = '') => normalizeTypeLabel(typeName) === 'autre';
 // EVT-CLUB (R1 A) : un Match ou un Tournoi garde son equipe avec « tout le club ».
-const keepsTeamTypeName = (typeName = '') => isMatchTypeName(typeName) || isTournamentTypeName(typeName);
+const keepsTeamTypeName = (typeName = '') => (
+  isMatchTypeName(typeName) || isTournamentTypeName(typeName)
+);
 
 const createInitialState = () => {
   const { end, start } = createDefaultTimeRange();
@@ -46,8 +48,8 @@ const createInitialState = () => {
     type: null,
 
     // Step 2: Team
-    // EVT-CLUB-ECRANS (14/11, D121) — « Tous les membres du club » : `audienceScope` ('club') et les
-    // comptes de l'apercu (ecran 2), relus par le recapitulatif (« Pour », 2e confirmation).
+    // EVT-CLUB-ECRANS (14/11, D121) — « Tous les membres du club » : `audienceScope` ('club') et
+    // les comptes de l'apercu (ecran 2), relus par le recapitulatif (« Pour », 2e confirmation).
     audienceScope: null,
     club: null,
     clubAudienceCounts: null,
@@ -232,11 +234,13 @@ const loadPersistedState = () => {
  */
 function eventWizardReducer(state, action) {
   switch (action.type) {
+    case 'CLEAR_CLUB_AUDIENCE':
+      return { ...state, audienceScope: null, clubAudienceCounts: null };
     case 'RESET':
       return createInitialState();
     case 'SET_CLUB_AUDIENCE': {
-      // EVT-CLUB (ecran 2, « Oui, tout le club ») — hors Match / Tournoi, l'evenement est rattache au
-      // club, sans equipe ; une serie ne porte pas « tout le club » (decision du chef, 14/11).
+      // EVT-CLUB (ecran 2, « Oui, tout le club ») — hors Match / Tournoi, l'evenement est rattache
+      // au club, sans equipe ; une serie ne porte pas « tout le club » (decision du chef, 14/11).
       const keepsTeam = keepsTeamTypeName(state?.type?.name);
       return {
         ...state,
@@ -253,8 +257,6 @@ function eventWizardReducer(state, action) {
         }),
       };
     }
-    case 'CLEAR_CLUB_AUDIENCE':
-      return { ...state, audienceScope: null, clubAudienceCounts: null };
     case 'SET_DETECTION_SLOTS':
       return { ...state, detectionSlots: action.payload };
     case 'SET_INVITES':
@@ -302,7 +304,9 @@ function eventWizardReducer(state, action) {
         matchCallUpTouched: false,
         team: action.payload,
         // EVT-CLUB : hors Match / Tournoi, choisir une equipe revient a un evenement d'equipe.
-        ...(keepsTeamTypeName(state?.type?.name) ? {} : { audienceScope: null, clubAudienceCounts: null }),
+        ...(keepsTeamTypeName(state?.type?.name)
+          ? {}
+          : { audienceScope: null, clubAudienceCounts: null }),
       };
     case 'SET_TEAM_AUDIENCES':
       return { ...state, teamAudiences: action.payload };

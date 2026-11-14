@@ -867,7 +867,8 @@ function EventCardNew({
                   </Text>
                 </View>
               ) : null}
-              {/* EVT-CLUB-ECRANS (14/11, ecran 3) — « Tout le club », meme forme que la pastille du type. */}
+              {/* EVT-CLUB-ECRANS (14/11, ecran 3) — « Tout le club », meme forme que la pastille du
+                  type. */}
               {isClubAudienceEvent(item) ? (
                 <View style={[styles.typeChip, glassChipStyle]} testID="event-card-club-audience">
                   <Text

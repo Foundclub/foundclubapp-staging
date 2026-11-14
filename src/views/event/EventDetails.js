@@ -190,6 +190,7 @@ import {
   resolveAttendanceWindow,
   resolveCallMode,
 } from './attendance/attendanceCallModel';
+import ClubAudienceResponses from './components/ClubAudienceResponses';
 import EventChatRow from './components/EventChatRow';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
@@ -198,7 +199,6 @@ import EventDetectionSlots from './components/EventDetectionSlots';
 import EventExportSheet from './components/EventExportSheet';
 import EventHeader from './components/EventHeader';
 import EventNextActionCard from './components/EventNextActionCard';
-import ClubAudienceResponses from './components/ClubAudienceResponses';
 import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
@@ -1317,9 +1317,10 @@ function EventDetails({ navigation, route }) {
     () => (userData?.multisportClubs || []).map((club) => club?.documentId).filter(Boolean),
     [userData?.multisportClubs],
   );
-  // EVT-CLUB-ECRANS (14/11, ecrans 4a-4c) — « tout le club » ET dirigeant (Q1 A / Q10 B) : UNE liste des
-  // reponses du club remplace le bloc des reponses par equipe. Un evenement ordinaire n'y passe jamais.
-  const showClubAudienceResponses = canSeeClubAudience(event, userData, USER_ROLES);
+  // EVT-CLUB-ECRANS (14/11, ecrans 4a-4c) — « tout le club » ET dirigeant (Q1 A / Q10 B) : UNE
+  // liste des reponses du club remplace le bloc des reponses par equipe. Un evenement ordinaire n'y
+  // passe jamais.
+  const showClubList = canSeeClubAudience(event, userData, USER_ROLES);
   const isClubManagerForEvent = Boolean(
     userData?.role?.name === USER_ROLES.president
     && userClubId
@@ -8689,11 +8690,11 @@ function EventDetails({ navigation, route }) {
                 <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
               ) : null}
 
-              {showParticipantsTab && showClubAudienceResponses ? (
+              {showParticipantsTab && showClubList ? (
                 <ClubAudienceResponses event={event} />
               ) : null}
 
-              {showParticipantsTab && !showClubAudienceResponses && (!isTournamentEvent || isStageDayEvent) ? (
+              {showParticipantsTab && !showClubList && (!isTournamentEvent || isStageDayEvent) ? (
                 <EventParticipants
                   // @ts-ignore: FIXME: Baseline TS regression
                   attendanceByUserId={attendanceByUserId}

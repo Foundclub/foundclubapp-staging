@@ -6,9 +6,10 @@ import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventA
 import EventCardNew from '../EventCardNew';
 
 // EVT-CLUB-ECRANS (14/11/2026, D121) — ecran 3 de la maquette v2 : dans le planning, la carte d'un
-// evenement « tout le club » porte une pastille « Tout le club » a cote du type, et garde ses boutons
-// Present / Absent. Un evenement « tout le club » hors Match / Tournoi n'a PAS d'equipe (`team: null`) :
-// la carte doit le lire sans planter. Doublures reprises de EventCardNewParentPlanning.test.js.
+// evenement « tout le club » porte une pastille « Tout le club » a cote du type, et garde ses
+// boutons Present / Absent. Un evenement « tout le club » hors Match / Tournoi n'a PAS d'equipe
+// (`team: null`) : la carte doit le lire sans planter. Doublures reprises de
+// EventCardNewParentPlanning.test.js.
 
 jest.mock('react-native-reanimated', () => {
   const { View } = jest.requireActual('react-native');
@@ -48,9 +49,10 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-jest.mock('react-i18next', () => (
-  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
-));
+jest.mock(
+  'react-i18next',
+  () => jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next,
+);
 
 // Un JOUEUR : sans `readOnly`, une seance ouverte lui propose une reponse.
 jest.mock('@/domains/auth/useAuth', () => ({
@@ -72,7 +74,7 @@ const FETE = {
   audienceScope: 'club',
   club: CLUB,
   customName: 'Fete de fin d annee',
-  date: new Date(Date.now() + (2 * 24 * 60 * 60 * 1000)).toISOString(),
+  date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
   documentId: 'e-club',
   missings: [],
   name: 'Fete de fin d annee',
@@ -86,16 +88,24 @@ const FETE = {
 
 let arbre = null;
 const rendre = (item) => {
-  act(() => { arbre = renderer.create(<EventCardNew item={item} onPress={jest.fn()} />); });
+  act(() => {
+    arbre = renderer.create(<EventCardNew item={item} onPress={jest.fn()} />);
+  });
   return arbre.root;
 };
 const pastille = (racine) => racine.findAll((n) => n.props?.testID === 'event-card-club-audience');
-const textes = (racine) => racine.findAllByType(Text).map((n) => n.props.children).filter((v) => typeof v === 'string');
+const textes = (racine) => racine
+  .findAllByType(Text)
+  .map((n) => n.props.children)
+  .filter((v) => typeof v === 'string');
 
-afterEach(() => { if (arbre) act(() => arbre.unmount()); arbre = null; });
+afterEach(() => {
+  if (arbre) act(() => arbre.unmount());
+  arbre = null;
+});
 
 describe('EVT-CLUB — ecran 3 : la carte du planning', () => {
-  test('un evenement « tout le club » sans equipe : la pastille « Tout le club », et les boutons de reponse', () => {
+  test('« tout le club » sans equipe : la pastille, et les boutons de reponse', () => {
     const racine = rendre(FETE);
     expect(pastille(racine).length).toBeGreaterThan(0);
     expect(textes(racine)).toContain('Tout le club');
@@ -106,7 +116,12 @@ describe('EVT-CLUB — ecran 3 : la carte du planning', () => {
     const racine = rendre({
       ...FETE,
       audienceScope: null,
-      team: { activities: [{ name: 'Football' }], club: CLUB, documentId: 'u15', name: 'U15' },
+      team: {
+        activities: [{ name: 'Football' }],
+        club: CLUB,
+        documentId: 'u15',
+        name: 'U15',
+      },
     });
     expect(pastille(racine)).toHaveLength(0);
     expect(textes(racine)).not.toContain('Tout le club');

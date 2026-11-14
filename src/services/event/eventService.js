@@ -1568,11 +1568,13 @@ export const remindUnansweredPlayers = async (input) => {
 };
 
 /**
- * EVT-CLUB-ECRANS (14/11/2026, D121) — l'apercu « Prevenir tout le club ? » (ecran 2), avant creation :
+ * EVT-CLUB-ECRANS (14/11/2026, D121) — l'apercu « Prevenir tout le club ? » (ecran 2), avant
+ * creation :
  * des COMPTES seulement, aucun nom. 403 si l'appelant ne dirige pas le club.
  * @param {string} clubId - Le club (documentId).
  * @param {'club' | 'all_sections'} [scope] - Le perimetre.
- * @returns {Promise<{ audienceScope: string, counts: { total: number, players: number, parents: number, children: number, coaches: number, members: number }, multisport: boolean }>} L'apercu.
+ * @returns {Promise<{ audienceScope: string, counts: { total: number, players: number, parents:
+ * number, children: number, coaches: number, members: number }, multisport: boolean }>} L'apercu.
  */
 export const getClubAudiencePreview = async (clubId, scope = 'club') => {
   const response = await client.get(`/clubs/${clubId}/event-club-audience`, { params: { scope } });
@@ -1583,7 +1585,8 @@ export const getClubAudiencePreview = async (clubId, scope = 'club') => {
  * EVT-CLUB-ECRANS — la liste du dirigeant (ecrans 4 et 5b) : une ligne par personne qui repond.
  * 404 si l'evenement n'est pas « tout le club » ; 403 pour un entraineur (Q10 B).
  * @param {string} eventId - L'evenement.
- * @returns {Promise<{ counts: object, multisport: boolean, rows: any[], relance: { available: boolean, lastRemindedAt: string|null, nextReminderAt: string|null } }>} La vue.
+ * @returns {Promise<{ counts: object, multisport: boolean, rows: any[], relance: { available:
+ * boolean, lastRemindedAt: string|null, nextReminderAt: string|null } }>} La vue.
  */
 export const getEventClubAudience = async (eventId) => {
   const response = await client.get(`/events/${eventId}/club-audience`);
@@ -1591,10 +1594,13 @@ export const getEventClubAudience = async (eventId) => {
 };
 
 /**
- * EVT-CLUB-ECRANS — « Relancer les N sans reponse » : relance ce qui est AFFICHE (`keys`). Le serveur
+ * EVT-CLUB-ECRANS — « Relancer les N sans reponse » : relance ce qui est AFFICHE (`keys`). Le
+ * serveur
  * ne relance personne deux fois en 24 h (R3 A).
  * @param {{ eventId: string, keys: string[] }} input - L'evenement et les lignes affichees.
- * @returns {Promise<{ remindedCount: number, blockedCount: number, unansweredCount: number, lastRemindedAt: string|null, nextReminderAt: string|null, reason: string|null }>} Le compte rendu.
+ * @returns {Promise<{ remindedCount: number, blockedCount: number, unansweredCount: number,
+ * lastRemindedAt: string|null, nextReminderAt: string|null, reason: string|null }>} Le compte
+ * rendu.
  */
 export const remindClubAudience = async ({ eventId, keys }) => {
   const response = await client.post(`/events/${eventId}/remind`, {
