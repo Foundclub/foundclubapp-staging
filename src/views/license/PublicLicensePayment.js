@@ -37,6 +37,17 @@ import {
   paymentModeLabels,
 } from './licenseDesignSystem';
 import LinksPlatform from '@/platform/links';
+import { RouteNames } from '@/navigation/routeNames';
+
+import { TournamentPlacePay, TournamentPlaceResult } from './TournamentPlacePanels';
+
+// T-PAIE (15/11) — une place de tournoi (`campaignType: 'tournament'`) : Stripe s'ouvre pour
+// elle seule (une licence garde `normalizePaymentModes`, qui force `stripe: false`) ; le retour
+// de Stripe revient ICI (`?status=success`), page publique : lisible sans compte.
+// ponytail: « Conditions d'inscription » ouvre la fiche du tournoi tant que les conditions n'ont
+// pas leur page. Sortie : TOURNAMENT_TERMS_URL.
+const TOURNAMENT_TERMS_URL = '';
+const CONFIRMING_REFETCH_MS = 3000;
 
 /**
  *
@@ -86,22 +97,30 @@ function DeclarePaymentModal({
 }
 
 /**
- *
- * @param root0
- * @param root0.route
+ * La page publique d'un lien de paiement (`/licenses/pay/:token`), connecté ou non.
+ * @param {object} root0 - Les propriétés de l'écran.
+ * @param {any} root0.navigation - La navigation (lien vers la fiche du tournoi).
+ * @param {any} root0.route - La route : `token`, et `status` au retour de Stripe.
+ * @returns {import('react').ReactElement} L'écran.
  */
-function PublicLicensePayment({ route }) {
+function PublicLicensePayment({ navigation, route }) {
   const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const token = route?.params?.token;
+  const returnStatus = String(route?.params?.status || '').toLowerCase();
   const [declareModalVisible, setDeclareModalVisible] = useState(false);
   const query = useQuery({
     enabled: Boolean(token),
     queryFn: () => getPublicLicensePayment(token),
     queryKey: ['licenses', 'public-payment', token],
+    // T-PAIE : au retour de Stripe, l'avis suit en quelques secondes : relire jusqu'à « payée ».
+    refetchInterval: (state) => {
+      const waiting = returnStatus === 'success' && state?.state?.data?.status !== 'paid';
+      return waiting ? CONFIRMING_REFETCH_MS : false;
+    },
     staleTime: 20_000,
   });
   const checkoutMutation = useMutation({
@@ -133,6 +152,17 @@ function PublicLicensePayment({ route }) {
   const canDeclareOfflinePayment = offlinePaymentMethods.length > 0 && canPayOnline;
   const tone = getLicenseStatusTone(Colors, payment?.status);
   const currency = payment?.currency || 'EUR';
+  const isTournament = payment?.campaignType === 'tournament';
+  const tournament = isTournament ? (payment?.tournament || {}) : null;
+  const tournamentEventId = tournament?.eventDocumentId;
+  const openTournament = useCallback(() => {
+    if (!tournamentEventId) return;
+    navigation?.navigate?.(RouteNames.EventDetails, { eventId: tournamentEventId });
+  }, [navigation, tournamentEventId]);
+  const openTerms = useCallback(() => {
+    if (TOURNAMENT_TERMS_URL) LinksPlatform.openUrl(TOURNAMENT_TERMS_URL);
+    else openTournament();
+  }, [openTournament]);
 
   const openCheckout = useCallback((provider) => {
     if (isCampaignPaused) {
@@ -259,8 +289,15 @@ function PublicLicensePayment({ route }) {
           <View style={Spaces.gap[licenseSpacing.titleGap]}>
             <LicenseStatusChip status={payment?.status} />
             <Text style={[Fonts.h2, Fonts.neutral00]}>
-              {t('publicLicensePayment.hero.title', 'Paiement cotisation')}
+              {isTournament
+                ? t('publicLicensePayment.tournament.heroTitle', 'Inscription au tournoi')
+                : t('publicLicensePayment.hero.title', 'Paiement cotisation')}
             </Text>
+            {isTournament ? (
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {[tournament?.eventName, tournament?.teamName].filter(Boolean).join(' - ')}
+              </Text>
+            ) : null}
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {payment?.memberName || t('publicLicensePayment.hero.memberFallback', 'Membre')}
               {' '}
@@ -270,6 +307,14 @@ function PublicLicensePayment({ route }) {
             </Text>
           </View>
         </View>
+        {isTournament ? (
+          <TournamentPlaceResult
+            isPaid={payment?.status === 'paid'}
+            onOpenTournament={openTournament}
+            returnStatus={returnStatus}
+            tournament={tournament}
+          />
+        ) : null}
         <LicenseCard>
           <LicenseMetricRow
             items={[
@@ -347,6 +392,14 @@ function PublicLicensePayment({ route }) {
           )}
           title={t('publicLicensePayment.pay.title', 'Regler')}
         />
+        {isTournament && hasSomethingToPay ? (
+          <TournamentPlacePay
+            canPay={canPayOnline && payment?.paymentModes?.stripe === true}
+            isLoading={checkoutMutation.isPending}
+            onOpenTerms={openTerms}
+            onPay={() => openCheckout('stripe')}
+          />
+        ) : null}
         {canPayOnline && paymentModes.helloasso ? (
           <Button
             isLoading={checkoutMutation.isPending}
