@@ -91,13 +91,14 @@ export function TournamentPlaceResult({
  * ponytail: texte provisoire (CGV v2, partie I) ; sortie : la clé `noWithdrawal` des traductions.
  * @param {object} props - Les propriétés.
  * @param {boolean} props.canPay - Le bouton Stripe est-il proposé ?
+ * @param {string | null} [props.complexeName] - Le complexe du tournoi (phrase du favori), ou null.
  * @param {boolean} props.isLoading - Le paiement s'ouvre-t-il ?
  * @param {() => void} props.onOpenTerms - Ouvre les conditions d'inscription.
  * @param {() => void} props.onPay - Ouvre le paiement Stripe.
  * @returns {import('react').ReactElement} Le bloc.
  */
 export function TournamentPlacePay({
-  canPay, isLoading, onOpenTerms, onPay,
+  canPay, complexeName = null, isLoading, onOpenTerms, onPay,
 }) {
   const { t } = useTranslation();
   const { Fonts } = useTheme();
@@ -127,6 +128,18 @@ export function TournamentPlacePay({
           />
         </View>
       </LicenseCard>
+      {/* T-COMPLEXE, étape 2 (D13 B) : au paiement confirmé, le complexe du tournoi passe dans les
+          favoris du joueur (serveur) ; on le dit avant le bouton. Le nom vient du serveur. */}
+      {canPay && complexeName ? (
+        <Text style={[Fonts.p3, Fonts.neutral200]} testID="tournament-place-favori">
+          {t(
+            'complexeEvenements.favoriAuPaiement',
+            'En t’inscrivant, tu ajoutes {{complexe}} à tes favoris sur FoundClub.'
+              + ' Tu peux le retirer à tout moment.',
+            { complexe: complexeName, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
+      ) : null}
       {canPay ? (
         <Button
           isLoading={isLoading}

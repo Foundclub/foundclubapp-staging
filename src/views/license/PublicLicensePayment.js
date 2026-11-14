@@ -395,6 +395,7 @@ function PublicLicensePayment({ navigation, route }) {
         {isTournament && hasSomethingToPay ? (
           <TournamentPlacePay
             canPay={canPayOnline && payment?.paymentModes?.stripe === true}
+            complexeName={tournament?.complexeName || null}
             isLoading={checkoutMutation.isPending}
             onOpenTerms={openTerms}
             onPay={() => openCheckout('stripe')}

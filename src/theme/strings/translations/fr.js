@@ -8012,6 +8012,7 @@ export default {
   // RESA-L5B-2 (20/10/2026) — la fidélité du complexe (E-G14, serveur RESA-L4).
   // T-COMPLEXE (14/11/2026, D13 B) : « Tournois et événements » sur la fiche publique du complexe.
   complexeEvenements: {
+    favoriAuPaiement: 'En t’inscrivant, tu ajoutes {{complexe}} à tes favoris sur FoundClub. Tu peux le retirer à tout moment.',
     ouvrir: 'Voir {{nom}}',
     titre: 'Tournois et événements',
   },
