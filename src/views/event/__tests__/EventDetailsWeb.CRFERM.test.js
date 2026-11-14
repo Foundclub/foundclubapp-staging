@@ -29,6 +29,8 @@ const mockInvalidateQueries = jest.fn();
 // comme chaque service de l ecran (EventDetails.js:123-128).
 // Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+// EVT-CLUB-ECRANS (14/11) : le tableau « tout le club » (il tire BottomModal / gorhom), double comme ses voisins.
+jest.mock('@/views/event/components/ClubAudienceResponses', () => () => null);
 // CORR-EVENEMENTS 119 et 130 : feuilles « série » et « équipe » = BottomModal native (gorhom).
 jest.mock('@/views/event/components/CancelSeriesSheet', () => () => null);
 jest.mock('@/views/event/components/TournamentTeamSheet', () => () => null);

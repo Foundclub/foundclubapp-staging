@@ -16,6 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useAuth from '@/domains/auth/useAuth';
+import { isClubAudienceEvent } from '@/domains/event/clubAudience';
 import { estDuClubOrganisateur, resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
@@ -863,6 +864,17 @@ function EventCardNew({
                     style={[styles.typeChipText, { color: Colors.neutral00 }]}
                   >
                     {childLabel}
+                  </Text>
+                </View>
+              ) : null}
+              {/* EVT-CLUB-ECRANS (14/11, ecran 3) — « Tout le club », meme forme que la pastille du type. */}
+              {isClubAudienceEvent(item) ? (
+                <View style={[styles.typeChip, glassChipStyle]} testID="event-card-club-audience">
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.typeChipText, { color: Colors.primary500 }]}
+                  >
+                    {t('eventClubAudience.pill', 'Tout le club')}
                   </Text>
                 </View>
               ) : null}

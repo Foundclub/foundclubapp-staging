@@ -10,6 +10,7 @@ import { Image, useWindowDimensions } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { canSeeClubAudience } from '@/domains/event/clubAudience';
 import {
   resolveEventCustomName,
   resolveEventDisplayName,
@@ -135,6 +136,7 @@ import MatchBilanCard from './components/MatchBilanCard';
 import MatchScoreEncart from './components/MatchScoreEncart';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import VillePrevenueDialog from './components/VillePrevenueDialog';
+import ClubAudienceResponses from './components/ClubAudienceResponses';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { eventMapTarget, formatEventPlaceLine, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
@@ -229,6 +231,7 @@ function EventDetails({ navigation, route }) {
   const {
     canManageEvent,
     isParentMode,
+    USER_ROLES,
     userData,
   } = useAuth();
   const {
@@ -2064,6 +2067,11 @@ function EventDetails({ navigation, route }) {
   );
 
   const renderParticipantsSection = () => {
+    // EVT-CLUB-ECRANS (14/11, ecran 5b) — « tout le club » ET dirigeant (Q1 A / Q10 B) : le tableau unique
+    // du club remplace les listes par equipe. Un evenement ordinaire ne passe jamais ici.
+    if (canSeeClubAudience(event, userData, USER_ROLES)) {
+      return <ClubAudienceResponses event={event} layout="table" />;
+    }
     // Noms visibles : les listes du telephone. Sinon on garde la suite d avant —
     // 🔒 identites masquees par l organisateur = le serveur remplace chaque
     // personne par un jeton anonyme ; on montre un NOMBRE, jamais une liste.
