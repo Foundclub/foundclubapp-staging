@@ -49,3 +49,30 @@ export const creerGroupeCommunaute = async ({ corps, genre, id }) => {
   ).post(`/communautes/${encodeURIComponent(genre)}/${encodeURIComponent(id)}/groupes`, corps);
   return response?.data?.data;
 };
+
+/**
+ * COMMUNAUTES-L4 (14/11/2026) — « Quitter le groupe » (appui long, écran 2) : la route
+ * d'aujourd'hui (`POST /chats/:id/leave`, `leaveGroupChat`). Qui quitte n'y est pas remis d'office
+ * (L3).
+ * @param {string} chatId
+ * @returns {Promise<any>} La réponse du serveur.
+ */
+export const quitterLeGroupe = async (chatId) => (
+  (await import('./chatService')).leaveGroupChat(chatId)
+);
+
+/**
+ * COMMUNAUTES-L4 — variante A : « Quitter la communauté » d'un complexe = quitter son canal (la
+ * route d'aujourd'hui, le favori reste) puis chacun de ses groupes à thème.
+ * @param {{ slug: string, groupes: string[] }} params
+ * @returns {Promise<void>}
+ */
+export const quitterLaCommunauteDuComplexe = async ({ groupes, slug }) => {
+  const { quitterLeCanal } = await import('../complexe/complexeJoueurService');
+  await quitterLeCanal(slug);
+  // L'un après l'autre : un refus s'arrête là, le canal est déjà quitté (comme aujourd'hui).
+  await (groupes || []).reduce(
+    (precedent, chatId) => precedent.then(() => quitterLeGroupe(chatId)),
+    Promise.resolve(),
+  );
+};
