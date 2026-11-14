@@ -226,6 +226,8 @@ jest.mock('@/services/club/clubService', () => ({
 }));
 
 jest.mock('@/services/event/eventQueries', () => ({
+  // EVT-CLUB-ECRANS (14/11) : l'apercu de la carte « Tous les membres du club ».
+  useGetClubAudiencePreview: () => ({ data: null, error: null, isLoading: false }),
   useGetEventTypes: () => ({
     data: mockDonnees.types, error: null, isLoading: false, refetch: () => {},
   }),

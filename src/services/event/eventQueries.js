@@ -6,8 +6,10 @@ import { getPlaceholderDataOption } from '@/services/queryOptions';
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
+  getClubAudiencePreview,
   getEventAttendance,
   getEventById,
+  getEventClubAudience,
   getEventByIdForEdit,
   getEventConvocation,
   getEvents,
@@ -142,5 +144,33 @@ export const useGetEvents = (params, options) => useInfiniteQuery({
   queryKey: getEventsQueryKey(params),
   refetchOnMount: options?.refetchOnMount ?? false,
   staleTime: EVENT_LIST_STALE_MS,
+  ...options,
+});
+
+/**
+ * EVT-CLUB-ECRANS (14/11/2026) — l'apercu « Prevenir tout le club ? » (comptes seulement).
+ * @param {string} clubId Le club.
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options] Options.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La requete.
+ */
+export const useGetClubAudiencePreview = (clubId, options = {}) => useQuery({
+  enabled: Boolean(clubId),
+  queryFn: () => getClubAudiencePreview(clubId, 'club'),
+  queryKey: ['event-club-audience-preview', clubId],
+  staleTime: 60_000,
+  ...options,
+});
+
+/**
+ * EVT-CLUB-ECRANS — la liste « tout le club » du dirigeant.
+ * @param {string} eventId L'evenement.
+ * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options] Options.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any>} La requete.
+ */
+export const useGetEventClubAudience = (eventId, options = {}) => useQuery({
+  enabled: Boolean(eventId),
+  queryFn: () => getEventClubAudience(eventId),
+  queryKey: ['event-club-audience', eventId],
+  staleTime: 15_000,
   ...options,
 });

@@ -36,6 +36,8 @@ const isStageTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes
 const isTournamentTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('tournoi');
 const isMatchTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('match');
 const isOtherTypeName = (typeName = '') => normalizeTypeLabel(typeName) === 'autre';
+// EVT-CLUB (R1 A) : un Match ou un Tournoi garde son equipe avec « tout le club ».
+const keepsTeamTypeName = (typeName = '') => isMatchTypeName(typeName) || isTournamentTypeName(typeName);
 
 const createInitialState = () => {
   const { end, start } = createDefaultTimeRange();
@@ -44,7 +46,11 @@ const createInitialState = () => {
     type: null,
 
     // Step 2: Team
+    // EVT-CLUB-ECRANS (14/11, D121) — « Tous les membres du club » : `audienceScope` ('club') et les
+    // comptes de l'apercu (ecran 2), relus par le recapitulatif (« Pour », 2e confirmation).
+    audienceScope: null,
     club: null,
+    clubAudienceCounts: null,
     team: null,
     tournamentActivity: null,
     tournamentCategory: null,
@@ -228,6 +234,27 @@ function eventWizardReducer(state, action) {
   switch (action.type) {
     case 'RESET':
       return createInitialState();
+    case 'SET_CLUB_AUDIENCE': {
+      // EVT-CLUB (ecran 2, « Oui, tout le club ») — hors Match / Tournoi, l'evenement est rattache au
+      // club, sans equipe ; une serie ne porte pas « tout le club » (decision du chef, 14/11).
+      const keepsTeam = keepsTeamTypeName(state?.type?.name);
+      return {
+        ...state,
+        audienceScope: action.payload?.audienceScope || 'club',
+        club: action.payload?.club || state.club,
+        clubAudienceCounts: action.payload?.counts || null,
+        isRecurrent: false,
+        ...(keepsTeam ? {} : {
+          detectionSlots: [],
+          invitedTeams: [],
+          matchCallUpPlayerIds: [],
+          matchCallUpTouched: false,
+          team: null,
+        }),
+      };
+    }
+    case 'CLEAR_CLUB_AUDIENCE':
+      return { ...state, audienceScope: null, clubAudienceCounts: null };
     case 'SET_DETECTION_SLOTS':
       return { ...state, detectionSlots: action.payload };
     case 'SET_INVITES':
@@ -274,6 +301,8 @@ function eventWizardReducer(state, action) {
         matchCallUpPlayerIds: [],
         matchCallUpTouched: false,
         team: action.payload,
+        // EVT-CLUB : hors Match / Tournoi, choisir une equipe revient a un evenement d'equipe.
+        ...(keepsTeamTypeName(state?.type?.name) ? {} : { audienceScope: null, clubAudienceCounts: null }),
       };
     case 'SET_TEAM_AUDIENCES':
       return { ...state, teamAudiences: action.payload };
@@ -314,6 +343,9 @@ function eventWizardReducer(state, action) {
         !== String(state?.type?.documentId || '');
       const nextState = {
         ...state,
+        // EVT-CLUB : « tout le club » se rechoisit quand le type change vraiment.
+        audienceScope: hasTypeChanged ? null : (state.audienceScope ?? null),
+        clubAudienceCounts: hasTypeChanged ? null : (state.clubAudienceCounts ?? null),
         // AC04 — le mode de capacite se REDEMANDE quand le type change
         // vraiment : c'est le type qui porte le defaut. Un type inchange (le
         // lien « modifier » du Recap) ne touche a rien, meme regle que

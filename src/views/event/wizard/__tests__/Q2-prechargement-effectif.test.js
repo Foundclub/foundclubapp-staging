@@ -122,6 +122,14 @@ jest.mock('@/domains/auth/useAuth', () => {
 // la suite entiere meurt au chargement (0 test execute).
 // C'est CETTE doublure que le prechargement doit appeler — et son compteur qui
 // prouve qu'on ne l'appelle PAS hors match.
+// EVT-CLUB-ECRANS (14/11) — la carte « Tous les membres du club » lit l'apercu du serveur : doublee,
+// sinon l'import de `eventQueries` chargerait le vrai client HTTP. Aucune assertion ne change.
+jest.mock('@/services/event/eventQueries', () => ({
+  useGetClubAudiencePreview: () => ({ data: null, error: null, isLoading: false }),
+}));
+// … et sa feuille (gorhom ne se charge pas sous jest) : fermee, elle ne rend rien.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => () => null);
+
 jest.mock('@/services/team/teamService', () => ({
   getTeamById: (/** @type {string} */ identifiant) => {
     mockAppelsEffectif.push(identifiant);

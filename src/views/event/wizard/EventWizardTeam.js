@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { isClubAudienceEvent, keepsTeamWithClubAudience } from '@/domains/event/clubAudience';
 import { getManagedTeams } from '@/domains/team/teamMembership';
 import useTheme from '@/theme/themeContext';
 
@@ -16,6 +17,7 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import Input from '@/components/molecules/input/Input';
 import TourTarget from '@/components/molecules/tour/TourTarget';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import EventWizardClubAudience from '@/views/event/wizard/components/EventWizardClubAudience';
 import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeamCard';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -309,6 +311,39 @@ function EventWizardTeam({ navigation }) {
     navigation.navigate(nextRoute);
   };
 
+  // EVT-CLUB-ECRANS (14/11, D121, ecrans 1 et 2) — « Tous les membres du club » : le dirigeant
+  // seulement (Q1 A), masquee pendant une recherche. Hors Match / Tournoi, « Oui » rattache
+  // l'evenement au club et passe a l'etape suivante ; un Match / Tournoi garde son equipe (R1 A) :
+  // on reste ici pour la choisir.
+  const keepsClubAudienceTeam = keepsTeamWithClubAudience(state?.type?.name);
+  const showClubAudienceCard = Boolean(
+    isClubManager
+    && organizerClub?.documentId
+    && !normalizeSearchText(searchQuery)
+    && !isLoading
+    && !error
+    && hasTeams,
+  );
+  const handleConfirmClubAudience = (counts) => {
+    dispatch({
+      payload: { audienceScope: 'club', club: organizerClub, counts },
+      type: 'SET_CLUB_AUDIENCE',
+    });
+    if (!keepsClubAudienceTeam) {
+      navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardTeam, state));
+    }
+  };
+  const renderClubAudienceCard = () => (showClubAudienceCard ? (
+    <EventWizardClubAudience
+      club={organizerClub}
+      isSelected={isClubAudienceEvent(state)}
+      keepsTeam={keepsClubAudienceTeam}
+      onClear={() => dispatch({ type: 'CLEAR_CLUB_AUDIENCE' })}
+      onConfirm={handleConfirmClubAudience}
+      teamsCount={availableTeams.length}
+    />
+  ) : null);
+
   const canContinueAutonomousTournament = Boolean(
     organizerClub?.documentId
     && selectedTournamentActivity?.documentId
@@ -564,6 +599,8 @@ function EventWizardTeam({ navigation }) {
 
               {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCardWithAnchor) : null}
 
+              {renderClubAudienceCard()}
+
               {!isLoading && !error && hasFilteredTeams && isClubManager ? (
                 <View style={[Spaces.gap[16]]}>
                   {teamsByOwnership.myTeams.length > 0 ? (
@@ -806,6 +843,8 @@ function EventWizardTeam({ navigation }) {
         ) : null}
 
         {!isLoading && !error && hasFilteredTeams && !isClubManager ? filteredTeams.map(renderTeamCardWithAnchor) : null}
+
+        {renderClubAudienceCard()}
 
         {!isLoading && !error && hasFilteredTeams && isClubManager ? (
           <View style={[Spaces.gap[16]]}>

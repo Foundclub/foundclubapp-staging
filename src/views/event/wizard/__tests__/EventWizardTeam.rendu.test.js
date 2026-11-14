@@ -89,6 +89,14 @@ jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ prefetchQuery: () => Promise.resolve() }),
 }));
 
+// EVT-CLUB-ECRANS (14/11) — la carte « Tous les membres du club » lit l'apercu du serveur : doublee,
+// sinon l'import de `eventQueries` chargerait le vrai client HTTP. Aucune assertion ne change.
+jest.mock('@/services/event/eventQueries', () => ({
+  useGetClubAudiencePreview: () => ({ data: null, error: null, isLoading: false }),
+}));
+// … et sa feuille (gorhom ne se charge pas sous jest) : fermee, elle ne rend rien.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => () => null);
+
 jest.mock('@/services/team/teamService', () => ({
   getTeamById: () => Promise.resolve(null),
   getTeams: () => Promise.resolve([]),

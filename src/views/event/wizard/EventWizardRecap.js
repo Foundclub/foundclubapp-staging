@@ -14,6 +14,11 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import {
+  applyClubAudienceToFormData,
+  isClubAudienceEvent,
+  keepsTeamWithClubAudience,
+} from '@/domains/event/clubAudience';
 import { isEventCustomNameValid, normalizeEventCustomName } from '@/domains/event/eventDisplayName';
 import {
   isTrainingEventType,
@@ -456,7 +461,14 @@ function EventWizardRecap({ navigation }) {
     );
   }, [freeUsageSummary, isMatch, quotaTeamDocumentId, subscriptionAccessLevel]);
 
-  const wizardFormData = useMemo(() => buildWizardFormData(state), [state]);
+  // EVT-CLUB-ECRANS (14/11, D121) — « tout le club » : `audienceScope` (+ `club`, sans `team` hors
+  // Match / Tournoi) ; un evenement ordinaire part a l'identique.
+  // EVT-CLUB-ECRANS (ecran 2 bis, Q4 B) — la 2e confirmation « Créer et prévenir N personnes ? ».
+  const [isClubConfirmOpen, setIsClubConfirmOpen] = useState(false);
+  const wizardFormData = useMemo(
+    () => applyClubAudienceToFormData(buildWizardFormData(state), state),
+    [state],
+  );
 
   const plannedPayloads = useMemo(
     () => (isMultiDayProgram
@@ -649,7 +661,18 @@ function EventWizardRecap({ navigation }) {
       : `${format(new Date(state.stageDefaultStartTime || state.startTime), 'HH:mm')} - ${format(new Date(state.stageDefaultEndTime || state.endTime), 'HH:mm')}`;
   }
   const hasType = Boolean(state.type?.name);
-  const hasTeam = Boolean(state.team?.name || (isTournament && state.tournamentScopeMode === 'autonomous'));
+  // EVT-CLUB-ECRANS — hors Match / Tournoi, « tout le club » n'a pas d'equipe : la ligne « Pour » la remplace.
+  const isClubWide = isClubAudienceEvent(state);
+  const clubWideWithoutTeam = isClubWide && !keepsTeamWithClubAudience(state.type?.name);
+  const clubAudienceTotal = Number(state.clubAudienceCounts?.total);
+  const clubAudienceValue = Number.isFinite(clubAudienceTotal)
+    ? t('eventClubAudience.recapValue', { count: clubAudienceTotal, defaultValue: 'Tout le club · {{count}} personnes' })
+    : t('eventClubAudience.recapValueNoCount', 'Tout le club');
+  const hasTeam = Boolean(
+    state.team?.name
+    || (isTournament && state.tournamentScopeMode === 'autonomous')
+    || clubWideWithoutTeam,
+  );
   const hasDate = Boolean(isMultiDayProgram ? state.stageStartDate && state.stageEndDate : state.date);
   const hasTime = Boolean(isMultiDayProgram ? state.stageDefaultStartTime && state.stageDefaultEndTime : state.startTime && state.endTime);
   const hasLocation = Boolean(state.location || state.facility || hasCompletePerDayLocationSet);
@@ -667,11 +690,16 @@ function EventWizardRecap({ navigation }) {
       label: t('eventWizard.steps.name.recapLabel', 'Nom'),
       value: hasCustomName ? normalizeEventCustomName(state.customName) : recapNotSet,
     }] : []),
-    {
+    ...(clubWideWithoutTeam ? [] : [{
       complete: hasTeam,
       label: t('eventWizard.recap.sections.team'),
       value: teamValue,
-    },
+    }]),
+    ...(isClubWide ? [{
+      complete: true,
+      label: t('eventClubAudience.recapLabel', 'Pour'),
+      value: clubAudienceValue,
+    }] : []),
     {
       complete: hasDate && hasTime,
       label: t('eventWizard.recap.sections.logistics'),
@@ -1201,7 +1229,7 @@ function EventWizardRecap({ navigation }) {
         isNextLoading={isSubmitting}
         nextLabel={t('eventWizard.recap.actions.createShort', 'Creer')}
         onBack={() => navigation.goBack()}
-        onNext={handleSubmit}
+        onNext={isClubWide ? () => setIsClubConfirmOpen(true) : handleSubmit}
         stepCount={getEventWizardStepCount(state)}
         stepIndex={getEventWizardRecapStepIndex(state)}
         subtitle={t(
@@ -1346,10 +1374,19 @@ function EventWizardRecap({ navigation }) {
                   </Text>
                 </TouchableOpacity>
               ) : null}
-              <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.team')}</Text>
-                <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>{teamValue}</Text>
-              </View>
+              {clubWideWithoutTeam ? null : (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventWizard.recap.sections.team')}</Text>
+                  <Text style={[Fonts.p2, hasTeam ? Fonts.neutral00 : Fonts.gold500]}>{teamValue}</Text>
+                </View>
+              )}
+              {/* EVT-CLUB-ECRANS (ecran 2 bis) — « Pour · Tout le club · N personnes ». */}
+              {isClubWide ? (
+                <View style={[Spaces.gap[4]]} testID="event-wizard-recap-club-audience">
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventClubAudience.recapLabel', 'Pour')}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral00]}>{clubAudienceValue}</Text>
+                </View>
+              ) : null}
               {isTournament && state.tournamentScopeMode === 'autonomous' ? (
                 <View style={[Spaces.gap[4]]}>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -1998,6 +2035,67 @@ function EventWizardRecap({ navigation }) {
           ) : null}
         </View>
       </WizardStepLayout>
+
+      {isClubWide ? (
+        <BottomModal
+          close={() => setIsClubConfirmOpen(false)}
+          isVisible={isClubConfirmOpen}
+          scrollable={false}
+          webPresentation="dialog"
+        >
+          <View style={[Spaces.paddingTop[24], Spaces.paddingBottom[24], Spaces.gap[16]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {Number.isFinite(clubAudienceTotal)
+                ? t('eventClubAudience.confirmTitle', {
+                  count: clubAudienceTotal,
+                  defaultValue: 'Créer et prévenir {{count}} personnes ?',
+                })
+                : t('eventClubAudience.confirmTitleNoCount', 'Créer et prévenir tout le club ?')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t('eventClubAudience.confirmIntro', 'Dès que tu valides, chaque membre du club reçoit :')}
+            </Text>
+            <View
+              style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[4], cardSurfaceStyle]}
+              testID="event-wizard-club-notification-preview"
+            >
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('eventClubAudience.notifTitle', 'Tout le club est invité')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral100]}>
+                {t('eventClubAudience.notifBody', {
+                  date: [dateValue, timeValue].filter(Boolean).join(' · '),
+                  defaultValue: '{{name}}, {{date}}. Tu viens ?',
+                  name: (isOther && hasCustomName ? normalizeEventCustomName(state.customName) : typeValue),
+                  ...SANS_ECHAPPEMENT,
+                })}
+              </Text>
+            </View>
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t(
+                'eventClubAudience.confirmWarning',
+                'Une notification envoyée ne se reprend pas. Si tu annules l’événement ensuite, les membres reçoivent l’annulation.',
+              )}
+            </Text>
+            <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
+              <Button
+                isLoading={isSubmitting}
+                onPress={() => {
+                  setIsClubConfirmOpen(false);
+                  handleSubmit();
+                }}
+                title={t('eventClubAudience.confirmCta', 'Créer et prévenir le club')}
+                variant="Primary"
+              />
+              <Button
+                onPress={() => setIsClubConfirmOpen(false)}
+                title={t('eventClubAudience.confirmBack', 'Revenir au récapitulatif')}
+                variant="Secondary"
+              />
+            </View>
+          </View>
+        </BottomModal>
+      ) : null}
 
       <BottomModal
         close={() => {

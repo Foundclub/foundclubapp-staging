@@ -12,6 +12,7 @@ import {
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { isClubAudienceEvent } from '@/domains/event/clubAudience';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -127,8 +128,10 @@ function EventWizardStageProgram({ navigation, route }) {
   const { t } = useTranslation();
   const { dispatch, state } = useEventWizard();
   const { userData } = useAuth();
-  const clubId = state.team?.club?.documentId || null;
-  const cmId = state.team?.club?.parentMultisport?.documentId || null;
+  // EVT-CLUB-ECRANS (14/11) — « tout le club » sans equipe : les installations de son club.
+  const clubDuLieu = state.team?.club || (isClubAudienceEvent(state) ? state.club : null);
+  const clubId = clubDuLieu?.documentId || null;
+  const cmId = clubDuLieu?.parentMultisport?.documentId || null;
   // Creation d'installation reservee aux dirigeants (403 serveur pour les autres roles).
   const facilityManagerRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const canManageFacilities = facilityManagerRoleKey === 'president'

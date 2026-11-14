@@ -4,6 +4,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { isClubAudienceEvent } from '@/domains/event/clubAudience';
 import { closureRefusalText } from '@/domains/facilityClosure/facilityClosureDisplay';
 import useTheme from '@/theme/themeContext';
 
@@ -64,8 +65,10 @@ function EventWizardLocation({ navigation, route }) {
   const dateConnue = route?.params?.returnTo === RouteNames.EventWizardRecap
     || isStageEventType(state.type?.name);
 
-  const clubId = state.team?.club?.documentId;
-  const cmId = state.team?.club?.parentMultisport?.documentId;
+  // EVT-CLUB-ECRANS (14/11) — un evenement « tout le club » sans equipe lit les installations de son club.
+  const clubDuLieu = state.team?.club || (isClubAudienceEvent(state) ? state.club : null);
+  const clubId = clubDuLieu?.documentId;
+  const cmId = clubDuLieu?.parentMultisport?.documentId;
   const occupancyWindow = {
     end: dateConnue ? buildDateTimeIso(state.date, state.endTime) : null,
     start: dateConnue ? buildDateTimeIso(state.date, state.startTime) : null,
@@ -101,8 +104,8 @@ function EventWizardLocation({ navigation, route }) {
     ? null
     : preventionDuCreneau(t, {
       gestionnaire: (decisionDeLaVille.deLaVille && decisionDeLaVille.ville)
-        || (occupationLue?.isShared && state.team?.club?.parentMultisport?.name)
-        || state.team?.club?.name
+        || (occupationLue?.isShared && clubDuLieu?.parentMultisport?.name)
+        || clubDuLieu?.name
         || t('eventWizard.steps.location.prevention.tonClub', 'ton club'),
       mairie: decisionDeLaVille.mairie,
       occupation: occupationLue,
