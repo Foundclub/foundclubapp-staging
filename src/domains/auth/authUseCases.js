@@ -1555,6 +1555,8 @@ export const NOTIFICATION_TYPES = {
   // CONVOC-NOTIFS (29/09) — « Tu n'es plus dans la convocation ». Jumeau serveur :
   // admin/src/api/user-fcm-token/types/index.ts (EVENT_CONVOCATION_REMOVED).
   EVENT_CONVOCATION_REMOVED: 'eventConvocationRemoved',
+  // EVT-CLUB (14/11/2026) — « Tout le club est invité ». Jumeau serveur : EVENT_CLUB_INVITED.
+  EVENT_CLUB_INVITED: 'eventClubInvited',
   EVENT_LINEUP_PUBLISH_REMINDER: 'eventLineupPublishReminder',
   EVENT_PARTICIPANT_REMINDER: 'eventParticipantReminder',
   EVENT_PUBLISHED: 'eventPublished',
