@@ -56,7 +56,7 @@ import { confirmerDansLApp } from '@/utils/fenetreDeLApp';
 /**
  * Le sous-titre d'une communauté selon son genre. Récolte T11 : les replis vivent DANS `t()`
  * (porte i18n:no-regression) ; même clé, même repli qu'avant.
- * @param {(cle: string, repli: string) => string} t
+ * @param {import('i18next').TFunction} t - la traduction.
  * @param {string} genre
  * @returns {string} Le sous-titre.
  */
