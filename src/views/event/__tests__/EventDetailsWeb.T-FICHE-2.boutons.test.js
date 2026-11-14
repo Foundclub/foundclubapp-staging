@@ -216,10 +216,10 @@ const MATCH_EQUIPE = evenement({
 /** @type {any} */
 let mounted = null;
 
-const monter = (/** @type {any} */ event) => {
+const monter = (/** @type {any} */ event, /** @type {any} */ compte = JOUEUR) => {
   mockEventQuery.data = event;
   mockAttendanceQuery.data = { data: { items: [], serverNow: '2099-12-01T10:00:00.000Z', timezone: 'Europe/Paris' } };
-  mockUseAuth.mockReturnValue(JOUEUR);
+  mockUseAuth.mockReturnValue(compte);
   act(() => {
     mounted = renderer.create(
       <EventDetailsWeb
@@ -261,7 +261,8 @@ const texte = (noeud) => (typeof noeud === 'string'
  * @returns {any}
  */
 const blocMonStatut = (arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'div'
-  && texte(n) === 'Mon statut')[0].parent;
+  // Le visiteur lit « Rejoindre cet événement » à la place de « Mon statut » (même bloc).
+  && ['Mon statut', 'Rejoindre cet événement'].includes(texte(n)))[0].parent;
 
 /**
  * Les boutons de « Mon statut », dans l'ordre : [libellé, 'plein' | 'contour'].
@@ -359,4 +360,56 @@ test('« Infos rapides » d un match d équipe : la ligne « Section » reste, a
   const arbre = monter(MATCH_EQUIPE);
   expect(lignesInfosRapides(arbre)).toEqual(['Type', 'Équipe', 'Section', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
   expect(arbre.root.findAll((/** @type {any} */ n) => n.type === 'span' && texte(n) === 'Foot à 11')).toHaveLength(1);
+});
+
+// ==========================================================================
+// T-FICHE-2, suite (14/11, chef du tournoi « B » à Q1 et Q2) :
+// - le VISITEUR non connecté voit aussi « Inscrire mon équipe » plein en tête ; le bouton ouvre la
+//   connexion par le tunnel de « Participer » et demande le retour sur la fiche
+//   (`retourApresConnexion`) ; « Se connecter pour participer » reste, en contour ;
+// - dans « Mode tournoi », le bouton qui inscrit l'équipe du CLUB dit « Inscrire une équipe du
+//   club » (clé existante `registerAClubTeam`, celle du téléphone) ; son action ne change pas.
+// ==========================================================================
+const VISITEUR_ANONYME = { ...JOUEUR, userData: null };
+
+test('visiteur, tournoi à équipes libres : « Inscrire mon équipe » plein, « Se connecter pour participer » en contour', () => {
+  expect(boutonsMonStatut(monter(tournoiAutonome(), VISITEUR_ANONYME))).toEqual([
+    ['Inscrire mon équipe', 'plein'],
+    ['Se connecter pour participer', 'contour'],
+  ]);
+});
+
+test('visiteur : « Inscrire mon équipe » ouvre la connexion (tunnel de Participer) et demande le retour sur la fiche', () => {
+  const arbre = monter(tournoiAutonome(), VISITEUR_ANONYME);
+  cliquer(arbre, 'Inscrire mon équipe');
+  expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {
+    params: expect.objectContaining({ origin: 'EventDetails', retourApresConnexion: true }),
+    screen: 'Login',
+  });
+  // Aucune équipe créée sans compte.
+  expect(mockFeuilleEquipe).not.toHaveBeenCalledWith('name');
+});
+
+test('visiteur, tournoi SANS équipes libres : rien ne change', () => {
+  const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCustomTeams: false } }), VISITEUR_ANONYME);
+  expect(boutonsMonStatut(arbre)).toEqual([['Se connecter pour participer', 'plein']]);
+});
+
+test('visiteur, match d équipe : rien ne change', () => {
+  expect(boutonsMonStatut(monter(MATCH_EQUIPE, VISITEUR_ANONYME))).toEqual([['Se connecter pour participer', 'plein']]);
+});
+
+test('« Mode tournoi » : l équipe du club s inscrit par « Inscrire une équipe du club », même action', () => {
+  const entraineur = {
+    ...JOUEUR,
+    userData: { ...JOUEUR.userData, trainedTeams: [{ documentId: 'team-u13', name: 'U13' }] },
+  };
+  const arbre = monter(tournoiAutonome(), entraineur);
+  const blocTournoi = arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
+  const libelles = blocTournoi.findAll((/** @type {any} */ n) => n.type === 'button').map(texte);
+  expect(libelles).toContain('Inscrire une équipe du club');
+  expect(libelles).not.toContain('Inscrire mon équipe');
+  const bouton = blocTournoi.findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Inscrire une équipe du club')[0];
+  act(() => { bouton.props.onClick(); });
+  expect(mockFeuilleEquipe).toHaveBeenLastCalledWith('choose');
 });

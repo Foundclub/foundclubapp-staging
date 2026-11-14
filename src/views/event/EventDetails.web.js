@@ -626,7 +626,17 @@ function EventDetails({ navigation, route }) {
     && event?.tournamentConfig?.allowCustomTeams !== false
     && equipeDuCompteAuTournoi?.documentId,
   );
-  const inscrireMonEquipeEnTete = !voirMonEquipeEnTete && canCreateCustomTournamentTeam;
+  // T-FICHE-2, suite (chef du tournoi « B », 14/11) : le visiteur non connecté le voit aussi ; le
+  // bouton ouvre la connexion (tunnel de « Participer ») puis ramène sur la fiche.
+  const inscrireMonEquipeVisiteur = Boolean(
+    !isSignedIn
+    && isTournamentEvent
+    && !tournoiClos
+    && !offreAuxEnfants
+    && event?.tournamentConfig?.allowCustomTeams !== false,
+  );
+  const inscrireMonEquipeEnTete = !voirMonEquipeEnTete
+    && (canCreateCustomTournamentTeam || inscrireMonEquipeVisiteur);
   const boutonEquipeEnTete = voirMonEquipeEnTete || inscrireMonEquipeEnTete;
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
@@ -2647,9 +2657,19 @@ function EventDetails({ navigation, route }) {
                     <button
                       data-testid="event-status-tournament-team"
                       disabled={inscrireMonEquipeEnTete && createTournamentTeamMutation.isPending}
-                      onClick={voirMonEquipeEnTete
-                        ? () => handleOpenTournamentTeam(equipeDuCompteAuTournoi?.documentId)
-                        : handleCreateTournamentTeam}
+                      onClick={() => {
+                        if (voirMonEquipeEnTete) {
+                          handleOpenTournamentTeam(equipeDuCompteAuTournoi?.documentId);
+                        } else if (isSignedIn) {
+                          handleCreateTournamentTeam();
+                        } else {
+                          openPublicAuthFlow(navigation, {
+                            origin: RouteNames.EventDetails,
+                            retourApresConnexion: true,
+                            source: 'event-details-register-team',
+                          });
+                        }
+                      }}
                       style={{ ...primaryButtonStyle, padding: '12px 16px' }}
                       type="button"
                     >
@@ -3772,7 +3792,9 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        {t('eventDetails.registerMyTeam', 'Inscrire mon équipe')}
+                        {/* T-FICHE-2 (chef du tournoi « B », 14/11) : l'équipe du CLUB, comme au
+                            téléphone ; « Inscrire mon équipe » est le bouton de tête. */}
+                        {t('eventDetails.registerAClubTeam', 'Inscrire une équipe du club')}
                       </button>
                     ) : null}
                     {canCreateCustomTournamentTeam ? (
