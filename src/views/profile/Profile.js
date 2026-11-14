@@ -77,6 +77,7 @@ import {
   PARENTAL_POWER_ENDS_AGE,
 } from '@/constants/parentalDeclaration';
 import { useTour } from '@/context/useTour';
+import useNotificationsDuCompte from '@/hooks/useNotificationsDuCompte';
 import { getItem, removeItem, setItem } from '@/platform/storage';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
@@ -168,6 +169,8 @@ function Profile({ navigation, route }) {
   // l'assistance (la conversation dans l'app) ou envoyer un e-mail (le lien de R24).
   const [isContactChoiceOpen, setIsContactChoiceOpen] = useState(false);
   const assistance = useOuvrirLAssistance({ navigation });
+  // NOTIF-COMPTE (D122) — l'état réel de la permission du téléphone (null : pas de rangée).
+  const { agir: agirNotifications, etat: etatNotifications } = useNotificationsDuCompte();
   const safeAuthSessions = authSessions || [];
   const hasMultipleConnectedAccounts = safeAuthSessions.length > 1;
   const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
@@ -840,17 +843,18 @@ function Profile({ navigation, route }) {
 
   /**
    * @param {{ key: string, icon: any, label: string, onPress: () => void,
-   *   destructive?: boolean, isLast?: boolean, value?: string, badge?: number,
+   *   destructive?: boolean, isLast?: boolean, value?: import('react').ReactNode, badge?: number,
    *   nombre?: number, a11y?: string, accessoire?: import('react').ReactNode,
-   *   sousLigne?: boolean }} params -
+   *   sousLigne?: boolean, lignesDeValeur?: number }} params -
    *   `nombre` (PAR-L7) : un compte qui n'est pas une alerte (« 2 » enfants), dit par une pastille
    *   cyan, jamais par la pastille rouge. `accessoire` (RESA-L6B-1) : ce qui se lit lui-même (le
    *   nombre de « Mes réservations »), posé à la place de cette pastille. `sousLigne`
    *   (GUIDE-FINITIONS-2 N10) : un choix d'un menu déplié, en retrait sous sa rangée.
+   *   `lignesDeValeur` (NOTIF-COMPTE) : une explication suivie de son geste, sur plusieurs lignes.
    */
   const renderAccountRow = ({
     a11y = undefined, accessoire = null, badge = 0, destructive = false, icon, isLast = false,
-    key, label, nombre = 0, onPress, sousLigne = false, value = undefined,
+    key, label, lignesDeValeur = 0, nombre = 0, onPress, sousLigne = false, value = undefined,
   }) => (
     <TouchableOpacity
       accessibilityLabel={a11y}
@@ -899,7 +903,10 @@ function Profile({ navigation, route }) {
         {/* COLL-ACCUEIL — la rangée de la Ville : son nom, puis « Ma collectivité » dessous. */}
         {value ? (
           // N10 : le détail d'un choix de menu tient sur deux lignes (retrait de 42).
-          <Text numberOfLines={sousLigne ? 2 : 1} style={[Fonts.p3, Fonts.neutral300]}>
+          <Text
+            numberOfLines={lignesDeValeur || (sousLigne ? 2 : 1)}
+            style={[Fonts.p3, Fonts.neutral300]}
+          >
             {value}
           </Text>
         ) : null}
@@ -1266,6 +1273,59 @@ function Profile({ navigation, route }) {
   };
   const guideRows = isGuideSupported() ? guideKeys.flatMap(guideRowsOf) : [];
 
+  /**
+   * NOTIF-COMPTE — la rangée « Notifications » selon l'état du téléphone : « Activées » (pastille
+   * verte), « Activer » (la demande système), ou « Ouvrir les Réglages », sous leur raison.
+   * @param {{ agir: () => Promise<void>, etat: 'accordee' | 'a_demander' | 'refusee' }} param0
+   * @returns {object} - La rangée, pour `renderAccountRow`.
+   */
+  const rangeeNotifications = ({ agir, etat }) => {
+    const commun = {
+      icon: Images.bell,
+      key: 'notifications',
+      label: t('profile.notifications.title', 'Notifications'),
+      onPress: agir,
+    };
+    if (etat === 'accordee') {
+      return {
+        ...commun,
+        accessoire: (
+          <PastilleDEtat
+            testID="notifications-etat"
+            texte={t('profile.notifications.on', 'Activées')}
+            ton="ok"
+          />
+        ),
+      };
+    }
+    const refusee = etat === 'refusee';
+    // La raison, puis le geste en cyan sur sa propre ligne : à droite, il volait la place
+    // de la raison.
+    return {
+      ...commun,
+      lignesDeValeur: 4,
+      value: (
+        <>
+          {refusee
+            ? t(
+              'profile.notifications.refusedHint',
+              'Coupées sur ce téléphone : seuls ses Réglages peuvent les rallumer.',
+            )
+            : t(
+              'profile.notifications.enableHint',
+              'Pour savoir quand on t’écrit ou qu’on te convoque.',
+            )}
+          {'\n'}
+          <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
+            {refusee
+              ? t('profile.notifications.openSettings', 'Ouvrir les Réglages')
+              : t('profile.notifications.enable', 'Activer')}
+          </Text>
+        </>
+      ),
+    };
+  };
+
   const accountNonLogoutRows = [
     // Garde-fou du 14/09 : pas de choix de langue tant que l anglais est fermé (production).
     ...(anglaisDisponible() ? languageRows : []),
@@ -1294,6 +1354,12 @@ function Profile({ navigation, route }) {
       label: t('profile.privacy.title', 'Confidentialité'),
       onPress: () => navigateOrExplainOnWeb(navigation, RouteNames.PrivacySettings),
     },
+    // NOTIF-COMPTE (D122, demande d'Adel du 13/11) — « un onglet pour activer les notifications
+    // dans le compte » : l'état réel du téléphone, et son geste. Refusées, seuls les Réglages du
+    // téléphone peuvent les rallumer (iOS ne redemande jamais). Pas sur le site (pas de push).
+    ...(etatNotifications
+      ? [rangeeNotifications({ agir: agirNotifications, etat: etatNotifications })]
+      : []),
     // R24 — Apple 1.5 exige un moyen FACILE de joindre l'editeur DANS l'app.
     // Le seul bouton nomme « Nous contacter » ouvrait jusqu'ici la fenetre
     // « je ne trouve pas mon club » du tunnel d'affiliation : une demande aux

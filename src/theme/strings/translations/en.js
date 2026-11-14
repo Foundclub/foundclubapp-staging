@@ -18609,6 +18609,14 @@ export default {
       en: 'English',
       fr: 'Français',
     },
+    notifications: {
+      enable: 'Turn on',
+      enableHint: 'To know when someone messages you or calls you up.',
+      on: 'On',
+      openSettings: 'Open Settings',
+      refusedHint: 'Turned off on this phone: only its Settings can turn them back on.',
+      title: 'Notifications',
+    },
     privacy: {
       privateHelper: "Other members no longer see your profile or find you in search. Your card's QR code simply leads to FoundClub.",
       privateLabel: 'Private account',

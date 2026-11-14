@@ -86,3 +86,22 @@ test('NOTIF-PREDEMANDE — notre ecran remplace l ancienne fenetre maison', () =
   );
   expect(fenetres.map((n) => n.props.primaryAction.label)).toEqual(['Ajouter au calendrier']);
 });
+
+// NOTIF-COMPTE (D122) — la rangée « Notifications » de « Mon compte » emprunte la MÊME activation
+// que notre écran : branchée au montage, débranchée au démontage (plus rien à appeler ensuite).
+test('NOTIF-COMPTE — l activation du compte est celle de useNotifications', async () => {
+  const {
+    activerNotificationsDepuisLeCompte,
+  } = jest.requireActual('@/utils/notifications/preDemandeNotifications');
+  mockActiver.mockClear();
+  mockActiver.mockResolvedValue('success');
+  let arbre;
+  act(() => { arbre = renderer.create(<NotificationBootstrap />); });
+
+  await expect(activerNotificationsDepuisLeCompte()).resolves.toBe('success');
+  expect(mockActiver).toHaveBeenCalledTimes(1);
+
+  act(() => { arbre.unmount(); });
+  await expect(activerNotificationsDepuisLeCompte()).resolves.toBe('skipped');
+  expect(mockActiver).toHaveBeenCalledTimes(1);
+});

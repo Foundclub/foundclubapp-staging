@@ -158,6 +158,14 @@ jest.mock('@/services/collectivite/collectiviteQueries', () => {
   return { useCollectiviteRequests: () => aucune, useMyCollectivites: () => aucune, useMyManagerRequests: () => ({ data: [] }) };
 });
 jest.mock('@/config/legalUrls', () => ({ SUPPORT_CONTACT_MAILTO: 'mailto:contact@exemple.test' }));
+// NOTIF-COMPTE (D122) — l'état de la permission du téléphone est doublé (son crochet a ses
+// propres témoins) ; `etat: null` = pas de rangée (site, ou notifications push éteintes).
+/** @type {any} */
+let mockNotifCompte = { agir: jest.fn(), etat: null };
+jest.mock('@/hooks/useNotificationsDuCompte', () => ({
+  __esModule: true,
+  default: () => mockNotifCompte,
+}));
 
 const Profile = require('../Profile').default;
 
@@ -468,5 +476,32 @@ describe('R17-SIGNALER-1 — « Mon compte » : la rangée « Mes signalements �
     expect(signalements('player')).toEqual([]);
     mockMesSignalements = { data: null };
     expect(signalements('coach')).toEqual([]);
+  });
+});
+
+// NOTIF-COMPTE (D122, demande d'Adel du 13/11 : « un onglet pour activer les notifications dans
+// le compte ») — la rangée suit « Confidentialité » et dit l'état RÉEL du téléphone.
+describe('NOTIF-COMPTE — la rangée « Notifications » de « Mon compte »', () => {
+  afterEach(() => { mockNotifCompte = { agir: jest.fn(), etat: null }; });
+
+  it.each([
+    ['accordee', 'NotificationsActivées'],
+    ['a_demander', 'NotificationsPour savoir quand on t’écrit ou qu’on te convoque.\nActiver'],
+    ['refusee', 'NotificationsCoupées sur ce téléphone : seuls ses Réglages peuvent les rallumer.\nOuvrir les Réglages'],
+  ])('%s', (etat, attendu) => {
+    mockNotifCompte = { agir: jest.fn(), etat };
+    const { arbre } = monter('player');
+
+    const liste = rangees(arbre);
+    expect(liste[liste.indexOf('Confidentialité') + 1]).toBe(attendu);
+
+    appuyerSur(arbre, attendu);
+    expect(mockNotifCompte.agir).toHaveBeenCalledTimes(1);
+  });
+
+  it('état inconnu (site, push éteint) : aucune rangée', () => {
+    const { arbre } = monter('player');
+
+    expect(rangees(arbre).some((texte) => texte.startsWith('Notifications'))).toBe(false);
   });
 });

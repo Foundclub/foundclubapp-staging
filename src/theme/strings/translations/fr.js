@@ -19373,6 +19373,16 @@ export default {
     // bien enregistree ») : « ton » ou « ta » devant un libelle oblige a
     // connaitre son genre, et « ton date de naissance » serait faux.
     // Table des champs : `services/profile/profileSaveConfirmation.js`.
+    // NOTIF-COMPTE (D122, 13/11) — la rangée « Notifications » de « Mon compte » : l'état réel
+    // de la permission du téléphone, et le geste qui la rallume.
+    notifications: {
+      enable: 'Activer',
+      enableHint: 'Pour savoir quand on t’écrit ou qu’on te convoque.',
+      on: 'Activées',
+      openSettings: 'Ouvrir les Réglages',
+      refusedHint: 'Coupées sur ce téléphone : seuls ses Réglages peuvent les rallumer.',
+      title: 'Notifications',
+    },
     privacy: {
       privateHelper: 'Les autres membres ne voient plus ton profil'
         + ' et ne te trouvent plus en recherche.'
