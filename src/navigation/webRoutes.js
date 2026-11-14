@@ -156,6 +156,10 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.Conversation]: '/messages/:chatId',
   [RouteNames.Chat]: '/messages',
   [RouteNames.NewConversation]: '/messages/new',
+  // COMMUNAUTES-L2 (13/11, D76) : hors de /messages/:chatId, pour ne jamais lire
+  // « communautes » comme un fil.
+  [RouteNames.Communautes]: '/communautes',
+  [RouteNames.NouveauGroupeCommunaute]: '/communautes/nouveau',
   [RouteNames.ConversationPublicEventPicker]: '/messages/:chatId/public-events',
   [RouteNames.BookingCalendar]: '/booking',
   [RouteNames.ReservationDetails]: '/reservations/:reservationId',

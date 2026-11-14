@@ -723,6 +723,23 @@ function PrivateNavigator() {
             headerShown: false,
           }}
         />
+        {/* COMMUNAUTES-L2 (13/11, D76) : mes communautes, puis « Nouveau groupe » en 2 etapes. */}
+        <Stack.Screen
+          getComponent={() => require('@/views/communautes/Communautes').default}
+          name={RouteNames.Communautes}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/communautes/NouveauGroupeCommunaute').default}
+          name={RouteNames.NouveauGroupeCommunaute}
+          options={{
+            ...commonOptions,
+            headerShown: false,
+          }}
+        />
         <Stack.Screen
           getComponent={() => require('@/views/PollDetails').default}
           name={RouteNames.PollDetails}

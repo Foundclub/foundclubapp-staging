@@ -109,6 +109,8 @@ export const RouteNames = /** @type {const} */ ({
   CollectiviteInstallationForm: 'CollectiviteInstallationForm',
   CollectiviteInstallations: 'CollectiviteInstallations',
   CollectiviteRequests: 'CollectiviteRequests',
+  // COMMUNAUTES-L2 (13/11, D76) : mes communautes, puis « Nouveau groupe » en 2 etapes.
+  Communautes: 'Communautes',
   Conversation: 'Conversation',
   ConversationPublicEventPicker: 'ConversationPublicEventPicker',
   CreateSection: 'CreateSection',
@@ -148,6 +150,7 @@ export const RouteNames = /** @type {const} */ ({
   NewConversation: 'NewConversation',
   NotificationDetails: 'NotificationDetails',
   NotificationList: 'NotificationList',
+  NouveauGroupeCommunaute: 'NouveauGroupeCommunaute',
   // PARENT-LIEN (30/09) — l ecran du PARENT : relier le compte de son enfant, ou F20 « donner
   // un compte a Lina » (meme ecran, avec la fiche en parametre).
   ParentLinkInvite: 'ParentLinkInvite',
