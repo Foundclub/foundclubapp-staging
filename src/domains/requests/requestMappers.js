@@ -489,7 +489,10 @@ export const mapFeaturedRequestToHubItem = (/** @type {Record<string, any>} */ e
     'requestMappers.eventFallback',
     'Événement',
   );
-  const clubName = normalizeString(eventEntity?.team?.club?.name) || i18next.t(
+  // T-FICHE (14/11) : un tournoi autonome n'a pas d'équipe, son club est `event.club`.
+  const clubName = normalizeString(
+    eventEntity?.team?.club?.name || eventEntity?.club?.name,
+  ) || i18next.t(
     'requestMappers.clubFallback',
     'Club',
   );

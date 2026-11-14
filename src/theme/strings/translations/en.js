@@ -10586,6 +10586,7 @@ export default {
     optional: 'Optional',
     organisingClub: 'Organising club:',
     organisingTeam: 'Organising team',
+    organizer: 'Organizer',
     participants: 'Participants',
     participantsFilter: {
       absent: 'Absent',

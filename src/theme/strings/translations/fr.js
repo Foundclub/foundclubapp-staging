@@ -11217,6 +11217,7 @@ export default {
     optional: 'Facultatif',
     organisingClub: 'Club organisateur :',
     organisingTeam: 'Équipe organisatrice',
+    organizer: 'Organisateur',
     participants: 'Participants',
     participantsFilter: {
       absent: 'Absents',

@@ -1056,6 +1056,8 @@ function EventDetails({ navigation, route }) {
   // « AS Montrivage — Test-COMPO ». Sans adversaire connu, le nom d'avant reste (jamais
   // un « — » orphelin).
   const headerClubName = String(event?.team?.club?.name || event?.club?.name || '').trim();
+  // T-FICHE (14/11) — « Infos rapides » : sans équipe, le club de l'événement est l'organisateur.
+  const quickInfoOrganizerName = event?.team ? '' : String(event?.club?.name || '').trim();
   const headerTitle = isMatchEvent && headerClubName && matchOpponentName
     ? `${headerClubName} — ${matchOpponentName}`
     : event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Événement');
@@ -3495,10 +3497,16 @@ function EventDetails({ navigation, route }) {
                       label: 'Type',
                       value: event?.type?.name || t('eventDetails.notSet', 'Non défini'),
                     },
-                    {
+                    // T-FICHE (14/11) : un tournoi autonome n'a pas d'équipe, seulement un club
+                    // (`event.club`) → « Organisateur » ; ni équipe ni club → ligne masquée.
+                    ...(event?.team ? [{
                       label: t('eventDetails.teamFallback', 'Equipe'),
-                      value: event?.team?.name || t('eventDetails.notSetFeminine', 'Non définie'),
-                    },
+                      value: event.team.name || t('eventDetails.notSetFeminine', 'Non définie'),
+                    }] : []),
+                    ...(quickInfoOrganizerName ? [{
+                      label: t('eventDetails.organizer', 'Organisateur'),
+                      value: quickInfoOrganizerName,
+                    }] : []),
                     {
                       label: 'Section',
                       value: event?.team?.section?.name
