@@ -70,6 +70,23 @@ export const canSeeClubAudience = (event, userData, roles) => {
 };
 
 /**
+ * EVT-CLUB-SECTIONS (15/11, R6 B) — « Toutes les sections » : l'omnisports dont l'utilisateur
+ * est admin et dont `club` est une section. Lui seul voit ce choix (ni le dirigeant d'une section,
+ * ni un entraineur) ; le serveur juge aussi (admins de `parentMultisport`, 403 sinon).
+ * @param {any} userData L'utilisateur connecte.
+ * @param {any} club Le club organisateur.
+ * @returns {any|null} L'omnisports (`name`, `sections`), ou null.
+ */
+export const getAllSectionsMultisport = (userData, club) => {
+  const clubId = idOf(club);
+  if (!clubId) return null;
+  return (Array.isArray(userData?.multisportClubs) ? userData.multisportClubs : []).find(
+    (/** @type {any} */ multisport) => (multisport?.sections || [])
+      .some((/** @type {any} */ section) => idOf(section) === clubId),
+  ) || null;
+};
+
+/**
  * Ordre alphabetique par prenom, puis initiale (maquette 4a).
  * @param {any[]} rows Les lignes du serveur.
  * @returns {any[]} Une copie triee.
