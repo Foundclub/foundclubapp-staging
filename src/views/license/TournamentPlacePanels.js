@@ -92,7 +92,8 @@ export function TournamentPlaceResult({
  * @param {object} props - Les propriétés.
  * @param {boolean} props.canPay - Le bouton Stripe est-il proposé ?
  * @param {string | null} [props.complexeName] - Le complexe du tournoi (phrase du favori), ou null.
- * @param {boolean} [props.disabled] - T-PARENT : bouton inactif (autorisation parentale incomplète).
+ * @param {boolean} [props.disabled] - T-PARENT : bouton inactif
+ *   (autorisation parentale incomplète).
  * @param {boolean} props.isLoading - Le paiement s'ouvre-t-il ?
  * @param {() => void} props.onOpenTerms - Ouvre les conditions d'inscription.
  * @param {() => void} props.onPay - Ouvre le paiement Stripe.

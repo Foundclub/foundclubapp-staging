@@ -65,7 +65,8 @@ export const canSeeClubAudience = (event, userData, roles) => {
   const multisportId = idOf(eventClub?.parentMultisport);
   return (
     Boolean(multisportId)
-    && (userData?.multisportClubs || []).some((/** @type {any} */ club) => idOf(club) === multisportId)
+    && (userData?.multisportClubs || [])
+      .some((/** @type {any} */ club) => idOf(club) === multisportId)
   );
 };
 
