@@ -19661,6 +19661,26 @@ export default {
     waitingOpponent: 'En attente de la réponse adverse',
   },
   publicLicensePayment: {
+    parentalConsent: {
+      accept: 'J’autorise mon enfant à participer au tournoi',
+      image: 'Les deux parents autorisent photos et vidéos (facultatif)',
+      intro: 'Ce joueur a 16 ou 17 ans : un de ses parents remplit ce bloc avant le paiement, même si la place est payée par quelqu’un d’autre.',
+      missing: 'Remplis les champs et coche l’autorisation pour pouvoir payer.',
+      parentName: 'Nom et prénom du parent',
+      parentPhone: 'Téléphone du parent, joignable le soir du tournoi',
+      relation: {
+        father: 'Père',
+        legal_guardian: 'Représentant légal',
+        mother: 'Mère',
+        title: 'Lien avec le joueur',
+      },
+      return: {
+        alone: 'Il rentre seul',
+        picked_up: 'Quelqu’un vient le chercher',
+        title: 'Après le tournoi',
+      },
+      title: 'Autorisation parentale',
+    },
     alerts: {
       checkoutError: {
         noLink: 'Aucun lien de paiement configure.',
@@ -26950,6 +26970,8 @@ export default {
     noProfileAvailableToInvite: 'Aucun profil disponible à inviter pour cette recherche.',
     openRequests: 'Ouvrir les demandes',
     parentalConsentPending: 'Autorisation parentale attendue',
+    parentalConsentReceived: 'Autorisation parentale reçue',
+    noImage: 'Pas d’image',
     participant: 'Participant',
     pending: 'En attente',
     pendingInvitations: 'Invitations en attente',

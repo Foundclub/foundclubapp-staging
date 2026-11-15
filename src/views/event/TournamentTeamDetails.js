@@ -39,6 +39,7 @@ import {
 import { searchScopedUsers, searchUsers } from '@/services/user/userService';
 
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import TournamentMemberConsent from './TournamentMemberConsent';
 import { TournamentMemberPlace, TournamentPlacesSummary } from './TournamentMemberPlace';
 import {
   getTournamentMemberBuckets,
@@ -543,18 +544,8 @@ function TournamentTeamDetails({ navigation, route }) {
                 ) : memberStatusMeta.label}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral300]}>{getOriginLabel(member?.origin)}</Text>
-              {member?.parentalConsentPending === true ? (
-                // T-AGE (15/11) : membre de 16-17 ans, marqué par le serveur.
-                <Text
-                  style={[Fonts.p4, { color: Colors.warning500 }]}
-                  testID={`tournament-member-parental-consent-${member?.documentId}`}
-                >
-                  {t(
-                    'tournamentTeamDetails.parentalConsentPending',
-                    'Autorisation parentale attendue',
-                  )}
-                </Text>
-              ) : null}
+              {/* T-AGE puis T-PARENT (15/11) : autorisation attendue / reçue, pas d'image. */}
+              <TournamentMemberConsent member={member} />
               {variant === 'active' ? (
                 <TournamentMemberPlace place={placesByMember.get(member?.documentId)} />
               ) : null}

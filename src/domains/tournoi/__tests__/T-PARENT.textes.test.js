@@ -1,0 +1,34 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
+import { createHash } from 'crypto';
+
+import { TEXTE_DE_L_AUTORISATION, VERSION_DE_L_AUTORISATION } from '../autorisationParentale';
+import { PARAGRAPHES_DES_CONDITIONS, VERSION_DES_CONDITIONS } from '../conditionsTournoi';
+
+// T-PARENT (15/11/2026) — les deux textes légaux du tournoi du 19/12.
+// - L'autorisation parentale : son empreinte sha256 est celle que le serveur garde sous sa version (admin
+//   `tournament-payment.js`, PARENTAL_CONSENT_VERSIONS ; témoin admin T-PARENT/P3 sur la même valeur). Changer une
+//   virgule du texte sans nouvelle version rougit ici.
+// - Les conditions d'inscription (CGV_INSCRIPTION partie II) : nom légal « Found Club », aucun passage encore entre
+//   crochets, les 10 parties dans l'ordre.
+
+const EMPREINTE_DU_SERVEUR = '2fcbffe15d0d24377e35a2e5eeb1c2a4a82c455eefb6e2fd5269e78f8fccb93f';
+
+describe('T-PARENT — les textes du tournoi', () => {
+  test('🔴 l autorisation : version v1 du 15/11 et empreinte égale à celle du serveur', () => {
+    expect(VERSION_DE_L_AUTORISATION).toBe('tournament-parental-consent-v1-2026-11-15');
+    expect(createHash('sha256').update(TEXTE_DE_L_AUTORISATION, 'utf8').digest('hex')).toBe(EMPREINTE_DU_SERVEUR);
+  });
+
+  test('🔴 l autorisation reprend les points de MINEURS.md (événement, santé, urgence, retour, conditions)', () => {
+    ['19 décembre 2026', 'AR Soccer', '1 h au plus tard', 'sport de contact', 'joueurs majeurs', 'contre-indication', 'appeler les secours', 'rentre', 'conditions d\'inscription'].forEach((morceau) => expect(TEXTE_DE_L_AUTORISATION).toContain(morceau));
+  });
+
+  test('🔴 les conditions : 10 parties dans l ordre, « Found Club », aucun crochet, aucun gras restant', () => {
+    const titres = PARAGRAPHES_DES_CONDITIONS.filter((p) => /^\d+\. /.test(p)).map((p) => Number(p.split('.')[0]));
+    expect(titres).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    const tout = PARAGRAPHES_DES_CONDITIONS.join('\n');
+    expect(tout).toContain('organisé par Found Club (SIREN 940 032 253');
+    expect(tout).not.toMatch(/\[|\]|\*\*/);
+    expect(PARAGRAPHES_DES_CONDITIONS[1]).toBe(VERSION_DES_CONDITIONS);
+  });
+});

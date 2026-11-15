@@ -92,9 +92,9 @@ const equipe = () => ({
 
 /** @type {any[]} */
 const montes = [];
-const monter = async () => {
+const monter = async (equipeMontee = equipe()) => {
   mockAuth = { accountRoleKey: 'player', userData: { documentId: 'u-cap' } };
-  mockTeam = equipe();
+  mockTeam = equipeMontee;
   /** @type {any} */
   let arbre = null;
   await act(async () => {
@@ -130,5 +130,23 @@ describe('T-AGE — la fiche d équipe et les 16-17 ans', () => {
     invitation.onError({ message: 'Ce tournoi est ouvert à partir de 16 ans' });
     expect(alerte).toHaveBeenCalledWith(expect.any(String), 'Ce tournoi est ouvert à partir de 16 ans');
     alerte.mockRestore();
+  });
+});
+
+// T-PARENT (15/11) — l autorisation recue (`parentalConsentReceived`) et « pas d image » (`noImage`), poses par le
+// serveur (vue d equipe, pour qui voit les personnes) quand le parent a coche la case sur la page de paiement.
+describe('T-PARENT — la fiche d équipe après l autorisation', () => {
+  test('🔴 « Autorisation reçue » et « Pas d image » sur la carte de l ado, rien pour l adulte', async () => {
+    const team = equipe();
+    team.members[1] = {
+      ...team.members[1], noImage: true, parentalConsentPending: undefined, parentalConsentReceived: true,
+    };
+    const arbre = await monter(team);
+    const toutes = JSON.stringify(arbre.toJSON());
+    expect(toutes).not.toContain('Autorisation parentale attendue');
+    expect(toutes.split('Autorisation parentale reçue')).toHaveLength(2);
+    expect(toutes.split('Pas d’image')).toHaveLength(2);
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-member-no-image-mb-2').length).toBeGreaterThan(0);
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-member-no-image-mb-3')).toHaveLength(0);
   });
 });

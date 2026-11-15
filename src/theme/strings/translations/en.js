@@ -18869,6 +18869,26 @@ export default {
     waitingOpponent: "Awaiting the opponent's reply",
   },
   publicLicensePayment: {
+    parentalConsent: {
+      accept: 'I allow my child to take part in the tournament',
+      image: 'Both parents allow photos and videos (optional)',
+      intro: 'This player is 16 or 17: one of their parents fills in this section before payment, even if someone else pays for the spot.',
+      missing: 'Fill in the fields and tick the consent box to pay.',
+      parentName: 'Parent’s full name',
+      parentPhone: 'Parent’s phone, reachable on the evening of the tournament',
+      relation: {
+        father: 'Father',
+        legal_guardian: 'Legal guardian',
+        mother: 'Mother',
+        title: 'Relationship to the player',
+      },
+      return: {
+        alone: 'Goes home alone',
+        picked_up: 'Someone picks them up',
+        title: 'After the tournament',
+      },
+      title: 'Parental consent',
+    },
     alerts: {
       checkoutError: {
         noLink: 'No payment link set up.',
@@ -25796,6 +25816,8 @@ export default {
     noProfileAvailableToInvite: 'No profile available to invite for this search.',
     openRequests: 'Open requests',
     parentalConsentPending: 'Parental consent pending',
+    parentalConsentReceived: 'Parental consent received',
+    noImage: 'No photos',
     participant: 'Participant',
     pending: 'Pending',
     pendingInvitations: 'Pending invitations',
