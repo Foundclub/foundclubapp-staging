@@ -46,3 +46,14 @@ export const LEGAL_COMPLEXE_RULES_PATH = '/regles-complexes';
 
 /** @see LEGAL_COMPLEXE_RULES_PATH */
 export const LEGAL_COMPLEXE_RULES_URL = `https://foundclub.app${LEGAL_COMPLEXE_RULES_PATH}`;
+
+/**
+ * T-PARENT (15/11/2026) — les « Conditions d'inscription » du tournoi FoundClub x AR Soccer du
+ * 19/12/2026 (CGV_INSCRIPTION partie II), page publique du SITE (`web/src/pages/seo`), lisible
+ * sans compte. Le lien « Conditions d'inscription » de la page de paiement d'une place y mène.
+ * Le texte vit dans `domains/tournoi/conditionsTournoi.js`.
+ */
+export const LEGAL_TOURNAMENT_TERMS_PATH = '/conditions-tournoi';
+
+/** @see LEGAL_TOURNAMENT_TERMS_PATH */
+export const LEGAL_TOURNAMENT_TERMS_URL = `https://foundclub.app${LEGAL_TOURNAMENT_TERMS_PATH}`;

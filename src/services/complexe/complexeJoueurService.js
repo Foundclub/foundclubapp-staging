@@ -417,3 +417,14 @@ export const signalerUnComplexe = async ({ complexe, details = null, motif }) =>
 export const lireLesPartenaires = async (slug) => corps(
   client.get(`/public-complexes/${enc(slug)}/partenaires`),
 );
+
+/**
+ * T-COMPLEXE (D13 B) — « Tournois et événements » de la fiche publique, sans compte : les
+ * événements publics à venir d'un terrain du complexe.
+ * @param {string} slug - L'adresse publique du complexe.
+ * @returns {Promise<any>} `{ data: { items } }`, chaque événement
+ *   `{ documentId, name, date, startTime, type, facility }`.
+ */
+export const lireLesEvenementsPublics = async (slug) => corps(
+  client.get(`/public-complexes/${enc(slug)}/evenements`),
+);

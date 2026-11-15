@@ -38,7 +38,12 @@ import {
 } from '@/services/tournamentTeam/tournamentTeamService';
 import { searchScopedUsers, searchUsers } from '@/services/user/userService';
 
+import { formatDateWithDayPrefix } from '@/utils/date';
+
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import TournamentMemberConsent from './TournamentMemberConsent';
+import { TournamentMemberPlace, TournamentPlacesSummary } from './TournamentMemberPlace';
+import TournamentTeamDiscussion from './TournamentTeamDiscussion';
 import {
   getTournamentMemberBuckets,
   getTournamentRosterSummary,
@@ -151,6 +156,9 @@ function TournamentTeamDetails({ navigation, route }) {
     Spaces,
   });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  // T-INVITE (15/11) : « Inviter des joueurs » par lien ; sur un ordinateur le lien est copié,
+  // l'écran le dit. États : '' | 'pending' | 'copie' | 'echec'.
+  const [inviteLinkState, setInviteLinkState] = useState('');
   const [isJoinRequestModalVisible, setIsJoinRequestModalVisible] = useState(false);
   const [joinRequestError, setJoinRequestError] = useState('');
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
@@ -163,6 +171,11 @@ function TournamentTeamDetails({ navigation, route }) {
   } = useGetTournamentTeam(teamId);
 
   const currentUserDocumentId = userData?.documentId || '';
+  // T-PAIE : les places d'un tournoi payant (absent pour un tournoi gratuit ou un vieux serveur).
+  const placesByMember = useMemo(() => new Map(
+    (team?.payment?.members || [])
+      .map((/** @type {any} */ place) => [place?.memberDocumentId, place]),
+  ), [team?.payment?.members]);
   const allMembers = useMemo(
     () => (Array.isArray(team?.members) ? team.members : [])
       .filter((member) => normalizeTournamentText(member?.responseStatus) !== 'removed'),
@@ -537,6 +550,11 @@ function TournamentTeamDetails({ navigation, route }) {
                 ) : memberStatusMeta.label}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral300]}>{getOriginLabel(member?.origin)}</Text>
+              {/* T-AGE puis T-PARENT (15/11) : autorisation attendue / reçue, pas d'image. */}
+              <TournamentMemberConsent member={member} />
+              {variant === 'active' ? (
+                <TournamentMemberPlace place={placesByMember.get(member?.documentId)} />
+              ) : null}
             </View>
           </View>
           {isCurrentUserMember ? (
@@ -590,6 +608,48 @@ function TournamentTeamDetails({ navigation, route }) {
     );
   };
 
+  // T-INVITE (15/11) — « Ton inscription » : le tournoi, sa date et son lieu,
+  // au-dessus de l'équipe.
+  const eventLocation = team?.event?.location;
+  const eventHeader = [
+    team?.event?.name,
+    formatDateWithDayPrefix(team?.event?.date),
+    String(
+      eventLocation?.name || eventLocation?.address || team?.event?.locationDetails || '',
+    ).trim(),
+  ].filter(Boolean).join(' · ');
+  const inviteLinkHint = {
+    copie: t(
+      'tournamentTeamDetails.inviteLink.copied',
+      'Lien copié : colle-le dans un message à tes joueurs.',
+    ),
+    echec: t(
+      'tournamentTeamDetails.inviteLink.failed',
+      "Le lien n'a pas pu être préparé. Réessaie dans un instant.",
+    ),
+  }[inviteLinkState] || t(
+    'tournamentTeamDetails.inviteLink.hint',
+    "Envoie ce lien à tes joueurs : ils rejoignent l'équipe puis paient leur place.",
+  );
+  const shareInviteLink = async () => {
+    setInviteLinkState('pending');
+    try {
+      // Chargé à la demande (comme teamInviteShare) : les suites de la fiche
+      // n'en simulent pas le réseau.
+      // eslint-disable-next-line global-require
+      const { shareTournamentTeamInviteLink } = require('@/services/teamInvite/teamInviteShare');
+      const { envoi, url } = await shareTournamentTeamInviteLink({
+        eventId,
+        eventName: team?.event?.name,
+        teamId: team?.documentId || teamId,
+        teamName: team?.name,
+      });
+      setInviteLinkState(!url || envoi === 'echec' ? 'echec' : (envoi || ''));
+    } catch (_error) {
+      setInviteLinkState('echec');
+    }
+  };
+
   return (
     <ScreenContainer
       // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
@@ -632,6 +692,11 @@ function TournamentTeamDetails({ navigation, route }) {
                   'Équipe éphémère créée pour ce tournoi',
                 )}
             </Text>
+            {eventHeader ? (
+              <Text style={[Fonts.p3, Fonts.neutral100]} testID="tournament-team-event-header">
+                {eventHeader}
+              </Text>
+            ) : null}
           </View>
 
           {teamIsLocked ? (
@@ -689,6 +754,8 @@ function TournamentTeamDetails({ navigation, route }) {
                 <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={`${rosterSummary.requestedCount} demande${rosterSummary.requestedCount > 1 ? 's' : ''}`} textColor="warning500" />
               ) : null}
             </View>
+            <TournamentPlacesSummary payment={team?.payment} />
+            <TournamentTeamDiscussion discussion={team?.discussion} navigation={navigation} />
             {!rosterSummary.meetsMinRoster ? (
               <Text style={[Fonts.p3, Fonts.warning500]}>
                 {`Effectif minimum non atteint: ${rosterSummary.totalCount}/${rosterSummary.minRosterSize}`}
@@ -843,6 +910,22 @@ function TournamentTeamDetails({ navigation, route }) {
                   </Text>
                 </View>
                 <Button onPress={() => setIsInviteOpen((current) => !current)} size="sm" title={isInviteOpen ? t('tournamentTeamDetails.close', 'Fermer') : t('tournamentTeamDetails.invite', 'Inviter')} variant="Secondary" />
+              </View>
+
+              {/* T-INVITE (15/11, Adel D37) — un lien pour toute l'équipe. */}
+              <View style={tournamentDs.styles.insetPanelCard}>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('tournamentTeamDetails.inviteLink.title', 'Inviter des joueurs par lien')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>{inviteLinkHint}</Text>
+                <Button
+                  isLoading={inviteLinkState === 'pending'}
+                  onPress={shareInviteLink}
+                  size="sm"
+                  style={{ alignSelf: 'flex-start' }}
+                  title={t('tournamentTeamDetails.inviteLink.button', 'Partager le lien')}
+                  variant="Primary"
+                />
               </View>
 
               {normalizeTournamentText(team?.sourceType) === 'custom_team' ? (

@@ -7503,6 +7503,12 @@ export default {
     vide: 'No venue yet.',
   },
   // RESA-L5B-2 (20/10/2026) — the venue's loyalty programme (E-G14, RESA-L4 server).
+  // T-COMPLEXE (14/11/2026, D13 B): "Tournaments and events" on the complex's public page.
+  complexeEvenements: {
+    favoriAuPaiement: 'By signing up, you add {{complexe}} to your favourites on FoundClub. You can remove it at any time.',
+    ouvrir: 'View {{nom}}',
+    titre: 'Tournaments and events',
+  },
   complexeFidelite: {
     apercu: {
       encore_one: '{{count}} more booking before "{{recompense}}"',
@@ -10592,6 +10598,7 @@ export default {
     optional: 'Optional',
     organisingClub: 'Organising club:',
     organisingTeam: 'Organising team',
+    organizer: 'Organizer',
     participants: 'Participants',
     participantsFilter: {
       absent: 'Absent',
@@ -10669,6 +10676,7 @@ export default {
     quickInfo: 'Quick info',
     registerAClubTeam: 'Register a club team',
     registerMyTeam: 'Register my team',
+    registerMyTournamentTeam: 'Register my team',
     registrationsToCheck_one: '{{count}} registration to check',
     registrationsToCheck_other: '{{count}} registrations to check',
     reload: 'Reload',
@@ -13850,6 +13858,13 @@ export default {
       body: 'You received a link to a private tournament. Do you want to open it?',
       primary: 'See the tournament',
       title: 'Tournament invitation',
+    },
+    tournamentTeam: {
+      closed: 'Registrations for this tournament are closed.',
+      intro: "You're invited to join the {{team}} team for the {{event}} tournament.",
+      introShort: "You're invited to join a tournament team.",
+      join: 'Join the team',
+      title: 'Join {{team}}',
     },
   },
   leagueActionPromptHost: {
@@ -18867,6 +18882,26 @@ export default {
     waitingOpponent: "Awaiting the opponent's reply",
   },
   publicLicensePayment: {
+    parentalConsent: {
+      accept: 'I allow my child to take part in the tournament',
+      image: 'Both parents allow photos and videos (optional)',
+      intro: 'This player is 16 or 17: one of their parents fills in this section before payment, even if someone else pays for the spot.',
+      missing: 'Fill in the fields and tick the consent box to pay.',
+      parentName: 'Parent’s full name',
+      parentPhone: 'Parent’s phone, reachable on the evening of the tournament',
+      relation: {
+        father: 'Father',
+        legal_guardian: 'Legal guardian',
+        mother: 'Mother',
+        title: 'Relationship to the player',
+      },
+      return: {
+        alone: 'Goes home alone',
+        picked_up: 'Someone picks them up',
+        title: 'After the tournament',
+      },
+      title: 'Parental consent',
+    },
     alerts: {
       checkoutError: {
         noLink: 'No payment link set up.',
@@ -18953,6 +18988,21 @@ export default {
       number: 'Number',
       status: 'Status',
       title: 'Receipts already issued',
+    },
+    tournament: {
+      cancelledDescription: 'Nothing was charged. You can try again whenever you like.',
+      cancelledTitle: 'Payment cancelled',
+      confirmingDescription: 'Stripe lets us know within seconds: this page updates by itself.',
+      confirmingTitle: 'Payment being confirmed',
+      heroTitle: 'Tournament registration',
+      noWithdrawal: 'Leisure activity on a fixed date: no right of withdrawal (French Consumer Code, art. L221-28 12°).',
+      openTournament: 'See the tournament page',
+      paidDescription: 'Thank you! This spot is paid for team {{teamName}}.',
+      paidTitle: 'Spot paid',
+      payForOthers: 'Secure payment by Stripe. You can also pay another player\'s spot by opening their link.',
+      payStripe: 'Pay for my spot',
+      teamFallback: 'of the player',
+      termsLink: 'Registration terms',
     },
     unavailable: {
       title: 'Payment unavailable',
@@ -24156,6 +24206,10 @@ export default {
     message: "You're invited to join the {{team}} team on FoundClub. Open this link to see the invitation:",
     messageFrom: '{{inviter}} invites you to join the {{team}} team on FoundClub. Open this link to see the invitation:',
     teamWithClub: '{{team}} ({{club}})',
+    tournamentTeam: {
+      fallback: 'If the app opens without signing you up, update it or open this link in your browser.',
+      message: 'Join the {{team}} team for the {{event}} tournament on FoundClub:',
+    },
   },
   teamInviteSheet: {
     accepted: {
@@ -25752,6 +25806,8 @@ export default {
     declined: 'Declined',
     declineThisRequest: 'Do you want to decline this request?',
     derivedFrom: 'Tournament team derived from {{name}}',
+    discussionMinorOutside: 'The team chat is not open to you: your parent needs an account linked to yours, or a coach from your club must be able to join it. You stay in the team and pay for your place as usual.',
+    discussionReadOnly: 'The chat is closed: you can still read it.',
     exceptionalAddition: 'Exceptional addition',
     foundclubProfile: 'FoundClub profile',
     incomingRequestsAreDisabledOnly: 'Incoming requests are disabled. Only your manual invitations are possible.',
@@ -25762,6 +25818,13 @@ export default {
     invite: 'Invite',
     inviteAClubPlayerWithout: 'Invite a club player without touching the base club team.',
     inviteAPlayer: 'Invite a player',
+    inviteLink: {
+      button: 'Share the link',
+      copied: 'Link copied: paste it in a message to your players.',
+      failed: 'The link could not be prepared. Try again in a moment.',
+      hint: 'Send this link to your players: they join the team, then pay for their spot.',
+      title: 'Invite players with a link',
+    },
     joinRequest: 'Join request',
     joinRequests: 'Join requests',
     joinThisTeam: 'Join this team',
@@ -25778,9 +25841,22 @@ export default {
     noPendingRequestForNow: 'No pending request for now.',
     noProfileAvailableToInvite: 'No profile available to invite for this search.',
     openRequests: 'Open requests',
+    parentalConsentPending: 'Parental consent pending',
+    parentalConsentReceived: 'Parental consent received',
+    noImage: 'No photos',
     participant: 'Participant',
     pending: 'Pending',
     pendingInvitations: 'Pending invitations',
+    places: {
+      copied: 'Link copied',
+      copiedHint: 'Send it to the player or their parent.',
+      copyFailed: 'Copy failed',
+      copyLink: 'Copy the payment link',
+      due: 'Spot to pay',
+      paid: 'Spot paid',
+      payMine: 'Pay for my spot',
+      summary: 'Paid spots: {{paid}}/{{needed}} to confirm the team ({{amount}} per player).',
+    },
     playersCanSendARequest: 'Players can send a request to join this custom team.',
     present: 'Present',
     remove: 'Remove',
@@ -25795,6 +25871,7 @@ export default {
     sendAJoinRequestThe: 'Send a join request. The captain or an admin can then accept or decline it.',
     sendMyRequest: 'Send my request',
     teamArchived: 'Team archived',
+    teamDiscussion: 'Team chat',
     teamStatus: 'Team status',
     temporaryTeamCreatedForThis: 'Temporary team created for this tournament',
     theCaptainOrAnAdmin: 'The captain or an admin must open this team before receiving new requests.',

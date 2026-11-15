@@ -22,6 +22,7 @@ import {
   lireComplexePublic,
   lireCreneauxDuJour,
   lireLeGroupe,
+  lireLesEvenementsPublics,
   lireLesPartenaires,
   lireLInvitation,
   lireMaFidelite,
@@ -585,6 +586,21 @@ export const usePartenairesPublics = (slug) => useQuery({
     return Array.isArray(corps?.items) ? corps.items : [];
   },
   queryKey: [...LECTURE_PUBLIQUE_CLEF, 'partenaires', slug],
+  staleTime: DEMI_MINUTE,
+});
+
+/**
+ * T-COMPLEXE — les événements publics à venir du complexe (tournois…), sans compte.
+ * @param {string | null | undefined} slug - L'adresse publique.
+ * @returns {import('@tanstack/react-query').UseQueryResult<any[]>} Les événements.
+ */
+export const useEvenementsPublics = (slug) => useQuery({
+  enabled: Boolean(slug),
+  queryFn: async () => {
+    const corps = donnees(await lireLesEvenementsPublics(String(slug)));
+    return Array.isArray(corps?.items) ? corps.items : [];
+  },
+  queryKey: [...LECTURE_PUBLIQUE_CLEF, 'evenements', slug],
   staleTime: DEMI_MINUTE,
 });
 

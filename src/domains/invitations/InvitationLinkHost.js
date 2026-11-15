@@ -261,6 +261,70 @@ export const describeCodedTeamInvite = ({
 };
 
 /**
+ * T-INVITE (15/11/2026, Adel D37 « B ») — Decision PURE : la fenetre d'un lien d'EQUIPE DE TOURNOI
+ * (`/i/tournament/<tournoi>?c=<code>`). Connecte : « Rejoindre l'equipe » (le serveur verifie club,
+ * age,
+ * effectif, equipe unique et cloture, puis cree la place a payer). Deconnecte : l'invitation attend
+ * le compte.
+ * @param {object} params - ce qu'on sait.
+ * @param {boolean} params.isSignedIn - la personne est-elle connectee ?
+ * @param {any} [params.preview] - l'apercu public (tournoi, equipe, statut).
+ * @param {any} params.t - la traduction (react-i18next ou une doublure).
+ * @returns {{ body: string, closed: boolean, primary: string, secondary: string, title: string }}
+ * la fenetre.
+ */
+export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
+  const teamName = String(preview?.team?.name || '').trim();
+  const eventName = String(preview?.event?.name || '').trim();
+  const title = teamName
+    ? t('invitationLink.tournamentTeam.title', 'Rejoindre {{team}}', {
+      ...SANS_ECHAPPEMENT, team: teamName,
+    })
+    : t('invitationLink.tournament.title', 'Invitation à un tournoi');
+  if (preview?.status === 'closed') {
+    return {
+      body: t(
+        'invitationLink.tournamentTeam.closed',
+        'Les inscriptions de ce tournoi sont closes.',
+      ),
+      closed: true,
+      primary: t('invitationLink.tournament.primary', 'Voir le tournoi'),
+      secondary: t('invitationLink.later', 'Plus tard'),
+      title,
+    };
+  }
+  const intro = teamName && eventName
+    ? t(
+      'invitationLink.tournamentTeam.intro',
+      "Tu es invité·e à rejoindre l'équipe {{team}} pour le tournoi {{event}}.",
+      { ...SANS_ECHAPPEMENT, event: eventName, team: teamName },
+    )
+    : t(
+      'invitationLink.tournamentTeam.introShort',
+      'Tu es invité·e à rejoindre une équipe de tournoi.',
+    );
+  if (!isSignedIn) {
+    return {
+      body: `${intro} ${t(
+        'invitationLink.coded.signIn',
+        "Connecte-toi ou crée ton compte : l'invitation t'attendra.",
+      )}`,
+      closed: false,
+      primary: t('invitationLink.coded.continue', 'Continuer'),
+      secondary: t('invitationLink.later', 'Plus tard'),
+      title,
+    };
+  }
+  return {
+    body: intro,
+    closed: false,
+    primary: t('invitationLink.tournamentTeam.join', "Rejoindre l'équipe"),
+    secondary: t('invitationLink.later', 'Plus tard'),
+    title,
+  };
+};
+
+/**
  * L'hote unique qui lit les liens entrants et pose la question.
  * @param {object} [props] - les proprietes.
  * @param {string} [props.userId] - le compte connecte, s'il y en a un (INVIT2).
@@ -279,6 +343,12 @@ function InvitationLinkHost({ userId } = {}) {
   const codedTeamInvite = pendingInvite?.subject === 'team' && pendingInvite?.code
     ? pendingInvite
     : null;
+  // T-INVITE — un lien d'equipe de tournoi : sujet `tournament` AVEC code (sans code : le lien du
+  // tournoi prive).
+  const codedTournamentInvite = pendingInvite?.subject === 'tournament' && pendingInvite?.code
+    ? pendingInvite
+    : null;
+  const [tournamentPreview, setTournamentPreview] = useState(/** @type {any} */ (null));
 
   const handleIncomingUrl = useCallback((rawUrl) => {
     const outcome = resolveInviteLinkOutcome(rawUrl);
@@ -370,6 +440,25 @@ function InvitationLinkHost({ userId } = {}) {
       isCurrent = false;
     };
   }, [codedTeamInvite?.code, isSignedIn]);
+
+  // T-INVITE — l'apercu (public) du lien d'equipe de tournoi : le nom du tournoi et de l'equipe.
+  // ponytail: le service est charge a la demande (`tournamentTeamService`), comme dans
+  // teamInviteShare : en tete,
+  // il ferait tomber les suites de l'hote qui n'en simulent pas le client. Sortie : le simuler dans
+  // ces suites.
+  useEffect(() => {
+    const code = String(codedTournamentInvite?.code || '');
+    setTournamentPreview(null);
+    if (!code) return undefined;
+    let isCurrent = true;
+    // eslint-disable-next-line global-require
+    require('@/services/tournamentTeam/tournamentTeamService').previewTournamentTeamInviteLink(code)
+      .then((preview) => { if (isCurrent) setTournamentPreview(preview); })
+      .catch(() => undefined);
+    return () => {
+      isCurrent = false;
+    };
+  }, [codedTournamentInvite?.code]);
 
   const closeWindow = useCallback(() => {
     setPendingInvite(null);
@@ -485,6 +574,53 @@ function InvitationLinkHost({ userId } = {}) {
     showAnswerError,
   ]);
 
+  // T-INVITE — rejoindre l'equipe par le lien, puis sa fiche (« Ton inscription » : coequipiers,
+  // places, payer).
+  const handleTournamentPrimary = useCallback(async () => {
+    const eventId = String(codedTournamentInvite?.id || '').trim();
+    if (!isSignedIn) {
+      // 🔒 Comme le lien d'equipe : on NE L'EFFACE PAS, l'invitation attend le compte (I7).
+      closeWindow();
+      return;
+    }
+    if (tournamentPreview?.status === 'closed') {
+      clearPendingInvite();
+      closeWindow();
+      goTo({ params: { eventId }, route: RouteNames.TournamentManagement });
+      return;
+    }
+    let team;
+    try {
+      // eslint-disable-next-line global-require
+      const { joinTournamentTeamByInviteLink } = require(
+        '@/services/tournamentTeam/tournamentTeamService',
+      );
+      team = await joinTournamentTeamByInviteLink(codedTournamentInvite?.code);
+    } catch (error) {
+      // Les refus du serveur sont ecrits pour la personne (age, equipe pleine, autre equipe, lien
+      // perime).
+      // Le client rejette `response.data.error` lui-meme (services/client.native.js, resetAuth).
+      const message = String(/** @type {any} */ (error)?.message || '').trim();
+      Alert.alert(
+        t('invitationLink.coded.errorTitle', 'Invitation'),
+        message || t(
+          'invitationLink.coded.errorBody',
+          'Impossible de répondre à cette invitation pour le moment. Réessaie dans un instant.',
+        ),
+      );
+      return;
+    }
+    clearPendingInvite();
+    closeWindow();
+    goTo({
+      params: {
+        eventId: String(team?.event?.documentId || eventId),
+        teamId: String(team?.documentId || ''),
+      },
+      route: RouteNames.TournamentTeamDetails,
+    });
+  }, [closeWindow, codedTournamentInvite, goTo, isSignedIn, t, tournamentPreview?.status]);
+
   const handleCodedSecondary = useCallback(async () => {
     if (isSignedIn && claimDecision?.mode === 'answer') {
       try {
@@ -550,6 +686,21 @@ function InvitationLinkHost({ userId } = {}) {
         onRequestClose={closeWindow}
         primaryAction={{ label: coded.primary, onPress: handleCodedPrimary }}
         secondaryAction={{ label: coded.secondary, onPress: handleCodedSecondary }}
+        title={coded.title}
+        visible
+      />
+    );
+  }
+
+  if (codedTournamentInvite) {
+    const coded = describeCodedTournamentInvite({ isSignedIn, preview: tournamentPreview, t });
+    return (
+      <GlobalPromptModal
+        body={coded.body}
+        eyebrow={t('invitationLink.eyebrow', 'Invitation')}
+        onRequestClose={closeWindow}
+        primaryAction={{ label: coded.primary, onPress: handleTournamentPrimary }}
+        secondaryAction={{ label: coded.secondary, onPress: handleDismiss }}
         title={coded.title}
         visible
       />

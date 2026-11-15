@@ -10,10 +10,12 @@ import { libelleSport } from '@/domains/complexe/complexeTerrain';
 import { apercuDeLaFidelite } from '@/domains/complexe/partieDuJoueur';
 import {
   contenuDEchec,
+  dateEtHeureDeParis,
   horairesLisibles,
   jourDeParis,
   numeroLisible,
   texteAnnulation,
+  texteJourLong,
   varianteDEchec,
 } from '@/domains/complexe/reserverTerrain';
 import { withAlpha } from '@/theme/colors';
@@ -39,6 +41,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import {
   useAjouterAuxFavoris,
   useComplexePublic,
+  useEvenementsPublics,
   useMaRelationAuComplexe,
   usePartenairesPublics,
   useRetirerDesFavoris,
@@ -125,6 +128,7 @@ function ReserverComplexe() {
   const [feuille, setFeuille] = useState(/** @type {FeuilleOuverte | null} */ (null));
   const relation = useMaRelationAuComplexe(slug, { enabled: communaute })?.data || null;
   const partenairesLus = usePartenairesPublics(slug);
+  const evenementsLus = useEvenementsPublics(slug);
   const ajouter = useAjouterAuxFavoris();
   const retirer = useRetirerDesFavoris();
   const [annonceFavori, setAnnonceFavori] = useState(/** @type {string | null} */ (null));
@@ -593,6 +597,48 @@ function ReserverComplexe() {
     </View>
   ) : null;
 
+  // T-COMPLEXE (14/11/2026, D13 B) — « Tournois et événements » : les événements publics à
+  // venir d'un terrain du complexe (le serveur choisit lesquels) ; chacun ouvre sa fiche. Rien
+  // sans événement.
+  const evenements = Array.isArray(evenementsLus?.data) ? evenementsLus.data : [];
+  const blocEvenements = evenements.length ? (
+    <View style={carteDeBloc} testID="complexe-evenements">
+      <Text style={titreDeBloc}>
+        {t('complexeEvenements.titre', 'Tournois et événements')}
+      </Text>
+      {evenements.map((evenement) => {
+        const nom = String(evenement?.name || '');
+        const jour = dateEtHeureDeParis(evenement?.date)?.date;
+        const quand = [
+          jour ? texteJourLong(t, jour) : '', evenement?.startTime, evenement?.facility,
+        ].filter(Boolean)
+          .join(' · ');
+        return (
+          <TouchableOpacity
+            accessibilityLabel={t(
+              'complexeEvenements.ouvrir',
+              'Voir {{nom}}',
+              { nom, ...SANS_ECHAPPEMENT },
+            )}
+            accessibilityRole="link"
+            key={String(evenement?.documentId)}
+            onPress={() => navigation.navigate(RouteNames.EventDetails, {
+              eventId: evenement.documentId,
+            })}
+            style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}
+            testID="complexe-evenement"
+          >
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>
+              {quand ? <Text style={[Fonts.p3, Fonts.neutral100]}>{quand}</Text> : null}
+            </View>
+            <SvgIcon color={Colors.primary500} height={16} name="arrow-right" width={16} />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  ) : null;
+
   const ligneDeRegle = (/** @type {string} */ texte, /** @type {boolean} */ enEvidence = false) => (
     <View
       style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}
@@ -793,6 +839,7 @@ function ReserverComplexe() {
       <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
         <View style={{ flex: 1, gap: 16, minWidth: 0 }}>
           {identite}
+          {blocEvenements}
           {infos}
           {blocPartenaires}
           {blocFidelite}
@@ -811,6 +858,7 @@ function ReserverComplexe() {
     page = (
       <View style={{ gap: 16 }}>
         {identite}
+        {blocEvenements}
         <SegmentedControl
           onChange={setSegment}
           options={[

@@ -90,7 +90,13 @@ function RemotePopupCampaignHost({
       allowedRoutes: activeCampaign.allowedRoutes,
       // 🪤 Q3-03 : la fenêtre de démarrage dure 2,2 s et ne revient jamais ; une campagne
       // reçue plus tard (réponse lente, retour au premier plan) doit aussi pouvoir s'ouvrir.
-      allowedStartupPhases: ['startup_prompt_window', 'screen_local_prompts', 'steady_state'],
+      // ponytail: T-VITRINE (14/11) — au site, personne n'avance les phases :
+      // `markNavigationReady` n'est appelé que par app/src/App.js, elles restent à `boot_core`.
+      // D'où aucune phase exigée au site. Sortie : brancher les phases sur le routeur du site
+      // (cela réveillerait aussi HomeHub et TeamList).
+      allowedStartupPhases: Platform.OS === 'web'
+        ? undefined
+        : ['startup_prompt_window', 'screen_local_prompts', 'steady_state'],
       blockedRoutes: activeCampaign.blockedRoutes,
       blocking: true,
       id: getPopupId(activeCampaign),

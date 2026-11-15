@@ -7,7 +7,6 @@ import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
 
-import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -26,7 +25,6 @@ import {
   getLicenseStatusTone,
   LicenseCard,
   LicenseEmptyState,
-  LicenseInstallmentList,
   LicenseMetricRow,
   licenseRadius,
   LicenseSectionHeader,
@@ -37,6 +35,29 @@ import {
   paymentModeLabels,
 } from './licenseDesignSystem';
 import LinksPlatform from '@/platform/links';
+import { RouteNames } from '@/navigation/routeNames';
+
+import { LEGAL_TOURNAMENT_TERMS_PATH, LEGAL_TOURNAMENT_TERMS_URL } from '@/config/legalUrls';
+import { buildPublicWebUrl } from '@/utils/shareLinks';
+
+import TournamentParentalConsent, {
+  AUTORISATION_VIDE,
+  autorisationAEnvoyer,
+  autorisationComplete,
+} from './TournamentParentalConsent';
+import { LicenseCampaignBlock, LicenseDocumentsBlock } from './PublicLicenseSections';
+import { TournamentPlacePay, TournamentPlaceResult } from './TournamentPlacePanels';
+
+// T-PAIE (15/11) — une place de tournoi (`campaignType: 'tournament'`) : Stripe s'ouvre pour
+// elle seule (une licence garde `normalizePaymentModes`, qui force `stripe: false`) ; le retour
+// de Stripe revient ICI (`?status=success`), page publique : lisible sans compte.
+// T-PARENT (15/11) — « Conditions d'inscription » ouvre la page publique du site
+// (`/conditions-tournoi`) ; une place de tournoi n'affiche pas les rubriques d'une licence
+// (Campagne, Échéancier, Documents demandés) ; un joueur de 16-17 ans a son bloc parental.
+const TOURNAMENT_TERMS_URL = buildPublicWebUrl(
+  /** @type {any} */ ({ path: LEGAL_TOURNAMENT_TERMS_PATH }),
+) || LEGAL_TOURNAMENT_TERMS_URL;
+const CONFIRMING_REFETCH_MS = 3000;
 
 /**
  *
@@ -86,26 +107,41 @@ function DeclarePaymentModal({
 }
 
 /**
- *
- * @param root0
- * @param root0.route
+ * La page publique d'un lien de paiement (`/licenses/pay/:token`), connecté ou non.
+ * @param {object} root0 - Les propriétés de l'écran.
+ * @param {any} root0.navigation - La navigation (lien vers la fiche du tournoi).
+ * @param {any} root0.route - La route : `token`, et `status` au retour de Stripe.
+ * @returns {import('react').ReactElement} L'écran.
  */
-function PublicLicensePayment({ route }) {
+function PublicLicensePayment({ navigation, route }) {
   const retraitBas = useRetraitBasDuDefilement(12);
   const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const token = route?.params?.token;
+  const returnStatus = String(route?.params?.status || '').toLowerCase();
   const [declareModalVisible, setDeclareModalVisible] = useState(false);
+  const [autorisation, setAutorisation] = useState(AUTORISATION_VIDE);
   const query = useQuery({
     enabled: Boolean(token),
     queryFn: () => getPublicLicensePayment(token),
     queryKey: ['licenses', 'public-payment', token],
+    // T-PAIE : au retour de Stripe, l'avis suit en quelques secondes : relire jusqu'à « payée ».
+    refetchInterval: (state) => {
+      const waiting = returnStatus === 'success' && state?.state?.data?.status !== 'paid';
+      return waiting ? CONFIRMING_REFETCH_MS : false;
+    },
     staleTime: 20_000,
   });
+  // T-PARENT : le serveur dit si la place est celle d'un 16-17 ans sans autorisation (il refuse le paiement sans elle).
+  const needsParentalConsent = query.data?.campaignType === 'tournament'
+    && query.data?.tournament?.parentalConsentRequired === true;
   const checkoutMutation = useMutation({
-    mutationFn: (provider) => createPublicLicenseCheckout(token, { provider }),
+    mutationFn: (provider) => createPublicLicenseCheckout(token, {
+      ...(needsParentalConsent ? { parentalConsent: autorisationAEnvoyer(autorisation) } : {}),
+      provider,
+    }),
   });
   const declareMutation = useMutation({
     mutationFn: (method) => declarePublicExternalLicensePayment(token, {
@@ -133,6 +169,15 @@ function PublicLicensePayment({ route }) {
   const canDeclareOfflinePayment = offlinePaymentMethods.length > 0 && canPayOnline;
   const tone = getLicenseStatusTone(Colors, payment?.status);
   const currency = payment?.currency || 'EUR';
+  const isTournament = payment?.campaignType === 'tournament';
+  const tournament = isTournament ? (payment?.tournament || {}) : null;
+  const tournamentEventId = tournament?.eventDocumentId;
+  const parentalConsentBlocks = needsParentalConsent && !autorisationComplete(autorisation);
+  const openTournament = useCallback(() => {
+    if (!tournamentEventId) return;
+    navigation?.navigate?.(RouteNames.EventDetails, { eventId: tournamentEventId });
+  }, [navigation, tournamentEventId]);
+  const openTerms = useCallback(() => LinksPlatform.openUrl(TOURNAMENT_TERMS_URL), []);
 
   const openCheckout = useCallback((provider) => {
     if (isCampaignPaused) {
@@ -259,8 +304,15 @@ function PublicLicensePayment({ route }) {
           <View style={Spaces.gap[licenseSpacing.titleGap]}>
             <LicenseStatusChip status={payment?.status} />
             <Text style={[Fonts.h2, Fonts.neutral00]}>
-              {t('publicLicensePayment.hero.title', 'Paiement cotisation')}
+              {isTournament
+                ? t('publicLicensePayment.tournament.heroTitle', 'Inscription au tournoi')
+                : t('publicLicensePayment.hero.title', 'Paiement cotisation')}
             </Text>
+            {isTournament ? (
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {[tournament?.eventName, tournament?.teamName].filter(Boolean).join(' - ')}
+              </Text>
+            ) : null}
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {payment?.memberName || t('publicLicensePayment.hero.memberFallback', 'Membre')}
               {' '}
@@ -270,6 +322,14 @@ function PublicLicensePayment({ route }) {
             </Text>
           </View>
         </View>
+        {isTournament ? (
+          <TournamentPlaceResult
+            isPaid={payment?.status === 'paid'}
+            onOpenTournament={openTournament}
+            returnStatus={returnStatus}
+            tournament={tournament}
+          />
+        ) : null}
         <LicenseCard>
           <LicenseMetricRow
             items={[
@@ -298,32 +358,7 @@ function PublicLicensePayment({ route }) {
             ]}
           />
         </LicenseCard>
-        <LicenseSectionHeader title={t('publicLicensePayment.campaign.title', 'Campagne')} />
-        <LicenseCard variant="muted">
-          <View style={Spaces.gap[licenseSpacing.actionGap]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {payment?.seasonLabel || t(
-                'publicLicensePayment.campaign.seasonFallback',
-                'Cotisation en cours',
-              )}
-            </Text>
-            {payment?.description ? <Text style={[Fonts.p2, Fonts.neutral200]}>{payment.description}</Text> : null}
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {t('publicLicensePayment.campaign.deadline', 'Date limite:')}
-              {' '}
-              {payment?.dueDate || t('publicLicensePayment.campaign.deadlineNotSet', 'Non définie')}
-            </Text>
-            {payment?.teamName ? (
-              <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t('publicLicensePayment.campaign.team', 'Equipe:')}
-                {' '}
-                {payment.teamName}
-              </Text>
-            ) : null}
-          </View>
-        </LicenseCard>
-        <LicenseSectionHeader title={t('publicLicensePayment.installments.title', 'Echeancier')} />
-        <LicenseInstallmentList currency={currency} installments={payment?.installments || []} />
+        {isTournament ? null : <LicenseCampaignBlock currency={currency} payment={payment} />}
         {isCampaignPaused ? (
           <LicenseCard variant="muted">
             <View style={Spaces.gap[licenseSpacing.actionGap]}>
@@ -347,6 +382,19 @@ function PublicLicensePayment({ route }) {
           )}
           title={t('publicLicensePayment.pay.title', 'Regler')}
         />
+        {isTournament && hasSomethingToPay && needsParentalConsent ? (
+          <TournamentParentalConsent onChange={setAutorisation} valeur={autorisation} />
+        ) : null}
+        {isTournament && hasSomethingToPay ? (
+          <TournamentPlacePay
+            canPay={canPayOnline && payment?.paymentModes?.stripe === true}
+            complexeName={tournament?.complexeName || null}
+            disabled={parentalConsentBlocks}
+            isLoading={checkoutMutation.isPending}
+            onOpenTerms={openTerms}
+            onPay={() => openCheckout('stripe')}
+          />
+        ) : null}
         {canPayOnline && paymentModes.helloasso ? (
           <Button
             isLoading={checkoutMutation.isPending}
@@ -384,61 +432,7 @@ function PublicLicensePayment({ route }) {
             ))}
           </>
         ) : null}
-        <LicenseSectionHeader title={t(
-          'publicLicensePayment.documents.title',
-          'Documents demandes',
-        )}
-        />
-        {(payment?.documentRequests || []).length ? (
-          <View style={Spaces.gap[licenseSpacing.listGap]}>
-            {(payment?.documentRequests || []).map((request) => (
-              <LicenseCard key={request.documentId || request.id || request.name} variant="muted">
-                <View style={Spaces.gap[licenseSpacing.actionGap]}>
-                  <View style={{
-                    alignItems: 'flex-start',
-                    flexDirection: 'row',
-                    gap: licenseSpacing.actionGap,
-                    justifyContent: 'space-between',
-                  }}
-                  >
-                    <View style={[Spaces.gap[4], { flex: 1 }]}>
-                      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                        {request.name || t(
-                          'publicLicensePayment.documents.nameFallback',
-                          'Document',
-                        )}
-                      </Text>
-                      <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {request.required === false ? t(
-                          'publicLicensePayment.documents.optional',
-                          'Facultatif',
-                        ) : t(
-                          'publicLicensePayment.documents.required',
-                          'Obligatoire',
-                        )}
-                        {request.dueDate ? t(
-                          'publicLicensePayment.documents.dueBefore',
-                          ' - Dépôt avant {{dueDate}}',
-                          { dueDate: request.dueDate, ...SANS_ECHAPPEMENT },
-                        ) : ''}
-                      </Text>
-                    </View>
-                    <LicenseStatusChip status={request.status || 'missing'} />
-                  </View>
-                  {request.description ? <Text style={[Fonts.p3, Fonts.neutral200]}>{request.description}</Text> : null}
-                </View>
-              </LicenseCard>
-            ))}
-          </View>
-        ) : (
-          <LicenseEmptyState
-            description={t(
-              'publicLicensePayment.documents.empty.description',
-              'Aucune pièce supplémentaire n est associée à ce lien.',
-            )}
-            title={t('publicLicensePayment.documents.empty.title', 'Aucun document')}
-          />
-        )}
+        {isTournament ? null : <LicenseDocumentsBlock documentRequests={payment?.documentRequests} />}
         <LicenseSectionHeader title={t('publicLicensePayment.receipts.title', 'Reçus déjà emis')} />
         {(payment?.receipts || []).length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>

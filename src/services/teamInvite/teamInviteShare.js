@@ -8,6 +8,7 @@
  * fichier iPhone réclame déjà `/i/*` (mesuré 200) : l'app s'ouvre directement
  * quand elle est installée, et le code permet de dire QUI invite.
  */
+import i18next from 'i18next';
 import {
   AppState, Linking, Platform, Share,
 } from 'react-native';
@@ -15,6 +16,7 @@ import {
 import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import { buildInviteWebUrl } from '@/domains/invitations/inviteLink';
 import { buildTeamInviteShareText } from '@/domains/team/teamInviteSuggestions';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { createTeamInviteLink } from '@/services/teamInvite/teamInviteService';
 
@@ -230,4 +232,64 @@ export const openInviteSms = async ({ message, phoneNumber, url }) => {
   } else {
     whenBackInApp(() => emitGuidanceInteraction('team.invite.returned'));
   }
+};
+
+/**
+ * T-INVITE (15/11/2026, Adel D37 « B ») — le message du lien d'une ÉQUIPE de tournoi. La dernière
+ * phrase
+ * (tranchée par le chef du tournoi le 15/11) couvre l'ancienne app, qui ouvre la fiche du tournoi
+ * sans inscrire.
+ * @param {{ eventName?: string, teamName?: string, url: string }} params - Le contenu.
+ * @returns {string} Le message.
+ */
+export const buildTournamentTeamInviteMessage = ({ eventName, teamName, url }) => [
+  i18next.t(
+    'teamInviteShare.tournamentTeam.message',
+    "Rejoins l'équipe {{team}} pour le tournoi {{event}} sur FoundClub :",
+    {
+      ...SANS_ECHAPPEMENT,
+      event: String(eventName || '').trim(),
+      team: String(teamName || '').trim(),
+    },
+  ),
+  url,
+  i18next.t(
+    'teamInviteShare.tournamentTeam.fallback',
+    "Si l'app s'ouvre sans t'inscrire, mets-la à jour ou ouvre ce lien dans ton navigateur.",
+  ),
+].join('\n');
+
+/**
+ * T-INVITE — fabrique (ou relit) le code de l'équipe, puis partage
+ * `/i/tournament/<tournoi>?c=<code>` :
+ * feuille du système sur le téléphone, copie sur un ordinateur (comme `envoyerLeLien`).
+ * @param {{ eventId: string, eventName?: string, teamId: string, teamName?: string }} params -
+ * L'équipe.
+ * @returns {Promise<{ envoi?: '' | 'copie' | 'echec', url: string | null }>} Ce qui est parti.
+ */
+export const shareTournamentTeamInviteLink = async ({
+  eventId, eventName, teamId, teamName,
+}) => {
+  // ponytail: chargé à la demande, comme le partage de l'équipe dans la fiche : un service réseau
+  // importé en tête
+  // ferait tomber les suites qui n'en simulent pas le client. Sortie : un module de services commun
+  // simulé partout.
+  // eslint-disable-next-line global-require
+  const { createTournamentTeamInviteLink } = require(
+    '@/services/tournamentTeam/tournamentTeamService',
+  );
+  const link = await createTournamentTeamInviteLink(teamId);
+  const url = buildInviteWebUrl({
+    code: String(link?.code || ''),
+    id: String(link?.eventDocumentId || eventId || ''),
+    origin: resolveInviteLinkOrigin(),
+    subject: 'tournament',
+  });
+  if (!url || !link?.code) return { url: null };
+  const { envoi } = await envoyerLeLien({
+    message: buildTournamentTeamInviteMessage({ eventName, teamName, url }),
+    title: String(teamName || ''),
+    url,
+  });
+  return { envoi, url };
 };

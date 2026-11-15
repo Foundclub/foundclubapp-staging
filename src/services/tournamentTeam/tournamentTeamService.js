@@ -98,3 +98,42 @@ export const closeTournament = async (eventId) => {
   const response = await client.post(`/events/${eventId}/tournament/close`);
   return response?.data?.data || response?.data;
 };
+
+// T-INVITE (15/11/2026) — le lien d'invitation d'une équipe de tournoi (admin :
+// services/tournament-team.js).
+// L'aperçu est public ; fabriquer (qui gère l'équipe) et rejoindre (le joueur) exigent un compte.
+/**
+ * L'aperçu public d'un lien d'équipe de tournoi.
+ * @param {string} code - Le code du lien.
+ * @returns {Promise<any>} Le tournoi, l'équipe et l'effectif.
+ */
+export const previewTournamentTeamInviteLink = async (code) => {
+  const response = await client.get(`/tournament-teams/invite-link/${encodeURIComponent(code)}`);
+  return response?.data?.data || response?.data;
+};
+
+/**
+ * Le code du lien de l'équipe (existant ou neuf) ; `renew` le change, `revoke` l'efface.
+ * @param {string} teamId - L'équipe.
+ * @param {{ renew?: boolean, revoke?: boolean }} [options] - Renouveler ou révoquer.
+ * @returns {Promise<any>} `{ code, eventDocumentId, teamDocumentId }`.
+ */
+export const createTournamentTeamInviteLink = async (teamId, options = {}) => {
+  const response = await client.post(`/tournament-teams/${teamId}/invite-link`, {
+    data: { renew: options?.renew === true, revoke: options?.revoke === true },
+  });
+  return response?.data?.data || response?.data;
+};
+
+/**
+ * Rejoindre l'équipe par son lien (compte connecté).
+ * @param {string} code - Le code du lien.
+ * @returns {Promise<any>} L'équipe rejointe.
+ */
+export const joinTournamentTeamByInviteLink = async (code) => {
+  const response = await client.post(
+    `/tournament-teams/invite-link/${encodeURIComponent(code)}/join`,
+    { data: {} },
+  );
+  return response?.data?.data || response?.data;
+};

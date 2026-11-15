@@ -149,6 +149,25 @@ const adresseDuParent = (
   return valeur ? buildWebPath(parent.routeName, { [parent.param]: valeur }) : '/';
 };
 
+/**
+ * T-FICHE-2 (14/11, tournoi du 19/12) — l'état d'historique d'une navigation : les objets gardés
+ * (`carryParams`) et, pour une connexion qui demande `retourApresConnexion`, l'adresse à rouvrir
+ * (`from`, que la page de connexion du site suit une fois le compte ouvert).
+ * ponytail: sur demande seulement ; les autres entrées du tunnel retombent sur l'accueil comme
+ * avant. Sortie : poser `from` pour toute connexion si l'on veut ce retour partout.
+ * @param {string} routeName
+ * @param {Record<string, any>} params
+ * @param {string} currentPath
+ * @returns {Record<string, any> | undefined}
+ */
+const etatDeNavigation = (routeName, params, currentPath) => {
+  const etat = carryParams(routeName, params);
+  const cible = resolveTarget(routeName, params);
+  const demandeLeRetour = cible.params?.retourApresConnexion === true;
+  if (cible.routeName !== RouteNames.Login || !demandeLeRetour) return etat;
+  return { ...(etat || {}), from: currentPath };
+};
+
 export const createWebNavigationAdapter = ({
   currentPath = '/',
   currentRouteName,
@@ -215,7 +234,8 @@ export const createWebNavigationAdapter = ({
       if (typeof push !== 'function') {
         return;
       }
-      push(buildWebPath(routeName, nextParams), carryParams(routeName, nextParams));
+      const etat = etatDeNavigation(routeName, nextParams, currentPath);
+      push(buildWebPath(routeName, nextParams), etat);
     },
     // COMPO-WEB — `popTo` MANQUAIT : l'appeler faisait planter la page (apres
     // « Publier », `MatchCompositionBoard` y revient vers la fiche du match).

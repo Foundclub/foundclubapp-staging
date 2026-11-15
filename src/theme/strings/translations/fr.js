@@ -8010,6 +8010,12 @@ export default {
     vide: 'Aucun complexe pour l’instant.',
   },
   // RESA-L5B-2 (20/10/2026) — la fidélité du complexe (E-G14, serveur RESA-L4).
+  // T-COMPLEXE (14/11/2026, D13 B) : « Tournois et événements » sur la fiche publique du complexe.
+  complexeEvenements: {
+    favoriAuPaiement: 'En t’inscrivant, tu ajoutes {{complexe}} à tes favoris sur FoundClub. Tu peux le retirer à tout moment.',
+    ouvrir: 'Voir {{nom}}',
+    titre: 'Tournois et événements',
+  },
   complexeFidelite: {
     apercu: {
       encore_one: 'Encore {{count}} réservation avant « {{recompense}} »',
@@ -11223,6 +11229,7 @@ export default {
     optional: 'Facultatif',
     organisingClub: 'Club organisateur :',
     organisingTeam: 'Équipe organisatrice',
+    organizer: 'Organisateur',
     participants: 'Participants',
     participantsFilter: {
       absent: 'Absents',
@@ -11303,6 +11310,7 @@ export default {
     quickInfo: 'Infos rapides',
     registerAClubTeam: 'Inscrire une équipe du club',
     registerMyTeam: 'Inscrire mon équipe',
+    registerMyTournamentTeam: 'Inscrire mon équipe',
     registrationsToCheck_one: '{{count}} inscription à vérifier',
     registrationsToCheck_other: '{{count}} inscriptions à vérifier',
     reload: 'Recharger',
@@ -14707,6 +14715,13 @@ export default {
       body: "Tu as reçu un lien vers un tournoi privé. Veux-tu l'ouvrir ?",
       primary: 'Voir le tournoi',
       title: 'Invitation à un tournoi',
+    },
+    tournamentTeam: {
+      closed: 'Les inscriptions de ce tournoi sont closes.',
+      intro: "Tu es invité·e à rejoindre l'équipe {{team}} pour le tournoi {{event}}.",
+      introShort: 'Tu es invité·e à rejoindre une équipe de tournoi.',
+      join: "Rejoindre l'équipe",
+      title: 'Rejoindre {{team}}',
     },
   },
   leagueActionPromptHost: {
@@ -19659,6 +19674,26 @@ export default {
     waitingOpponent: 'En attente de la réponse adverse',
   },
   publicLicensePayment: {
+    parentalConsent: {
+      accept: 'J’autorise mon enfant à participer au tournoi',
+      image: 'Les deux parents autorisent photos et vidéos (facultatif)',
+      intro: 'Ce joueur a 16 ou 17 ans : un de ses parents remplit ce bloc avant le paiement, même si la place est payée par quelqu’un d’autre.',
+      missing: 'Remplis les champs et coche l’autorisation pour pouvoir payer.',
+      parentName: 'Nom et prénom du parent',
+      parentPhone: 'Téléphone du parent, joignable le soir du tournoi',
+      relation: {
+        father: 'Père',
+        legal_guardian: 'Représentant légal',
+        mother: 'Mère',
+        title: 'Lien avec le joueur',
+      },
+      return: {
+        alone: 'Il rentre seul',
+        picked_up: 'Quelqu’un vient le chercher',
+        title: 'Après le tournoi',
+      },
+      title: 'Autorisation parentale',
+    },
     alerts: {
       checkoutError: {
         noLink: 'Aucun lien de paiement configure.',
@@ -19748,6 +19783,24 @@ export default {
       number: 'Numéro',
       status: 'Statut',
       title: 'Reçus déjà émis',
+    },
+    tournament: {
+      cancelledDescription: 'Rien n’a été débité. Tu peux réessayer quand tu veux.',
+      cancelledTitle: 'Paiement annulé',
+      // eslint-disable-next-line max-len
+      confirmingDescription: 'Stripe nous prévient en quelques secondes : cette page se met à jour toute seule.',
+      confirmingTitle: 'Paiement en cours de confirmation',
+      heroTitle: 'Inscription au tournoi',
+      // eslint-disable-next-line max-len
+      noWithdrawal: 'Activité de loisir à date fixe : pas de droit de rétractation (art. L221-28 12° du Code de la consommation).',
+      openTournament: 'Voir la fiche du tournoi',
+      paidDescription: 'Merci ! Cette place est réglée pour l’équipe {{teamName}}.',
+      paidTitle: 'Place payée',
+      // eslint-disable-next-line max-len
+      payForOthers: 'Paiement sécurisé par Stripe. Tu peux aussi payer la place d’un autre joueur en ouvrant son lien.',
+      payStripe: 'Payer ma place',
+      teamFallback: 'du joueur',
+      termsLink: 'Conditions d\'inscription',
     },
     unavailable: {
       title: 'Paiement indisponible',
@@ -24637,6 +24690,11 @@ export default {
     // eslint-disable-next-line max-len
     messageFrom: "{{inviter}} t'invite à rejoindre l'équipe {{team}} sur FoundClub. Ouvre ce lien pour voir l'invitation :",
     teamWithClub: '{{team}} ({{club}})',
+    tournamentTeam: {
+      // eslint-disable-next-line max-len
+      fallback: "Si l'app s'ouvre sans t'inscrire, mets-la à jour ou ouvre ce lien dans ton navigateur.",
+      message: "Rejoins l'équipe {{team}} pour le tournoi {{event}} sur FoundClub :",
+    },
   },
   teamInviteSheet: {
     accepted: {
@@ -26901,6 +26959,9 @@ export default {
     declined: 'Refusé',
     declineThisRequest: 'Veux-tu refuser cette demande ?',
     derivedFrom: 'Équipe tournoi dérivée de {{name}}',
+    // eslint-disable-next-line max-len
+    discussionMinorOutside: 'La discussion de l’équipe ne t’est pas ouverte : il faut que ton parent ait un compte relié au tien, ou qu’un encadrant de ton club puisse la rejoindre. Tu restes dans l’équipe et tu paies ta place normalement.',
+    discussionReadOnly: 'La discussion est fermée : tu peux la relire.',
     exceptionalAddition: 'Ajout exceptionnel',
     foundclubProfile: 'Profil FoundClub',
     // eslint-disable-next-line max-len
@@ -26913,6 +26974,13 @@ export default {
     invite: 'Inviter',
     inviteAClubPlayerWithout: "Invite un joueur du club sans toucher à l'équipe club de base.",
     inviteAPlayer: 'Inviter un joueur',
+    inviteLink: {
+      button: 'Partager le lien',
+      copied: 'Lien copié : colle-le dans un message à tes joueurs.',
+      failed: "Le lien n'a pas pu être préparé. Réessaie dans un instant.",
+      hint: "Envoie ce lien à tes joueurs : ils rejoignent l'équipe puis paient leur place.",
+      title: 'Inviter des joueurs par lien',
+    },
     joinRequest: 'Demande de rejoindre',
     joinRequests: 'Demandes de rejoindre',
     joinThisTeam: 'Rejoindre cette équipe',
@@ -26929,9 +26997,22 @@ export default {
     noPendingRequestForNow: 'Aucune demande en attente pour le moment.',
     noProfileAvailableToInvite: 'Aucun profil disponible à inviter pour cette recherche.',
     openRequests: 'Ouvrir les demandes',
+    parentalConsentPending: 'Autorisation parentale attendue',
+    parentalConsentReceived: 'Autorisation parentale reçue',
+    noImage: 'Pas d’image',
     participant: 'Participant',
     pending: 'En attente',
     pendingInvitations: 'Invitations en attente',
+    places: {
+      copied: 'Lien copié',
+      copiedHint: 'Envoie-le au joueur ou à son parent.',
+      copyFailed: 'Copie impossible',
+      copyLink: 'Copier le lien de paiement',
+      due: 'Place à payer',
+      paid: 'Place payée',
+      payMine: 'Payer ma place',
+      summary: 'Places payées : {{paid}}/{{needed}} pour valider l’équipe ({{amount}} par joueur).',
+    },
     // eslint-disable-next-line max-len
     playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.',
     present: 'Présent',
@@ -26949,6 +27030,7 @@ export default {
     sendAJoinRequestThe: "Envoie une demande de rejoindre. Le capitaine ou un admin pourra ensuite l'accepter ou la refuser.",
     sendMyRequest: 'Envoyer ma demande',
     teamArchived: 'Équipe archivée',
+    teamDiscussion: "Discussion de l'équipe",
     teamStatus: 'Statut équipe',
     temporaryTeamCreatedForThis: 'Équipe éphémère créée pour ce tournoi',
     // eslint-disable-next-line max-len
