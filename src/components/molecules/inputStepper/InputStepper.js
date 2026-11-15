@@ -65,14 +65,24 @@ function InputStepper({
     : null;
   const decrementDisabled = locked || value <= min;
   const incrementDisabled = locked || value >= max;
+  // RETOUCHES-T12A · M1274 (recette 37, 15/11) — en `tunnel`, le « − » était plus étroit que le
+  // « + » et le chiffre collé aux boutons : deux boutons 44 × 44 qui centrent leur signe, un
+  // chiffre de largeur fixe. Le registre `surface` garde son padding.
   const buttonStyle = isTunnelTone
     ? {
+      alignItems: /** @type {'center'} */ ('center'),
       backgroundColor: 'rgba(1, 179, 244, 0.12)',
       borderColor: 'rgba(1, 179, 244, 0.28)',
       borderRadius: 16,
       borderWidth: 1,
+      height: 44,
+      justifyContent: /** @type {'center'} */ ('center'),
+      width: 44,
     }
-    : { backgroundColor: Colors.neutral00, borderRadius: 6 };
+    : { ...Spaces.padding[12], backgroundColor: Colors.neutral00, borderRadius: 6 };
+  const valueBoxStyle = isTunnelTone
+    ? { marginHorizontal: 8, textAlign: /** @type {'center'} */ ('center'), width: 32 }
+    : null;
   const signStyle = isTunnelTone ? Fonts.primary500 : Fonts.primary700;
   const valueStyle = isTunnelTone ? Fonts.neutral00 : Fonts.neutral900;
   const labelStyle = isTunnelTone ? Fonts.neutral200 : Fonts.neutral300;
@@ -97,7 +107,6 @@ function InputStepper({
           hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={onDecrement}
           style={[
-            Spaces.padding[12],
             buttonStyle,
             decrementDisabled && { opacity: 0.5 },
           ]}
@@ -105,7 +114,7 @@ function InputStepper({
           <Text style={[Fonts.h3, signStyle]}>-</Text>
         </TouchableOpacity>
 
-        <Text style={[Fonts.h3, valueStyle]}>{value}</Text>
+        <Text style={[Fonts.h3, valueStyle, valueBoxStyle]}>{value}</Text>
 
         <TouchableOpacity
           accessibilityLabel={incrementLabel
@@ -116,7 +125,6 @@ function InputStepper({
           hitSlop={ApplicationStyle.hitSlop.min44From40}
           onPress={onIncrement}
           style={[
-            Spaces.padding[12],
             buttonStyle,
             incrementDisabled && { opacity: 0.5 },
           ]}
