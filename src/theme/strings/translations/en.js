@@ -25795,6 +25795,7 @@ export default {
     noPendingRequestForNow: 'No pending request for now.',
     noProfileAvailableToInvite: 'No profile available to invite for this search.',
     openRequests: 'Open requests',
+    parentalConsentPending: 'Parental consent pending',
     participant: 'Participant',
     pending: 'Pending',
     pendingInvitations: 'Pending invitations',

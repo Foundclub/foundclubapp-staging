@@ -26949,6 +26949,7 @@ export default {
     noPendingRequestForNow: 'Aucune demande en attente pour le moment.',
     noProfileAvailableToInvite: 'Aucun profil disponible à inviter pour cette recherche.',
     openRequests: 'Ouvrir les demandes',
+    parentalConsentPending: 'Autorisation parentale attendue',
     participant: 'Participant',
     pending: 'En attente',
     pendingInvitations: 'Invitations en attente',
