@@ -30,7 +30,7 @@
  * Témoin : `__tests__/complexeService.test.js`.
  */
 import { uploadActualiteFile } from '../collectivite/collectiviteActualiteService';
-import { client, fermetures, messages } from './complexeChargeurs';
+import { client, fermetures } from './complexeChargeurs';
 
 /**
  * Le corps d'une réponse.
@@ -485,14 +485,21 @@ export const partagerAnnonce = async (complexeId, reservationId) => corps(
 /**
  * « Écrire » au réserveur (E-G15, E-G05 ; AT-04) : LA conversation de cette réservation, ouverte
  * par le gérant (la même que celle du réserveur ; RESA-L3).
+ * CHAT-COMPLEXE-MESSAGE (D64, 15/11) : avec `firstMessage`, le serveur crée le fil ET ce premier
+ * message ensemble, en tout ou rien ; sans lui, le corps reste `{}` (comportement d'avant).
  * @param {string} complexeId - documentId du complexe.
  * @param {string} reservationId - documentId de la réservation.
+ * @param {string} [firstMessage] - Le premier message du gérant.
  * @returns {Promise<any>} `{ data: { chat } }` (le documentId de la conversation).
  */
-export const ecrireAuReserveur = async (complexeId, reservationId) => corps(
+export const ecrireAuReserveur = async (
+  complexeId,
+  reservationId,
+  firstMessage = undefined,
+) => corps(
   client().post(
     `/complexes/${enc(complexeId)}/reservations/${enc(reservationId)}/conversation`,
-    {},
+    firstMessage === undefined ? {} : { data: { firstMessage } },
   ),
 );
 
@@ -508,24 +515,18 @@ export const trouverConversationDuClient = async (complexeId, reservationId) => 
 );
 
 /**
- * MESSAGERIE-COMPLEXE — le premier message du gérant à son client : le fil naît (POST), puis le
- * message y part par le chemin de tous les messages (POST /chat-messages).
- * ponytail: deux appels, pas une transaction (même choix que la Ville, collectiviteCanauxService) :
- * si le second échoue, le fil existe vide et l'appui suivant le retrouve et l'ouvre. Sortie : un
- * POST de la conversation qui porte le message, si le cas se voit.
+ * MESSAGERIE-COMPLEXE — le premier message du gérant à son client.
+ * CHAT-COMPLEXE-MESSAGE (D64, 15/11) : UN seul appel, le POST de la conversation qui porte le
+ * message (`firstMessage`) ; le serveur crée le fil et le message ensemble, en tout ou rien, par
+ * les mêmes contrôles que POST /chat-messages. Avant : POST `{}` puis /chat-messages, et un arrêt
+ * entre les deux laissait un fil vide chez le client.
  * @param {{ complexeId: string, message: string, reservationId: string }} args - Le complexe, la
  *   réservation (documentId) et le texte.
  * @returns {Promise<any>} `{ data: { chat } }`.
  */
-export const ecrireLePremierMessageAuClient = async ({ complexeId, message, reservationId }) => {
-  const ouvert = await ecrireAuReserveur(complexeId, reservationId);
-  const chatId = ouvert?.data?.chat;
-  if (!chatId) return ouvert;
-  // Par `complexeChargeurs`, comme le client HTTP (en-tête du fichier) : le service des messages
-  // charge le client, et le site n'a pas `require`.
-  await messages().createChatMessage({ chatId, message });
-  return ouvert;
-};
+export const ecrireLePremierMessageAuClient = async ({ complexeId, message, reservationId }) => (
+  ecrireAuReserveur(complexeId, reservationId, message)
+);
 
 // ---------------------------------------------------------------------------------------------
 // RESA-L5A2 — les FERMETURES d'un terrain de complexe passent par les routes des fermetures des

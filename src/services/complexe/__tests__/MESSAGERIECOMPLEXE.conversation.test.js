@@ -51,13 +51,16 @@ describe(
       expect(mockClient.post).not.toHaveBeenCalled();
     });
 
-    it('ecrireLePremierMessageAuClient : le POST crée le fil, puis le message y part', async () => {
+    // CHAT-COMPLEXE-MESSAGE (D64, 15/11) : UN seul appel, le POST qui porte le message (avant :
+    // POST `{}`, puis /chat-messages ; un arrêt entre les deux laissait un fil vide).
+    it('ecrireLePremierMessageAuClient : UN POST crée le fil AVEC le message', async () => {
       const rendu = await ecrireLePremierMessageAuClient({
         complexeId: 'cx-five', message: 'Salut !', reservationId: 'r-48',
       });
       expect(rendu).toEqual({ data: { chat: 'chat-154' } });
-      expect(mockClient.post).toHaveBeenCalledWith(CHEMIN, {});
-      expect(mockMessage).toHaveBeenCalledWith({ chatId: 'chat-154', message: 'Salut !' });
+      expect(mockClient.post).toHaveBeenCalledTimes(1);
+      expect(mockClient.post).toHaveBeenCalledWith(CHEMIN, { data: { firstMessage: 'Salut !' } });
+      expect(mockMessage).not.toHaveBeenCalled();
     });
   },
 );
@@ -109,7 +112,8 @@ describe('MESSAGERIE-COMPLEXE — le crochet « Écrire au client »', () => {
           complexeId: 'cx-five', message: 'Salut !', reservationId: 'r-48',
         });
       });
-      expect(mockMessage).toHaveBeenCalledWith({ chatId: 'chat-154', message: 'Salut !' });
+      expect(mockClient.post).toHaveBeenCalledWith(CHEMIN, { data: { firstMessage: 'Salut !' } });
+      expect(mockMessage).not.toHaveBeenCalled();
       expect(relire).toHaveBeenCalledWith({ queryKey: ['chats'], type: 'all' });
     },
   );
