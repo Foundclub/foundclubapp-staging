@@ -17,7 +17,15 @@ import { useGetClubAudiencePreview } from '@/services/event/eventQueries';
  * /clubs/:id/event-club-audience).
  * Le parent decide de l'afficher (dirigeant seulement, Q1 A ; masquee pendant une recherche).
  * Sur le site, la feuille est une fenetre centree (`webPresentation="dialog"`, maquette 5a).
+ * EVT-CLUB-SECTIONS (15/11, R6 B) : avec `scope="all_sections"`, la meme carte devient « Toutes les
+ * sections » de l'omnisports (admin de l'omnisports seulement, decide par le parent), avec les
+ * comptes de la reunion (apercu `scope=all_sections`). La maquette ne la dessine pas : meme carte,
+ * meme feuille, textes propres.
  * @param {object} props Proprietes.
+ * @param {'club'|'all_sections'} [props.scope] La portee de la carte (`club` par defaut).
+ * @param {{ name?: string, sections?: any[] } | null} [props.multisport] L'omnisports (portee
+ *   `all_sections`).
+ * @param {boolean} [props.withTitle] Affiche l'intertitre « POUR TOUT LE CLUB » (vrai par defaut).
  * @param {{ documentId?: string, name?: string } | null} props.club Le club de l'evenement.
  * @param {number} props.teamsCount Le nombre d'equipes du club, affiche sur la carte.
  * @param {boolean} props.isSelected Vrai si « tout le club » est deja choisi (Match / Tournoi, ou
@@ -30,7 +38,8 @@ import { useGetClubAudiencePreview } from '@/services/event/eventQueries';
  * @returns {import('react').ReactElement} La carte et sa feuille.
  */
 function EventWizardClubAudience({
-  club, isSelected, keepsTeam, onClear, onConfirm, teamsCount,
+  club, isSelected, keepsTeam, multisport = null, onClear, onConfirm, scope = 'club', teamsCount,
+  withTitle = true,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -38,12 +47,15 @@ function EventWizardClubAudience({
   const { t } = useTranslation();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const clubId = String(club?.documentId || '');
-  const preview = useGetClubAudiencePreview(clubId);
+  const preview = useGetClubAudiencePreview(clubId, scope);
   const counts = preview?.data?.counts || null;
   const total = Number(counts?.total);
   const hasTotal = Number.isFinite(total);
+  const allSections = scope === 'all_sections';
+  const multisportSections = multisport?.sections;
+  const sectionsCount = Array.isArray(multisportSections) ? multisportSections.length : 0;
 
-  const subtitle = hasTotal
+  const clubSubtitle = hasTotal
     ? t('eventClubAudience.cardSubtitle', {
       club: club?.name || '',
       count: total,
@@ -55,6 +67,40 @@ function EventWizardClubAudience({
       defaultValue: '{{club}} · {{teams}} équipes',
       teams: teamsCount,
     });
+  const allSectionsSubtitle = hasTotal
+    ? t('eventClubAudience.allSectionsCardSubtitle', {
+      count: total,
+      defaultValue: '{{name}} · {{sections}} sections · {{count}} personnes',
+      name: multisport?.name || '',
+      sections: sectionsCount,
+    })
+    : t('eventClubAudience.allSectionsCardSubtitleNoCount', {
+      defaultValue: '{{name}} · {{sections}} sections',
+      name: multisport?.name || '',
+      sections: sectionsCount,
+    });
+  const subtitle = allSections ? allSectionsSubtitle : clubSubtitle;
+  /** @type {Record<string, string>} */
+  const hints = {
+    allSectionsHint: t(
+      'eventClubAudience.allSectionsCardHint',
+      'Les membres de chaque section du club omnisports, sans doublon.',
+    ),
+    allSectionsSelected: t(
+      'eventClubAudience.allSectionsCardSelected',
+      'Toutes les sections seront prévenues. Choisis maintenant l’équipe qui joue.',
+    ),
+    clubHint: t(
+      'eventClubAudience.cardHint',
+      'Joueurs, parents des moins de 13 ans, entraîneurs et membres sans équipe.',
+    ),
+    clubSelected: t(
+      'eventClubAudience.cardSelected',
+      'Tout le club sera prévenu. Choisis maintenant l’équipe qui joue.',
+    ),
+  };
+  const hintScope = allSections ? 'allSections' : 'club';
+  const hint = hints[`${hintScope}${isSelected && keepsTeam ? 'Selected' : 'Hint'}`];
 
   const intertitreStyle = [Fonts.p3Bold, Fonts.neutral300, { letterSpacing: 1 }];
   const ligneDeCompte = (/** @type {string} */ label, /** @type {any} */ value) => (
@@ -84,9 +130,11 @@ function EventWizardClubAudience({
 
   return (
     <View style={[Spaces.gap[12]]}>
-      <Text style={intertitreStyle}>
-        {t('eventClubAudience.sectionTitle', 'POUR TOUT LE CLUB')}
-      </Text>
+      {withTitle ? (
+        <Text style={intertitreStyle}>
+          {t('eventClubAudience.sectionTitle', 'POUR TOUT LE CLUB')}
+        </Text>
+      ) : null}
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityState={{ selected: Boolean(isSelected) }}
@@ -103,22 +151,18 @@ function EventWizardClubAudience({
             borderWidth: 1,
           },
         ]}
-        testID="event-wizard-club-audience-card"
+        testID={allSections
+          ? 'event-wizard-club-audience-card-all_sections'
+          : 'event-wizard-club-audience-card'}
       >
         <Text style={[Fonts.h4Bold, isSelected ? Fonts.primary500 : Fonts.neutral00]}>
-          {t('eventClubAudience.cardTitle', 'Tous les membres du club')}
+          {allSections
+            ? t('eventClubAudience.allSectionsCardTitle', 'Toutes les sections')
+            : t('eventClubAudience.cardTitle', 'Tous les membres du club')}
         </Text>
         <Text style={[Fonts.p3Bold, Fonts.primary500]}>{subtitle}</Text>
         <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
-          {isSelected && keepsTeam
-            ? t(
-              'eventClubAudience.cardSelected',
-              'Tout le club sera prévenu. Choisis maintenant l’équipe qui joue.',
-            )
-            : t(
-              'eventClubAudience.cardHint',
-              'Joueurs, parents des moins de 13 ans, entraîneurs et membres sans équipe.',
-            )}
+          {hint}
         </Text>
       </TouchableOpacity>
 
@@ -131,7 +175,9 @@ function EventWizardClubAudience({
         >
           <View style={[Spaces.paddingTop[24], Spaces.paddingBottom[24], Spaces.gap[16]]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('eventClubAudience.sheetTitle', 'Prévenir tout le club ?')}
+              {allSections
+                ? t('eventClubAudience.allSectionsSheetTitle', 'Prévenir toutes les sections ?')
+                : t('eventClubAudience.sheetTitle', 'Prévenir tout le club ?')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t(
@@ -189,11 +235,17 @@ function EventWizardClubAudience({
             ) : null}
 
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'eventClubAudience.sheetDedupe',
-                'Une personne qui est à la fois parent et entraîneur ne reçoit qu’une notification '
-                + 'et n’est comptée qu’une fois.',
-              )}
+              {allSections
+                ? t(
+                  'eventClubAudience.allSectionsSheetDedupe',
+                  'Une personne inscrite dans deux sections ne reçoit qu’une notification '
+                  + 'et n’est comptée qu’une fois.',
+                )
+                : t(
+                  'eventClubAudience.sheetDedupe',
+                  'Une personne qui est à la fois parent et entraîneur ne reçoit qu’une '
+                  + 'notification et n’est comptée qu’une fois.',
+                )}
             </Text>
             {keepsTeam ? (
               <Text style={[Fonts.p3, Fonts.neutral200]}>
@@ -216,7 +268,9 @@ function EventWizardClubAudience({
               <Button
                 disabled={!counts}
                 onPress={confirmer}
-                title={t('eventClubAudience.sheetConfirm', 'Oui, tout le club')}
+                title={allSections
+                  ? t('eventClubAudience.allSectionsSheetConfirm', 'Oui, toutes les sections')
+                  : t('eventClubAudience.sheetConfirm', 'Oui, tout le club')}
                 variant="Primary"
               />
               <Button

@@ -672,6 +672,16 @@ function EventWizardRecap({ navigation }) {
       defaultValue: 'Tout le club · {{count}} personnes',
     })
     : t('eventClubAudience.recapValueNoCount', 'Tout le club');
+  // EVT-CLUB-SECTIONS (15/11, R6 B) — le total est celui de la reunion des sections (serveur).
+  const allSectionsValue = Number.isFinite(clubAudienceTotal)
+    ? t('eventClubAudience.allSectionsRecapValue', {
+      count: clubAudienceTotal,
+      defaultValue: 'Toutes les sections · {{count}} personnes',
+    })
+    : t('eventClubAudience.allSectionsRecapValueNoCount', 'Toutes les sections');
+  const audienceValue = state.audienceScope === 'all_sections'
+    ? allSectionsValue
+    : clubAudienceValue;
   const hasTeam = Boolean(
     state.team?.name
     || (isTournament && state.tournamentScopeMode === 'autonomous')
@@ -702,7 +712,7 @@ function EventWizardRecap({ navigation }) {
     ...(isClubWide ? [{
       complete: true,
       label: t('eventClubAudience.recapLabel', 'Pour'),
-      value: clubAudienceValue,
+      value: audienceValue,
     }] : []),
     {
       complete: hasDate && hasTime,
@@ -1394,7 +1404,7 @@ function EventWizardRecap({ navigation }) {
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {t('eventClubAudience.recapLabel', 'Pour')}
                   </Text>
-                  <Text style={[Fonts.p2, Fonts.neutral00]}>{clubAudienceValue}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral00]}>{audienceValue}</Text>
                 </View>
               ) : null}
               {isTournament && state.tournamentScopeMode === 'autonomous' ? (

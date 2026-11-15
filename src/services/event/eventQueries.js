@@ -149,14 +149,17 @@ export const useGetEvents = (params, options) => useInfiniteQuery({
 
 /**
  * EVT-CLUB-ECRANS (14/11/2026) — l'apercu « Prevenir tout le club ? » (comptes seulement).
+ * EVT-CLUB-SECTIONS (15/11, R6 B) : `scope` 'all_sections' compte la reunion des sections (admin
+ * de l'omnisports seulement, 403 sinon).
  * @param {string} clubId Le club.
+ * @param {'club'|'all_sections'} [scope] La portee.
  * @param {Omit<import('@tanstack/react-query').UseQueryOptions, 'queryKey'>} [options] Options.
  * @returns {import('@tanstack/react-query').UseQueryResult<any>} La requete.
  */
-export const useGetClubAudiencePreview = (clubId, options = {}) => useQuery({
+export const useGetClubAudiencePreview = (clubId, scope = 'club', options = {}) => useQuery({
   enabled: Boolean(clubId),
-  queryFn: () => getClubAudiencePreview(clubId, 'club'),
-  queryKey: ['event-club-audience-preview', clubId],
+  queryFn: () => getClubAudiencePreview(clubId, scope),
+  queryKey: ['event-club-audience-preview', clubId, scope],
   staleTime: 60_000,
   ...options,
 });

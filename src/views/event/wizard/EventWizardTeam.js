@@ -8,7 +8,11 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { isClubAudienceEvent, keepsTeamWithClubAudience } from '@/domains/event/clubAudience';
+import {
+  getAllSectionsMultisport,
+  isClubAudienceEvent,
+  keepsTeamWithClubAudience,
+} from '@/domains/event/clubAudience';
 import { getManagedTeams } from '@/domains/team/teamMembership';
 import useTheme from '@/theme/themeContext';
 
@@ -315,34 +319,61 @@ function EventWizardTeam({ navigation }) {
   // seulement (Q1 A), masquee pendant une recherche. Hors Match / Tournoi, « Oui » rattache
   // l'evenement au club et passe a l'etape suivante ; un Match / Tournoi garde son equipe (R1 A) :
   // on reste ici pour la choisir.
+  // EVT-CLUB-SECTIONS (15/11, R6 B) — l'admin de l'omnisports dont le club organisateur est une
+  // section voit en plus « Toutes les sections » (personne d'autre ; le serveur juge aussi).
   const keepsClubAudienceTeam = keepsTeamWithClubAudience(state?.type?.name);
-  const showClubAudienceCard = Boolean(
-    isClubManager
-    && organizerClub?.documentId
+  const canShowClubWideCards = Boolean(
+    organizerClub?.documentId
     && !normalizeSearchText(searchQuery)
     && !isLoading
     && !error
     && hasTeams,
   );
-  const handleConfirmClubAudience = (/** @type {any} */ counts) => {
+  const showClubAudienceCard = canShowClubWideCards && isClubManager;
+  const allSectionsMultisport = canShowClubWideCards
+    ? getAllSectionsMultisport(userData, organizerClub)
+    : null;
+  const handleConfirmClubAudience = (
+    /** @type {'club'|'all_sections'} */ audienceScope,
+    /** @type {any} */ counts,
+  ) => {
     dispatch({
-      payload: { audienceScope: 'club', club: organizerClub, counts },
+      payload: { audienceScope, club: organizerClub, counts },
       type: 'SET_CLUB_AUDIENCE',
     });
     if (!keepsClubAudienceTeam) {
       navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardTeam, state));
     }
   };
-  const renderClubAudienceCard = () => (showClubAudienceCard ? (
-    <EventWizardClubAudience
-      club={organizerClub}
-      isSelected={isClubAudienceEvent(state)}
-      keepsTeam={keepsClubAudienceTeam}
-      onClear={() => dispatch({ type: 'CLEAR_CLUB_AUDIENCE' })}
-      onConfirm={handleConfirmClubAudience}
-      teamsCount={availableTeams.length}
-    />
-  ) : null);
+  const renderClubAudienceCard = () => (
+    <>
+      {showClubAudienceCard ? (
+        <EventWizardClubAudience
+          club={organizerClub}
+          isSelected={isClubAudienceEvent(state) && state?.audienceScope !== 'all_sections'}
+          keepsTeam={keepsClubAudienceTeam}
+          onClear={() => dispatch({ type: 'CLEAR_CLUB_AUDIENCE' })}
+          onConfirm={(/** @type {any} */ counts) => handleConfirmClubAudience('club', counts)}
+          teamsCount={availableTeams.length}
+        />
+      ) : null}
+      {allSectionsMultisport ? (
+        <EventWizardClubAudience
+          club={organizerClub}
+          isSelected={state?.audienceScope === 'all_sections'}
+          keepsTeam={keepsClubAudienceTeam}
+          multisport={allSectionsMultisport}
+          onClear={() => dispatch({ type: 'CLEAR_CLUB_AUDIENCE' })}
+          onConfirm={(/** @type {any} */ counts) => (
+            handleConfirmClubAudience('all_sections', counts)
+          )}
+          scope="all_sections"
+          teamsCount={availableTeams.length}
+          withTitle={!showClubAudienceCard}
+        />
+      ) : null}
+    </>
+  );
 
   const canContinueAutonomousTournament = Boolean(
     organizerClub?.documentId
