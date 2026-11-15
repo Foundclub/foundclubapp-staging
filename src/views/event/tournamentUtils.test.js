@@ -133,6 +133,24 @@ describe('tournamentUtils', () => {
     });
   });
 
+  // T-LIGUE-2 (15/11) : publiee au tirage, la ligue doit encore pouvoir avoir sa phase finale.
+  test('publiee sans tableau final : le bouton de la phase finale reste, une seule fois', () => {
+    const publiee = (bracket) => getTournamentCompetitionActions({
+      bracket,
+      config: { competitionState: 'published', formatMode: 'groups_to_knockout' },
+      overview: { groups: 1, totalMatches: 40 },
+    });
+    expect(publiee([]).canGenerateKnockout).toBe(true);
+    expect(publiee([]).canDrawGroups).toBe(false);
+    expect(publiee([]).canGenerateMatches).toBe(false);
+    expect(publiee([]).canPublish).toBe(false);
+    expect(publiee([{ matches: [] }]).canGenerateKnockout).toBe(false);
+    expect(getTournamentCompetitionActions({
+      bracket: [],
+      config: { competitionState: 'published', formatMode: 'knockout_only' },
+    }).canGenerateKnockout).toBe(false);
+  });
+
   test('formats match score and exposes status meta', () => {
     const colors = {
       error500: '#f44',
