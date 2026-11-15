@@ -172,6 +172,7 @@ function ClubAudienceResponses({ event, layout = 'list' }) {
         t('eventClubAudience.remindedAt', {
           defaultValue: 'relancé à {{time}}',
           time: heureDe(row.remindedAt),
+          ...SANS_ECHAPPEMENT,
         }),
       );
     }
@@ -407,6 +408,7 @@ function ClubAudienceResponses({ event, layout = 'list' }) {
     ? t('eventClubAudience.remindWaiting', {
       defaultValue: 'Relancé à {{time}}',
       time: heureDe(relance.lastRemindedAt),
+      ...SANS_ECHAPPEMENT,
     })
     : t(isFiltered ? 'eventClubAudience.remindCtaFiltered' : 'eventClubAudience.remindCta', {
       count: relance.keys.length,
@@ -431,6 +433,7 @@ function ClubAudienceResponses({ event, layout = 'list' }) {
               'Nouvelle relance possible le {{date}} à {{time}}, '
               + 'pour ceux qui n’auront toujours pas répondu.',
             time: heureDe(relance.nextReminderAt),
+            ...SANS_ECHAPPEMENT,
           })}
         </Text>
       ) : null}

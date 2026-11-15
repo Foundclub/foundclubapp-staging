@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -61,11 +62,13 @@ function EventWizardClubAudience({
       count: total,
       defaultValue: '{{club}} · {{teams}} équipes · {{count}} personnes',
       teams: teamsCount,
+      ...SANS_ECHAPPEMENT,
     })
     : t('eventClubAudience.cardSubtitleNoCount', {
       club: club?.name || '',
       defaultValue: '{{club}} · {{teams}} équipes',
       teams: teamsCount,
+      ...SANS_ECHAPPEMENT,
     });
   const allSectionsSubtitle = hasTotal
     ? t('eventClubAudience.allSectionsCardSubtitle', {
@@ -73,11 +76,13 @@ function EventWizardClubAudience({
       defaultValue: '{{name}} · {{sections}} sections · {{count}} personnes',
       name: multisport?.name || '',
       sections: sectionsCount,
+      ...SANS_ECHAPPEMENT,
     })
     : t('eventClubAudience.allSectionsCardSubtitleNoCount', {
       defaultValue: '{{name}} · {{sections}} sections',
       name: multisport?.name || '',
       sections: sectionsCount,
+      ...SANS_ECHAPPEMENT,
     });
   const subtitle = allSections ? allSectionsSubtitle : clubSubtitle;
   /** @type {Record<string, string>} */

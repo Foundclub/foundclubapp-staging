@@ -28,6 +28,9 @@ const mockAppelsMaNote = jest.fn();
 // comme chaque service de l ecran (EventDetails.js:123-128).
 // Le consentement de detection est couvert par EventDetailsWebVisiteurAD02.
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+// RECOLTE-TRAIN12 : EVT-CLUB-ECRANS branche le tableau « tout le club » dans la fiche (il tire
+// BottomModal / gorhom) ; double comme dans les autres témoins EventDetailsWeb.
+jest.mock('@/views/event/components/ClubAudienceResponses', () => () => null);
 // CORR-EVENEMENTS 119 et 130 : feuilles « série » et « équipe » = BottomModal native (gorhom).
 jest.mock('@/views/event/components/CancelSeriesSheet', () => () => null);
 // La feuille du nom de l'équipe : on garde son `mode` pour prouver quelle action le bouton lance.
