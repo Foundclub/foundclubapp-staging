@@ -10562,13 +10562,15 @@ export default {
     allFeminine: 'toutes',
     allMasculine: 'tous',
     allSectionsCardHint: 'Les membres de chaque section du club omnisports, sans doublon.',
-    allSectionsCardSelected: 'Toutes les sections seront prévenues. Choisis maintenant l’équipe qui joue.',
+    allSectionsCardSelected:
+      'Toutes les sections seront prévenues. Choisis maintenant l’équipe qui joue.',
     allSectionsCardSubtitle: '{{name}} · {{sections}} sections · {{count}} personnes',
     allSectionsCardSubtitleNoCount: '{{name}} · {{sections}} sections',
     allSectionsCardTitle: 'Toutes les sections',
     allSectionsRecapValue: 'Toutes les sections · {{count}} personnes',
     allSectionsRecapValueNoCount: 'Toutes les sections',
     allSectionsSheetConfirm: 'Oui, toutes les sections',
+    // eslint-disable-next-line max-len
     allSectionsSheetDedupe: 'Une personne inscrite dans deux sections ne reçoit qu’une notification et n’est comptée qu’une fois.',
     allSectionsSheetTitle: 'Prévenir toutes les sections ?',
     answerAbsent: 'Absent',
