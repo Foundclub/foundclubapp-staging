@@ -24,6 +24,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { canSeeClubAudience } from '@/domains/event/clubAudience';
 import {
   isMatchTypeName,
   OPPONENT_NAME_MAX_LENGTH,
@@ -189,6 +190,7 @@ import {
   resolveAttendanceWindow,
   resolveCallMode,
 } from './attendance/attendanceCallModel';
+import ClubAudienceResponses from './components/ClubAudienceResponses';
 import EventChatRow from './components/EventChatRow';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
@@ -1315,6 +1317,10 @@ function EventDetails({ navigation, route }) {
     () => (userData?.multisportClubs || []).map((club) => club?.documentId).filter(Boolean),
     [userData?.multisportClubs],
   );
+  // EVT-CLUB-ECRANS (14/11, ecrans 4a-4c) — « tout le club » ET dirigeant (Q1 A / Q10 B) : UNE
+  // liste des reponses du club remplace le bloc des reponses par equipe. Un evenement ordinaire n'y
+  // passe jamais.
+  const showClubList = canSeeClubAudience(event, userData, USER_ROLES);
   const isClubManagerForEvent = Boolean(
     userData?.role?.name === USER_ROLES.president
     && userClubId
@@ -8684,7 +8690,11 @@ function EventDetails({ navigation, route }) {
                 <EventChildRegistrationsForOrganizer eventId={event?.documentId} />
               ) : null}
 
-              {showParticipantsTab && (!isTournamentEvent || isStageDayEvent) ? (
+              {showParticipantsTab && showClubList ? (
+                <ClubAudienceResponses event={event} />
+              ) : null}
+
+              {showParticipantsTab && !showClubList && (!isTournamentEvent || isStageDayEvent) ? (
                 <EventParticipants
                   // @ts-ignore: FIXME: Baseline TS regression
                   attendanceByUserId={attendanceByUserId}

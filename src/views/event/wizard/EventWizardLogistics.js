@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { isClubAudienceEvent } from '@/domains/event/clubAudience';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -535,7 +536,8 @@ function EventWizardLogistics({ navigation, route }) {
     let normalizedRecurrenceStartDate = null;
     let normalizedRecurrenceEndDate = null;
 
-    const effectiveIsRecurrent = isTournament ? false : isRecurrent;
+    // EVT-CLUB-ECRANS (decision du chef, 14/11) : « tout le club » = une date seule.
+    const effectiveIsRecurrent = (isTournament || isClubAudienceEvent(state)) ? false : isRecurrent;
 
     if (effectiveIsRecurrent) {
       normalizedRecurrenceStartDate = recurrenceStartDate
@@ -696,7 +698,7 @@ function EventWizardLogistics({ navigation, route }) {
                 intervalleTexte: recurrenceIntervalText,
                 jours: recurrenceDays,
               }}
-              sansRepetition={isTournament}
+              sansRepetition={isTournament || isClubAudienceEvent(state)}
               vacances={vacancesDeLaZone ? {
                 actif: saufVacances,
                 onBasculer: () => setChoixSaufVacances(!saufVacances),
