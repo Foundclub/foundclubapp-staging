@@ -26953,6 +26953,9 @@ export default {
     declined: 'Refusé',
     declineThisRequest: 'Veux-tu refuser cette demande ?',
     derivedFrom: 'Équipe tournoi dérivée de {{name}}',
+    // eslint-disable-next-line max-len
+    discussionMinorOutside: 'La discussion de l’équipe ne t’est pas ouverte : il faut que ton parent ait un compte relié au tien, ou qu’un encadrant de ton club puisse la rejoindre. Tu restes dans l’équipe et tu paies ta place normalement.',
+    discussionReadOnly: 'La discussion est fermée : tu peux la relire.',
     exceptionalAddition: 'Ajout exceptionnel',
     foundclubProfile: 'Profil FoundClub',
     // eslint-disable-next-line max-len
@@ -27021,6 +27024,7 @@ export default {
     sendAJoinRequestThe: "Envoie une demande de rejoindre. Le capitaine ou un admin pourra ensuite l'accepter ou la refuser.",
     sendMyRequest: 'Envoyer ma demande',
     teamArchived: 'Équipe archivée',
+    teamDiscussion: "Discussion de l'équipe",
     teamStatus: 'Statut équipe',
     temporaryTeamCreatedForThis: 'Équipe éphémère créée pour ce tournoi',
     // eslint-disable-next-line max-len

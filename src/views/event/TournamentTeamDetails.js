@@ -43,6 +43,7 @@ import { formatDateWithDayPrefix } from '@/utils/date';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import TournamentMemberConsent from './TournamentMemberConsent';
 import { TournamentMemberPlace, TournamentPlacesSummary } from './TournamentMemberPlace';
+import TournamentTeamDiscussion from './TournamentTeamDiscussion';
 import {
   getTournamentMemberBuckets,
   getTournamentRosterSummary,
@@ -754,6 +755,7 @@ function TournamentTeamDetails({ navigation, route }) {
               ) : null}
             </View>
             <TournamentPlacesSummary payment={team?.payment} />
+            <TournamentTeamDiscussion discussion={team?.discussion} navigation={navigation} />
             {!rosterSummary.meetsMinRoster ? (
               <Text style={[Fonts.p3, Fonts.warning500]}>
                 {`Effectif minimum non atteint: ${rosterSummary.totalCount}/${rosterSummary.minRosterSize}`}
