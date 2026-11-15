@@ -13853,6 +13853,13 @@ export default {
       primary: 'See the tournament',
       title: 'Tournament invitation',
     },
+    tournamentTeam: {
+      closed: 'Registrations for this tournament are closed.',
+      intro: "You're invited to join the {{team}} team for the {{event}} tournament.",
+      introShort: "You're invited to join a tournament team.",
+      join: 'Join the team',
+      title: 'Join {{team}}',
+    },
   },
   leagueActionPromptHost: {
     actions: {
@@ -24193,6 +24200,10 @@ export default {
     message: "You're invited to join the {{team}} team on FoundClub. Open this link to see the invitation:",
     messageFrom: '{{inviter}} invites you to join the {{team}} team on FoundClub. Open this link to see the invitation:',
     teamWithClub: '{{team}} ({{club}})',
+    tournamentTeam: {
+      fallback: 'If the app opens without signing you up, update it or open this link in your browser.',
+      message: 'Join the {{team}} team for the {{event}} tournament on FoundClub:',
+    },
   },
   teamInviteSheet: {
     accepted: {
@@ -25799,6 +25810,13 @@ export default {
     invite: 'Invite',
     inviteAClubPlayerWithout: 'Invite a club player without touching the base club team.',
     inviteAPlayer: 'Invite a player',
+    inviteLink: {
+      button: 'Share the link',
+      copied: 'Link copied: paste it in a message to your players.',
+      failed: 'The link could not be prepared. Try again in a moment.',
+      hint: 'Send this link to your players: they join the team, then pay for their spot.',
+      title: 'Invite players with a link',
+    },
     joinRequest: 'Join request',
     joinRequests: 'Join requests',
     joinThisTeam: 'Join this team',

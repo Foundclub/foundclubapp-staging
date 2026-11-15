@@ -14710,6 +14710,13 @@ export default {
       primary: 'Voir le tournoi',
       title: 'Invitation à un tournoi',
     },
+    tournamentTeam: {
+      closed: 'Les inscriptions de ce tournoi sont closes.',
+      intro: "Tu es invité·e à rejoindre l'équipe {{team}} pour le tournoi {{event}}.",
+      introShort: 'Tu es invité·e à rejoindre une équipe de tournoi.',
+      join: "Rejoindre l'équipe",
+      title: 'Rejoindre {{team}}',
+    },
   },
   leagueActionPromptHost: {
     actions: {
@@ -24677,6 +24684,11 @@ export default {
     // eslint-disable-next-line max-len
     messageFrom: "{{inviter}} t'invite à rejoindre l'équipe {{team}} sur FoundClub. Ouvre ce lien pour voir l'invitation :",
     teamWithClub: '{{team}} ({{club}})',
+    tournamentTeam: {
+      // eslint-disable-next-line max-len
+      fallback: "Si l'app s'ouvre sans t'inscrire, mets-la à jour ou ouvre ce lien dans ton navigateur.",
+      message: "Rejoins l'équipe {{team}} pour le tournoi {{event}} sur FoundClub :",
+    },
   },
   teamInviteSheet: {
     accepted: {
@@ -26953,6 +26965,13 @@ export default {
     invite: 'Inviter',
     inviteAClubPlayerWithout: "Invite un joueur du club sans toucher à l'équipe club de base.",
     inviteAPlayer: 'Inviter un joueur',
+    inviteLink: {
+      button: 'Partager le lien',
+      copied: 'Lien copié : colle-le dans un message à tes joueurs.',
+      failed: "Le lien n'a pas pu être préparé. Réessaie dans un instant.",
+      hint: "Envoie ce lien à tes joueurs : ils rejoignent l'équipe puis paient leur place.",
+      title: 'Inviter des joueurs par lien',
+    },
     joinRequest: 'Demande de rejoindre',
     joinRequests: 'Demandes de rejoindre',
     joinThisTeam: 'Rejoindre cette équipe',
