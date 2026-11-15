@@ -37,7 +37,6 @@ function TournamentTeamDiscussion({ discussion, navigation }) {
         onPress={() => navigation.navigate(RouteNames.Conversation, { chatId })}
         size="sm"
         style={{ alignSelf: 'flex-start' }}
-        testID="tournament-team-discussion"
         title={t('tournamentTeamDetails.teamDiscussion', "Discussion de l'équipe")}
         variant="Primary"
       />
