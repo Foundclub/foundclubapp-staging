@@ -225,7 +225,9 @@ export const getTournamentCompetitionActions = (dashboard) => {
 
   return {
     canDrawGroups: competitionState !== 'published' && usesGroups,
-    canGenerateKnockout: competitionState !== 'published' && usesKnockout,
+    // T-LIGUE-2 : publiee au tirage, la ligue garde une fois sa phase finale (le serveur fait foi).
+    canGenerateKnockout: usesKnockout && (competitionState !== 'published'
+      || (normalizeTournamentText(config?.formatMode) === 'groups_to_knockout' && !hasBracket)),
     canGenerateMatches: competitionState !== 'published' && (
       (usesGroups && groupCount > 0)
       || normalizeTournamentText(config?.formatMode) === 'knockout_only'
