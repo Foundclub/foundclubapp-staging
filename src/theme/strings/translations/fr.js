@@ -19825,6 +19825,11 @@ export default {
       description: 'Le lien de paiement est incomplet.',
       title: 'Lien invalide',
     },
+    jerseySize: {
+      intro: 'Le maillot est compris dans la place. Choisis la taille du joueur inscrit, même si tu paies pour quelqu’un d’autre.',
+      missing: 'Choisis une taille pour pouvoir payer.',
+      title: 'Taille du maillot',
+    },
     loading: {
       description: 'On récupère les informations de paiement.',
       title: 'Chargement',

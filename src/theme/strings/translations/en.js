@@ -19030,6 +19030,11 @@ export default {
       description: 'The payment link is incomplete.',
       title: 'Invalid link',
     },
+    jerseySize: {
+      intro: 'The jersey is included in the spot. Choose the registered player’s size, even if you are paying for someone else.',
+      missing: 'Choose a size to be able to pay.',
+      title: 'Jersey size',
+    },
     loading: {
       description: 'Fetching the payment details.',
       title: 'Loading',
