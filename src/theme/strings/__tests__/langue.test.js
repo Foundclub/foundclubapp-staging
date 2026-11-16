@@ -16,6 +16,10 @@ jest.mock('@/utils/device/deviceInfo', () => ({
   },
 }));
 
+/** @type {{ OS: string }} */
+const mockPlatform = { OS: 'ios' };
+jest.mock('react-native', () => ({ Platform: mockPlatform }));
+
 jest.mock('@/platform/storage', () => ({
   getItem: (/** @type {string} */ clef) => mockStockage.get(clef),
   removeItem: (/** @type {string} */ clef) => mockStockage.delete(clef),
@@ -34,9 +38,61 @@ const {
   lireChoixDeLangue,
 } = jest.requireActual('@/theme/strings/langue');
 
+const navigateurAvant = Object.getOwnPropertyDescriptor(global, 'navigator');
 beforeEach(() => {
   mockLocale = ['fr', 'FR'];
+  mockPlatform.OS = 'ios';
   mockStockage.clear();
+});
+afterEach(() => {
+  if (navigateurAvant) Object.defineProperty(global, 'navigator', navigateurAvant);
+});
+
+/**
+ * Le navigateur du testeur : ses langues préférées, dans l'ordre de ses réglages.
+ * @param {string[]} languages - `navigator.languages`.
+ * @returns {void}
+ */
+const navigateur = (languages) => {
+  Object.defineProperty(global, 'navigator', {
+    configurable: true,
+    value: { language: languages[0], languages },
+  });
+};
+
+// 🐞 RETOUCHES-T12B (16/11, M1292) — Chrome réglé « anglais en premier », fenêtre
+// privée : le site restait en français. `Intl` suit la langue d'AFFICHAGE de Chrome
+// (celle de Windows), pas la liste des langues préférées que le navigateur annonce
+// aux sites (`navigator.languages`, l'en-tête Accept-Language).
+describe('M1292 — sur le site, la première visite suit les langues préférées du navigateur', () => {
+  it('navigateur « anglais en premier » sur un Chrome affiché en français → anglais', () => {
+    mockPlatform.OS = 'web';
+    mockLocale = ['fr', 'FR'];
+    navigateur(['en-US', 'en', 'fr-FR']);
+    expect(langueDuTelephone()).toBe('en');
+    expect(langueEffective()).toBe('en');
+  });
+
+  it('navigateur « français en premier » → français', () => {
+    mockPlatform.OS = 'web';
+    mockLocale = ['en', 'US'];
+    navigateur(['fr-FR', 'en-US']);
+    expect(langueEffective()).toBe('fr');
+  });
+
+  it('le choix enregistré l’emporte ensuite sur le navigateur', () => {
+    mockPlatform.OS = 'web';
+    navigateur(['en-US']);
+    enregistrerChoixDeLangue('fr');
+    expect(langueEffective()).toBe('fr');
+  });
+
+  it('au téléphone, rien ne change : la locale du téléphone', () => {
+    mockPlatform.OS = 'ios';
+    mockLocale = ['fr', 'FR'];
+    navigateur(['en-US']);
+    expect(langueDuTelephone()).toBe('fr');
+  });
 });
 
 describe('I18N-0 — langueDepuisLocale', () => {
