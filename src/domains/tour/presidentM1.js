@@ -438,6 +438,8 @@ const planningStep = (step) => Object.defineProperties(
   Object.getOwnPropertyDescriptors(step),
 );
 
+const isWeb = () => Platform.OS === 'web';
+
 const PART_PLANNING = [
   {
     advanceOn: { goto: 'm1-pdemo', key: 'facility.planning.opened', type: 'interaction' },
@@ -581,7 +583,14 @@ const PART_PLANNING = [
     get text() { return t('m1-pb1', 'Reviens à tes installations.'); },
   },
   {
-    advanceOn: { key: RouteNames.Club, type: 'route' },
+    // GUIDE-T12 M1182 : sur le site, l'onglet du club ouvre « Mes équipes » (`TeamList`) ou le
+    // tableau omnisports (`CMDashboard`), jamais `Club` (web AppShell getTeamTabDestination) :
+    // l'arrivée y compte ; m1-poster ouvre ensuite la fiche du club lui-même (navigateOnEnter).
+    advanceOn: [
+      { key: RouteNames.Club, type: 'route' },
+      { key: RouteNames.TeamList, type: 'route', when: isWeb },
+      { key: RouteNames.CMDashboard, type: 'route', when: isWeb },
+    ],
     // GUIDES-SITE-CORR S06 (tournée du site, 09/11) : sur le site, « Tes installations » n'a pas
     // de flèche Retour ; le club est dans les onglets (colonne de gauche, barre du bas).
     get fallback() {
