@@ -6,12 +6,12 @@
  * Source : `pilotage/tournoi-mtp/CGV_INSCRIPTION.md` (dépôt méthode, main ea0047d), PARTIE II « texte à publier »
  * (v3 du 15/11, décisions d'Adel D11 A, D17, D20 A, D21 A, D22 B, D23, D36). Changements de forme seulement : le
  * gras est retiré, le tableau du § 5 devient une ligne par cas (« cas : ce qui se passe »), les puces deviennent
- * des paragraphes. Nom légal « Found Club » (règle « 129- B »). Aucun médiateur de la consommation (D23, 15/11).
+ * des paragraphes. Nom légal « Found Club » (règle « 129- B »). Médiateur de la consommation : CM2C, adhésion de Found Club valable jusqu'au 16/11/2029 (révision de D23, 16/11).
  * ⚠️ Adel relit ce texte avant la prod. Une virgule changée ici change la page publiée.
  */
 
 /** La ligne de version, affichée sous le titre. */
-export const VERSION_DES_CONDITIONS = 'Version du 15 novembre 2026';
+export const VERSION_DES_CONDITIONS = 'Version du 16 novembre 2026';
 
 /**
  * Les paragraphes, dans l'ordre : le titre, la version, puis chaque titre de partie (« 1. … ») suivi de ses
@@ -59,7 +59,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   '8. Données personnelles',
   'Responsable : Found Club.',
   'Ce qu\'on garde : prénom, nom, e-mail, téléphone (pour joindre le joueur le soir du tournoi) ; date de naissance (pour vérifier l\'âge ; l\'organisateur ne voit que l\'âge) ; taille de maillot ; nom et numéro à imprimer sur le maillot (facultatifs) ; équipe, niveau déclaré, résultats ; pour un joueur de 16 ou 17 ans, l\'autorisation de son parent ; paiement : montant, date, référence. Le numéro de carte n\'est jamais vu ni gardé par Found Club.',
-  'Combien de temps : coordonnées et tailles jusqu\'au 31 mars 2027, puis effacées ; l\'autorisation parentale, archivée 10 ans, à accès restreint, comme preuve en cas d\'accident ; le nom de l\'équipe et les résultats restent publiés comme palmarès ; les pièces comptables 10 ans (article L123-22 du Code de commerce) ; les images, la durée du § 7.',
+  'Combien de temps : coordonnées, tailles, noms et numéros de maillot jusqu\'au 31 mars 2027, puis effacés ; l\'autorisation parentale, archivée 10 ans, à accès restreint, comme preuve en cas d\'accident ; le nom de l\'équipe et les résultats restent publiés comme palmarès ; les pièces comptables 10 ans (article L123-22 du Code de commerce) ; les images, la durée du § 7.',
   'Base : le contrat (l\'inscription) ; le consentement pour les images et pour les nouvelles de FoundClub ; l\'obligation légale pour la comptabilité ; l\'intérêt légitime pour le favori ci-dessous.',
   'AR Soccer en favori : en s\'inscrivant, le joueur ajoute AR Soccer à ses favoris sur FoundClub ; il voit ses annonces et ses créneaux, et peut le retirer de ses favoris à tout moment, en un geste. AR Soccer ne reçoit ni son téléphone ni son e-mail.',
   'Vos droits : accès, rectification, effacement, opposition, en écrivant à contact@foundclubpro.com. Réclamation possible auprès de la CNIL (cnil.fr).',
@@ -71,7 +71,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   '10. Réclamations et litiges',
   'Toute réclamation s\'adresse par écrit à contact@foundclubpro.com, avec le nom du joueur et l\'objet de la demande.',
   'Found Club répond sous 15 jours.',
-  'Si la réponse ne règle pas le désaccord, le joueur garde les voies de recours habituelles : il peut faire appel gratuitement à un conciliateur de justice, ou saisir le tribunal compétent.',
+  'Conformément aux dispositions du Code de la consommation concernant le processus de médiation des litiges de la consommation, après nous avoir sollicités et à défaut de réponse vous satisfaisant, vous avez la possibilité de recourir gratuitement à une procédure de médiation de la consommation auprès de : CM2C, 49 rue de Ponthieu, 75008 Paris. Tél : 01 89 47 00 14. Site internet : https://www.cm2c.net/declarer-un-litige.php. Mail : litiges@cm2c.net. Le joueur peut aussi saisir le tribunal compétent.',
   'Ces conditions sont soumises au droit français.',
 ]);
 
