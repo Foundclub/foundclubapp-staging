@@ -188,7 +188,9 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
   const matchContextLabel = showMatchTitle ? matchDisplay.contextLabel : '';
   const eventOwnName = toDisplayText(event?.name);
   const teamName = toDisplayText(event?.team?.name);
-  const tournamentTitle = eventOwnName || t('eventDetails.header.tournamentFallback', 'Tournoi');
+  // T-NOM (16/11) : le nom donne au tournoi d'abord, meme si `name` est encore le nom machine.
+  const tournamentTitle = toDisplayText(resolveEventCustomName(event)) || eventOwnName
+    || t('eventDetails.header.tournamentFallback', 'Tournoi');
   // AE01 — le titre principal suit le TYPE (planche 03, cadres C/D/E/G/H).
   // Deux familles en sont EXCLUES et gardent le nom du club :
   //  - le match (voir N3 juste en dessous) ;

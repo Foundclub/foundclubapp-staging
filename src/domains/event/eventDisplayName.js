@@ -66,6 +66,17 @@ export const isMatchTypeName = (typeName) => comparable(typeName).includes('matc
 export const isOtherTypeName = (typeName) => comparable(typeName) === 'autre';
 
 /**
+ * T-NOM (16/11) — le type garde-t-il le nom donne (`customName`) a l'affichage ?
+ * « Autre » et les tournois (« FoundClub x AR Soccer »). Jumeau de
+ * `isCustomNamedTypeName` cote serveur. Les formulaires restent a `isOtherTypeName`.
+ * @param {any} typeName Nom du type d'evenement.
+ * @returns {boolean} Vrai pour « Autre » et tout type contenant « tournoi ».
+ */
+export const isCustomNamedTypeName = (typeName) => (
+  isOtherTypeName(typeName) || comparable(typeName).includes('tournoi')
+);
+
+/**
  * Nettoie un nom libre : blancs retires aux bords et ecrases au milieu.
  * @param {any} value Nom brut.
  * @returns {string} Nom nettoye, chaine vide s'il n'y a rien.
@@ -104,13 +115,13 @@ export const buildEventCustomNamePayload = (typeName, value) => (
 );
 
 /**
- * Le nom donne a un « Autre », vide pour tout autre type ou sans nom.
+ * Le nom donne a un « Autre » ou a un tournoi (T-NOM), vide pour tout autre type ou sans nom.
  * @param {any} eventLike Evenement, tel que l'API le sert.
  * @returns {string} Le nom donne, ou chaine vide.
  */
 export const resolveEventCustomName = (eventLike) => {
   const typeName = eventLike?.type?.name || eventLike?.typeName;
-  return isOtherTypeName(typeName) ? normalizeEventCustomName(eventLike?.customName) : '';
+  return isCustomNamedTypeName(typeName) ? normalizeEventCustomName(eventLike?.customName) : '';
 };
 
 /**
