@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import { PRESIDENT_GUIDE } from '@/domains/tour/presidentGuide';
 import { indexOfStep, matchSignal } from '@/domains/tour/tourGuideEngine';
+
 import { RouteNames } from '@/navigation/routeNames';
 
 // GUIDE-T12, M1182 (testeur, site, 13/11 puis 16/11) : à « Puis retourne sur la fiche du club :

@@ -17,13 +17,15 @@ const etapesDeM2 = (/** @type {string} */ niveau) => {
 test('M1224 : club sans offre Club, M2 se regarde (« + » non touchable, « Compris », M3)', () => {
   expect(etapesDeM2('FREE')).toEqual(['m2-visit', 'm2-visit-add']);
   const plus = PRESIDENT_GUIDE.steps.find((/** @type {any} */ s) => s.id === 'm2-visit-add');
-  expect(plus).toMatchObject({ completesMission: true, lookOnly: true, targets: ['staff-add-coach'] });
+  expect(plus).toMatchObject({
+    completesMission: true, lookOnly: true, targets: ['staff-add-coach'],
+  });
 });
 
 test('M1224 : club avec l offre Club, même non certifié, le « + » se touche pour de vrai', () => {
-  for (const niveau of ['CLUB', 'CLUB_UNVERIFIED']) {
+  ['CLUB', 'CLUB_UNVERIFIED'].forEach((niveau) => {
     const ids = etapesDeM2(niveau);
     expect(ids.slice(0, 2)).toEqual(['m2-staff', 'm2-add']);
     expect(ids).not.toContain('m2-visit-add');
-  }
+  });
 });
