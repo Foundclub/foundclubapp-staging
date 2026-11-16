@@ -461,7 +461,7 @@ function PublicLicensePayment({ navigation, route }) {
                         'Statut',
                       ),
                       // T-FINITIONS2 (16/11) : le libellé français du statut, jamais « issued ».
-                      value: licenseStatusLabels[receipt.status] || receipt.status || '-',
+                      value: /** @type {Record<string, string>} */ (licenseStatusLabels)[receipt.status] || receipt.status || '-',
                     },
                   ]}
                 />

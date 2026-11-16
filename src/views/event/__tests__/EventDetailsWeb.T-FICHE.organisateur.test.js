@@ -250,7 +250,9 @@ test('match d équipe : la ligne « Équipe » garde le nom de l équipe, aucune
   })));
   expect(lignes).toContainEqual(['Équipe', 'U13']);
   expect(libelles(lignes)).not.toContain('Organisateur');
-  expect(libelles(lignes)).toEqual(['Type', 'Équipe', 'Section', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+  // T-FINITIONS2 (16/11, chef M1294) : cet événement est un TOURNOI (type par défaut) avec 0 joueur
+  // attendu ; une case à 0 ne s'affiche plus sur un tournoi.
+  expect(libelles(lignes)).toEqual(['Type', 'Équipe', 'Section', 'Capacité', 'Prix / personne']);
 });
 
 test('tournoi autonome (club sans équipe) : « Organisateur » = nom du club, plus de « Équipe : Non définie »', () => {
