@@ -297,7 +297,12 @@ const STEPS = [
     when: (/** @type {any} */ ctx) => !hadTeam(ctx) && isTeamJoinPending(ctx),
   },
   {
-    advanceOn: withM1Escapes({ key: RouteNames.MyTeamList, type: 'route' }),
+    // GUIDE-T12 : sur le site, l'onglet entouré mène le coach à « Mes équipes » (`TeamList`, web
+    // AppShell getTeamTabDestination), pas à `MyTeamList` ; m1-new y trouve « Nouvelle équipe ».
+    advanceOn: withM1Escapes([
+      { key: RouteNames.MyTeamList, type: 'route' },
+      { key: RouteNames.TeamList, type: 'route', when: () => Platform.OS === 'web' },
+    ]),
     id: 'm1-dock',
     missionId: 'coach_m1',
     navTarget: homeTarget,
