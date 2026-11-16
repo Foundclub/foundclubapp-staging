@@ -140,6 +140,9 @@ import ClubAudienceResponses from './components/ClubAudienceResponses';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { eventMapTarget, formatEventPlaceLine, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
+import {
+  isPaidTournament, openTournamentTerms, paidValidationLabel, tournamentEntryFeeEuros,
+} from './components/tournamentTerms';
 import { findParentTeamId } from './matchEncartLines';
 import {
   buildMatchHeaderScoreSummary,
@@ -3584,8 +3587,9 @@ function EventDetails({ navigation, route }) {
                       : []),
                     {
                       label: t('eventDetails.pricePerson', 'Prix / personne'),
-                      value: event?.pricePerPerson != null
-                        ? `${event.pricePerPerson} EUR`
+                      // T-FINITIONS (16/11) : un tournoi payant affiche le prix de sa place.
+                      value: tournamentEntryFeeEuros(event) != null || event?.pricePerPerson != null
+                        ? `${tournamentEntryFeeEuros(event) ?? event.pricePerPerson} EUR`
                         : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini'),
                     },
                   ].map((item, index, rows) => (
@@ -3634,9 +3638,9 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {t('eventDetails.teamApproval', 'Validation des equipes:')}
                       {' '}
-                      {event?.tournamentConfig?.registrationMode === 'auto'
+                      {paidValidationLabel(event, t) ?? (event?.tournamentConfig?.registrationMode === 'auto'
                         ? t('eventDetails.automatic', 'Automatique')
-                        : t('eventDetails.manual', 'Manuelle')}
+                        : t('eventDetails.manual', 'Manuelle'))}
                     </span>
                     <span>
                       {t('eventDetails.maxTeams', 'Max equipes:')}
@@ -3823,6 +3827,24 @@ function EventDetails({ navigation, route }) {
                         type="button"
                       >
                         {t('eventDetails.createATeam', 'Créer une équipe')}
+                      </button>
+                    ) : null}
+                    {/* T-FINITIONS (16/11) : conditions lisibles avant l'inscription, tournoi payant seul. */}
+                    {isPaidTournament(event) ? (
+                      <button
+                        data-testid="event-tournament-terms-link"
+                        onClick={openTournamentTerms}
+                        style={{
+                          background: 'transparent',
+                          border: `1px solid ${borderColor}`,
+                          borderRadius: 999,
+                          color: textColor,
+                          cursor: 'pointer',
+                          padding: '10px 16px',
+                        }}
+                        type="button"
+                      >
+                        {t('publicLicensePayment.tournament.termsLink', "Conditions d'inscription")}
                       </button>
                     ) : null}
                   </div>

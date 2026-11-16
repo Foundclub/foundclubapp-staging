@@ -10043,6 +10043,7 @@ export default {
     sheetTotal: '{{count}} people',
   },
   eventDetails: {
+    validatedAtPaidPlayer: 'Team confirmed once {{count}} players have paid',
     facilityWhole: '{{nom}} · Whole facility',
     // FINITIONS7 (02/10) — the names the screen reader announces in the top bar.
     a11y: {

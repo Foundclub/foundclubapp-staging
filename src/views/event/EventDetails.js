@@ -209,6 +209,7 @@ import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
+import { isPaidTournament, openTournamentTerms, paidValidationLabel } from './components/tournamentTerms';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
@@ -7227,6 +7228,19 @@ function EventDetails({ navigation, route }) {
     };
   };
 
+  // T-FINITIONS (16/11) : le joueur lit les conditions AVANT de s'inscrire (tournoi payant seul).
+  const renderTournamentTermsLink = () => {
+    if (!isTournamentEvent || isStageDayEvent || !isPaidTournament(event)) return null;
+    return (
+      <Button
+        onPress={openTournamentTerms}
+        testID="event-tournament-terms-link"
+        title={t('publicLicensePayment.tournament.termsLink', "Conditions d'inscription")}
+        variant="SecondaryLight"
+      />
+    );
+  };
+
   const renderTournamentActionsPanel = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
     // 🎯 N2 — LES QUATRE ACTIONS PRIMAIRES ONT QUITTE CE PANNEAU pour la barre
@@ -7559,10 +7573,10 @@ function EventDetails({ navigation, route }) {
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
               <Text style={[Fonts.p4, Fonts.neutral300]}>Validation</Text>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : t(
+                {paidValidationLabel(event, t) ?? (event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : t(
                   'eventDetails.manual',
                   'Manuelle',
-                )}
+                ))}
               </Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
@@ -7685,6 +7699,7 @@ function EventDetails({ navigation, route }) {
     return (
       <View style={Spaces.gap[16]}>
         {renderTournamentActionsPanel()}
+        {renderTournamentTermsLink()}
 
         <View style={tournamentDs.styles.panelCard}>
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
@@ -8466,6 +8481,7 @@ function EventDetails({ navigation, route }) {
               <Text style={[Fonts.p3, Fonts.neutral200]}>{openTrainingPublicLine}</Text>
             ) : null}
             {renderTournamentActionsPanel()}
+            {renderTournamentTermsLink()}
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>

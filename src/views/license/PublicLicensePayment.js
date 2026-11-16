@@ -37,14 +37,13 @@ import {
 import LinksPlatform from '@/platform/links';
 import { RouteNames } from '@/navigation/routeNames';
 
-import { LEGAL_TOURNAMENT_TERMS_PATH, LEGAL_TOURNAMENT_TERMS_URL } from '@/config/legalUrls';
-import { buildPublicWebUrl } from '@/utils/shareLinks';
-
 import TournamentParentalConsent, {
   AUTORISATION_VIDE,
   autorisationAEnvoyer,
   autorisationComplete,
 } from './TournamentParentalConsent';
+import { openTournamentTerms } from '../event/components/tournamentTerms';
+
 import { LicenseCampaignBlock, LicenseDocumentsBlock } from './PublicLicenseSections';
 import { TournamentPlacePay, TournamentPlaceResult } from './TournamentPlacePanels';
 
@@ -54,9 +53,6 @@ import { TournamentPlacePay, TournamentPlaceResult } from './TournamentPlacePane
 // T-PARENT (15/11) — « Conditions d'inscription » ouvre la page publique du site
 // (`/conditions-tournoi`) ; une place de tournoi n'affiche pas les rubriques d'une licence
 // (Campagne, Échéancier, Documents demandés) ; un joueur de 16-17 ans a son bloc parental.
-const TOURNAMENT_TERMS_URL = buildPublicWebUrl(
-  /** @type {any} */ ({ path: LEGAL_TOURNAMENT_TERMS_PATH }),
-) || LEGAL_TOURNAMENT_TERMS_URL;
 const CONFIRMING_REFETCH_MS = 3000;
 
 /**
@@ -177,7 +173,7 @@ function PublicLicensePayment({ navigation, route }) {
     if (!tournamentEventId) return;
     navigation?.navigate?.(RouteNames.EventDetails, { eventId: tournamentEventId });
   }, [navigation, tournamentEventId]);
-  const openTerms = useCallback(() => LinksPlatform.openUrl(TOURNAMENT_TERMS_URL), []);
+  const openTerms = useCallback(() => openTournamentTerms(), []);
 
   const openCheckout = useCallback((provider) => {
     if (isCampaignPaused) {
