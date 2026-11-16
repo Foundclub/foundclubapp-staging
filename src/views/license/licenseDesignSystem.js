@@ -61,7 +61,7 @@ export const licenseStatusLabels = {
     return i18next.t('licenseDesignSystem.statusLabels.failed', 'Echoue');
   },
   get issued() {
-    return i18next.t('licenseDesignSystem.statusLabels.issued', 'Emis');
+    return i18next.t('licenseDesignSystem.statusLabels.issued', 'Émis');
   },
   get link_missing() {
     return i18next.t('licenseDesignSystem.statusLabels.linkMissing', 'Lien manquant');

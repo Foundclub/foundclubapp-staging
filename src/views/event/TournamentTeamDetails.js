@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -613,7 +614,8 @@ function TournamentTeamDetails({ navigation, route }) {
   // au-dessus de l'équipe.
   // T-FINITIONS2 (16/11) : le lieu par la règle commune (jamais le JSON de `locationDetails`).
   const eventHeader = [
-    team?.event?.name,
+    // T-FINITIONS2 (16/11) : le nom donné au tournoi (T-NOM) d'abord.
+    resolveEventCustomName(team?.event) || team?.event?.name,
     formatDateWithDayPrefix(team?.event?.date),
     getEventLocationText(team?.event),
   ].filter(Boolean).join(' · ');

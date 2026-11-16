@@ -30,6 +30,7 @@ import {
   LicenseSectionHeader,
   licenseSpacing,
   LicenseStatusChip,
+  licenseStatusLabels,
   normalizePaymentModes,
   paymentInstructionFields,
   paymentModeLabels,
@@ -378,9 +379,9 @@ function PublicLicensePayment({ navigation, route }) {
         <LicenseSectionHeader
           description={t(
             'publicLicensePayment.pay.description',
-            'Choisis le moyen propose par le club.',
+            'Choisis le moyen proposé par le club.',
           )}
-          title={t('publicLicensePayment.pay.title', 'Regler')}
+          title={t('publicLicensePayment.pay.title', 'Régler')}
         />
         {isTournament && hasSomethingToPay && needsParentalConsent ? (
           <TournamentParentalConsent onChange={setAutorisation} valeur={autorisation} />
@@ -433,7 +434,7 @@ function PublicLicensePayment({ navigation, route }) {
           </>
         ) : null}
         {isTournament ? null : <LicenseDocumentsBlock documentRequests={payment?.documentRequests} />}
-        <LicenseSectionHeader title={t('publicLicensePayment.receipts.title', 'Reçus déjà emis')} />
+        <LicenseSectionHeader title={t('publicLicensePayment.receipts.title', 'Reçus déjà émis')} />
         {(payment?.receipts || []).length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
             {(payment?.receipts || []).map((receipt) => (
@@ -459,7 +460,8 @@ function PublicLicensePayment({ navigation, route }) {
                         'publicLicensePayment.receipts.status',
                         'Statut',
                       ),
-                      value: receipt.status || '-',
+                      // T-FINITIONS2 (16/11) : le libellé français du statut, jamais « issued ».
+                      value: licenseStatusLabels[receipt.status] || receipt.status || '-',
                     },
                   ]}
                 />
