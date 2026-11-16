@@ -13,15 +13,13 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import OuvrirDansLeGps from '@/components/molecules/ouvrirDansLeGps/OuvrirDansLeGps';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { getEventLocationText, toDisplayText } from '@/utils/eventLocationText';
 import {
   resolveExternalMatchDisplay,
   resolveExternalMatchLocation,
 } from '@/utils/externalMatchDisplay';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
-import {
-  normalizeLocationInput,
-  getLocationCoordinates as resolveLocationCoordinates,
-} from '@/utils/location';
+import { getLocationCoordinates as resolveLocationCoordinates } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 import texteInsecable from '@/utils/texteInsecable';
 
@@ -74,43 +72,6 @@ const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ even
   if (normalizedType.includes('tournoi')) return BG_TOURNAMENT;
   if (isStageEvent) return BG_STAGE;
   return BG_OTHER;
-};
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-const toDisplayText = (value) => {
-  if (typeof value === 'string') {
-    return value.trim();
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  if (!value || typeof value !== 'object') {
-    return '';
-  }
-
-  const entity = /** @type {any} */ (value);
-  if (typeof entity.description === 'string') {
-    return entity.description.trim();
-  }
-  if (typeof entity.label === 'string') {
-    return entity.label.trim();
-  }
-  if (entity.label && typeof entity.label === 'object') {
-    return toDisplayText(entity.label);
-  }
-  if (typeof entity.address === 'string') {
-    return entity.address.trim();
-  }
-  if (typeof entity.name === 'string') {
-    return entity.name.trim();
-  }
-  if (entity.address && typeof entity.address === 'object') {
-    return toDisplayText(entity.address);
-  }
-  return '';
 };
 
 /**
@@ -244,14 +205,10 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
   };
 
   const getLocationText = () => {
-    const parsed = getParsedLocationDetails();
-    const fromDetails = toDisplayText(parsed?.address);
-    const fromEventLocation = toDisplayText(event?.location);
-    const normalized = normalizeLocationInput(parsed?.address || event?.location || parsed);
     if (isImportedExternalMatch && externalMatchLocation) {
       return externalMatchLocation;
     }
-    return fromDetails || fromEventLocation || normalized?.label || normalized?.address || externalMatchLocation || '';
+    return getEventLocationText(event) || externalMatchLocation || '';
   };
 
   const getLocationCoordinates = () => {

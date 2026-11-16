@@ -179,6 +179,7 @@ import {
 
 import { lireLeMomentCourt } from '@/utils/date';
 import { getErrorStatus } from '@/utils/errors/displayError';
+import { getEventLocationText } from '@/utils/eventLocationText';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 import { toUtcFromZonedLocal } from '@/utils/parisTime';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
@@ -6361,7 +6362,7 @@ function EventDetails({ navigation, route }) {
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral100]}>
           {event?.facility?.name
-            || event?.locationDetails
+            || getEventLocationText(event)
             || t('eventDetails.stage.placeEmpty', 'À définir')}
         </Text>
       </View>

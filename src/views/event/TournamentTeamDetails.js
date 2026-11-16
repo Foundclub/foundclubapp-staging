@@ -39,6 +39,7 @@ import {
 import { searchScopedUsers, searchUsers } from '@/services/user/userService';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { getEventLocationText } from '@/utils/eventLocationText';
 
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import TournamentMemberConsent from './TournamentMemberConsent';
@@ -610,13 +611,11 @@ function TournamentTeamDetails({ navigation, route }) {
 
   // T-INVITE (15/11) — « Ton inscription » : le tournoi, sa date et son lieu,
   // au-dessus de l'équipe.
-  const eventLocation = team?.event?.location;
+  // T-FINITIONS2 (16/11) : le lieu par la règle commune (jamais le JSON de `locationDetails`).
   const eventHeader = [
     team?.event?.name,
     formatDateWithDayPrefix(team?.event?.date),
-    String(
-      eventLocation?.name || eventLocation?.address || team?.event?.locationDetails || '',
-    ).trim(),
+    getEventLocationText(team?.event),
   ].filter(Boolean).join(' · ');
   const inviteLinkHint = {
     copie: t(

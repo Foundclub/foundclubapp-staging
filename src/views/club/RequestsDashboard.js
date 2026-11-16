@@ -25,6 +25,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { cancelEvent, getEvents, updateEvent } from '@/services/event/eventService';
 
+import { getEventLocationText } from '@/utils/eventLocationText';
+
 /**
  * RequestsDashboard component
  * @param root0
@@ -166,7 +168,7 @@ function RequestsDashboard({ navigation, route }) {
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>
               {t('requestsDashboard.item.locationLabel', 'Lieu:')}
-              {item.facility?.name || item.locationDetails || t(
+              {item.facility?.name || getEventLocationText(item) || t(
                 'requestsDashboard.item.locationUndefined',
                 'Non défini',
               )}
