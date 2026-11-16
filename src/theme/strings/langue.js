@@ -14,6 +14,8 @@
 // 🧪 Dans Jest, `jest.setup.js` fixe `langueEffective` à `fr` : les 300 fichiers
 // de témoins qui lisent du français restent vrais quelle que soit la langue de
 // la machine qui les lance (la CI tourne en anglais).
+import { Platform } from 'react-native';
+
 import { getDeviceLocale } from '@/utils/device/deviceInfo';
 
 import { getItem, removeItem, setItem } from '@/platform/storage';
@@ -33,12 +35,24 @@ export const langueDepuisLocale = (locale) => {
 };
 
 /**
- * La langue du téléphone, ramenée aux langues de l'app.
+ * RETOUCHES-T12B (16/11, M1292) — sur le site, la première langue PRÉFÉRÉE du
+ * navigateur (celle qu'il annonce aux sites). `Intl` y suit la langue d'affichage
+ * de Chrome : « anglais en premier » sur un Windows français restait en français.
+ * Au téléphone, rien ne change.
+ * @returns {string | null} Par exemple `en-US`, ou `null` hors du site.
+ */
+const localeDuNavigateur = () => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return null;
+  return navigator.languages?.[0] || navigator.language || null;
+};
+
+/**
+ * La langue du téléphone (ou du navigateur, sur le site), ramenée aux langues de l'app.
  * @returns {'fr' | 'en'} La langue déduite, `fr` si la lecture échoue.
  */
 export const langueDuTelephone = () => {
   try {
-    return langueDepuisLocale((getDeviceLocale() || []).join('-'));
+    return langueDepuisLocale(localeDuNavigateur() || (getDeviceLocale() || []).join('-'));
   } catch {
     return 'fr';
   }
