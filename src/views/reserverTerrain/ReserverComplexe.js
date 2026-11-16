@@ -36,6 +36,7 @@ import FeuilleTelephone from '@/views/reserverTerrain/components/FeuilleTelephon
 import GaleriePhotos from '@/views/reserverTerrain/components/GaleriePhotos';
 import { navigateToSearchHub } from '@/views/search/searchRouteHelpers';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
@@ -622,7 +623,9 @@ function ReserverComplexe() {
             )}
             accessibilityRole="link"
             key={String(evenement?.documentId)}
-            onPress={() => navigation.navigate(RouteNames.EventDetails, {
+            // RECOLTE-TRAIN12 : la fiche est un écran de l'onglet ; depuis la racine, `navigate`
+            // ne descend pas chez un voisin (filet navigation/__tests__/allerDansLOnglet.test.js).
+            onPress={() => allerDansLOnglet(navigation, RouteNames.EventDetails, {
               eventId: evenement.documentId,
             })}
             style={[Alignments.row, Alignments.alignCenter, { gap: 12, minHeight: 44 }]}

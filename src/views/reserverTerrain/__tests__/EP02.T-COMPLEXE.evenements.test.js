@@ -158,7 +158,11 @@ describe.each(MISES_EN_PAGE)('T-COMPLEXE, fiche du complexe (%s)', (_nom, ordina
     expect(lignes).toHaveLength(2);
     expect(lignes[0].props.accessibilityLabel).toBe('Voir FoundClub x AR Soccer');
     await act(async () => { lignes[0].props.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventDetails, { eventId: 'evt-ar' });
+    // Un écran de l'onglet, depuis la racine : par `HomeTab` (allerDansLOnglet).
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
+      params: { params: { eventId: 'evt-ar' }, pop: true, screen: RouteNames.EventDetails },
+      screen: RouteNames.Search,
+    }, { pop: true });
     // Rien n'est retiré : l'identité du complexe est toujours là.
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'LE FIVE DE MONTRIVAGE', 'Montrivage',
