@@ -77,8 +77,8 @@ export const maillotAEnvoyer = (valeur) => {
  * demande les maillots (le serveur le dit : `tournament.jerseySizeRequired`). Le payeur choisit la
  * taille DU JOUEUR (il peut payer pour un autre) ; nom et numéro sont facultatifs. Le maillot est
  * un bonus non promis (conditions du tournoi, § 2). Après paiement, on ne change plus rien ici :
- * on écrit à l'assistance (conversation « Assistance FoundClub », MSG-SUPPORT). Le serveur refuse le
- * paiement sans taille valable : ce bloc n'est que l'interface.
+ * on écrit à l'assistance (conversation « Assistance FoundClub », MSG-SUPPORT). Le serveur
+ * refuse le paiement sans taille valable : ce bloc n'est que l'interface.
  * @param {object} props - Les propriétés.
  * @param {(valeur: Maillot) => void} props.onChange - Le maillot modifié.
  * @param {Maillot} props.valeur - Le maillot en cours.
