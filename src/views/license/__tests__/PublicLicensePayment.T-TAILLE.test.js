@@ -10,8 +10,9 @@ import PublicLicensePayment from '../PublicLicensePayment';
 // T-TAILLE (16/11, Adel ; chef du tournoi par délégation) — sur la page publique `/licenses/pay/:token` d'une
 // place de tournoi qui fournit les maillots (`tournament.jerseySizeRequired`, drapeau du tournoi) :
 // - six tailles XS à XXL, AVANT le bouton, avec la phrase « taille du joueur » (le payeur peut être un autre) ;
-// - bouton « Payer ma place » inactif tant qu'aucune taille n'est choisie, message visible ;
-// - la taille part avec le paiement (`jerseySize`) ; une taille déjà gardée est présélectionnée ;
+// - nom (12 lettres) et numéro (1 à 99) facultatifs ; phrase « au cas où, pas promis » ; phrase « assistance » ;
+// - bouton « Payer ma place » inactif tant qu'aucune taille n'est choisie (ou nom / numéro invalides), message visible ;
+// - le maillot part avec le paiement (`jersey`) ; un maillot déjà gardé est présélectionné ;
 // - sans drapeau (autre tournoi, licence) : aucun sélecteur, rien de plus envoyé.
 
 /** @type {any[]} */
@@ -88,11 +89,11 @@ const place = (extra = {}) => ({
 });
 const maillot = (extra = {}) => place({
   tournament: {
-    ...place().tournament, jerseySize: null, jerseySizeRequired: true, ...extra,
+    ...place().tournament, jersey: null, jerseySizeRequired: true, ...extra,
   },
 });
 
-describe('T-TAILLE — taille du maillot sur la page de paiement d une place', () => {
+describe('T-TAILLE — maillot sur la page de paiement d une place', () => {
   /** @type {any} */
   let arbre;
   const monter = (/** @type {any} */ paiement) => {
@@ -106,18 +107,22 @@ describe('T-TAILLE — taille du maillot sur la page de paiement d une place', (
   const checkout = () => mockOptions.at(-2);
   const payer = () => mockBoutons.filter((props) => props.title === 'Payer ma place').at(-1);
   const taille = (/** @type {string} */ valeur) => arbre.root.find((/** @type {any} */ node) => node.props.testID === `jersey-size-${valeur}` && node.props.onPress);
-  const tailles = () => arbre.root.findAll((/** @type {any} */ node) => typeof node.props.testID === 'string' && node.props.testID.startsWith('jersey-size-') && node.props.onPress);
+  const tailles = () => arbre.root.findAll((/** @type {any} */ node) => typeof node.props.testID === 'string' && /^jersey-size-[A-Z]+$/.test(node.props.testID) && node.props.onPress);
+  const saisir = (/** @type {string} */ id, /** @type {string} */ valeur) => act(() => arbre.root.find((/** @type {any} */ node) => node.props.testID === id && node.props.onChangeText).props.onChangeText(valeur));
   afterEach(() => {
     act(() => arbre.unmount());
     mockOptions.length = 0;
     /** @type {any} */ (createPublicLicenseCheckout).mockClear();
   });
 
-  test('🔴 drapeau : six tailles XS à XXL, AVANT le bouton, phrase « taille du joueur », groupe lu par le lecteur d écran', () => {
+  test('🔴 drapeau : six tailles XS à XXL, AVANT le bouton, phrases « taille du joueur », « pas promis », « assistance » ; groupe lu par le lecteur d écran', () => {
     monter(maillot());
     const contenu = texte();
     expect(contenu).toContain('Taille du maillot');
     expect(contenu).toContain('Choisis la taille du joueur inscrit');
+    expect(contenu).toContain('Il n’est pas promis et ne fait pas partie du prix.');
+    expect(contenu).toContain('« Assistance FoundClub »');
+    expect(contenu).not.toContain('compris dans la place');
     expect([...new Set(tailles().map((node) => node.props.testID))]).toEqual(['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((v) => `jersey-size-${v}`));
     expect(contenu.indexOf('Taille du maillot')).toBeLessThan(contenu.indexOf('[Payer ma place]'));
     const groupe = arbre.root.find((/** @type {any} */ node) => node.props.accessibilityRole === 'radiogroup' && node.props.accessibilityLabel === 'Taille du maillot');
@@ -135,19 +140,43 @@ describe('T-TAILLE — taille du maillot sur la page de paiement d une place', (
     expect(texte()).not.toContain('Choisis une taille pour pouvoir payer.');
   });
 
-  test('🔴 drapeau : la taille part avec le paiement', async () => {
+  test('🔴 drapeau : taille seule => `jersey: { size }` part avec le paiement', async () => {
     monter(maillot());
     act(() => taille('XL').props.onPress());
     await checkout().mutationFn('stripe');
-    expect(createPublicLicenseCheckout).toHaveBeenCalledWith('tok', { jerseySize: 'XL', provider: 'stripe' });
+    expect(createPublicLicenseCheckout).toHaveBeenCalledWith('tok', { jersey: { size: 'XL' }, provider: 'stripe' });
   });
 
-  test('drapeau : une taille déjà gardée est présélectionnée, bouton actif', async () => {
-    monter(maillot({ jerseySize: 'S' }));
+  test('🔴 drapeau : nom et numéro remplis partent avec la taille', async () => {
+    monter(maillot());
+    act(() => taille('M').props.onPress());
+    saisir('jersey-name', '  Jean-Éloi ');
+    saisir('jersey-number', '7');
+    expect(payer().disabled).toBe(false);
+    await checkout().mutationFn('stripe');
+    expect(createPublicLicenseCheckout).toHaveBeenCalledWith('tok', { jersey: { name: 'Jean-Éloi', number: 7, size: 'M' }, provider: 'stripe' });
+  });
+
+  test('🔴 drapeau : nom ou numéro invalides => bouton inactif, message visible', () => {
+    monter(maillot());
+    act(() => taille('M').props.onPress());
+    saisir('jersey-name', 'Zizou10');
+    expect(payer().disabled).toBe(true);
+    expect(texte()).toContain('Nom : 12 lettres au plus');
+    saisir('jersey-name', 'Zizou');
+    saisir('jersey-number', '0');
+    expect(payer().disabled).toBe(true);
+    expect(texte()).toContain('Numéro : un nombre de 1 à 99.');
+    saisir('jersey-number', '99');
+    expect(payer().disabled).toBe(false);
+  });
+
+  test('drapeau : un maillot déjà gardé est présélectionné, bouton actif, renvoyé tel quel', async () => {
+    monter(maillot({ jersey: { name: 'Zizou', number: 10, size: 'S' } }));
     expect(taille('S').props.accessibilityState).toEqual({ selected: true });
     expect(payer().disabled).toBe(false);
     await checkout().mutationFn('stripe');
-    expect(createPublicLicenseCheckout).toHaveBeenCalledWith('tok', { jerseySize: 'S', provider: 'stripe' });
+    expect(createPublicLicenseCheckout).toHaveBeenCalledWith('tok', { jersey: { name: 'Zizou', number: 10, size: 'S' }, provider: 'stripe' });
   });
 
   test('sans drapeau : aucun sélecteur, bouton actif, rien de plus envoyé', async () => {

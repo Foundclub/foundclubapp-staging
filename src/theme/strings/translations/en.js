@@ -19031,8 +19031,15 @@ export default {
       title: 'Invalid link',
     },
     jerseySize: {
-      intro: 'The jersey is included in the spot. Choose the registered player’s size, even if you are paying for someone else.',
+      change: 'After payment, the size, name and number can no longer be changed here: write to “Assistance FoundClub” at the top of your Messages in the FoundClub app.',
+      heading: 'Player’s jersey',
+      intro: 'Choose the registered player’s size, even if you are paying for someone else.',
       missing: 'Choose a size to be able to pay.',
+      name: 'Name to print (optional, 12 letters max)',
+      nameInvalid: 'Name: 12 letters max, spaces and hyphens allowed.',
+      noPromise: 'We ask just in case: the jersey is a free bonus, subject to available sizes and stock. It is not guaranteed and is not part of the price.',
+      number: 'Number (optional, 1 to 99)',
+      numberInvalid: 'Number: a whole number from 1 to 99.',
       title: 'Jersey size',
     },
     loading: {
