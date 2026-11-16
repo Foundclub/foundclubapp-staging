@@ -3638,9 +3638,10 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {t('eventDetails.teamApproval', 'Validation des equipes:')}
                       {' '}
-                      {paidValidationLabel(event, t) ?? (event?.tournamentConfig?.registrationMode === 'auto'
-                        ? t('eventDetails.automatic', 'Automatique')
-                        : t('eventDetails.manual', 'Manuelle'))}
+                      {paidValidationLabel(event, t)
+                        ?? (event?.tournamentConfig?.registrationMode === 'auto'
+                          ? t('eventDetails.automatic', 'Automatique')
+                          : t('eventDetails.manual', 'Manuelle'))}
                     </span>
                     <span>
                       {t('eventDetails.maxTeams', 'Max equipes:')}
@@ -3829,7 +3830,7 @@ function EventDetails({ navigation, route }) {
                         {t('eventDetails.createATeam', 'Créer une équipe')}
                       </button>
                     ) : null}
-                    {/* T-FINITIONS (16/11) : conditions lisibles avant l'inscription, tournoi payant seul. */}
+                    {/* T-FINITIONS (16/11) : conditions avant l'inscription. */}
                     {isPaidTournament(event) ? (
                       <button
                         data-testid="event-tournament-terms-link"

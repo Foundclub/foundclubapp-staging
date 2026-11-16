@@ -9,7 +9,10 @@ export const TOURNAMENT_TERMS_URL = buildPublicWebUrl(
   /** @type {any} */ ({ path: LEGAL_TOURNAMENT_TERMS_PATH }),
 ) || LEGAL_TOURNAMENT_TERMS_URL;
 
-/** @returns {any} */
+/**
+ * Ouvre les conditions d'inscription.
+ * @returns {any}
+ */
 export const openTournamentTerms = () => LinksPlatform.openUrl(TOURNAMENT_TERMS_URL);
 
 /**
@@ -20,7 +23,7 @@ export const openTournamentTerms = () => LinksPlatform.openUrl(TOURNAMENT_TERMS_
 export const isPaidTournament = (event) => Number(event?.tournamentConfig?.entryFeeCents) > 0;
 
 /**
- * Le prix d'une place de tournoi, en euros (`entryFeeCents / 100`) ; null si le tournoi est gratuit.
+ * Le prix d'une place, en euros (`entryFeeCents / 100`) ; null si le tournoi est gratuit.
  * @param {any} event
  * @returns {number | null}
  */

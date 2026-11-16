@@ -209,7 +209,9 @@ import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
-import { isPaidTournament, openTournamentTerms, paidValidationLabel } from './components/tournamentTerms';
+import {
+  isPaidTournament, openTournamentTerms, paidValidationLabel,
+} from './components/tournamentTerms';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
@@ -7573,10 +7575,11 @@ function EventDetails({ navigation, route }) {
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
               <Text style={[Fonts.p4, Fonts.neutral300]}>Validation</Text>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {paidValidationLabel(event, t) ?? (event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : t(
-                  'eventDetails.manual',
-                  'Manuelle',
-                ))}
+                {paidValidationLabel(event, t)
+                  ?? (event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : t(
+                    'eventDetails.manual',
+                    'Manuelle',
+                  ))}
               </Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>

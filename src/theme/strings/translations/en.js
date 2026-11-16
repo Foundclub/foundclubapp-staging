@@ -10043,7 +10043,6 @@ export default {
     sheetTotal: '{{count}} people',
   },
   eventDetails: {
-    validatedAtPaidPlayer: 'Team confirmed once {{count}} players have paid',
     facilityWhole: '{{nom}} · Whole facility',
     // FINITIONS7 (02/10) — the names the screen reader announces in the top bar.
     a11y: {
@@ -10998,6 +10997,7 @@ export default {
     update: 'Update',
     updateMyDelay: 'Update my delay',
     updateTheActualDelayOr: 'Update the actual delay or reset the check-in.',
+    validatedAtPaidPlayer: 'Team confirmed once {{count}} players have paid',
     validationAutomatic: 'automatic',
     validationManual: 'manual',
     validationPill: {

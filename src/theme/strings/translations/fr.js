@@ -10648,7 +10648,6 @@ export default {
     sheetTotal: '{{count}} personnes',
   },
   eventDetails: {
-    validatedAtPaidPlayer: 'Équipe validée au {{count}}ᵉ joueur payé',
     facilityWhole: '{{nom}} · Toute l’installation',
     // FINITIONS7 (02/10) — les noms que le lecteur d ecran annonce dans la barre du haut.
     a11y: {
@@ -11655,6 +11654,7 @@ export default {
     update: 'Mettre à jour',
     updateMyDelay: 'Mettre à jour mon retard',
     updateTheActualDelayOr: 'Mets à jour le retard réel ou réinitialise le pointage.',
+    validatedAtPaidPlayer: 'Équipe validée au {{count}}ᵉ joueur payé',
     validationAutomatic: 'automatique',
     validationManual: 'manuelle',
     // CORR-EVENEMENTS 126 : la pastille de l'en-tête dit la vraie règle du serveur.
