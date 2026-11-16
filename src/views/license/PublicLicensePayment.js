@@ -143,7 +143,7 @@ function PublicLicensePayment({ navigation, route }) {
   // T-PARENT : le serveur dit si la place est celle d'un 16-17 ans sans autorisation (il refuse le paiement sans elle).
   const needsParentalConsent = query.data?.campaignType === 'tournament'
     && query.data?.tournament?.parentalConsentRequired === true;
-  // T-TAILLE : le tournoi demande les maillots (drapeau du serveur, qui refuse le paiement sans taille) ;
+  // T-TAILLE : le tournoi demande les maillots (le serveur refuse le paiement sans taille) ;
   // un maillot déjà gardé sur la place est repris tant que rien n'est saisi.
   const needsJerseySize = query.data?.campaignType === 'tournament'
     && query.data?.tournament?.jerseySizeRequired === true;
