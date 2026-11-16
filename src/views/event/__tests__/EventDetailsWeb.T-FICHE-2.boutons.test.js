@@ -429,3 +429,45 @@ test('visiteur : « Se connecter pour participer » ouvre la connexion et demand
     screen: 'Login',
   });
 });
+
+// T-FINITIONS2 (16/11, chef « go b ») — même règle que le serveur (`registerClubTeam`) : l'entraîneur
+// d'un autre club ne voit pas « Inscrire une équipe du club » sur un tournoi public.
+const entraineurDe = (/** @type {any} */ club) => ({
+  ...JOUEUR,
+  userData: { ...JOUEUR.userData, role: { name: 'Entraineur' }, trainedTeams: [{ club, documentId: 'equipe-u13', name: 'U13' }] },
+});
+const inscrireEquipeDuClub = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'button'
+  && texte(n) === 'Inscrire une équipe du club').length;
+
+test('🔴 T-FINITIONS2 — entraîneur d un autre club : pas de « Inscrire une équipe du club »', () => {
+  expect(inscrireEquipeDuClub(monter(tournoiAutonome(), entraineurDe({ documentId: 'club-autre' })))).toBe(0);
+});
+
+test('T-FINITIONS2 caractérisant — entraîneur du club organisateur : le bouton reste', () => {
+  expect(inscrireEquipeDuClub(monter(tournoiAutonome(), entraineurDe(CLUB_TOURNOIS)))).toBe(1);
+});
+
+// T-FINITIONS2 (16/11, M1294 / M1295) — fiche du tournoi sur le site.
+const textesH1 = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'h1').map(texte);
+const ligneInfo = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'div'
+  && n.children.length >= 2 && texte(n.children[0]) === libelle).length;
+
+test('🔴 T-FINITIONS2 — le grand titre porte le nom donné (T-NOM)', () => {
+  const arbre = monter(tournoiAutonome({ customName: 'TEST — FoundClub x AR Soccer', name: 'Tournoi - 05/12/2026' }));
+  expect(textesH1(arbre)).toContain('TEST — FoundClub x AR Soccer');
+});
+
+test('🔴 T-FINITIONS2 — « Mix clubs » : « Autorisé », avec son accent', () => {
+  const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCrossClubPlayers: true } }));
+  expect(JSON.stringify(arbre.toJSON())).toContain('Autorisé');
+});
+
+test('🔴 T-FINITIONS2 — tournoi sans valeur : ni « Capacité » ni « Joueurs attendus »', () => {
+  const arbre = monter(tournoiAutonome({ capacity: 0, totalPlayers: 0 }));
+  expect(ligneInfo(arbre, 'Capacité')).toBe(0);
+  expect(ligneInfo(arbre, 'Joueurs attendus')).toBe(0);
+});
+
+test('T-FINITIONS2 caractérisant — un match garde « Capacité »', () => {
+  expect(ligneInfo(monter(MATCH_EQUIPE), 'Capacité')).toBe(1);
+});

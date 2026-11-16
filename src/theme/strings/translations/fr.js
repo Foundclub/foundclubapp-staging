@@ -10671,7 +10671,7 @@ export default {
     // eslint-disable-next-line max-len
     aDraftAlreadyExistsResume: 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.',
     allowed: 'Autorisées',
-    allowedSingular: 'Autorise',
+    allowedSingular: 'Autorisé',
     anErrorOccurred: 'Une erreur est survenue.',
     // eslint-disable-next-line max-len
     announceTheEstimatedDelayYou: 'Annonce le retard estime. Tu confirmeras ensuite ton arrivée réelle.',
@@ -15739,7 +15739,7 @@ export default {
       disputed: 'Litige',
       draft: 'Brouillon',
       failed: 'Échoué',
-      issued: 'Emis',
+      issued: 'Émis',
       linkMissing: 'Lien manquant',
       manualReview: 'À valider',
       missing: 'Manquant',
@@ -19879,7 +19879,7 @@ export default {
     },
     pay: {
       declareOffline: 'Déclarer un paiement hors app',
-      description: 'Choisis le moyen propose par le club.',
+      description: 'Choisis le moyen proposé par le club.',
       externalLink: 'Ouvrir le lien externe du club',
       helloAsso: 'Payer avec HelloAsso',
       title: 'Régler',

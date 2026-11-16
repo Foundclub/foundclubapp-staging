@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -39,6 +40,7 @@ import {
 import { searchScopedUsers, searchUsers } from '@/services/user/userService';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { getEventLocationText } from '@/utils/eventLocationText';
 
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import TournamentMemberConsent from './TournamentMemberConsent';
@@ -610,13 +612,12 @@ function TournamentTeamDetails({ navigation, route }) {
 
   // T-INVITE (15/11) — « Ton inscription » : le tournoi, sa date et son lieu,
   // au-dessus de l'équipe.
-  const eventLocation = team?.event?.location;
+  // T-FINITIONS2 (16/11) : le lieu par la règle commune (jamais le JSON de `locationDetails`).
   const eventHeader = [
-    team?.event?.name,
+    // T-FINITIONS2 (16/11) : le nom donné au tournoi (T-NOM) d'abord.
+    resolveEventCustomName(team?.event) || team?.event?.name,
     formatDateWithDayPrefix(team?.event?.date),
-    String(
-      eventLocation?.name || eventLocation?.address || team?.event?.locationDetails || '',
-    ).trim(),
+    getEventLocationText(team?.event),
   ].filter(Boolean).join(' · ');
   const inviteLinkHint = {
     copie: t(

@@ -73,3 +73,15 @@ describe('ACCUEIL-JOUEUR — la cible du GPS et la fiche du site', () => {
     expect(source).toContain('<OuvrirDansLeGps');
   });
 });
+
+// T-FINITIONS2 (16/11) — lieu choisi au complexe : `{"address":{"description":…}}`. La fiche du
+// site n'en montrait rien (seul le terrain restait).
+test('T-FINITIONS2 — address.description se lit, sans « {" »', () => {
+  const ligne = formatEventPlaceLine({
+    locationDetails: JSON.stringify({
+      address: { description: 'AR Soccer, 119 rue de la Rauze basse, 34070 Montpellier' },
+    }),
+  });
+  expect(ligne).toBe('AR Soccer, 119 rue de la Rauze basse, 34070 Montpellier');
+  expect(ligne).not.toContain('{"');
+});

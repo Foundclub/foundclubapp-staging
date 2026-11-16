@@ -1,5 +1,6 @@
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 
+import { getEventLocationText } from '@/utils/eventLocationText';
 import { getLocationCoordinates, normalizeLocationInput } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
@@ -119,7 +120,10 @@ export const formatEventPlaceLine = (event) => {
   const parsed = event?.locationDetails ? safeJsonParse(event.locationDetails, null) : null;
   const normalized = normalizeLocationInput(parsed?.address || parsed || event?.location)
     || normalizeLocationInput(event?.location);
-  const texte = [normalized?.label, parsed?.address, parsed?.label, event?.location]
+  // T-FINITIONS2 (16/11) : `{"address":{"description":…}}` (lieu choisi au complexe) se lit aussi.
+  const texte = [
+    normalized?.label, parsed?.address, parsed?.label, event?.location, getEventLocationText(event),
+  ]
     .find((value) => typeof value === 'string' && value.trim()) || '';
   const precis = String(texte).trim().replace(/,?\s*France\s*$/i, '');
   // Ce qui reste une fois la ville et le code postal retirés : rien, c'est la ville seule.

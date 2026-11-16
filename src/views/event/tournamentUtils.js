@@ -318,3 +318,19 @@ export const getTournamentGroupBounds = ({ formatMode, groupCount, teamCount }) 
     maxGroupCount,
   };
 };
+
+/**
+ * T-FINITIONS2 (16/11, chef « go a+b ») — une équipe de club peut-elle être inscrite à ce tournoi ?
+ * Même règle que le serveur (admin `tournament-team.js`, `registerClubTeam`) : un tournoi privé
+ * (`sessionStatus: 'closed'`) prend une équipe de tout club, l'organisateur tranche ; sinon,
+ * seules les équipes du club organisateur. Un club inconnu d'un côté ne bloque pas (serveur idem).
+ * @param {any} event
+ * @param {any} sourceTeam
+ * @returns {boolean}
+ */
+export const canRegisterSourceTeamToTournament = (event, sourceTeam) => {
+  if (normalizeTournamentText(event?.sessionStatus) === 'closed') return true;
+  const eventClubId = String(event?.club?.documentId || '').trim();
+  const teamClubId = String(sourceTeam?.club?.documentId || '').trim();
+  return !eventClubId || !teamClubId || eventClubId === teamClubId;
+};

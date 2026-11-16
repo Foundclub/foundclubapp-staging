@@ -169,3 +169,47 @@ describe('T-INVITE — la fenêtre d un lien d équipe de tournoi', () => {
     expect(fenetre.primary).toBe('Voir le tournoi');
   });
 });
+
+// T-FINITIONS2 (16/11) — le lieu vient de `locationDetails` (lieu choisi au complexe) : la fiche
+// d'équipe le lisait tel quel et montrait le JSON brut à tous les joueurs.
+describe('T-FINITIONS2 — le lieu de la fiche d équipe', () => {
+  test('🔴 locationDetails en JSON : l adresse lisible, jamais « {" »', async () => {
+    const base = equipe;
+    mockAuth = { accountRoleKey: 'player', userData: { documentId: 'u-cap' } };
+    mockTeam = base();
+    mockTeam.event = {
+      ...mockTeam.event,
+      location: null,
+      locationDetails: JSON.stringify({ address: { description: 'AR Soccer, 119 rue de la Rauze basse, 34070 Montpellier' } }),
+    };
+    /** @type {any} */
+    let arbre = null;
+    await act(async () => {
+      arbre = renderer.create(
+        <TournamentTeamDetails navigation={{ goBack: jest.fn(), navigate: jest.fn() }} route={{ params: { eventId: 'evt-1', teamId: 'tt-1' } }} />,
+      );
+    });
+    montes.push(arbre);
+    const textes = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.children === 'string').map((/** @type {any} */ n) => n.props.children);
+    expect(textes.join('\n')).toContain('FoundClub x AR Soccer · sam 19/12/2026 · AR Soccer, 119 rue de la Rauze basse, 34070 Montpellier');
+    expect(textes.filter((/** @type {string} */ x) => x.includes('{"'))).toEqual([]);
+  });
+});
+
+test('🔴 T-FINITIONS2 — la fiche d équipe nomme le tournoi par son nom donné (T-NOM)', async () => {
+  mockAuth = { accountRoleKey: 'player', userData: { documentId: 'u-cap' } };
+  mockTeam = equipe();
+  mockTeam.event = {
+    ...mockTeam.event, customName: 'TEST — FoundClub x AR Soccer', name: 'Tournoi - 05/12/2026', type: { name: 'Tournoi' },
+  };
+  /** @type {any} */
+  let arbre = null;
+  await act(async () => {
+    arbre = renderer.create(
+      <TournamentTeamDetails navigation={{ goBack: jest.fn(), navigate: jest.fn() }} route={{ params: { eventId: 'evt-1', teamId: 'tt-1' } }} />,
+    );
+  });
+  montes.push(arbre);
+  expect(texte(arbre)).toContain('TEST — FoundClub x AR Soccer · sam 19/12/2026');
+  expect(texte(arbre)).not.toContain('Tournoi - 05/12/2026');
+});

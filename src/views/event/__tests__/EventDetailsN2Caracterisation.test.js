@@ -1458,3 +1458,52 @@ describe('N2 · S5 — aucun libelle d onglet n est coupe, quel que soit le type
     expect(libellesDesOnglets(root)).toHaveLength(3);
   });
 });
+
+// T-FINITIONS2 (16/11, chef « go a+b ») — recette 39, iPhone 2.6.904 : l'entraîneur d'un
+// AUTRE club, capitaine d'une équipe en attente, voyait « Inscrire une équipe du club » (refus
+// certain du serveur, `registerClubTeam`) et le rail « OÙ EN EST LE TOURNOI » avec
+// « N inscriptions à vérifier ».
+describe('T-FINITIONS2 — la fiche du tournoi pour qui n organise pas', () => {
+  const CLUB_ORGA = { documentId: 'club-orga', name: 'AR Soccer' };
+  const entraineur = (/** @type {any} */ club, /** @type {boolean} */ peutGerer = false) => ({
+    ...authPour('coach-autre', peutGerer),
+    userData: {
+      documentId: 'coach-autre',
+      role: { name: peutGerer ? 'Dirigeant' : 'Entraineur' },
+      trainedTeams: [{ club, documentId: 'equipe-u13', name: 'U13' }],
+    },
+  });
+  const tournoi = (/** @type {any} */ sur = {}) => buildTournoi({
+    club: CLUB_ORGA, tournamentTeams: [], ...sur,
+  });
+
+  test('🔴 b — entraîneur d un autre club : pas de « Inscrire une équipe du club »', () => {
+    const root = monter({ auth: entraineur({ documentId: 'club-autre' }), event: tournoi() });
+    expect(contient(root, 'Inscrire une équipe du club')).toBe(false);
+  });
+
+  test('b caractérisant — entraîneur du club organisateur : le bouton reste', () => {
+    const root = monter({ auth: entraineur(CLUB_ORGA), event: tournoi() });
+    expect(contient(root, 'Inscrire une équipe du club')).toBe(true);
+  });
+
+  test('b caractérisant — tournoi privé : une équipe d un autre club peut demander', () => {
+    const root = monter({
+      auth: entraineur({ documentId: 'club-autre' }),
+      event: tournoi({ sessionStatus: 'closed' }),
+    });
+    expect(contient(root, 'Inscrire une équipe du club')).toBe(true);
+  });
+
+  test('🔴 a — qui ne gère pas : ni le rail ni « inscriptions à vérifier » ; le badge reste', () => {
+    const root = monter({ auth: authPour('visiteur-1', false), event: buildTournoi() });
+    expect(contient(root, 'OÙ EN EST LE TOURNOI')).toBe(false);
+    expect(contient(root, 'à vérifier')).toBe(false);
+    expect(contient(root, 'Compétition en brouillon')).toBe(true);
+  });
+
+  test('a caractérisant — l organisateur garde le rail', () => {
+    const root = monter({ event: buildTournoi() });
+    expect(contient(root, 'OÙ EN EST LE TOURNOI')).toBe(true);
+  });
+});

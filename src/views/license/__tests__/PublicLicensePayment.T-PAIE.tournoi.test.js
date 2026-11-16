@@ -145,3 +145,28 @@ describe('T-PAIE — page publique d une place de tournoi', () => {
     expect(contenu).not.toContain('Place payée');
   });
 });
+
+// T-FINITIONS2 (16/11, M1283) — page d une place payée : le reçu dit son statut en français.
+describe('T-FINITIONS2 — le reçu et les textes de la page de paiement', () => {
+  /** @type {any} */
+  let arbre;
+  afterEach(() => act(() => arbre.unmount()));
+  test('🔴 « Statut » du reçu : « Émis », jamais « issued » ; « proposé » accentué', () => {
+    mockBoutons.length = 0;
+    mockPaiement = placeDeTournoi({
+      receipts: [{
+        amountCents: 2000, documentId: 'r1', number: 'FC-2026-87981-000416', status: 'issued',
+      }],
+      remainingCents: 0,
+      status: 'paid',
+      totalPaidCents: 2000,
+    });
+    act(() => {
+      arbre = renderer.create(<PublicLicensePayment navigation={{ navigate: jest.fn() }} route={{ params: { token: 'tok' } }} />);
+    });
+    const contenu = JSON.stringify(arbre.toJSON());
+    expect(contenu).toContain('Choisis le moyen proposé par le club.');
+    expect(contenu).not.toContain('issued');
+    expect(contenu).toContain('Émis');
+  });
+});

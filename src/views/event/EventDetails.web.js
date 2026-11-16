@@ -57,6 +57,7 @@ import TrainingReviewsCard, {
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
+  canRegisterSourceTeamToTournament,
   getTournamentClosure,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -608,8 +609,10 @@ function EventDetails({ navigation, route }) {
   );
   const availableTournamentSourceTeams = useMemo(
     () => (userData?.trainedTeams || [])
-      .filter((team) => team?.documentId && !registeredTournamentSourceTeamIds.has(team.documentId)),
-    [registeredTournamentSourceTeamIds, userData?.trainedTeams],
+      .filter((team) => team?.documentId && !registeredTournamentSourceTeamIds.has(team.documentId))
+      // T-FINITIONS2 (16/11) : seules les équipes que le serveur acceptera (club organisateur).
+      .filter((team) => canRegisterSourceTeamToTournament(event, team)),
+    [event, registeredTournamentSourceTeamIds, userData?.trainedTeams],
   );
   // CORR-EVENEMENTS 130 (décision A) : un parent ne joue pas le tournoi ; ces deux gestes de
   // capitaine ne lui sont plus montrés (`offreAuxEnfants` : la règle du téléphone).
@@ -1088,7 +1091,9 @@ function EventDetails({ navigation, route }) {
   const quickInfoOrganizerName = event?.team ? '' : String(event?.club?.name || '').trim();
   const headerTitle = isMatchEvent && headerClubName && matchOpponentName
     ? `${headerClubName} — ${matchOpponentName}`
-    : event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Événement');
+    // T-FINITIONS2 (16/11, M1295) : le nom donné (T-NOM) d'abord, comme le fil d'Ariane.
+    : resolveEventCustomName(event) || event?.name || event?.type?.name
+      || t('eventDetails.eventFallback', 'Événement');
   const {
     data: staffCompositionPayload,
     isFetching: isStaffCompositionFetching,
@@ -3575,11 +3580,14 @@ function EventDetails({ navigation, route }) {
                       value: event.team.section?.name
                         || t('eventDetails.notSetFeminine', 'Non définie'),
                     }] : []),
-                    {
+                    // T-FINITIONS2 (16/11, M1294) : sur un tournoi, une case à 0 ne s'affiche pas
+                    // (« Capacité 0 ») ; « Non défini » reste (décision T-FICHE).
+                    ...(!isTournamentEvent || Number(event?.capacity ?? 1) !== 0 ? [{
                       label: t('eventDetails.capacity', 'Capacité'),
                       value: event?.capacity ?? t('eventDetails.open2', 'Libre'),
-                    },
+                    }] : []),
                     ...(!trainingOpenConfig.isOpenTraining
+                      && (!isTournamentEvent || Number(expectedPlayersCount ?? event?.totalPlayers ?? 1) !== 0)
                       ? [{
                         label: t('eventDetails.expectedPlayers', 'Joueurs attendus'),
                         value: expectedPlayersCount ?? event?.totalPlayers ?? t('eventDetails.notSet', 'Non défini'),
@@ -3670,7 +3678,7 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {t('eventDetails.mixedClubs', 'Mix clubs:')}
                       {' '}
-                      {event?.tournamentConfig?.allowCrossClubPlayers === true ? t('eventDetails.allowedSingular', 'Autorise') : t('eventDetails.notAllowed', 'Non autorise')}
+                      {event?.tournamentConfig?.allowCrossClubPlayers === true ? t('eventDetails.allowedSingular', 'Autorisé') : t('eventDetails.notAllowed', 'Non autorisé')}
                     </span>
                   </div>
                   {String(event?.tournamentConfig?.rulesText || '').trim() ? (
