@@ -11654,6 +11654,7 @@ export default {
     update: 'Mettre à jour',
     updateMyDelay: 'Mettre à jour mon retard',
     updateTheActualDelayOr: 'Mets à jour le retard réel ou réinitialise le pointage.',
+    validatedAtPaidPlayer: 'Équipe validée au {{count}}ᵉ joueur payé',
     validationAutomatic: 'automatique',
     validationManual: 'manuelle',
     // CORR-EVENEMENTS 126 : la pastille de l'en-tête dit la vraie règle du serveur.

@@ -10997,6 +10997,7 @@ export default {
     update: 'Update',
     updateMyDelay: 'Update my delay',
     updateTheActualDelayOr: 'Update the actual delay or reset the check-in.',
+    validatedAtPaidPlayer: 'Team confirmed once {{count}} players have paid',
     validationAutomatic: 'automatic',
     validationManual: 'manual',
     validationPill: {
