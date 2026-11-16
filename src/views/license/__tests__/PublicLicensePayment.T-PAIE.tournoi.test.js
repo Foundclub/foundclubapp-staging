@@ -154,7 +154,9 @@ describe('T-FINITIONS2 — le reçu et les textes de la page de paiement', () =>
   test('🔴 « Statut » du reçu : « Émis », jamais « issued » ; « proposé » accentué', () => {
     mockBoutons.length = 0;
     mockPaiement = placeDeTournoi({
-      receipts: [{ amountCents: 2000, documentId: 'r1', number: 'FC-2026-87981-000416', status: 'issued' }],
+      receipts: [{
+        amountCents: 2000, documentId: 'r1', number: 'FC-2026-87981-000416', status: 'issued',
+      }],
       remainingCents: 0,
       status: 'paid',
       totalPaidCents: 2000,

@@ -199,7 +199,9 @@ describe('T-FINITIONS2 — le lieu de la fiche d équipe', () => {
 test('🔴 T-FINITIONS2 — la fiche d équipe nomme le tournoi par son nom donné (T-NOM)', async () => {
   mockAuth = { accountRoleKey: 'player', userData: { documentId: 'u-cap' } };
   mockTeam = equipe();
-  mockTeam.event = { ...mockTeam.event, customName: 'TEST — FoundClub x AR Soccer', name: 'Tournoi - 05/12/2026', type: { name: 'Tournoi' } };
+  mockTeam.event = {
+    ...mockTeam.event, customName: 'TEST — FoundClub x AR Soccer', name: 'Tournoi - 05/12/2026', type: { name: 'Tournoi' },
+  };
   /** @type {any} */
   let arbre = null;
   await act(async () => {
