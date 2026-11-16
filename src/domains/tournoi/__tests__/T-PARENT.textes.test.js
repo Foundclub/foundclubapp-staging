@@ -39,4 +39,15 @@ describe('T-PARENT — les textes du tournoi', () => {
     expect(conservation).toBe("Combien de temps : coordonnées, tailles, noms et numéros de maillot jusqu'au 31 mars 2027, puis effacés ; l'autorisation parentale, archivée 10 ans, à accès restreint, comme preuve en cas d'accident ; le nom de l'équipe et les résultats restent publiés comme palmarès ; les pièces comptables 10 ans (article L123-22 du Code de commerce) ; les images, la durée du § 7.");
     expect(PARAGRAPHES_DES_CONDITIONS.join(' ')).toContain('nom et numéro à imprimer sur le maillot (facultatifs)');
   });
+
+  // Révision de D23 (Adel, 16/11 ~15:50) : Found Club a adhéré au médiateur CM2C ; texte du médiateur gardé tel quel.
+  test('🔴 § 10 : médiation de la consommation CM2C (texte du médiateur), plus de conciliateur de justice, tribunal gardé', () => {
+    const tout = PARAGRAPHES_DES_CONDITIONS.join('\n');
+    expect(tout).toContain('Conformément aux dispositions du Code de la consommation concernant le processus de médiation des litiges de la consommation, après nous avoir sollicités et à défaut de réponse vous satisfaisant, vous avez la possibilité de recourir gratuitement à une procédure de médiation de la consommation auprès de : CM2C, 49 rue de Ponthieu, 75008 Paris. Tél : 01 89 47 00 14. Site internet : https://www.cm2c.net/declarer-un-litige.php. Mail : litiges@cm2c.net.');
+    expect(tout).toContain('Le joueur peut aussi saisir le tribunal compétent.');
+    expect(tout).toContain("Toute réclamation s'adresse par écrit à contact@foundclubpro.com");
+    expect(tout).not.toMatch(/conciliateur/i);
+    expect(tout).not.toMatch(/ec\.europa\.eu|odr|RLL/);
+    expect(VERSION_DES_CONDITIONS).toBe('Version du 16 novembre 2026');
+  });
 });
