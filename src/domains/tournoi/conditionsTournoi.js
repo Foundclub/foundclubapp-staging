@@ -11,7 +11,7 @@
  */
 
 /** La ligne de version, affichée sous le titre. */
-export const VERSION_DES_CONDITIONS = 'Version du 15 novembre 2026';
+export const VERSION_DES_CONDITIONS = 'Version du 16 novembre 2026';
 
 /**
  * Les paragraphes, dans l'ordre : le titre, la version, puis chaque titre de partie (« 1. … ») suivi de ses
@@ -59,7 +59,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   '8. Données personnelles',
   'Responsable : Found Club.',
   'Ce qu\'on garde : prénom, nom, e-mail, téléphone (pour joindre le joueur le soir du tournoi) ; date de naissance (pour vérifier l\'âge ; l\'organisateur ne voit que l\'âge) ; taille de maillot ; nom et numéro à imprimer sur le maillot (facultatifs) ; équipe, niveau déclaré, résultats ; pour un joueur de 16 ou 17 ans, l\'autorisation de son parent ; paiement : montant, date, référence. Le numéro de carte n\'est jamais vu ni gardé par Found Club.',
-  'Combien de temps : coordonnées et tailles jusqu\'au 31 mars 2027, puis effacées ; l\'autorisation parentale, archivée 10 ans, à accès restreint, comme preuve en cas d\'accident ; le nom de l\'équipe et les résultats restent publiés comme palmarès ; les pièces comptables 10 ans (article L123-22 du Code de commerce) ; les images, la durée du § 7.',
+  'Combien de temps : coordonnées, tailles, noms et numéros de maillot jusqu\'au 31 mars 2027, puis effacés ; l\'autorisation parentale, archivée 10 ans, à accès restreint, comme preuve en cas d\'accident ; le nom de l\'équipe et les résultats restent publiés comme palmarès ; les pièces comptables 10 ans (article L123-22 du Code de commerce) ; les images, la durée du § 7.',
   'Base : le contrat (l\'inscription) ; le consentement pour les images et pour les nouvelles de FoundClub ; l\'obligation légale pour la comptabilité ; l\'intérêt légitime pour le favori ci-dessous.',
   'AR Soccer en favori : en s\'inscrivant, le joueur ajoute AR Soccer à ses favoris sur FoundClub ; il voit ses annonces et ses créneaux, et peut le retirer de ses favoris à tout moment, en un geste. AR Soccer ne reçoit ni son téléphone ni son e-mail.',
   'Vos droits : accès, rectification, effacement, opposition, en écrivant à contact@foundclubpro.com. Réclamation possible auprès de la CNIL (cnil.fr).',

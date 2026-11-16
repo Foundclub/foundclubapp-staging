@@ -31,4 +31,12 @@ describe('T-PARENT — les textes du tournoi', () => {
     expect(tout).not.toMatch(/\[|\]|\*\*/);
     expect(PARAGRAPHES_DES_CONDITIONS[1]).toBe(VERSION_DES_CONDITIONS);
   });
+
+  // « conditions- A » (Adel, 16/11 ~15:00) : nouvelle date, et la conservation cite les noms et numéros de maillot.
+  test('🔴 conditions- A : version du 16 novembre 2026, conservation « coordonnées, tailles, noms et numéros de maillot »', () => {
+    expect(VERSION_DES_CONDITIONS).toBe('Version du 16 novembre 2026');
+    const conservation = PARAGRAPHES_DES_CONDITIONS.find((p) => p.startsWith('Combien de temps : '));
+    expect(conservation).toBe("Combien de temps : coordonnées, tailles, noms et numéros de maillot jusqu'au 31 mars 2027, puis effacés ; l'autorisation parentale, archivée 10 ans, à accès restreint, comme preuve en cas d'accident ; le nom de l'équipe et les résultats restent publiés comme palmarès ; les pièces comptables 10 ans (article L123-22 du Code de commerce) ; les images, la durée du § 7.");
+    expect(PARAGRAPHES_DES_CONDITIONS.join(' ')).toContain('nom et numéro à imprimer sur le maillot (facultatifs)');
+  });
 });
