@@ -61,7 +61,7 @@ export const autorisationAEnvoyer = (valeur) => ({
 });
 
 /**
- * Un choix parmi quelques-uns (lien avec le joueur, retour), en pastilles.
+ * Un choix parmi quelques-uns (lien, retour ; T-TAILLE : taille du maillot), en pastilles.
  * @param {object} props - Les propriétés.
  * @param {string} props.prefixe - Préfixe des témoins (`testID`).
  * @param {(valeur: string) => void} props.onChoisir - Le geste.
@@ -70,7 +70,7 @@ export const autorisationAEnvoyer = (valeur) => ({
  * @param {string} props.valeur - Le choix actuel.
  * @returns {import('react').ReactElement} Le choix.
  */
-function ChoixUnique({
+export function ChoixUnique({
   onChoisir, options, prefixe, titre, valeur,
 }) {
   const { Colors, Fonts } = useTheme();

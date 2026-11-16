@@ -45,6 +45,11 @@ import TournamentParentalConsent, {
   autorisationAEnvoyer,
   autorisationComplete,
 } from './TournamentParentalConsent';
+import TournamentJerseySize, {
+  maillotAEnvoyer,
+  maillotComplet,
+  maillotGarde,
+} from './TournamentJerseySize';
 import { LicenseCampaignBlock, LicenseDocumentsBlock } from './PublicLicenseSections';
 import { TournamentPlacePay, TournamentPlaceResult } from './TournamentPlacePanels';
 
@@ -123,6 +128,7 @@ function PublicLicensePayment({ navigation, route }) {
   const returnStatus = String(route?.params?.status || '').toLowerCase();
   const [declareModalVisible, setDeclareModalVisible] = useState(false);
   const [autorisation, setAutorisation] = useState(AUTORISATION_VIDE);
+  const [maillotSaisi, setMaillotSaisi] = useState(/** @type {any} */ (null));
   const query = useQuery({
     enabled: Boolean(token),
     queryFn: () => getPublicLicensePayment(token),
@@ -137,9 +143,15 @@ function PublicLicensePayment({ navigation, route }) {
   // T-PARENT : le serveur dit si la place est celle d'un 16-17 ans sans autorisation (il refuse le paiement sans elle).
   const needsParentalConsent = query.data?.campaignType === 'tournament'
     && query.data?.tournament?.parentalConsentRequired === true;
+  // T-TAILLE : le tournoi demande les maillots (le serveur refuse le paiement sans taille) ;
+  // un maillot déjà gardé sur la place est repris tant que rien n'est saisi.
+  const needsJerseySize = query.data?.campaignType === 'tournament'
+    && query.data?.tournament?.jerseySizeRequired === true;
+  const maillot = maillotSaisi || maillotGarde(query.data?.tournament?.jersey);
   const checkoutMutation = useMutation({
     mutationFn: (provider) => createPublicLicenseCheckout(token, {
       ...(needsParentalConsent ? { parentalConsent: autorisationAEnvoyer(autorisation) } : {}),
+      ...(needsJerseySize ? { jersey: maillotAEnvoyer(maillot) } : {}),
       provider,
     }),
   });
@@ -173,6 +185,7 @@ function PublicLicensePayment({ navigation, route }) {
   const tournament = isTournament ? (payment?.tournament || {}) : null;
   const tournamentEventId = tournament?.eventDocumentId;
   const parentalConsentBlocks = needsParentalConsent && !autorisationComplete(autorisation);
+  const jerseySizeBlocks = needsJerseySize && !maillotComplet(maillot);
   const openTournament = useCallback(() => {
     if (!tournamentEventId) return;
     navigation?.navigate?.(RouteNames.EventDetails, { eventId: tournamentEventId });
@@ -385,11 +398,14 @@ function PublicLicensePayment({ navigation, route }) {
         {isTournament && hasSomethingToPay && needsParentalConsent ? (
           <TournamentParentalConsent onChange={setAutorisation} valeur={autorisation} />
         ) : null}
+        {isTournament && hasSomethingToPay && needsJerseySize ? (
+          <TournamentJerseySize onChange={setMaillotSaisi} valeur={maillot} />
+        ) : null}
         {isTournament && hasSomethingToPay ? (
           <TournamentPlacePay
             canPay={canPayOnline && payment?.paymentModes?.stripe === true}
             complexeName={tournament?.complexeName || null}
-            disabled={parentalConsentBlocks}
+            disabled={parentalConsentBlocks || jerseySizeBlocks}
             isLoading={checkoutMutation.isPending}
             onOpenTerms={openTerms}
             onPay={() => openCheckout('stripe')}

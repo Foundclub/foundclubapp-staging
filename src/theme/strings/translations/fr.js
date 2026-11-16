@@ -19825,6 +19825,20 @@ export default {
       description: 'Le lien de paiement est incomplet.',
       title: 'Lien invalide',
     },
+    jerseySize: {
+      change: 'Après le paiement, la taille, le nom et le numéro ne se changent plus ici :'
+        + ' écris à « Assistance FoundClub », en tête de tes Messages dans l’app FoundClub.',
+      heading: 'Maillot du joueur',
+      intro: 'Choisis la taille du joueur inscrit, même si tu paies pour quelqu’un d’autre.',
+      missing: 'Choisis une taille pour pouvoir payer.',
+      name: 'Nom à imprimer (facultatif, 12 lettres au plus)',
+      nameInvalid: 'Nom : 12 lettres au plus, espaces et traits d’union permis.',
+      noPromise: 'On le demande au cas où : le maillot est un bonus offert, dans la limite'
+        + ' des tailles et des stocks. Il n’est pas promis et ne fait pas partie du prix.',
+      number: 'Numéro (facultatif, de 1 à 99)',
+      numberInvalid: 'Numéro : un nombre de 1 à 99.',
+      title: 'Taille du maillot',
+    },
     loading: {
       description: 'On récupère les informations de paiement.',
       title: 'Chargement',
