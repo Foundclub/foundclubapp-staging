@@ -231,6 +231,7 @@ import {
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
+  canRegisterSourceTeamToTournament,
   getTournamentClosure,
   getTournamentMemberBuckets,
   getTournamentPendingMembershipForUser,
@@ -1211,8 +1212,10 @@ function EventDetails({ navigation, route }) {
   const availableTournamentSourceTeams = useMemo(
     () => (userData?.trainedTeams || [])
       // @ts-ignore: FIXME: Baseline TS regression
-      .filter((team) => team?.documentId && !registeredTournamentSourceTeamIds.has(team.documentId)),
-    [registeredTournamentSourceTeamIds, userData?.trainedTeams],
+      .filter((team) => team?.documentId && !registeredTournamentSourceTeamIds.has(team.documentId))
+      // T-FINITIONS2 (16/11) : seules les équipes que le serveur acceptera (club organisateur).
+      .filter((team) => canRegisterSourceTeamToTournament(event, team)),
+    [event, registeredTournamentSourceTeamIds, userData?.trainedTeams],
   );
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
@@ -7581,20 +7584,24 @@ function EventDetails({ navigation, route }) {
           ) : null}
         </View>
 
-        <TournamentProgressRail
-          note={tournamentTeamCounters.pending > 0
-            ? t(
-              'eventDetails.registrationsToCheck',
-              {
-                count: tournamentTeamCounters.pending,
-                defaultValue_one: '{{count}} inscription à vérifier',
-                defaultValue_other: '{{count}} inscriptions à vérifier',
-              },
-            )
-            : ''}
-          steps={tournamentRailSteps}
-          title={t('eventDetails.tournamentRail.title', 'OÙ EN EST LE TOURNOI')}
-        />
+        {/* T-FINITIONS2 (16/11, chef « go a ») : le rail et « N inscriptions à vérifier » sont des
+            outils d'organisateur ; badge et compteurs restent visibles par tous. */}
+        {canEdit ? (
+          <TournamentProgressRail
+            note={tournamentTeamCounters.pending > 0
+              ? t(
+                'eventDetails.registrationsToCheck',
+                {
+                  count: tournamentTeamCounters.pending,
+                  defaultValue_one: '{{count}} inscription à vérifier',
+                  defaultValue_other: '{{count}} inscriptions à vérifier',
+                },
+              )
+              : ''}
+            steps={tournamentRailSteps}
+            title={t('eventDetails.tournamentRail.title', 'OÙ EN EST LE TOURNOI')}
+          />
+        ) : null}
 
         {currentUserTournamentMember ? (
           <View style={tournamentDs.styles.panelCard}>

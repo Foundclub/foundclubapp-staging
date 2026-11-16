@@ -10671,7 +10671,7 @@ export default {
     // eslint-disable-next-line max-len
     aDraftAlreadyExistsResume: 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.',
     allowed: 'Autorisées',
-    allowedSingular: 'Autorise',
+    allowedSingular: 'Autorisé',
     anErrorOccurred: 'Une erreur est survenue.',
     // eslint-disable-next-line max-len
     announceTheEstimatedDelayYou: 'Annonce le retard estime. Tu confirmeras ensuite ton arrivée réelle.',
