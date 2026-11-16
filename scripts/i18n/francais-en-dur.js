@@ -182,7 +182,13 @@ const total = (comptes) => Object.values(comptes).reduce((somme, n) => somme + n
 // GO Adel « 306 A » (13/11/2026) : la baseline est recalée sur la tête du train 10 (589 lignes),
 // ces 48 lignes comprises. La tolérance est donc VIDÉE : gardée, elle les tolérerait deux fois et
 // laisserait passer jusqu'à 48 lignes neuves dans ces 4 fichiers (témoin « 306 A »).
-const EXCEPTIONS_D78 = Object.freeze({});
+// 368 A, Adel 16/11, textes juridiques du tournoi de Montpellier : l'autorisation parentale (6)
+// et les conditions du tournoi (51) restent en français seulement. Tolérance CHIFFRÉE à ces 2
+// fichiers, la baseline (589) ne bouge pas : une ligne de plus dans l'un d'eux fait rougir.
+const EXCEPTIONS_D78 = Object.freeze({
+  'src/domains/tournoi/autorisationParentale.js': 6,
+  'src/domains/tournoi/conditionsTournoi.js': 51,
+});
 
 const fichiersEnHausse = (comptes, plafonds) => Object.entries(comptes)
   .filter(([f, n]) => n > (plafonds[f] || 0) + (EXCEPTIONS_D78[f] || 0))

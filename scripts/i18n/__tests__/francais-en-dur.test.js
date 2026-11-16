@@ -96,10 +96,13 @@ describe('306 A — la baseline recalée attrape toute ligne neuve', () => {
   );
   const tete = compter(mesurer());
 
-  it('la tête est à sa baseline : 589 lignes, aucune hausse, aucune tolérance en plus', () => {
+  it('la tête est à sa baseline : 589 lignes, aucune hausse, seule la tolérance « 368 A »', () => {
     expect(baseline.totalLignes).toBe(589);
     expect(fichiersEnHausse(tete, baseline.fichiers)).toEqual([]);
-    expect(EXCEPTIONS_D78).toEqual({});
+    expect(EXCEPTIONS_D78).toEqual({
+      'src/domains/tournoi/autorisationParentale.js': 6,
+      'src/domains/tournoi/conditionsTournoi.js': 51,
+    });
   });
 
   it.each([
@@ -109,6 +112,8 @@ describe('306 A — la baseline recalée attrape toute ligne neuve', () => {
     'src/domains/search/friendlyMatchFormats.js',
     'src/domains/complexe/reserverTerrain.js',
     'src/domains/messaging/photoDuGroupe.js',
+    'src/domains/tournoi/autorisationParentale.js',
+    'src/domains/tournoi/conditionsTournoi.js',
   ])('une ligne de français en dur ajoutée exprès dans %s fait rougir la porte', (fichier) => {
     const source = `${fs.readFileSync(path.join(RACINE, fichier), 'utf8')}\n`
       + "export const ajoutExpres = 'Ton créneau est réservé';\n";
