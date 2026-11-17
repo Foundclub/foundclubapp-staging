@@ -87,3 +87,13 @@ describe('D48 — le modèle d\'autorisation parentale', () => {
     expect(ecrite).toBe(1);
   });
 });
+
+describe('D48 — les cases à cocher de l\'autorisation', () => {
+  test('13 cases, marquées et dessinées par la page, sans pictogramme dans le texte', () => {
+    // eslint-disable-next-line global-require
+    const { BLOCS_DE_L_AUTORISATION, MARQUE_DE_CASE } = require('../modeleAutorisationParentale');
+    const texte = BLOCS_DE_L_AUTORISATION.map((bloc) => bloc.texte || '').join('\n');
+    expect(texte.split(MARQUE_DE_CASE).length - 1).toBe(13);
+    expect(texte).not.toMatch(/\u2610/);
+  });
+});

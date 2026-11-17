@@ -10,6 +10,12 @@
  */
 import { ADRESSE_DU_COMPLEXE } from './conditionsTournoi';
 
+/**
+ * Une case à cocher dans un texte : la page la dessine (un petit carré bordé). Aucun pictogramme dans le code
+ * (SANS-EMOJI, décision d'Adel du 01/10) ; la source en porte 13, autant de marques ici.
+ */
+export const MARQUE_DE_CASE = '{case}';
+
 /** Le titre de la feuille. */
 export const TITRE_DE_L_AUTORISATION = 'Autorisation parentale — Tournoi FoundClub x AR Soccer du 19 décembre 2026';
 
@@ -23,7 +29,7 @@ export const BLOCS_DE_L_AUTORISATION = Object.freeze([
   { genre: 'trait' },
   { genre: 'intertitre', texte: 'Le parent ou le représentant légal' },
   { genre: 'ligne', texte: 'Prénom et nom : ............................................................................................' },
-  { genre: 'ligne', texte: 'Lien avec le joueur :  ☐ mère   ☐ père   ☐ représentant légal' },
+  { genre: 'ligne', texte: 'Lien avec le joueur :  {case} mère   {case} père   {case} représentant légal' },
   { genre: 'ligne', texte: 'Téléphone joignable le soir du 19 décembre : ..................................................' },
   { genre: 'intertitre', texte: 'Le joueur' },
   { genre: 'ligne', texte: 'Prénom et nom : ............................................................................................' },
@@ -32,16 +38,16 @@ export const BLOCS_DE_L_AUTORISATION = Object.freeze([
   { genre: 'ligne', texte: `Tournoi de football à 5, sport de contact, avec des joueurs majeurs, organisé par Found Club au complexe AR Soccer, ${ADRESSE_DU_COMPLEXE}, le samedi 19 décembre 2026, de 19 h (accueil) à 1 h au plus tard.` },
   { genre: 'trait' },
   { genre: 'intertitre', texte: 'Je soussigné(e), parent ou représentant légal du joueur ci-dessus :' },
-  { genre: 'ligne', texte: '☐ J\'autorise mon enfant à participer au tournoi et à s\'y inscrire.' },
-  { genre: 'ligne', texte: '☐ À ma connaissance, mon enfant n\'a pas de contre-indication à la pratique du football.' },
-  { genre: 'ligne', texte: '☐ J\'autorise l\'organisateur à appeler les secours et à faire transporter mon enfant à l\'hôpital en cas de besoin. Je serai prévenu sans délai au numéro ci-dessus.' },
-  { genre: 'ligne', texte: 'Retour après le tournoi :  ☐ mon enfant rentre seul   ☐ mon enfant rentre avec : ......................................................  (téléphone : ..................................)' },
-  { genre: 'ligne', texte: '☐ J\'ai lu le règlement du tournoi et les conditions d\'inscription (foundclub.app/conditions-tournoi).' },
+  { genre: 'ligne', texte: '{case} J\'autorise mon enfant à participer au tournoi et à s\'y inscrire.' },
+  { genre: 'ligne', texte: '{case} À ma connaissance, mon enfant n\'a pas de contre-indication à la pratique du football.' },
+  { genre: 'ligne', texte: '{case} J\'autorise l\'organisateur à appeler les secours et à faire transporter mon enfant à l\'hôpital en cas de besoin. Je serai prévenu sans délai au numéro ci-dessus.' },
+  { genre: 'ligne', texte: 'Retour après le tournoi :  {case} mon enfant rentre seul   {case} mon enfant rentre avec : ......................................................  (téléphone : ..................................)' },
+  { genre: 'ligne', texte: '{case} J\'ai lu le règlement du tournoi et les conditions d\'inscription (foundclub.app/conditions-tournoi).' },
   { genre: 'trait' },
   { genre: 'intertitre', texte: 'Droit à l\'image (facultatif : ne rien cocher n\'empêche pas de jouer)' },
-  { genre: 'ligne', texte: '☐ J\'accepte que mon enfant soit filmé et photographié pendant le tournoi, et que ces images soient publiées par Found Club et AR Soccer sur leurs réseaux, sites et applications, pendant 2 ans.' },
-  { genre: 'ligne', texte: 'et  ☐ l\'autre parent est d\'accord   ou   ☐ j\'exerce seul(e) l\'autorité parentale' },
-  { genre: 'ligne', texte: 'Accord du joueur :  ☐ j\'accepte aussi (à cocher par le joueur)' },
+  { genre: 'ligne', texte: '{case} J\'accepte que mon enfant soit filmé et photographié pendant le tournoi, et que ces images soient publiées par Found Club et AR Soccer sur leurs réseaux, sites et applications, pendant 2 ans.' },
+  { genre: 'ligne', texte: 'et  {case} l\'autre parent est d\'accord   ou   {case} j\'exerce seul(e) l\'autorité parentale' },
+  { genre: 'ligne', texte: 'Accord du joueur :  {case} j\'accepte aussi (à cocher par le joueur)' },
   { genre: 'note', texte: 'Sans ces trois cases, le joueur porte un signe distinctif et n\'est pas publié là où on le reconnaît.' },
   { genre: 'trait' },
   { genre: 'ligne', texte: 'Fait à .........................................., le ....... / ....... / 2026' },
