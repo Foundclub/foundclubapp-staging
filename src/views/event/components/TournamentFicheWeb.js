@@ -5,6 +5,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { useGetTournamentTeam } from '@/services/tournamentTeam/tournamentTeamQueries';
 
+import { TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT } from '../tournamentJoinRules';
 import { getTournamentEntryFeeLabel, getTournamentMinAge } from '../tournamentUtils';
 import TournamentTeamProgress from './TournamentTeamProgress';
 import { isPaidTournament } from './tournamentTerms';
@@ -292,7 +293,8 @@ const maPlace = (team) => (Array.isArray(team?.payment?.members) ? team.payment.
 /**
  * La carte « Mon équipe » (écran (b), R4) : où en est l'équipe (TournamentTeamProgress) et le seul
  * geste du lecteur : payer sa place si elle est due, répondre à son invitation, suivre sa demande,
- * sinon « Voir mon équipe ». L'équipe se lit ici (une requête de plus sur la fiche) ; tant
+ * sinon « Voir mon équipe » ; le paiement s'ouvre dans le même onglet (R8, comme
+ * TournamentMemberPlace). L'équipe se lit ici (une requête de plus sur la fiche) ; tant
  * qu'elle charge, ou si la lecture échoue, la carte garde le nom et « Voir mon équipe ».
  * @param {object} props - Les propriétés.
  * @param {any} props.team - L'équipe telle que la fiche la connaît (`tournamentTeams`).
@@ -326,7 +328,7 @@ export function TournamentMyTeamCard({
   } else if (payer) {
     principal = {
       libelle: t('tournamentTeamDetails.places.payMine', 'Payer ma place'),
-      onClick: () => LinksPlatform.openUrl(place.paymentUrl),
+      onClick: () => LinksPlatform.openUrlInPlace(place.paymentUrl),
     };
   }
   const montreVoir = principal.onClick !== ouvrir;
@@ -395,3 +397,35 @@ export const withTournamentTeamsLine = (items, event, line) => {
     ? { ...item, note: remplace(item.note), value: remplace(item.value) || item.value }
     : item));
 };
+
+/**
+ * Précision du chef (17/11) : sous le seuil des 30 % (`TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT`,
+ * tournamentJoinRules), un non-organisateur ne lit le nombre d'équipes NULLE PART, liste comprise.
+ * Même calcul que `getTournamentVisitorTeamsLine` : capacité du résumé (ou `maxTeams`), inscrites
+ * du résumé, seuil arrondi au supérieur. Capacité inconnue : le nombre reste caché.
+ * ponytail: recalcule ici le seuil de la règle (tournamentJoinRules ne l'expose pas en booléen, et
+ * le fichier est à T-PAGES-6) ; sortie : un `isTournamentTeamsCountShown(event)` exporté là-bas.
+ * @param {any} event - Le tournoi.
+ * @returns {boolean} Vrai si le nombre d'équipes doit rester caché.
+ */
+export const isTournamentTeamsCountHidden = (event) => {
+  const summary = event?.tournamentTeamsSummary || {};
+  const capacite = Math.round(Number(summary.expectedCount ?? event?.tournamentConfig?.maxTeams));
+  if (!Number.isFinite(capacite) || capacite <= 0) return true;
+  const inscrites = summary.registeredCount === null || summary.registeredCount === undefined
+    ? NaN
+    : Math.round(Number(summary.registeredCount));
+  const seuil = Math.ceil((capacite * TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT) / 100);
+  return !(Number.isFinite(inscrites) && inscrites >= seuil);
+};
+
+/**
+ * « 3 joueurs · 0 payé · 0 en attente » → « 3 joueurs » : un compteur de personnes à 0 disparaît
+ * (précision du chef, 17/11).
+ * @param {string} ligne - La ligne de résumé d'une équipe.
+ * @returns {string} La ligne sans ses morceaux à 0.
+ */
+export const withoutZeroCounts = (ligne) => String(ligne || '')
+  .split(' · ')
+  .filter((morceau) => !/^0\s/.test(morceau.trim()))
+  .join(' · ');

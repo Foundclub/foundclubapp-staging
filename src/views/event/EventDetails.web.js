@@ -56,7 +56,10 @@ import TrainingReviewsCard, {
   peutVoirLesAvisDEntrainement,
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
-import { getTournamentVisitorTeamsLine } from '@/views/event/tournamentJoinRules';
+import {
+  getTournamentTeamsSeekingPlayers,
+  getTournamentVisitorTeamsLine,
+} from '@/views/event/tournamentJoinRules';
 import {
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
@@ -143,10 +146,12 @@ import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
 import TournamentEssentials, { getTournamentEssentials } from './components/TournamentEssentials';
 import {
+  isTournamentTeamsCountHidden,
   TournamentBeforeSignUp,
   TournamentHowItWorks,
   TournamentMyTeamCard,
   TournamentSignUpCard,
+  withoutZeroCounts,
   withTournamentTeamsLine,
 } from './components/TournamentFicheWeb';
 import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
@@ -1885,15 +1890,24 @@ function EventDetails({ navigation, route }) {
     }
   }, [registerTournamentTeamMutation, t]);
 
+  // T-PAGES-3, M1310 (chef, 17/11) : « Valider » refusé par le serveur (effectif minimum)
+  // n'affichait rien : le message partait dans « Mon statut », en haut de la fiche, loin du
+  // bouton. Il s'écrit maintenant sous l'équipe concernée.
+  // Témoin : EventDetailsWeb.T-PAGES-3.fiche (M1310).
+  const [erreurDeRevue, setErreurDeRevue] = useState(
+    /** @type {{ message: string, teamDocumentId: string } | null} */ (null),
+  );
   const handleReviewTournamentTeam = useCallback(async (teamDocumentId, status) => {
     setActionError('');
+    setErreurDeRevue(null);
     try {
       await reviewTournamentTeamMutation.mutateAsync({ status, teamDocumentId });
     } catch (mutationError) {
-      setActionError(mutationError?.message || t(
+      const message = mutationError?.message || t(
         'eventDetails.unableToUpdateThisTeam',
         'Impossible de mettre à jour cette équipe.',
-      ));
+      );
+      setErreurDeRevue({ message, teamDocumentId });
     }
   }, [reviewTournamentTeamMutation, t]);
 
@@ -2352,6 +2366,17 @@ function EventDetails({ navigation, route }) {
     </div>
   ) : null;
 
+  // Précision du chef (17/11) : sous le seuil des 30 %, la liste ne trahit pas le nombre
+  // d'équipes : l'équipe du lecteur et celles qui cherchent un joueur (règle de T-REJOINDRE),
+  // sans total.
+  const nombreDEquipesCache = vueJoueurDuTournoi && isTournamentTeamsCountHidden(event);
+  const equipesDeLaListe = nombreDEquipesCache
+    ? tournamentTeams.filter((team) => (
+      (equipeDuLecteur && team?.documentId === equipeDuLecteur.documentId)
+      || getTournamentTeamsSeekingPlayers([team], tournamentConfig).length > 0
+    ))
+    : tournamentTeams;
+
   // T-PAGES-3 : le bloc du tournoi, posé à droite pour l organisateur (comme avant) et dans la
   // colonne principale pour le joueur, sous le titre « Les équipes », sans les réglages.
   const blocDuTournoi = isTournamentEvent ? (
@@ -2628,7 +2653,7 @@ function EventDetails({ navigation, route }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
-          {tournamentTeams.map((team) => {
+          {equipesDeLaListe.map((team) => {
             const rosterSummary = getTournamentRosterSummary(team, tournamentConfig);
             const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
             const status = normalizeTournamentText(team?.status);
@@ -2682,28 +2707,39 @@ function EventDetails({ navigation, route }) {
                       absent, les trois compteurs d'avant. */}
                   {rosterSummary.membersSummary ? (
                     <span>
-                      {getTournamentMembersSummaryLine(
-                        rosterSummary.membersSummary,
-                        tournamentConfig,
-                      )}
+                      {vueJoueurDuTournoi
+                        ? withoutZeroCounts(getTournamentMembersSummaryLine(
+                          rosterSummary.membersSummary,
+                          tournamentConfig,
+                        ))
+                        : getTournamentMembersSummaryLine(
+                          rosterSummary.membersSummary,
+                          tournamentConfig,
+                        )}
                     </span>
                   ) : (
                     <>
-                      <span>
-                        {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
-                          count: rosterSummary.totalCount,
-                        })}
-                      </span>
-                      <span>
-                        {t('tournamentManagement.rosterPresent', '{{count}} présents', {
-                          count: rosterSummary.presentCount,
-                        })}
-                      </span>
-                      <span>
-                        {rosterSummary.pendingCount}
-                        {' '}
-                        {t('eventDetails.pendingLower', 'en attente')}
-                      </span>
+                      {vueJoueurDuTournoi && !rosterSummary.totalCount ? null : (
+                        <span>
+                          {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
+                            count: rosterSummary.totalCount,
+                          })}
+                        </span>
+                      )}
+                      {vueJoueurDuTournoi && !rosterSummary.presentCount ? null : (
+                        <span>
+                          {t('tournamentManagement.rosterPresent', '{{count}} présents', {
+                            count: rosterSummary.presentCount,
+                          })}
+                        </span>
+                      )}
+                      {vueJoueurDuTournoi && !rosterSummary.pendingCount ? null : (
+                        <span>
+                          {rosterSummary.pendingCount}
+                          {' '}
+                          {t('eventDetails.pendingLower', 'en attente')}
+                        </span>
+                      )}
                     </>
                   )}
                   {rosterSummary.invitedCount > 0 ? (
@@ -2793,6 +2829,11 @@ function EventDetails({ navigation, route }) {
                     </>
                   ) : null}
                 </div>
+                {canEdit && erreurDeRevue?.teamDocumentId === team?.documentId ? (
+                  <div role="alert" style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
+                    {erreurDeRevue.message}
+                  </div>
+                ) : null}
               </div>
             );
           })}
