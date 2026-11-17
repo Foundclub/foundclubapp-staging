@@ -64,7 +64,6 @@ import {
   getTournamentClosure,
   getTournamentMembersSummaryLine,
   getTournamentEntryFeeLabel,
-  getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
