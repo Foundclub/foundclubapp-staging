@@ -414,3 +414,30 @@ describe('EventCardNew — T-FINITIONS-3, âge minimum du tournoi', () => {
       .toContain('Football • Masculine • Sénior (+18 ans)');
   });
 });
+
+// T-PARCOURS-2 (17/11, fait de recette du chef, recette 42, /search/events) — la carte d'un tournoi
+// montrait un gros bouton « Participer », alors que la fiche n'en a plus (T-FINITIONS-3) : on
+// s'inscrit à un tournoi par une équipe, depuis la fiche. La carte d'un tournoi n'a plus de bouton
+// de réponse ; l'appui sur la carte ouvre la fiche. Les deux boutons de l'organisateur
+// (Valider / Refuser) restent.
+describe('EventCardNew — T-PARCOURS-2, pas de « Participer » sur la carte d un tournoi', () => {
+  const tournoi = { ...baseEvent, tournamentTeams: [], type: { name: 'Tournoi' } };
+
+  it('🔴 tournoi : aucun bouton de réponse', () => {
+    const tree = renderCard({ item: tournoi });
+    expect(tree.root.findAllByType(EventAnswerButtons)).toHaveLength(0);
+  });
+
+  it('caractérisant — tournoi à valider par l organisateur : Valider et Refuser restent', () => {
+    const texts = textsOf(renderCard({
+      item: tournoi, onRefuse: jest.fn(), onValidate: jest.fn(),
+    }));
+    expect(texts).toContain('Valider');
+    expect(texts).toContain('Refuser');
+  });
+
+  it('caractérisant — un autre événement garde ses boutons de réponse', () => {
+    const tree = renderCard({ item: baseEvent });
+    expect(tree.root.findAllByType(EventAnswerButtons)).toHaveLength(1);
+  });
+});

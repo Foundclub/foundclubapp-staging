@@ -61,11 +61,13 @@ import {
   formatTournamentPlayersShortList,
   getTournamentAgeNotice,
   getTournamentClosure,
+  getTournamentEntryFeeLabel,
   getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
+  getTournamentViewerMember,
   isTooYoungForTournament,
   isTournamentActiveMemberStatus,
   isTournamentTeamNonCompliant,
@@ -594,10 +596,10 @@ function EventDetails({ navigation, route }) {
   const currentUserTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return null;
-    return tournamentTeams.find((team) => Array.isArray(team?.members) && team.members.some((member) => (
-      member?.user?.documentId === currentUserId
-      && isTournamentActiveMemberStatus(member?.responseStatus)
-    ))) || null;
+    // T-PARCOURS-2 (point 3) : `members`, ou la ligne du lecteur rendue par le serveur.
+    return tournamentTeams.find((team) => (
+      getTournamentViewerMember(team, currentUserId, isTournamentActiveMemberStatus)
+    )) || null;
   }, [tournamentTeams, userData?.documentId]);
   const currentUserPendingTournamentTeam = useMemo(
     () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
@@ -1955,6 +1957,20 @@ function EventDetails({ navigation, route }) {
   const trainingDescription = trainingOpenConfig.isTraining
     ? String(event?.description || '').trim()
     : '';
+  // T-PARCOURS-2 (17/11, point 10, recette 42) : sur un tournoi, la liste des participants n'est
+  // plus rendue (T-FINITIONS-3) ; pour un joueur, la colonne principale n'avait alors plus aucun
+  // bloc et restait une carte vide sous l'en-tête. Règle PRUDENTE : vide seulement si aucun de
+  // ses blocs ne peut être rendu (un doute la laisse affichée).
+  const colonnePrincipaleVide = isTournamentEvent && !canEdit
+    && !event?.facilityClosure
+    && !event?.facilityReportable
+    && !matchEncartSummary
+    && !trainingDescription
+    && joursDuStage.length === 0
+    && !hasVisibleEventTasks
+    && !supportsEventComposition
+    && !showTrainingParticipants
+    && !(Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0);
   // 🔢 « Joueurs attendus » DIT LE NOMBRE DE L APPEL. Il affichait
   // `event.totalPlayers`, un champ de saisie qui vaut 0 par defaut au schema :
   // « 0 » a cote de « 15 attendus ». Quand l evenement a des equipes, on prend
@@ -2565,9 +2581,12 @@ function EventDetails({ navigation, route }) {
                       >
                         {/* CORR-EVENEMENTS 126 : le serveur ne valide seul que les membres des
                             équipes conviées ; extérieurs et enfants attendent l'organisateur. */}
-                        {event.validationMode === 'manual'
-                          ? t('eventDetails.validationPill.manual', 'Validation manuelle')
-                          : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes')}
+                        {/* T-PARCOURS-2 (point 9) : un tournoi payant suit la règle du bloc
+                            « Mode tournoi » (équipe validée au seuil payé). */}
+                        {(isTournamentEvent && getTournamentPaidValidationLabel(event))
+                          || (event.validationMode === 'manual'
+                            ? t('eventDetails.validationPill.manual', 'Validation manuelle')
+                            : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes'))}
                       </span>
                     ) : null}
                     {/* REPRISE-EVENEMENTS 123 : un réglage d'organisateur. */}
@@ -2898,13 +2917,15 @@ function EventDetails({ navigation, route }) {
         ) : null}
 
         {!isLoading && event && !isCancelled ? (
-          <div style={{ display: 'grid', gap: 24, gridTemplateColumns: isDesktop ? 'minmax(0, 1.15fr) minmax(300px, 0.85fr)' : 'minmax(0, 1fr)' }}>
+          <div style={{ display: 'grid', gap: 24, gridTemplateColumns: isDesktop && !colonnePrincipaleVide ? 'minmax(0, 1.15fr) minmax(300px, 0.85fr)' : 'minmax(0, 1fr)' }}>
             {/* PARTWEB — `alignContent: 'start'` sur les DEUX colonnes : une grille
                 s'etire a la hauteur de la colonne voisine, et ses blocs avec — la
                 liste des participants, longue, creusait des trous dans « Infos rapides ». */}
-            <section style={{
-              alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
-            }}
+            <section
+              data-testid="event-main-column"
+              style={{
+                alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: colonnePrincipaleVide ? 'none' : 'grid', gap: 18, padding: 22,
+              }}
             >
               {/* CRFERM (13/10, COL-010, « D8 B », planche P8v4-fermee-ordi B et C) — la Ville a
                   fermé l installation ce jour-là : le bandeau du téléphone (même composant), ses
@@ -3636,10 +3657,13 @@ function EventDetails({ navigation, route }) {
                       : []),
                     {
                       label: t('eventDetails.pricePerson', 'Prix / personne'),
-                      // T-FINITIONS (16/11) : un tournoi payant affiche le prix de sa place.
-                      value: tournamentEntryFeeEuros(event) != null || event?.pricePerPerson != null
-                        ? `${tournamentEntryFeeEuros(event) ?? event.pricePerPerson} EUR`
-                        : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini'),
+                      // T-PARCOURS-2 (point 7) : pour un tournoi, le montant encaissé (la règle
+                      // du téléphone, getTournamentEntryFeeLabel), jamais le prix saisi sur
+                      // l'événement.
+                      value: (isTournamentEvent ? getTournamentEntryFeeLabel(event) : null)
+                        || (!isTournamentEvent && event?.pricePerPerson != null
+                          ? `${event.pricePerPerson} EUR`
+                          : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini')),
                     },
                   ].map((item, index, rows) => (
                     <div
@@ -3834,8 +3858,9 @@ function EventDetails({ navigation, route }) {
                         type="button"
                       >
                         {normalizeTournamentText(
-                          currentUserPendingTournamentTeam?.members?.find(
-                            (member) => member?.user?.documentId === userData?.documentId,
+                          getTournamentViewerMember(
+                            currentUserPendingTournamentTeam,
+                            userData?.documentId,
                           )?.responseStatus,
                         ) === 'invited'
                           ? t('eventDetails.answerMyInvitation', 'Répondre à mon invitation')
