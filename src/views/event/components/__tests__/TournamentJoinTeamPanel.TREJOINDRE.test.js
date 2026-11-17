@@ -196,14 +196,14 @@ describe('T-REJOINDRE — le panneau « Rejoindre une équipe »', () => {
 
   it('refus du serveur (âge, autre équipe) : son message est montré dans la déclaration, rien d’autre ne bouge', async () => {
     const onRequested = jest.fn();
-    mockRequestJoin.mockRejectedValue(new Error('Tu participes déjà à une autre équipe de ce tournoi.'));
+    mockRequestJoin.mockRejectedValue(new Error('Tu joues déjà ce tournoi avec l’équipe Les Complets.'));
     const arbre = await monter({ onRequested });
     await appuyer(arbre, 'tournament-join-team-button');
     await appuyer(arbre, 'tournament-join-team-ask-eq-seuls');
     await act(async () => {
       await arbre.root.findByProps({ testID: 'doublure-declaration' }).props.onConfirm({});
     });
-    expect(textes(arbre)).toContain('Tu participes déjà à une autre équipe de ce tournoi.');
+    expect(textes(arbre)).toContain('Tu joues déjà ce tournoi avec l’équipe Les Complets.');
     expect(onRequested).not.toHaveBeenCalled();
   });
 
