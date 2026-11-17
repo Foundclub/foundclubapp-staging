@@ -598,7 +598,7 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
   // T-REJOINDRE (17/11, Clément D49, registre D210) — le visiteur sans compte ne reçoit pas les
   // équipes : son onglet disait « Équipes · 0 » sur un tournoi qui en avait 5. Il lit le résumé
   // public (`tournamentTeamsSummary`), avec le seuil des 30 %.
-  test('🔴 T-REJ — VISITEUR sans compte : plus de « Équipes · 0 » ; sous 30 % « 24 équipes attendues », à 30 % « 8 équipes inscrites sur 24 »', () => {
+  test('🔴 T-REJ — VISITEUR sans compte : plus de « Équipes · 0 », le seuil des 30 %', () => {
     const visiteur = { ...authPour('personne'), userData: null };
     const tournoiPublic = (/** @type {number} */ registeredCount) => buildEvent({
       tournamentConfig: { maxTeams: 24 },
@@ -616,8 +616,9 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
     expect(contient(auSeuil, '8 équipes inscrites sur 24')).toBe(true);
   });
 
-  // T-REJOINDRE (D50) — « Rejoindre une équipe » : un compte connecté sans équipe le voit, pas le visiteur.
-  test('🔴 T-REJ — « Rejoindre une équipe » est sur la fiche du tournoi pour un joueur connecté sans équipe, pas pour le visiteur', () => {
+  // T-REJOINDRE (D50) — « Rejoindre une équipe » : un compte connecté sans équipe le voit,
+  // pas le visiteur.
+  test('🔴 T-REJ — « Rejoindre une équipe » : joueur connecté sans équipe, pas le visiteur', () => {
     const tournoi = buildEvent({ tournamentTeams: [], type: { name: 'Tournoi' } });
 
     const joueur = monter({ auth: authPour('joueur-seul'), event: tournoi });

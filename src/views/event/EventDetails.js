@@ -7751,7 +7751,10 @@ function EventDetails({ navigation, route }) {
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                 {t('eventDetails.tournamentTeams2', 'Équipes tournoi')}
               </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]} testID="event-tournament-teams-summary">
+              <Text
+                style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}
+                testID="event-tournament-teams-summary"
+              >
                 {estVisiteurDuTournoi ? ligneEquipesDuVisiteur : teamsSummary}
               </Text>
             </View>
@@ -8527,7 +8530,7 @@ function EventDetails({ navigation, route }) {
               <Text style={[Fonts.p3, Fonts.neutral200]}>{openTrainingPublicLine}</Text>
             ) : null}
             {renderTournamentActionsPanel()}
-            {/* T-REJOINDRE (17/11, D50) : le joueur seul demande à rejoindre une équipe ouverte. */}
+            {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte. */}
             {isTournamentEvent && !isStageDayEvent ? (
               <TournamentJoinTeamPanel
                 event={event}

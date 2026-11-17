@@ -2785,7 +2785,7 @@ function EventDetails({ navigation, route }) {
                     </button>
                   ) : null}
                 </div>
-                {/* T-REJOINDRE (17/11, D50) : le joueur seul demande à rejoindre une équipe ouverte. */}
+                {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte. */}
                 {isTournamentEvent && !isCancelled ? (
                   <TournamentJoinTeamPanel
                     event={event}
@@ -3743,7 +3743,10 @@ function EventDetails({ navigation, route }) {
                     </div>
                   ) : null}
                   {ligneEquipesDuVisiteur ? (
-                    <div data-testid="event-tournament-visitor-teams" style={{ color: textColor, fontSize: 14 }}>
+                    <div
+                      data-testid="event-tournament-visitor-teams"
+                      style={{ color: textColor, fontSize: 14 }}
+                    >
                       {ligneEquipesDuVisiteur}
                     </div>
                   ) : null}
@@ -3751,7 +3754,11 @@ function EventDetails({ navigation, route }) {
                       style, pas retirés (diff étroit : T-JOUEURS et T-PARCOURS-2 écrivent ici).
                       Sortie : T-PAGES-1 redessine ce bloc. */}
                   <div style={{
-                    color: mutedTextColor, display: estVisiteurDuTournoi ? 'none' : 'flex', flexWrap: 'wrap', fontSize: 13, gap: 12,
+                    color: mutedTextColor,
+                    display: estVisiteurDuTournoi ? 'none' : 'flex',
+                    flexWrap: 'wrap',
+                    fontSize: 13,
+                    gap: 12,
                   }}
                   >
                     <span>

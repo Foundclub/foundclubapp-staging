@@ -4,19 +4,19 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
-import { requestJoinTournamentTeam } from '@/services/tournamentTeam/tournamentTeamService';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 
+import { requestJoinTournamentTeam } from '@/services/tournamentTeam/tournamentTeamService';
+
 import {
   canAskToJoinTournamentTeam,
   getTournamentTeamPlayersLine,
   getTournamentTeamsSeekingPlayers,
 } from '../tournamentJoinRules';
-
 import { isPaidTournament } from './tournamentTerms';
 
 /**
@@ -32,7 +32,7 @@ import { isPaidTournament } from './tournamentTerms';
  * 16/11), sans « ouvre l'équipe » puisque la liste est sur la fiche.
  * @param {object} props - Les propriétés.
  * @param {any} props.event - Le tournoi.
- * @param {(team: any) => void} [props.onRequested] - Après l'envoi : l'équipe rendue par le serveur.
+ * @param {(team: any) => void} [props.onRequested] - Après l'envoi, avec l'équipe rendue.
  * @param {any[]} [props.teams] - Les équipes du tournoi, telles que la fiche les a reçues.
  * @returns {import('react').ReactElement | null} Le panneau, ou rien.
  */
@@ -86,23 +86,25 @@ function TournamentJoinTeamPanel({ event, onRequested, teams = [] }) {
 
   return (
     <View style={Spaces.gap[12]} testID="tournament-join-team-panel">
-      <Button
-        onPress={() => setIsListOpen((open) => !open)}
-        testID="tournament-join-team-button"
-        title={t('tournamentJoin.button', 'Rejoindre une équipe')}
-        variant="Secondary"
-      />
+      {/* Le bouton commun ne porte pas de testID : l'identifiant est sur son enveloppe. */}
+      <View testID="tournament-join-team-button">
+        <Button
+          onPress={() => setIsListOpen((open) => !open)}
+          title={t('tournamentJoin.button', 'Rejoindre une équipe')}
+          variant="Secondary"
+        />
+      </View>
       <Text style={[Fonts.p3, Fonts.neutral200]}>
         {isPaidTournament(event)
           ? t(
             'tournamentJoin.hintPaid',
-            'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à rejoindre ». '
-              + 'Quand le capitaine accepte, tu paies ta place.',
+            'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à '
+              + 'rejoindre ». Quand le capitaine accepte, tu paies ta place.',
           )
           : t(
             'tournamentJoin.hintFree',
-            'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à rejoindre ». '
-              + 'Quand le capitaine accepte, tu es dans l’équipe.',
+            'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à '
+              + 'rejoindre ». Quand le capitaine accepte, tu es dans l’équipe.',
           )}
       </Text>
 
@@ -110,7 +112,8 @@ function TournamentJoinTeamPanel({ event, onRequested, teams = [] }) {
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.neutral00]}>
           {t(
             'tournamentJoin.none',
-            'Aucune équipe ne cherche de joueur pour l’instant : crée la tienne ou reviens plus tard.',
+            'Aucune équipe ne cherche de joueur pour l’instant : crée la tienne ou reviens '
+              + 'plus tard.',
           )}
         </Text>
       ) : null}
@@ -144,16 +147,17 @@ function TournamentJoinTeamPanel({ event, onRequested, teams = [] }) {
                     <Text style={[Fonts.p4, Fonts.neutral200]}>{playersLine}</Text>
                   ) : null}
                 </View>
-                <Button
-                  onPress={() => {
-                    setSendError('');
-                    setChosenTeam(entry.team);
-                  }}
-                  size="sm"
-                  testID={`tournament-join-team-ask-${entry.team.documentId}`}
-                  title={t('tournamentTeamDetails.askToJoin', 'Demander à rejoindre')}
-                  variant="Primary"
-                />
+                <View testID={`tournament-join-team-ask-${entry.team.documentId}`}>
+                  <Button
+                    onPress={() => {
+                      setSendError('');
+                      setChosenTeam(entry.team);
+                    }}
+                    size="sm"
+                    title={t('tournamentTeamDetails.askToJoin', 'Demander à rejoindre')}
+                    variant="Primary"
+                  />
+                </View>
               </View>
             );
           })}

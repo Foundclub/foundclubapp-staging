@@ -65,7 +65,9 @@ export const getTournamentTeamsSeekingPlayers = (teams, tournamentConfig = {}) =
 export const getTournamentTeamPlayersLine = ({ maxRosterSize, playerCount }) => {
   if (playerCount === null) return null;
   if (maxRosterSize === null) {
-    return i18next.t('tournamentManagement.rosterTotal', '{{count}} joueurs', { count: playerCount });
+    return i18next.t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
+      count: playerCount,
+    });
   }
   return i18next.t('tournamentJoin.playersOutOf', {
     count: playerCount,

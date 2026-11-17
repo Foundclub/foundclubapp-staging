@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
 import renderer, { act } from 'react-test-renderer';
 
 import TournamentJoinTeamPanel from '../TournamentJoinTeamPanel';
@@ -107,16 +108,17 @@ const JOUEUR = { accountRoleKey: 'player', userData: { birthdate: '2000-01-01', 
  * @returns {Promise<any>} L'arbre monté.
  */
 const monter = async (props = {}) => {
+  const { event, onRequested, teams } = {
+    event: TOURNOI,
+    onRequested: jest.fn(),
+    teams: [equipe(), equipe({ documentId: 'eq-pleine', members: membres(5), name: 'Les Complets' })],
+    ...props,
+  };
   /** @type {any} */
   let arbre;
   await act(async () => {
     arbre = renderer.create(
-      <TournamentJoinTeamPanel
-        event={TOURNOI}
-        onRequested={jest.fn()}
-        teams={[equipe(), equipe({ documentId: 'eq-pleine', members: membres(5), name: 'Les Complets' })]}
-        {...props}
-      />,
+      <TournamentJoinTeamPanel event={event} onRequested={onRequested} teams={teams} />,
     );
   });
   return arbre;
@@ -124,7 +126,10 @@ const monter = async (props = {}) => {
 const textes = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
 const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID) => {
   await act(async () => {
-    await arbre.root.findByProps({ testID }).props.onPress();
+    // L'identifiant est sur l'enveloppe du bouton : on appuie sur le bouton qu'elle contient.
+    await arbre.root.findAll((/** @type {any} */ noeud) => noeud.props?.testID === testID)[0]
+      .findAll((/** @type {any} */ noeud) => typeof noeud.props?.onPress === 'function')[0]
+      .props.onPress();
   });
 };
 

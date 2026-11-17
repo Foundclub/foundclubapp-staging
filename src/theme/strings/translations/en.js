@@ -25696,9 +25696,7 @@ export default {
   },
   tournamentJoin: {
     button: 'Join a team',
-    // eslint-disable-next-line max-len
     hintFree: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you are in the team.',
-    // eslint-disable-next-line max-len
     hintPaid: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you pay for your spot.',
     listTitle: 'Teams looking for a player',
     none: 'No team is looking for a player right now: create yours or come back later.',

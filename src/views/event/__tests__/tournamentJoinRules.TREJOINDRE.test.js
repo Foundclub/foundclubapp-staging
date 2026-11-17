@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- les témoins se lisent en entier. */
 import {
   canAskToJoinTournamentTeam,
   getTournamentTeamPlayersLine,

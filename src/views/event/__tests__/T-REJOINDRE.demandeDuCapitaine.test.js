@@ -108,8 +108,11 @@ const monter = async (/** @type {any} */ equipeMontee, /** @type {string} */ lec
   montes.push(arbre);
   return arbre;
 };
+// L'identifiant est sur l'enveloppe du bouton : on rend le bouton qu'elle contient (0 ou 1).
 const bouton = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root
-  .findAll((/** @type {any} */ n) => n.props?.testID === testID && typeof n.props.onPress === 'function');
+  .findAll((/** @type {any} */ n) => n.props?.testID === testID)
+  .slice(0, 1)
+  .flatMap((/** @type {any} */ enveloppe) => enveloppe.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function').slice(0, 1));
 
 jest.setTimeout(30000);
 

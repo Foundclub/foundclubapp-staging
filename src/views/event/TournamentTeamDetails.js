@@ -525,8 +525,9 @@ function TournamentTeamDetails({ navigation, route }) {
     ? t('tournamentTeamDetails.searchForAFoundclubPlayer', 'Rechercher un joueur FoundClub')
     : t('tournamentTeamDetails.searchForAClubPlayer', 'Rechercher un joueur du club');
 
-  // T-REJOINDRE (17/11, Clément D50, registre D210) — « le capitaine consulte le profil, peut envoyer
-  // un message direct avant d'accepter la demande ». Le profil : l'écran existant (UserDetails).
+  // T-REJOINDRE (17/11, Clément D50, registre D210) — « le capitaine consulte le profil, peut
+  // envoyer un message direct avant d'accepter la demande ». Le profil : l'écran existant
+  // (UserDetails).
   // Le message : le fil direct créé ou retrouvé par le serveur, qui rejuge À CHAQUE FOIS la règle
   // des mineurs (chat `createWhisperChat`, minor-chat-guard) ; son refus s'affiche tel quel.
   const openRequesterProfile = (/** @type {string} */ userId) => {
@@ -628,22 +629,24 @@ function TournamentTeamDetails({ navigation, route }) {
         {/* T-REJOINDRE (17/11, Clément D50) : le capitaine voit qui demande avant d'accepter. */}
         {variant === 'requested' && canManageRoster && member?.user?.documentId ? (
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-            <Button
-              onPress={() => openRequesterProfile(member.user.documentId)}
-              size="sm"
-              testID={`tournament-request-profile-${member.documentId}`}
-              title={t('tournamentJoin.seeProfile', 'Voir le profil')}
-              variant="SecondaryLight"
-            />
-            {/* MINEURS : « Écrire » seulement si le garde du serveur l'a permis (`viewerCanWrite`). */}
-            {member?.viewerCanWrite === true ? (
+            <View testID={`tournament-request-profile-${member.documentId}`}>
               <Button
-                onPress={() => writeToRequester(member.user.documentId)}
+                onPress={() => openRequesterProfile(member.user.documentId)}
                 size="sm"
-                testID={`tournament-request-write-${member.documentId}`}
-                title={t('tournamentJoin.write', 'Écrire')}
+                title={t('tournamentJoin.seeProfile', 'Voir le profil')}
                 variant="SecondaryLight"
               />
+            </View>
+            {/* MINEURS : « Écrire » seulement si le garde du serveur l'a permis. */}
+            {member?.viewerCanWrite === true ? (
+              <View testID={`tournament-request-write-${member.documentId}`}>
+                <Button
+                  onPress={() => writeToRequester(member.user.documentId)}
+                  size="sm"
+                  title={t('tournamentJoin.write', 'Écrire')}
+                  variant="SecondaryLight"
+                />
+              </View>
             ) : null}
           </View>
         ) : null}
