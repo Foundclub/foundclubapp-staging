@@ -25818,6 +25818,33 @@ export default {
     count_one: '{{count}} nouveau',
     count_other: '{{count}} nouveaux',
   },
+  // T-PAGES-6 (17/11/2026, R9) : « L'essentiel en 6 lignes », en tête de /conditions-tournoi. Texte APPROUVÉ par
+  // Adel (« 10- ok », design/PARCOURS-INSCRIPTION/RESUME-CONDITIONS-A-RELIRE.md), copié tel quel. Il SUIT
+  // app/src/domains/tournoi/conditionsTournoi.js (parties citées en « § ») et doit changer avec lui.
+  tournamentConditionsSummary: {
+    autorisation: 'Autorisation parentale',
+    back: 'Retour au tournoi',
+    backSticky: 'Revenir au tournoi',
+    ligne1Gras: 'Samedi 19 décembre 2026, à AR Soccer, Montpellier.',
+    ligne1Suite: ' Accueil à 19 h, premier match à 19 h 30, fin au plus tard à 1 h.',
+    ligne2Gras: '20 € par joueur, payé en ligne.',
+    // eslint-disable-next-line max-len
+    ligne2Suite: " L'équipe est validée quand 5 joueurs ont payé, au plus tard le 10 décembre à 23 h 59. Sinon, chacun est remboursé.",
+    ligne3Gras: 'À partir de 16 ans',
+    ligne3Suite: ", révolus le 19 décembre. De 16 à 17 ans, un parent coche l'autorisation sur la page de paiement.",
+    ligne4Gras: 'Maillot offert en bonus',
+    ligne4Suite: ', dans la limite des tailles et des stocks. Il ne fait pas partie du prix.',
+    ligne5Gras: 'Pas de droit de rétractation',
+    // eslint-disable-next-line max-len
+    ligne5Suite: " (loisir à date fixe). Si tu te retires jusqu'au 5 décembre inclus, tu es remboursé en entier. Après, tu peux céder ta place.",
+    ligne6Gras: 'Tes données',
+    // eslint-disable-next-line max-len
+    ligne6Suite: " servent à t'inscrire et à te joindre le soir du tournoi. AR Soccer est ajouté à tes favoris ; tu peux le retirer en un geste.",
+    notice: 'Ce résumé ne remplace pas les conditions complètes, juste en dessous.',
+    reglement: 'Règlement du tournoi',
+    summaryTitle: 'Sommaire',
+    title: "L'essentiel en 6 lignes",
+  },
   // ST-VUES2 (02/10) — la carte « Résultats du week-end » de « Gestion du club » (écran 18).
   weekendResults: {
     // ST-VUES3-ORDI (03/10) — le tableau de l'écran 18 sur ordinateur.
