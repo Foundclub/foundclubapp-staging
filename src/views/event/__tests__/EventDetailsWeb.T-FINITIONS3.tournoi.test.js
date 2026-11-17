@@ -431,19 +431,22 @@ test('T-PARCOURS2 (9) caractérisant — tournoi gratuit, ou match : « Validati
 });
 
 // T-PARCOURS-2 (point 7) — « Prix / personne » d'un TOURNOI : le montant encaissé
-// (tournamentConfig.entryFeeCents, la règle du téléphone), jamais event.pricePerPerson.
+// (tournamentConfig.entryFeeCents, la règle du téléphone) ; à défaut le prix saisi (« P7 prix C »).
 test('🔴 T-PARCOURS2 (7) — tournoi payant : « 20 € par joueur », pas le prix saisi', () => {
   const arbre = monter(tournoiAutonome({ pricePerPerson: 35, tournamentConfig: PAYANT }));
   expect(texte(arbre.root)).toContain('20 € par joueur');
   expect(texte(arbre.root)).not.toContain('35 EUR');
+  expect(texte(arbre.root)).not.toContain('35 € par joueur');
 });
 
-test('🔴 T-PARCOURS2 (7) — tournoi sans prix encaissé : « Gratuit ou non défini »', () => {
+// Récolte du train 12, « P7 prix C » (chef, 17/11) : témoin retourné ; sans montant encaissé, le
+// prix saisi par l organisateur, au même format, jamais « Gratuit » sur un prix saisi.
+test('🔴 T-PARCOURS2 (7) — tournoi sans prix encaissé : le prix saisi, « 35 € par joueur »', () => {
   const arbre = monter(tournoiAutonome({
     pricePerPerson: 35, tournamentConfig: { registrationMode: 'manual' },
   }));
-  expect(texte(arbre.root)).toContain('Gratuit ou non défini');
-  expect(texte(arbre.root)).not.toContain('35 EUR');
+  expect(texte(arbre.root)).toContain('35 € par joueur');
+  expect(texte(arbre.root)).not.toContain('Gratuit ou non défini');
 });
 
 test('T-PARCOURS2 (7) caractérisant — un événement ordinaire garde son prix par personne', () => {

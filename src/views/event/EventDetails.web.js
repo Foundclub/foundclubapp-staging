@@ -3674,8 +3674,8 @@ function EventDetails({ navigation, route }) {
                     {
                       label: t('eventDetails.pricePerson', 'Prix / personne'),
                       // T-PARCOURS-2 (point 7) : pour un tournoi, le montant encaissé (la règle
-                      // du téléphone, getTournamentEntryFeeLabel), jamais le prix saisi sur
-                      // l'événement.
+                      // du téléphone, getTournamentEntryFeeLabel), à défaut le prix saisi au même
+                      // format (« P7 prix C », chef, 17/11).
                       value: (isTournamentEvent ? getTournamentEntryFeeLabel(event) : null)
                         || (!isTournamentEvent && event?.pricePerPerson != null
                           ? `${event.pricePerPerson} EUR`
