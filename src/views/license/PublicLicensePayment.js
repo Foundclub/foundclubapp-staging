@@ -7,6 +7,7 @@ import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
 
+import { formatEuros } from '@/domains/complexe/complexeTerrain';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -202,12 +203,15 @@ function PublicLicensePayment({ navigation, route }) {
         'Aucun lien de paiement configure.',
       )),
       onSuccess: async (result) => {
-        if (result?.checkoutUrl) {
-          await LinksPlatform.openUrl(result.checkoutUrl);
-        }
+        if (!result?.checkoutUrl) return;
+        // T-PARCOURS-1 (17/11, R8) : une place de tournoi ouvre Stripe DANS cet onglet. La
+        // fenêtre ouverte après l'appel au serveur était bloquée par le navigateur, sans rien
+        // dire. Une cotisation ne change pas.
+        if (isTournament) await LinksPlatform.openUrlHere(result.checkoutUrl);
+        else await LinksPlatform.openUrl(result.checkoutUrl);
       },
     });
-  }, [checkoutMutation, hasSomethingToPay, isCampaignPaused]);
+  }, [checkoutMutation, hasSomethingToPay, isCampaignPaused, isTournament]);
 
   const declareOfflinePayment = useCallback((method) => {
     declareMutation.mutate(method, {
@@ -376,8 +380,10 @@ function PublicLicensePayment({ navigation, route }) {
             </View>
           </LicenseCard>
         ) : null}
+        {/* T-PARCOURS-1 (17/11, R8) : une place de tournoi se paie par carte ; pas les mots
+            d'une cotisation. */}
         <LicenseSectionHeader
-          description={t(
+          description={isTournament ? null : t(
             'publicLicensePayment.pay.description',
             'Choisis le moyen proposé par le club.',
           )}
@@ -394,6 +400,9 @@ function PublicLicensePayment({ navigation, route }) {
             isLoading={checkoutMutation.isPending}
             onOpenTerms={openTerms}
             onPay={() => openCheckout('stripe')}
+            price={Number(payment?.remainingCents) > 0
+              ? formatEuros(Number(payment.remainingCents) / 100)
+              : ''}
           />
         ) : null}
         {canPayOnline && paymentModes.helloasso ? (

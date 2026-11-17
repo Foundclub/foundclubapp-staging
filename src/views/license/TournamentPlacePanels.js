@@ -95,12 +95,14 @@ export function TournamentPlaceResult({
  * @param {boolean} [props.disabled] - T-PARENT : bouton inactif
  *   (autorisation parentale incomplète).
  * @param {boolean} props.isLoading - Le paiement s'ouvre-t-il ?
+ * @param {string} [props.price] - T-PARCOURS-1 (R8) : le reste à payer, écrit (« 20 € ») ;
+ *   vide = « Payer ma place ».
  * @param {() => void} props.onOpenTerms - Ouvre les conditions d'inscription.
  * @param {() => void} props.onPay - Ouvre le paiement Stripe.
  * @returns {import('react').ReactElement} Le bloc.
  */
 export function TournamentPlacePay({
-  canPay, complexeName = null, disabled = false, isLoading, onOpenTerms, onPay,
+  canPay, complexeName = null, disabled = false, isLoading, onOpenTerms, onPay, price = '',
 }) {
   const { t } = useTranslation();
   const { Fonts } = useTheme();
@@ -147,7 +149,9 @@ export function TournamentPlacePay({
           disabled={disabled}
           isLoading={isLoading}
           onPress={onPay}
-          title={t('publicLicensePayment.tournament.payStripe', 'Payer ma place')}
+          title={price
+            ? t('publicLicensePayment.tournament.payByCard', { prix: price, ...SANS_ECHAPPEMENT })
+            : t('publicLicensePayment.tournament.payStripe', 'Payer ma place')}
         />
       ) : null}
     </View>
