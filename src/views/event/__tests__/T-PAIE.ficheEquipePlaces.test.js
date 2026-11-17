@@ -13,7 +13,7 @@ let mockTeam = null;
 let mockAuth = {};
 const mockCopier = jest.fn(async () => true);
 const mockOpenUrl = jest.fn(async () => true);
-// T-PAGES-2 (R8) : « Payer ma place » passe par openUrlInPlace (même onglet sur le site) ; même espion.
+// T-PAGES-2 (R8) : « Payer ma place » passe par openUrlHere (même onglet sur le site) ; même espion.
 const mockOpenUrlInPlace = (...args) => mockOpenUrl(...args);
 
 jest.mock('@tanstack/react-query', () => ({
@@ -60,7 +60,7 @@ jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({}));
 jest.mock('@/services/user/userService', () => ({ searchScopedUsers: jest.fn(), searchUsers: jest.fn() }));
 jest.mock('@/platform/share', () => ({ __esModule: true, copier: (...args) => mockCopier(...args), default: { copier: (...args) => mockCopier(...args) } }));
-jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: (...args) => mockOpenUrl(...args), openUrlInPlace: (...args) => mockOpenUrlInPlace(...args) } }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: (...args) => mockOpenUrl(...args), openUrlHere: (...args) => mockOpenUrlInPlace(...args) } }));
 
 const LIEN_2 = 'https://foundclub.app/licenses/pay/jeton-joueur-2';
 const LIEN_3 = 'https://foundclub.app/licenses/pay/jeton-joueur-3';

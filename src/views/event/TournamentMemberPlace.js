@@ -59,7 +59,7 @@ export function TournamentPlacesSummary({ payment }) {
  * « Place payée » / « Place à payer », la taille de maillot (T-PAGES-5), puis « Copier le lien de
  * paiement » (qui gère l'équipe) ou « Payer ma place » (le joueur lui-même).
  * T-PAGES-2 (17/11) : « Payer ma place » ouvre la page de paiement dans le MÊME onglet sur le site
- * (R8, `openUrlInPlace`) ; sur une ligne de l'effectif, la page met son seul « Payer ma place » en
+ * (R8, `openUrlHere`) ; sur une ligne de l'effectif, la page met son seul « Payer ma place » en
  * tête (`showSelfPay` faux ici) ; le lien copié prend toute la largeur de la ligne, il ne dépasse
  * plus de la carte à 375 px (R11, fait F5).
  * @param {object} props - Les propriétés.
@@ -83,7 +83,7 @@ export function TournamentMemberPlace({ place, showSelfPay = true }) {
         : paymentUrl,
     );
   }, [paymentUrl, t]);
-  const payMine = useCallback(() => LinksPlatform.openUrlInPlace(paymentUrl), [paymentUrl]);
+  const payMine = useCallback(() => LinksPlatform.openUrlHere(paymentUrl), [paymentUrl]);
 
   if (!place) return null;
   const isPaid = place.status === 'paid';

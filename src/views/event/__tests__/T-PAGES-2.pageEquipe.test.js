@@ -42,7 +42,7 @@ jest.mock('@tanstack/react-query', () => ({
     // Une future version de l'écran pourrait relire le tournoi : rien ne doit casser.
     // ADAPTÉ À LA REFONTE (F22) : la page lit les équipes du tournoi avant de proposer « Demander à
     // rejoindre » ; ici, un tournoi où le lecteur n'a aucune équipe.
-    if (cle === 'event') return { data: mockEvent, isFetching: false };
+    if (cle === 'event') return mockEventQuery || { data: mockEvent, isFetching: false };
     return { data: [], isFetching: false };
   },
   useQueryClient: () => ({ invalidateQueries: jest.fn(() => Promise.resolve()) }),
@@ -128,9 +128,9 @@ jest.mock('@/platform/share', () => {
 });
 jest.mock('@/platform/links', () => {
   const openUrl = jest.fn(async () => true);
-  const openUrlInPlace = jest.fn(async () => true);
+  const openUrlHere = jest.fn(async () => true);
   return {
-    __esModule: true, default: { openUrl, openUrlInPlace }, openUrl, openUrlInPlace,
+    __esModule: true, default: { openUrl, openUrlHere }, openUrl, openUrlHere,
   };
 });
 
@@ -138,6 +138,8 @@ jest.mock('@/platform/links', () => {
 let mockTeam = null;
 /** @type {any} */
 let mockEvent = { documentId: 'evt-1', tournamentTeams: [] };
+/** @type {any} */
+let mockEventQuery = null;
 /** @type {any} */
 let mockAuth = {};
 
@@ -487,10 +489,10 @@ describe('T-PAGES-2 — joueur qui n’est pas capitaine (R6, R8)', () => {
     expect(tous[tous.length - 1].props.accessibilityLabel).toBe("Quitter l'équipe");
   });
 
-  test('🔴 R8 : « Payer ma place » ouvre la page de paiement DANS LE MÊME ONGLET (openUrlInPlace), pas une fenêtre', async () => {
+  test('🔴 R8 : « Payer ma place » ouvre la page de paiement DANS LE MÊME ONGLET (openUrlHere), pas une fenêtre', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
     await appuyer(arbre, ['Payer ma place']);
-    expect(liens.default.openUrlInPlace).toHaveBeenCalledWith(LIEN_2);
+    expect(liens.default.openUrlHere).toHaveBeenCalledWith(LIEN_2);
     expect(liens.default.openUrl).not.toHaveBeenCalled();
   });
 
@@ -553,5 +555,33 @@ describe('T-PAGES-2 — relecture (17/11) : deux trous de la refonte', () => {
     const arbre = await monter(payante('joueur', { isOpenToJoinRequests: true }), 'u-9');
     expect(texte(arbre)).not.toContain('Ton équipe');
     expect(texte(arbre)).not.toContain('Il manque');
+  });
+});
+
+describe('T-PAGES-2 — F22 : une raison INCONNUE ne cache pas le bouton', () => {
+  afterEach(() => { mockEventQuery = null; });
+
+  test('🔴 la lecture du tournoi échoue : « Demander à rejoindre » reste (le serveur tranche)', async () => {
+    mockEventQuery = {
+      data: undefined, isError: true, isFetching: false, isLoading: false,
+    };
+    const arbre = await monter(equipe({ isOpenToJoinRequests: true }), 'u-9', 'player', '1990-01-01');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(1);
+  });
+
+  test('pendant le chargement du tournoi : pas encore de bouton', async () => {
+    mockEventQuery = {
+      data: undefined, isError: false, isFetching: true, isLoading: true,
+    };
+    const arbre = await monter(equipe({ isOpenToJoinRequests: true }), 'u-9', 'player', '1990-01-01');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(0);
+  });
+});
+
+describe('M1312 (testeur, 17/11) — le capitaine fondateur', () => {
+  test('🔴 le capitaine qui a créé l’équipe (origine serveur « external_addition ») ne porte pas « Ajout exceptionnel »', async () => {
+    const arbre = await monter(equipe(), 'u-cap');
+    expect(equipe().members[0]).toMatchObject({ origin: 'external_addition', role: 'captain' });
+    expect(texte(arbre)).not.toContain('Ajout exceptionnel');
   });
 });

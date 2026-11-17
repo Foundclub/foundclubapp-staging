@@ -289,17 +289,20 @@ function TournamentTeamDetails({ navigation, route }) {
   // Même clé que la fiche (`useGetEvent`, ['event', id]) : sa lecture en mémoire sert ici. Le
   // service est chargé à la demande (comme le lien d'invitation) : les suites de cette page n'en
   // simulent pas le réseau.
-  const { data: tournamentEvent } = useQuery({
-    enabled: Boolean(eventId && canRequestJoinTeam && !tooYoung),
+  // L'identifiant du tournoi : la route, sinon celui que porte l'équipe.
+  const tournamentEventId = eventId || team?.event?.documentId || '';
+  const tournamentEventQuery = useQuery({
+    enabled: Boolean(tournamentEventId && canRequestJoinTeam && !tooYoung),
     queryFn: () => {
       // eslint-disable-next-line global-require
       const { getEventById } = require('@/services/event/eventService');
-      return getEventById(eventId);
+      return getEventById(tournamentEventId);
     },
-    queryKey: ['event', eventId],
+    queryKey: ['event', tournamentEventId],
     refetchOnMount: false,
     staleTime: EVENT_DETAIL_STALE_MS,
   });
+  const tournamentEvent = tournamentEventQuery.data;
   const alreadyInTeam = Boolean(tournamentEvent) && hasTournamentTeamForUser(
     tournamentEvent?.tournamentTeams,
     currentUserDocumentId,
@@ -312,7 +315,10 @@ function TournamentTeamDetails({ navigation, route }) {
       'Tu es déjà dans une équipe de ce tournoi : tu ne peux pas en rejoindre une autre.',
     );
   }
-  const canShowJoinButton = canRequestJoinTeam && !joinBlockedReason && Boolean(tournamentEvent);
+  // Une raison INCONNUE ne cache pas le bouton : seul le chargement le retient ; une lecture en
+  // échec le laisse (le serveur rejuge tout, `requestJoin`).
+  const canShowJoinButton = canRequestJoinTeam && !joinBlockedReason
+    && !(tournamentEventQuery.isLoading && !tournamentEvent);
   const { width } = useWindowDimensions();
   const isWide = width >= LARGEUR_DEUX_COLONNES;
   // Le menu à trois points ouvert (un membre à la fois), ou ''.
