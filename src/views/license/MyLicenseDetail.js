@@ -615,7 +615,13 @@ function MyLicenseDetail({ navigation, route }) {
   const isOpen = !isCampaignPaused && !isSettledAssignment(current);
   const canPayOnline = onlineMethods.length > 0 && isOpen;
   const canDeclare = manualMethods.length > 0 && isOpen;
-  const showActionBar = !isSettledAssignment(current) && (canPayOnline || canDeclare);
+  // T-PAGES-A, point 3 (17/11) — une PLACE DE TOURNOI ne se paie pas ici (Stripe seul, et
+  // le maillot se choisit sur la page publique) : « Payer ma place » ouvre la page de paiement
+  // de la place, la même que sur la page d'équipe (`/licenses/pay/<jeton>`), dans le même
+  // onglet sur le site. Aucun droit neuf.
+  const tournamentPayUrl = current?.campaign?.type === 'tournament' && isOpen ? payerLink : null;
+  const showActionBar = !isSettledAssignment(current)
+    && (canPayOnline || canDeclare || Boolean(tournamentPayUrl));
   // 📐 S9-ter — LES MESURES DU FLOTTANT, ECRITES UNE SEULE FOIS.
   // Un calque RECOUVRE : le degagement du contenu et la position du bouton
   // doivent venir du MEME calcul, sinon ils divergent au premier reglage.
@@ -1318,7 +1324,14 @@ function MyLicenseDetail({ navigation, route }) {
             zIndex: 1000,
           }}
         >
-          {canPayOnline ? (
+          {tournamentPayUrl ? (
+            <Button
+              onPress={() => LinksPlatform.openUrlHere(tournamentPayUrl)}
+              style={ApplicationStyle.shadow200}
+              title={t('tournamentTeamDetails.places.payMine', 'Payer ma place')}
+            />
+          ) : null}
+          {!tournamentPayUrl && canPayOnline ? (
             <Button
               isLoading={checkoutMutation.isPending}
               onPress={() => setPaySheetVisible(true)}
@@ -1329,13 +1342,14 @@ function MyLicenseDetail({ navigation, route }) {
                 { amount: remainingLabel, ...SANS_ECHAPPEMENT },
               )}
             />
-          ) : (
+          ) : null}
+          {!tournamentPayUrl && !canPayOnline ? (
             <Button
               onPress={() => setDeclareSheetVisible(true)}
               style={ApplicationStyle.shadow200}
               title={t('myLicenseDetail.actions.paidOutsideApp', "J'ai payé hors app")}
             />
-          )}
+          ) : null}
         </WebFloatingOverlay>
       ) : null}
 
