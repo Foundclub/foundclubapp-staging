@@ -772,11 +772,277 @@ const RELEVE_DU_LECTEUR = {
   },
 };
 
-describe('T-PAGES-4 · point 0 — ce que chaque lecteur voit (caractérisant, état d avant a671bf518)', () => {
+// État d'avant : a671bf518.
+describe('T-PAGES-4 · point 0 — ce que chaque lecteur voit (caractérisant)', () => {
   Object.keys(RELEVE_DU_LECTEUR).forEach((lecteur) => {
     test(`${lecteur}`, () => {
       // @ts-ignore: clé du relevé
       expect(releve(LECTEURS[lecteur]())).toEqual(RELEVE_DU_LECTEUR[lecteur]);
     });
+  });
+});
+// ============================================================================================
+// POINTS 1 À 7 — ce que la maquette validée (a) et (b), version téléphone, demande.
+// ============================================================================================
+
+/** Les blocs suivis, pour lire leur ordre dans l'arbre (de haut en bas de l'écran). */
+const ORDRE = [
+  'tournament-fiche-my-team',
+  'tournament-essentials',
+  'tournament-registration-card',
+  'tournament-join-team-panel',
+  'event-tournament-terms-link',
+  'doublure-onglets',
+];
+const ordreDe = (/** @type {any} */ root) => [...new Set(root
+  .findAll((/** @type {any} */ node) => ORDRE.includes(node.props?.testID), { deep: true })
+  .map((/** @type {any} */ node) => node.props.testID))];
+
+const barreDe = (/** @type {any} */ root) => {
+  const [barre] = parTestID(root, 'tournament-bottom-bar');
+  return barre ? textes(barre) : null;
+};
+
+/** L'équipe telle que `GET /tournament-teams/:id` la rend (la page d'équipe). */
+const EQUIPE_DETAILLEE = {
+  ...AIGLES,
+  members: [
+    {
+      documentId: 'm-cap', responseStatus: 'present', user: { documentId: 'cap-1', firstname: 'Karim' },
+    },
+    {
+      documentId: 'm-2', responseStatus: 'present', user: { documentId: 'membre-1', firstname: 'Ado' },
+    },
+    {
+      documentId: 'm-3', responseStatus: 'present', user: { documentId: 'j-3', firstname: 'Michel' },
+    },
+  ],
+  payment: {
+    entryFeeCents: 2000,
+    members: [
+      { isSelf: true, memberDocumentId: 'm-cap', status: 'paid' },
+      { memberDocumentId: 'm-2', status: 'due' },
+      { memberDocumentId: 'm-3', status: 'due' },
+    ],
+    paidCount: 1,
+    paidMembersToValidate: 5,
+  },
+};
+
+beforeEach(() => {
+  mockTeamQuery.data = EQUIPE_DETAILLEE;
+});
+
+describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
+  test('🔴 (a) sans équipe : essentiel, inscription, rejoindre, conditions, onglets', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(ordreDe(root)).toEqual([
+      'tournament-essentials',
+      'tournament-registration-card',
+      'tournament-join-team-panel',
+      'event-tournament-terms-link',
+      'doublure-onglets',
+    ]);
+    const [carte] = parTestID(root, 'tournament-registration-card');
+    expect(textes(carte)).toEqual(expect.arrayContaining([
+      'Ton inscription', 'Inscris ton équipe', '20 € par joueur', 'Créer mon équipe',
+    ]));
+  });
+
+  test('🔴 (a) sans équipe : le bas dit le prix et « Créer mon équipe », qui ouvre la feuille', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(barreDe(root)).toEqual(['20 € par joueur', 'Créer mon équipe']);
+    const [barre] = parTestID(root, 'tournament-bottom-bar');
+    const [bouton] = barre.findAllByType(TouchableOpacity);
+    act(() => {
+      bouton.props.onPress();
+    });
+    expect(textes(root)).toContain('Créer une équipe');
+  });
+
+  test('(a) compétition publiée, garde-fou : le bas reste « Voir le tournoi » (déroulé, résultats)', () => {
+    const lecteur = LECTEURS.sansEquipe();
+    lecteur.event.tournamentConfig = {
+      ...lecteur.event.tournamentConfig, competitionState: 'published',
+    };
+    expect(barreDe(monter(lecteur))).toEqual(['Voir le tournoi']);
+  });
+
+  test('🔴 (b) capitaine : « Mon équipe » d abord, puis l essentiel ; en bas « Voir mon équipe »', () => {
+    const root = monter(LECTEURS.capitaine());
+    expect(ordreDe(root)).toEqual([
+      'tournament-fiche-my-team',
+      'tournament-essentials',
+      'event-tournament-terms-link',
+      'doublure-onglets',
+    ]);
+    const [carte] = parTestID(root, 'tournament-fiche-my-team');
+    expect(textes(carte)).toEqual(expect.arrayContaining(['Les Aigles', 'Voir mon équipe', '1 / 5']));
+    expect(parTestID(root, 'tournament-team-progress-todo')).toHaveLength(1);
+    expect(barreDe(root)).toEqual(['Voir mon équipe']);
+  });
+
+  test('🔴 (b) membre (R4) : la même carte, en bas « Voir mon équipe »', () => {
+    const root = monter(LECTEURS.membre());
+    expect(parTestID(root, 'tournament-fiche-my-team')).toHaveLength(1);
+    expect(barreDe(root)).toEqual(['Voir mon équipe']);
+  });
+
+  test('🔴 (b) invité (R4) : la carte de son équipe et son seul geste', () => {
+    mockTeamQuery.data = { ...LIONS, members: [] };
+    const root = monter(LECTEURS.invite());
+    const [carte] = parTestID(root, 'tournament-fiche-my-team');
+    expect(textes(carte)).toEqual(expect.arrayContaining([
+      'Les Lions', 'Répondre à mon invitation',
+    ]));
+    expect(barreDe(root)).toEqual(['Répondre à mon invitation']);
+  });
+
+  test('🔴 (b) sans la page d équipe (chargement, refus) : le nom et le geste, jamais « 0 / 5 »', () => {
+    mockTeamQuery.data = null;
+    const root = monter(LECTEURS.capitaine());
+    const [carte] = parTestID(root, 'tournament-fiche-my-team');
+    expect(textes(carte)).toEqual(['Les Aigles', 'Voir mon équipe']);
+  });
+
+  test('🔴 trop jeune : le message dans la carte, aucun bouton, rien en bas', () => {
+    const root = monter(LECTEURS.tropJeune());
+    const [carte] = parTestID(root, 'tournament-registration-card');
+    expect(textes(carte)).toEqual(['Ton inscription', 'Ce tournoi est ouvert à partir de 16 ans.']);
+    expect(carte.findAllByType(TouchableOpacity)).toHaveLength(0);
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(0);
+  });
+
+  test('🔴 inscription et conditions montées une seule fois (plus dans l onglet Équipes)', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-registration-card')).toHaveLength(1);
+    expect(parTestID(root, 'event-tournament-terms-link')).toHaveLength(1);
+  });
+
+  test('🔴 l essentiel en cases pour tous les lecteurs', () => {
+    Object.values(LECTEURS).forEach((fabrique) => {
+      expect(parTestID(monter(fabrique()), 'tournament-essentials')).toHaveLength(1);
+    });
+  });
+});
+
+describe('T-PAGES-4 · point 2 — réservés à l organisateur (A2, R11)', () => {
+  test('🔴 carte « TOURNOI », « Compétition en brouillon / Brouillon » et rail : l organisateur seul', () => {
+    Object.entries(LECTEURS).forEach(([nom, fabrique]) => {
+      const vus = textes(monter(fabrique()));
+      const attendu = nom === 'organisateur' ? 1 : 0;
+      expect([nom, compter(vus, 'Compétition en brouillon')]).toEqual([nom, attendu]);
+      expect([nom, vus.filter((ligne) => ligne === 'Brouillon').length]).toEqual([nom, attendu]);
+      expect([nom, compter(vus, 'OÙ EN EST LE TOURNOI')]).toEqual([nom, attendu]);
+    });
+  });
+
+  test('🔴 le format et le règlement écrit restent aux joueurs (une carte courte)', () => {
+    const lecteur = LECTEURS.sansEquipe();
+    lecteur.event.tournamentConfig = {
+      ...lecteur.event.tournamentConfig, rulesText: 'Matchs de 10 minutes.',
+    };
+    const root = monter(lecteur);
+    const [carte] = parTestID(root, 'tournament-player-rules');
+    expect(textes(carte)).toEqual(['Poules + finale', 'Matchs de 10 minutes.']);
+  });
+});
+
+describe('T-PAGES-4 · point 3 — nombre d équipes, seuil des 30 %, pour tous (« 4- A »)', () => {
+  const huitEquipes = () => Array.from({ length: 8 }, (_, index) => ({
+    ...LIONS, documentId: `eq-${index}`, name: `Équipe ${index}`,
+  }));
+  const essentielDe = (/** @type {any} */ root) => textes(
+    parTestID(root, 'tournament-essentials')[0],
+  ).join(' ');
+
+  test('🔴 connecté sous le seuil (2 sur 24) : « 24 équipes attendues », sans compteur', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(essentielDe(root)).toContain('24 équipes attendues');
+    expect(textes(root).join(' ')).not.toContain('équipes au plus');
+    expect(ongletsDe(root)).toEqual(['Aperçu', 'Équipes', 'Personnes · 0']);
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'event-tournament-teams-summary').map(textOf))
+      .toEqual(['24 équipes attendues']);
+  });
+
+  test('🔴 connecté au seuil (8 sur 24) : « 8 équipes inscrites sur 24 »', () => {
+    const lecteur = LECTEURS.sansEquipe();
+    lecteur.event.tournamentTeams = huitEquipes();
+    expect(essentielDe(monter(lecteur))).toContain('8 équipes inscrites sur 24');
+  });
+
+  test('🔴 visiteur : « 24 équipes attendues » dans l essentiel, plus de « Personnes · 0 »', () => {
+    const root = monter(LECTEURS.visiteur());
+    expect(essentielDe(root)).toContain('24 équipes attendues');
+    expect(ongletsDe(root)).toEqual(['Aperçu', 'Équipes', 'Personnes']);
+  });
+
+  test('l organisateur garde ses vrais nombres', () => {
+    const root = monter(LECTEURS.organisateur());
+    expect(ongletsDe(root)).toEqual(['Aperçu', 'Équipes · 2', 'Personnes · 0']);
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'event-tournament-teams-summary').map(textOf))
+      .toEqual(['1 validée · 1 en attente']);
+  });
+
+  test('le panneau « Rejoindre une équipe » liste toujours les équipes qui cherchent un joueur', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    const [panneau] = parTestID(root, 'tournament-join-team-panel');
+    const [ouvrir] = panneau.findAllByType(TouchableOpacity);
+    act(() => {
+      ouvrir.props.onPress();
+    });
+    expect(textes(parTestID(root, 'tournament-join-team-panel')[0])).toContain('Les Aigles');
+    expect(textes(root).join(' ')).not.toContain('équipes inscrites sur');
+  });
+});
+
+describe('T-PAGES-4 · point 4 — retirés pour qui n est pas l organisateur', () => {
+  test('🔴 membre : plus de « Ma réponse au tournoi » ; ni « Participer » ni « Validation manuelle »', () => {
+    const lecteur = LECTEURS.membre();
+    lecteur.event.tournamentTeams = [{
+      ...AIGLES,
+      members: [{ responseStatus: 'present', user: { documentId: 'membre-1' } }],
+    }, LIONS];
+    const vus = textes(monter(lecteur));
+    expect(compter(vus, 'Ma réponse au tournoi')).toBe(0);
+    expect(compter(vus, 'Je suis présent')).toBe(0);
+    expect(compter(vus, 'Participer')).toBe(0);
+    expect(compter(vus, 'Validation manuelle')).toBe(0);
+  });
+});
+
+describe('T-PAGES-4 · point 5 — « Rejoindre une équipe » caché à l organisateur', () => {
+  test('🔴 organisateur : pas de panneau', () => {
+    expect(parTestID(monter(LECTEURS.organisateur()), 'tournament-join-team-panel')).toHaveLength(0);
+  });
+});
+
+describe('T-PAGES-4 · point 7 — R11', () => {
+  test('🔴 « Créer une équipe » jamais à qui a une équipe (capitaine par captainUser, membre, invité)', () => {
+    ['capitaine', 'membre', 'invite'].forEach((nom) => {
+      // @ts-ignore: clé du relevé
+      const root = monter(LECTEURS[nom]());
+      allerSurLOnglet(root, 'tournamentTeams');
+      const vus = textes(root);
+      expect([nom, parTestID(root, 'tournament-registration-card').length]).toEqual([nom, 0]);
+      expect([nom, compter(vus, 'Créer mon équipe')]).toEqual([nom, 0]);
+      expect([nom, compter(vus, 'Créer une équipe')]).toEqual([nom, 0]);
+    });
+  });
+});
+
+describe('T-PAGES-4 · point 6 — R10, la feuille « Créer une équipe » du téléphone', () => {
+  test('🔴 la feuille dit la suite : « Ensuite : invite 4 joueurs, chacun paie 20 €. »', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    // Le premier bouton « Créer … » de l'écran (avant : « Créer une équipe pour ce tournoi »).
+    const creer = root.findAllByType(TouchableOpacity)
+      .find((/** @type {any} */ node) => textOf(node).startsWith('Créer'));
+    act(() => {
+      creer.props.onPress();
+    });
+    expect(textes(root)).toContain('Ensuite : invite 4 joueurs, chacun paie 20 €.');
   });
 });
