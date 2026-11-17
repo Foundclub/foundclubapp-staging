@@ -38,7 +38,6 @@ import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
   getTournamentTeamsLine,
-  isTournamentTeamsCountShown,
 } from '@/views/event/tournamentTeamsCount';
 import { getTournamentCategoryLabel } from '@/views/event/tournamentUtils';
 
@@ -387,23 +386,26 @@ const resolveTypeInfoText = ({
 /**
  * Jauge de places : inscrits/capacité, équipes pour un tournoi.
  * @param {any} eventItem - Événement affiché.
- * @param {{ isReservation: boolean, isTournamentEvent: boolean }} kind - Nature de l'événement.
+ * @param {{ isOrganizer?: boolean, isReservation: boolean, isTournamentEvent: boolean }} kind -
+ *   Nature de l'événement, et si le lecteur organise ce tournoi.
  * @returns {{ line?: string, taken: number, total: number, unit: string } | null} - Jauge, ou
  *   seulement sa phrase (`line`), ou null.
  */
-const resolveCapacityGauge = (eventItem, { isReservation, isTournamentEvent }) => {
+const resolveCapacityGauge = (eventItem, { isOrganizer = false, isReservation, isTournamentEvent }) => {
   if (isReservation) {
     const total = Number(eventItem?.totalPlayers || 0);
     if (!total) return null;
     return { taken: Number(eventItem?.currentPlayers || 0), total, unit: '' };
   }
   if (isTournamentEvent) {
-    // T-PAGES-4 (17/11, « 4- A », recette 44) : sous le seuil des 30 %, aucun nombre inscrit,
-    // seulement « 24 équipes attendues » ; au seuil, le vrai nombre (résumé du serveur). La
-    // carte disait « 0 / 24 » à un visiteur, qui ne reçoit pas les équipes.
+    // T-PAGES-4 (17/11, « 4- A », recette 44) : qui n'organise pas le tournoi lit la phrase de
+    // la règle, jamais une jauge : « 24 équipes attendues » sous le seuil des 30 %, puis
+    // « N équipes inscrites sur 24 » (les INSCRITES, résumé du serveur). L'organisateur garde la
+    // jauge du vrai nombre. La carte disait « 0 / 24 » (les équipes reçues, aucune pour un
+    // visiteur) alors que 6 étaient inscrites.
     const total = getTournamentTeamsCapacity(eventItem);
     if (!total) return null;
-    if (!isTournamentTeamsCountShown(eventItem)) {
+    if (!isOrganizer) {
       return {
         line: getTournamentTeamsLine(eventItem) || '', taken: 0, total, unit: '',
       };
@@ -688,7 +690,11 @@ function EventCardNew({
     tournamentMetaName: tournoiDejaDit ? '' : tournamentMetaName,
     typeName,
   });
-  const capacityGauge = resolveCapacityGauge(item, { isReservation, isTournamentEvent });
+  const capacityGauge = resolveCapacityGauge(item, {
+    isOrganizer: Boolean(isTournamentEvent && canManageEvent?.(item)),
+    isReservation,
+    isTournamentEvent,
+  });
   const gaugeRatio = capacityGauge
     ? Math.min(1, Math.max(0, capacityGauge.taken / capacityGauge.total))
     : 0;

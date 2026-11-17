@@ -62,9 +62,11 @@ jest.mock('react-i18next', () => ({
 }));
 
 const mockUserData = jest.fn();
+// T-PAGES-4 : l'organisateur du tournoi (canManageEvent) garde la jauge du vrai nombre.
+const mockCanManageEvent = jest.fn(() => false);
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => ({ userData: mockUserData() }),
+  default: () => ({ canManageEvent: mockCanManageEvent, userData: mockUserData() }),
 }));
 
 const mockHaveIAlreadyJoined = jest.fn();
@@ -141,11 +143,33 @@ describe('EventCardNew — T-PAGES-4, la carte d un tournoi (recette 44)', () =>
     expect(texte).toContain('24 équipes attendues');
   });
 
-  test('🔴 1 — au seuil (8 sur 24) : la jauge dit le vrai nombre du serveur', () => {
+  test('🔴 1 — au seuil (8 sur 24) : « 8 équipes inscrites sur 24 », sans jauge', () => {
     const texte = textsOf(renderCard({
       item: TOURNOI({ tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 } }),
     }));
-    expect(texte).toContain('8 / 24 équipes');
+    expect(texte).toContain('8 équipes inscrites sur 24');
+    expect(texte).not.toContain('8 / 24');
+  });
+
+  test('🔴 1 — 3442 : 6 inscrites, 0 validée, le visiteur ne lit aucun compte', () => {
+    const texte = textsOf(renderCard({
+      item: TOURNOI({
+        tournamentTeams: Array.from({ length: 6 }, (_, index) => ({
+          documentId: `eq-${index}`, status: 'pending',
+        })),
+        tournamentTeamsSummary: undefined,
+      }),
+    }));
+    expect(texte).toContain('24 équipes attendues');
+    expect(texte).not.toContain('/ 24');
+  });
+
+  test('🔴 1 — l organisateur garde la jauge, au vrai nombre des inscrites (6, pas 0 validée)', () => {
+    mockCanManageEvent.mockReturnValue(true);
+    const texte = textsOf(renderCard({ item: TOURNOI() }));
+    mockCanManageEvent.mockReturnValue(false);
+    expect(texte).toContain('6 / 24 équipes');
+    expect(texte).not.toContain('équipes attendues');
   });
 
   test('🔴 3 — « À partir de 16 ans » et « Mixte » ne s écrivent qu une fois', () => {
