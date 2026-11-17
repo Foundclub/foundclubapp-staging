@@ -20,6 +20,12 @@ import MyLicenseDetail from '../MyLicenseDetail';
  * club). Donc aucun bouton « Payer » ni « J'ai payé hors app », et aucun appel à la route connectée.
  * Une licence ordinaire garde son bouton « Payer » (témoin de contrôle).
  * Si ce témoin rougit (Stripe ajouté à cet écran), le sélecteur de maillot doit y venir aussi.
+ *
+ * T-PAGES-A, point 3 (17/11, impasse vue par le testeur) — la place de tournoi a maintenant SON bouton
+ * « Payer ma place » : il ouvre la page de paiement publique (`/licenses/pay/<jeton>`, celle de « Payer ma
+ * place » sur la page d'équipe, avec le maillot et l'autorisation parentale), dans le même onglet sur le
+ * site. Toujours aucun paiement connecté (Stripe) depuis cet écran, ni « J'ai payé hors app ».
+ * Ancienne assertion : « ni Payer, ni hors app » ; nouvelle : « Payer ma place » seul, vers la page publique.
  */
 
 /** @type {any} */
@@ -87,7 +93,7 @@ jest.mock('react-native-blob-util', () => ({
   default: { config: jest.fn(), fs: { dirs: { CacheDir: '/cache' }, stat: jest.fn() } },
 }));
 
-jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn(), openUrlInPlace: jest.fn() } }));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
 jest.mock('@/platform/media/downloadRemoteFile', () => ({
   __esModule: true,
@@ -151,9 +157,13 @@ const monter = (/** @type {any} */ affectation) => {
 const titres = () => arbre.root.findAllByType(Button).map((/** @type {any} */ b) => String(b.props.title));
 
 describe('T-TAILLE — « Mes licences » ne paie pas une place de tournoi', () => {
-  it('place de tournoi (Stripe seul) : ni « Payer », ni « hors app », aucun appel au paiement connecté', () => {
+  it('🔴 place de tournoi (Stripe seul) : « Payer ma place » ouvre la page publique, ni « hors app » ni paiement connecté', async () => {
     monter(place(MODES_DU_TOURNOI, 'tournament'));
-    expect(titres().some((titre) => /Payer|hors app/.test(titre))).toBe(false);
+    expect(titres().filter((titre) => /Payer|hors app/.test(titre))).toEqual(['Payer ma place']);
+    const [payer] = arbre.root.findAllByType(Button).filter((/** @type {any} */ b) => b.props.title === 'Payer ma place');
+    await act(async () => { await payer.props.onPress(); });
+    const liens = jest.requireMock('@/platform/links').default;
+    expect(liens.openUrlInPlace).toHaveBeenCalledWith(expect.stringMatching(/\/licenses\/pay\/jeton-de-test$/));
     expect(createLicenseCheckout).not.toHaveBeenCalled();
   });
 
