@@ -1952,6 +1952,20 @@ function EventDetails({ navigation, route }) {
   const trainingDescription = trainingOpenConfig.isTraining
     ? String(event?.description || '').trim()
     : '';
+  // T-PARCOURS-2 (17/11, point 10, recette 42) : sur un tournoi, la liste des participants n'est
+  // plus rendue (T-FINITIONS-3) ; pour un joueur, la colonne principale n'avait alors plus aucun
+  // bloc et restait une carte vide sous l'en-tête. Règle PRUDENTE : vide seulement si aucun de
+  // ses blocs ne peut être rendu (un doute la laisse affichée).
+  const colonnePrincipaleVide = isTournamentEvent && !canEdit
+    && !event?.facilityClosure
+    && !event?.facilityReportable
+    && !matchEncartSummary
+    && !trainingDescription
+    && joursDuStage.length === 0
+    && !hasVisibleEventTasks
+    && !supportsEventComposition
+    && !showTrainingParticipants
+    && !(Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0);
   // 🔢 « Joueurs attendus » DIT LE NOMBRE DE L APPEL. Il affichait
   // `event.totalPlayers`, un champ de saisie qui vaut 0 par defaut au schema :
   // « 0 » a cote de « 15 attendus ». Quand l evenement a des equipes, on prend
@@ -2898,13 +2912,15 @@ function EventDetails({ navigation, route }) {
         ) : null}
 
         {!isLoading && event && !isCancelled ? (
-          <div style={{ display: 'grid', gap: 24, gridTemplateColumns: isDesktop ? 'minmax(0, 1.15fr) minmax(300px, 0.85fr)' : 'minmax(0, 1fr)' }}>
+          <div style={{ display: 'grid', gap: 24, gridTemplateColumns: isDesktop && !colonnePrincipaleVide ? 'minmax(0, 1.15fr) minmax(300px, 0.85fr)' : 'minmax(0, 1fr)' }}>
             {/* PARTWEB — `alignContent: 'start'` sur les DEUX colonnes : une grille
                 s'etire a la hauteur de la colonne voisine, et ses blocs avec — la
                 liste des participants, longue, creusait des trous dans « Infos rapides ». */}
-            <section style={{
-              alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
-            }}
+            <section
+              data-testid="event-main-column"
+              style={{
+                alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: colonnePrincipaleVide ? 'none' : 'grid', gap: 18, padding: 22,
+              }}
             >
               {/* CRFERM (13/10, COL-010, « D8 B », planche P8v4-fermee-ordi B et C) — la Ville a
                   fermé l installation ce jour-là : le bandeau du téléphone (même composant), ses

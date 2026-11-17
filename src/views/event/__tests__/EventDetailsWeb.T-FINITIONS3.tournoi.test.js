@@ -443,3 +443,46 @@ test('🔴 T-PARCOURS2 (7) — tournoi sans prix encaissé : « Gratuit ou non d
 test('T-PARCOURS2 (7) caractérisant — un événement ordinaire garde son prix par personne', () => {
   expect(texte(monter({ ...MATCH_EQUIPE, pricePerPerson: 12 }).root)).toContain('12 EUR');
 });
+
+// T-PARCOURS-2 (point 10) — la colonne principale de la fiche : depuis que la liste des participants
+// n'est plus rendue sur un tournoi (T-FINITIONS-3), un joueur y voyait une carte VIDE sous l'en-tête.
+/**
+ * La colonne principale dans l'arbre rendu (JSON) : ses enfants réellement rendus.
+ * @param {any} noeud
+ * @returns {any}
+ */
+const colonnePrincipale = (noeud) => {
+  if (!noeud || typeof noeud !== 'object') return null;
+  if (Array.isArray(noeud)) return noeud.map(colonnePrincipale).find(Boolean) || null;
+  if (noeud.props?.['data-testid'] === 'event-main-column') return noeud;
+  return colonnePrincipale(noeud.children);
+};
+const ORGANISATEUR = {
+  ...JOUEUR, canEditClub: () => true, canEditEvent: () => true, canManageEvent: () => true,
+};
+
+test('🔴 T-PARCOURS2 (10) — joueur sur un tournoi : la colonne vide n est pas affichée', () => {
+  const colonne = colonnePrincipale(monter(tournoiAutonome()).toJSON());
+  expect(colonne.children).toBeNull();
+  expect(colonne.props.style.display).toBe('none');
+});
+
+test('T-PARCOURS2 (10) caractérisant — dès qu un bloc y est rendu, la colonne reste affichée', () => {
+  [
+    () => monter(tournoiAutonome(), ORGANISATEUR),
+    () => monter(MATCH_EQUIPE),
+    () => monter(tournoiAutonome({
+      eventTasks: [{ documentId: 'tache-1', name: 'Apporter les chasubles' }],
+    })),
+  ].forEach((cas) => {
+    const colonne = colonnePrincipale(cas().toJSON());
+    // Cachée ⇒ aucun enfant rendu : jamais un bloc masqué par erreur.
+    if (colonne.props.style.display === 'none') expect(colonne.children).toBeNull();
+    else expect(colonne.props.style.display).toBe('grid');
+    act(() => mounted.unmount());
+    mounted = null;
+  });
+  const organisateur = colonnePrincipale(monter(tournoiAutonome(), ORGANISATEUR).toJSON());
+  expect(organisateur.props.style.display).toBe('grid');
+  expect(organisateur.children).not.toBeNull();
+});
