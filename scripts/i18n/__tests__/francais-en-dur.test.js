@@ -96,7 +96,7 @@ describe('306 A — la baseline recalée attrape toute ligne neuve', () => {
   );
   const tete = compter(mesurer());
 
-  it('la tête est à sa baseline : 589 lignes, aucune hausse, seule la tolérance « 368 A » + D210', () => {
+  it('la tête est à sa baseline : 589 lignes, aucune hausse, seules « 368 A » et D210', () => {
     expect(baseline.totalLignes).toBe(589);
     expect(fichiersEnHausse(tete, baseline.fichiers)).toEqual([]);
     expect(EXCEPTIONS_D78).toEqual({
