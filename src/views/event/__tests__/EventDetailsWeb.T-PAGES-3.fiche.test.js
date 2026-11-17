@@ -549,7 +549,8 @@ test('🔴 T-PAGES-3 (4) non-organisateur — ni Infos rapides, ni réglages Mod
   LECTEURS.filter(([nom]) => nom !== 'organisateur').forEach(([, compte, ev]) => {
     const arbre = monter(ev(), compte);
     const tout = texte(arbre.root);
-    ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Validation des', 'Aucun participant confirm'].forEach((mot) => expect(tout).not.toContain(mot));
+    // Recette 44 (testeur, via le chef) : ni « Mon statut » ni « Aucune réponse » sur un tournoi.
+    ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Validation des', 'Aucun participant confirm', 'Mon statut', 'Aucune réponse'].forEach((mot) => expect(tout).not.toContain(mot));
     expect(inventaire(arbre).pastilles).toEqual(['Terrain A']);
     expect(tousLesBoutons(arbre)).not.toContain('Participer');
     act(() => mounted.unmount());
