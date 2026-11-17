@@ -105,7 +105,7 @@ describe('T-TAILLE — maillot sur la page de paiement d une place', () => {
   };
   const texte = () => JSON.stringify(arbre.toJSON());
   const checkout = () => mockOptions.at(-2);
-  const payer = () => mockBoutons.filter((props) => props.title === 'Payer ma place').at(-1);
+  const payer = () => mockBoutons.filter((props) => props.title === 'Payer 20 € par carte').at(-1);
   const taille = (/** @type {string} */ valeur) => arbre.root.find((/** @type {any} */ node) => node.props.testID === `jersey-size-${valeur}` && node.props.onPress);
   const tailles = () => arbre.root.findAll((/** @type {any} */ node) => typeof node.props.testID === 'string' && /^jersey-size-[A-Z]+$/.test(node.props.testID) && node.props.onPress);
   const saisir = (/** @type {string} */ id, /** @type {string} */ valeur) => act(() => arbre.root.find((/** @type {any} */ node) => node.props.testID === id && node.props.onChangeText).props.onChangeText(valeur));
@@ -124,7 +124,7 @@ describe('T-TAILLE — maillot sur la page de paiement d une place', () => {
     expect(contenu).toContain('« Assistance FoundClub »');
     expect(contenu).not.toContain('compris dans la place');
     expect([...new Set(tailles().map((node) => node.props.testID))]).toEqual(['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((v) => `jersey-size-${v}`));
-    expect(contenu.indexOf('Taille du maillot')).toBeLessThan(contenu.indexOf('[Payer ma place]'));
+    expect(contenu.indexOf('Taille du maillot')).toBeLessThan(contenu.indexOf('[Payer 20 € par carte]'));
     const groupe = arbre.root.find((/** @type {any} */ node) => node.props.accessibilityRole === 'radiogroup' && node.props.accessibilityLabel === 'Taille du maillot');
     expect(groupe).toBeTruthy();
     expect(taille('M').props.accessibilityRole).toBe('radio');
