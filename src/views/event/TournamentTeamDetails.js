@@ -332,9 +332,10 @@ function TournamentTeamDetails({ navigation, route }) {
   const requestJoinMutation = useMutation({
     mutationFn: ({ acceptRiskDeclaration }) => requestJoinTournamentTeam(teamId, { acceptRiskDeclaration }),
     onError: (mutationError) => {
+      // T-REJOINDRE (17/11, fait de recette) : sans phrase du serveur, dire quoi faire.
       setJoinRequestError(mutationError?.message || t(
-        'tournamentTeamDetails.unableToSendThisRequest',
-        "Impossible d'envoyer cette demande.",
+        'tournamentJoin.sendError',
+        'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
       ));
     },
     onSuccess: async () => {
@@ -524,6 +525,38 @@ function TournamentTeamDetails({ navigation, route }) {
     ? t('tournamentTeamDetails.searchForAFoundclubPlayer', 'Rechercher un joueur FoundClub')
     : t('tournamentTeamDetails.searchForAClubPlayer', 'Rechercher un joueur du club');
 
+  // T-REJOINDRE (17/11, Clément D50, registre D210) — « le capitaine consulte le profil, peut
+  // envoyer un message direct avant d'accepter la demande ». Le profil : l'écran existant
+  // (UserDetails).
+  // Le message : le fil direct créé ou retrouvé par le serveur, qui rejuge À CHAQUE FOIS la règle
+  // des mineurs (chat `createWhisperChat`, minor-chat-guard) ; son refus s'affiche tel quel.
+  const openRequesterProfile = (/** @type {string} */ userId) => {
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { userId },
+      screen: RouteNames.UserDetails,
+    });
+  };
+  const writeToRequester = async (/** @type {string} */ userId) => {
+    try {
+      // Chargé à la demande (comme le lien d'invitation) : les suites de la fiche n'en simulent
+      // pas le réseau.
+      // eslint-disable-next-line global-require
+      const { createWhisperChat } = require('@/services/chat/chatService');
+      const chat = await createWhisperChat([userId]);
+      if (chat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      }
+    } catch (/** @type {any} */ writeError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        writeError?.response?.data?.error?.message || writeError?.message || t(
+          'tournamentJoin.writeError',
+          'Impossible d’ouvrir la conversation pour le moment.',
+        ),
+      );
+    }
+  };
+
   const renderMemberCard = (member, variant) => {
     const isCaptain = normalizeTournamentText(member?.role) === 'captain';
     const memberStatusMeta = getMemberStatusMeta(member?.responseStatus, Colors);
@@ -591,6 +624,31 @@ function TournamentTeamDetails({ navigation, route }) {
             title={t('tournamentTeamDetails.cancelTheInvitation', "Annuler l'invitation")}
             variant="SecondaryLight"
           />
+        ) : null}
+
+        {/* T-REJOINDRE (17/11, Clément D50) : le capitaine voit qui demande avant d'accepter. */}
+        {variant === 'requested' && canManageRoster && member?.user?.documentId ? (
+          <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+            <View testID={`tournament-request-profile-${member.documentId}`}>
+              <Button
+                onPress={() => openRequesterProfile(member.user.documentId)}
+                size="sm"
+                title={t('tournamentJoin.seeProfile', 'Voir le profil')}
+                variant="SecondaryLight"
+              />
+            </View>
+            {/* MINEURS : « Écrire » seulement si le garde du serveur l'a permis. */}
+            {member?.viewerCanWrite === true ? (
+              <View testID={`tournament-request-write-${member.documentId}`}>
+                <Button
+                  onPress={() => writeToRequester(member.user.documentId)}
+                  size="sm"
+                  title={t('tournamentJoin.write', 'Écrire')}
+                  variant="SecondaryLight"
+                />
+              </View>
+            ) : null}
+          </View>
         ) : null}
 
         {variant === 'requested' && canManageRoster ? (
@@ -936,7 +994,7 @@ function TournamentTeamDetails({ navigation, route }) {
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {team?.isOpenToJoinRequests === true
-                      ? t('tournamentTeamDetails.playersCanSendARequest', 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.')
+                      ? t('tournamentTeamDetails.playersCanSendARequest', 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe.')
                       : t('tournamentTeamDetails.incomingRequestsAreDisabledOnly', 'Les demandes entrantes sont désactivées. Seules tes invitations manuelles sont possibles.')}
                   </Text>
                   <Button
@@ -1062,8 +1120,8 @@ function TournamentTeamDetails({ navigation, route }) {
               });
             } catch (mutationError) {
               setJoinRequestError(mutationError?.message || t(
-                'tournamentTeamDetails.unableToSendThisRequest',
-                "Impossible d'envoyer cette demande.",
+                'tournamentJoin.sendError',
+                'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
               ));
             }
           }}
