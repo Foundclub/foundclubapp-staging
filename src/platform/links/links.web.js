@@ -9,7 +9,7 @@ export const openUrl = async (url) => {
 // courant (la page de paiement d'une place) s'ouvre dans le MÊME onglet : aucune fenêtre
 // surgissante qu'un navigateur pourrait bloquer sans rien dire. Même geste que
 // subscriptionPurchaseRail.js (Stripe).
-export const openUrlInPlace = async (url) => {
+export const openUrlInPlace = async (/** @type {string} */ url) => {
   if (typeof window === 'undefined' || !url) return;
   window.location.assign(url);
 };

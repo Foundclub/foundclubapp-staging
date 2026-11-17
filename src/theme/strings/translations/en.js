@@ -26094,6 +26094,8 @@ export default {
     players_other: 'players',
     rule_one: 'Not validated yet: {{count}} spot paid out of {{needed}}. Your team is validated once {{needed}} spots are paid.',
     rule_other: 'Not validated yet: {{count}} spots paid out of {{needed}}. Your team is validated once {{needed}} spots are paid.',
+    ruleNeutral_one: '{{count}} spot paid out of {{needed}}; the team is validated once {{needed}} spots are paid.',
+    ruleNeutral_other: '{{count}} spots paid out of {{needed}}; the team is validated once {{needed}} spots are paid.',
     ruleValidated_one: 'Your team is validated: {{count}} spot paid out of {{needed}}.',
     ruleValidated_other: 'Your team is validated: {{count}} spots paid out of {{needed}}.',
     sizeChosen: 'Size chosen: {{size}}',

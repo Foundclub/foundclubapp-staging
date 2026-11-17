@@ -531,3 +531,27 @@ describe('T-PAGES-2 — F22 : la raison de refus avant la déclaration', () => {
     expect(combien(arbre, ['Demander à rejoindre'])).toBe(1);
   });
 });
+
+describe('T-PAGES-2 — relecture (17/11) : deux trous de la refonte', () => {
+  test('🔴 capitaine dont la place est due, équipe validée : « Payer ma place » reste, une seule fois, en tête', async () => {
+    const team = payante('capitaine', { status: 'accepted' });
+    team.payment.members[0] = {
+      isSelf: true, memberDocumentId: 'mb-1', paymentUrl: 'https://foundclub.app/licenses/pay/jeton-cap', status: 'due',
+    };
+    const arbre = await monter(team, 'u-cap');
+    expect(combien(arbre, ['Payer ma place'])).toBe(1);
+    const [payer, etat] = ordre(arbre, ['Payer ma place', 'Où en est l’équipe']);
+    expect(etat).toBeGreaterThan(payer);
+  });
+
+  test('🔴 tournoi gratuit sans effectif minimum : jamais « 2 / 0 »', async () => {
+    const arbre = await monter(equipe(), 'u-cap');
+    expect(texte(arbre)).not.toContain('/ 0');
+  });
+
+  test('🔴 visiteur : la carte ne lui dit pas « Ton équipe », ni ce qu’il manque', async () => {
+    const arbre = await monter(payante('joueur', { isOpenToJoinRequests: true }), 'u-9');
+    expect(texte(arbre)).not.toContain('Ton équipe');
+    expect(texte(arbre)).not.toContain('Il manque');
+  });
+});

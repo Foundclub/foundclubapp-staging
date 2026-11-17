@@ -27,6 +27,7 @@ import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDef
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { EVENT_DETAIL_STALE_MS } from '@/services/event/eventCacheDurations';
 import { useGetTournamentTeam } from '@/services/tournamentTeam/tournamentTeamQueries';
 import {
   inviteTournamentTeamMember,
@@ -296,6 +297,8 @@ function TournamentTeamDetails({ navigation, route }) {
       return getEventById(eventId);
     },
     queryKey: ['event', eventId],
+    refetchOnMount: false,
+    staleTime: EVENT_DETAIL_STALE_MS,
   });
   const alreadyInTeam = Boolean(tournamentEvent) && hasTournamentTeamForUser(
     tournamentEvent?.tournamentTeams,
@@ -839,9 +842,6 @@ function TournamentTeamDetails({ navigation, route }) {
         </View>
       );
     }
-    if (item.kind === 'selfDue' && myPlace?.paymentUrl) {
-      return <TournamentMemberPlace place={myPlace} />;
-    }
     return null;
   };
 
@@ -1055,9 +1055,9 @@ function TournamentTeamDetails({ navigation, route }) {
         </View>
       ) : null}
 
-      {/* R6 (parcours d'inscription) : le joueur qui n'est pas capitaine voit « Payer ma place »,
-          avec le prix, avant tout le reste. */}
-      {!canManageTeam && myPlaceDue ? (
+      {/* R6 (parcours d'inscription) : « Payer ma place », avec le prix, avant tout le reste ; pour
+          le joueur comme pour le capitaine dont la place est due (seul bouton de paiement). */}
+      {myPlaceDue ? (
         <View
           style={[...tournamentDs.styles.panelCard, Spaces.gap[12]]}
           testID="tournament-team-my-place"
@@ -1082,6 +1082,7 @@ function TournamentTeamDetails({ navigation, route }) {
         payment={team?.payment}
         teamStatus={team?.status}
         tournamentConfig={tournamentConfig}
+        viewerIsMember={isCurrentActiveMember || canManageTeam}
       />
       {!rosterSummary.meetsMaxRoster ? (
         <Text style={[Fonts.p3, Fonts.error500]}>

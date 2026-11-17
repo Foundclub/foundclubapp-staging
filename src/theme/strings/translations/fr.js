@@ -27272,6 +27272,10 @@ export default {
     rule_one: 'Pas encore validée : {{count}} place payée sur {{needed}}. Ton équipe est validée dès la {{needed}}ᵉ place payée.',
     // eslint-disable-next-line max-len
     rule_other: 'Pas encore validée : {{count}} places payées sur {{needed}}. Ton équipe est validée dès la {{needed}}ᵉ place payée.',
+    // eslint-disable-next-line max-len
+    ruleNeutral_one: '{{count}} place payée sur {{needed}} ; l’équipe est validée dès la {{needed}}ᵉ place payée.',
+    // eslint-disable-next-line max-len
+    ruleNeutral_other: '{{count}} places payées sur {{needed}} ; l’équipe est validée dès la {{needed}}ᵉ place payée.',
     ruleValidated_one: 'Ton équipe est validée : {{count}} place payée sur {{needed}}.',
     ruleValidated_other: 'Ton équipe est validée : {{count}} places payées sur {{needed}}.',
     sizeChosen: 'Taille choisie : {{size}}',
