@@ -519,7 +519,6 @@ test('T-PARCOURS2 (3) site caractérisant — sans ligne du lecteur : « Inscrir
   expect(boutons).not.toContain('Voir mon équipe');
 });
 
-
 // --- T-REJOINDRE (17/11, décisions de Clément, registre D210) -------------------------------------------
 // D49 : le visiteur sans compte ne reçoit pas les équipes ; il lit le résumé public
 // (`tournamentTeamsSummary`), avec le seuil des 30 %. D50 : « Rejoindre une équipe » pour le joueur seul.
