@@ -2322,7 +2322,10 @@ function EventDetails({ navigation, route }) {
           tooYoung={tropJeunePourLeTournoi}
           ui={uiDeLaFiche}
         >
-          {/* T-REJOINDRE (D50), posé tel quel ; jamais pour l'organisateur (point 5). */}
+          {/* T-REJOINDRE (D50), posé tel quel ; jamais pour l'organisateur (point 5).
+              ponytail: la garde `!canEdit` vit ici, pas dans la règle partagée (le téléphone ne
+              l'a pas) ; sortie : remplacer par la règle de tournamentJoinRules.js (T-PAGES-6)
+              à la récolte. */}
           {!canEdit ? (
             <TournamentJoinTeamPanel
               event={event}
