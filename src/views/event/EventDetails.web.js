@@ -62,7 +62,6 @@ import {
   formatTournamentPlayersShortList,
   getTournamentAgeNotice,
   getTournamentClosure,
-  getTournamentMembersSummaryLine,
   getTournamentEntryFeeLabel,
   getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
@@ -153,7 +152,7 @@ import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { eventMapTarget, formatEventPlaceLine, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import {
-  isPaidTournament, openTournamentTerms, tournamentEntryFeeEuros,
+  isPaidTournament, openTournamentTerms,
 } from './components/tournamentTerms';
 import { findParentTeamId } from './matchEncartLines';
 import {
