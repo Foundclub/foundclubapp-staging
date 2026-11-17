@@ -38,7 +38,9 @@ jest.mock('@tanstack/react-query', () => ({
     const cle = Array.isArray(opts?.queryKey) ? opts.queryKey[0] : '';
     if (cle === 'tournament-team-users') return { data: mockCandidats, isFetching: false };
     // Une future version de l'écran pourrait relire le tournoi : rien ne doit casser.
-    if (cle === 'event') return { data: undefined, isFetching: false };
+    // ADAPTÉ À LA REFONTE (F22) : la page lit les équipes du tournoi avant de proposer « Demander à
+    // rejoindre » ; ici, un tournoi où le lecteur n'a aucune équipe.
+    if (cle === 'event') return { data: { documentId: 'evt-1', tournamentTeams: [] }, isFetching: false };
     return { data: [], isFetching: false };
   },
   useQueryClient: () => ({ invalidateQueries: jest.fn(() => Promise.resolve()) }),
@@ -157,8 +159,12 @@ const LIEN_2 = 'https://foundclub.app/licenses/pay/jeton-joueur-2';
  * @param {string[]} libelles - Les libellés acceptés.
  * @returns {any[]} Les boutons, dans l'ordre de l'écran.
  */
+// ADAPTÉ À LA REFONTE : le libellé du menu « Retirer de l’équipe » vaut « Retirer ».
+/** @type {Record<string, string[]>} */
+const ALIAS = { Retirer: ['Retirer de l’équipe'] };
+const avecAlias = (/** @type {string[]} */ libelles) => libelles.flatMap((l) => [l, ...(ALIAS[l] || [])]);
 const boutonsDe = (racine, libelles) => racine.findAll(
-  (/** @type {any} */ n) => libelles.includes(n.props?.accessibilityLabel) && typeof n.props?.onPress === 'function' && n.type !== 'View',
+  (/** @type {any} */ n) => avecAlias(libelles).includes(n.props?.accessibilityLabel) && typeof n.props?.onPress === 'function' && n.type !== 'View',
 ).filter((/** @type {any} */ n, /** @type {number} */ i, /** @type {any[]} */ all) => all.findIndex((m) => m.props.onPress === n.props.onPress) === i);
 
 /**
@@ -167,6 +173,15 @@ const boutonsDe = (racine, libelles) => racine.findAll(
  * @returns {any} Le nœud racine.
  */
 const racineDe = (cible) => cible?.root || cible;
+
+/**
+ * ADAPTÉ À LA REFONTE : les menus « trois points » des lignes (« Actions pour … »).
+ * @param {any} racine - Un nœud de l'arbre.
+ * @returns {any[]} Les boutons de menu.
+ */
+const menusDe = (racine) => racine.findAll(
+  (/** @type {any} */ n) => String(n.props?.accessibilityLabel || '').startsWith('Actions pour ') && typeof n.props?.onPress === 'function' && n.type !== 'View',
+).filter((/** @type {any} */ n, /** @type {number} */ i, /** @type {any[]} */ all) => all.findIndex((m) => m.props.onPress === n.props.onPress) === i);
 
 /**
  * Appuie sur le PREMIER bouton dont le libellé est dans `libelles`.
@@ -190,6 +205,11 @@ const ligne = (arbre, nom) => {
   const [etiquette] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text' && n.props?.children === nom);
   if (!etiquette) throw new Error(`Aucune ligne pour ${nom}`);
   const aUnBouton = (/** @type {any} */ n) => n.findAll((/** @type {any} */ m) => typeof m.props?.accessibilityLabel === 'string' && typeof m.props?.onPress === 'function').length > 0;
+  // ADAPTÉ À LA REFONTE : la carte d'un membre porte `tournament-member-row-<id>` ; on la prend
+  // entière (sinon on s'arrêterait à la rangée du nom, qui ne porte que le menu).
+  let carte = etiquette;
+  while (carte && !String(carte.props?.testID || '').startsWith('tournament-member-row-')) carte = carte.parent;
+  if (carte) return carte;
   let noeud = etiquette;
   while (noeud && !aUnBouton(noeud)) noeud = noeud.parent;
   if (!noeud) throw new Error(`Aucun bouton sur la ligne de ${nom}`);
@@ -203,7 +223,14 @@ const ligne = (arbre, nom) => {
  * @param {string[]} libelles - Les libellés acceptés.
  * @returns {Promise<void>} Fini quand l'appui est joué.
  */
-const appuyerDansLigne = async (arbre, nom, libelles) => appuyer(ligne(arbre, nom), libelles);
+const appuyerDansLigne = async (arbre, nom, libelles) => {
+  // ADAPTÉ À LA REFONTE : l'action peut être rangée dans le menu de la ligne ; on l'ouvre d'abord.
+  if (!boutonsDe(ligne(arbre, nom), libelles).length) {
+    const [menu] = menusDe(ligne(arbre, nom));
+    if (menu) await act(async () => { await menu.props.onPress(); });
+  }
+  return appuyer(ligne(arbre, nom), libelles);
+};
 
 /**
  * Combien de boutons portent l'un des libellés.
@@ -211,7 +238,19 @@ const appuyerDansLigne = async (arbre, nom, libelles) => appuyer(ligne(arbre, no
  * @param {string[]} libelles - Les libellés acceptés.
  * @returns {number} Le nombre de boutons.
  */
-const combien = (cible, libelles) => boutonsDe(racineDe(cible), libelles).length;
+const combien = (cible, libelles) => {
+  // ADAPTÉ À LA REFONTE : compte aussi ce que chaque menu de ligne ouvre (un menu à la fois).
+  const racine = racineDe(cible);
+  const fermes = boutonsDe(racine, libelles).length;
+  let enPlus = 0;
+  menusDe(racine).map((/** @type {any} */ m) => m.props.accessibilityLabel).forEach((/** @type {string} */ nom) => {
+    const trouver = () => menusDe(racine).find((/** @type {any} */ m) => m.props.accessibilityLabel === nom);
+    act(() => { trouver().props.onPress(); });
+    enPlus += boutonsDe(racine, libelles).length - fermes;
+    act(() => { trouver().props.onPress(); });
+  });
+  return fermes + enPlus;
+};
 
 const texte = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
 
