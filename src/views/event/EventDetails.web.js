@@ -56,6 +56,7 @@ import TrainingReviewsCard, {
   peutVoirLesAvisDEntrainement,
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { getTournamentVisitorTeamsLine } from '@/views/event/tournamentJoinRules';
 import {
   canRegisterSourceTeamToTournament,
   getTournamentAgeNotice,
@@ -136,6 +137,7 @@ import EventChildRegistration, {
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentTeamSheet from './components/TournamentTeamSheet';
 import MatchBilanCard from './components/MatchBilanCard';
 import MatchScoreEncart from './components/MatchScoreEncart';
@@ -675,6 +677,12 @@ function EventDetails({ navigation, route }) {
     () => getTournamentStatusCounters(tournamentTeams, tournamentConfig),
     [tournamentConfig, tournamentTeams],
   );
+  // T-REJOINDRE (17/11, Clément D49, registre D210) — le visiteur sans compte ne reçoit pas les
+  // équipes (le rôle Public n'a pas ce droit) : la fiche disait « 0 équipe / Aucune équipe n'est
+  // encore inscrite » sur un tournoi qui en avait 5. Il lit la ligne du résumé public, avec le
+  // seuil des 30 % (tournamentJoinRules).
+  const estVisiteurDuTournoi = isTournamentEvent && !isSignedIn;
+  const ligneEquipesDuVisiteur = estVisiteurDuTournoi ? getTournamentVisitorTeamsLine(event) : null;
   const facilityId = getEntityDocumentId(event?.facility);
   const eventLink = buildPublicEventUrl({ eventId });
   const participationLabel = getParticipationLabel(
@@ -2777,6 +2785,14 @@ function EventDetails({ navigation, route }) {
                     </button>
                   ) : null}
                 </div>
+                {/* T-REJOINDRE (17/11, D50) : le joueur seul demande à rejoindre une équipe ouverte. */}
+                {isTournamentEvent && !isCancelled ? (
+                  <TournamentJoinTeamPanel
+                    event={event}
+                    onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
+                    teams={tournamentTeams}
+                  />
+                ) : null}
                 {actionError ? (
                   <div style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
                     {actionError}
@@ -3726,8 +3742,16 @@ function EventDetails({ navigation, route }) {
                       {String(event?.tournamentConfig?.rulesText || '').trim()}
                     </div>
                   ) : null}
+                  {ligneEquipesDuVisiteur ? (
+                    <div data-testid="event-tournament-visitor-teams" style={{ color: textColor, fontSize: 14 }}>
+                      {ligneEquipesDuVisiteur}
+                    </div>
+                  ) : null}
+                  {/* ponytail: T-REJOINDRE — les compteurs d'équipes sont cachés au visiteur par le
+                      style, pas retirés (diff étroit : T-JOUEURS et T-PARCOURS-2 écrivent ici).
+                      Sortie : T-PAGES-1 redessine ce bloc. */}
                   <div style={{
-                    color: mutedTextColor, display: 'flex', flexWrap: 'wrap', fontSize: 13, gap: 12,
+                    color: mutedTextColor, display: estVisiteurDuTournoi ? 'none' : 'flex', flexWrap: 'wrap', fontSize: 13, gap: 12,
                   }}
                   >
                     <span>
@@ -3902,7 +3926,7 @@ function EventDetails({ navigation, route }) {
                       {erreurEquipeTournoi}
                     </div>
                   ) : null}
-                  {tournamentTeams.length === 0 ? (
+                  {tournamentTeams.length === 0 && !estVisiteurDuTournoi ? (
                     <div style={{ color: mutedTextColor, fontSize: 14 }}>
                       {t(
                         'eventDetails.noTeamIsRegisteredYet',

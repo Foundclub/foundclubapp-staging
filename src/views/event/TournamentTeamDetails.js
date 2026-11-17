@@ -524,6 +524,37 @@ function TournamentTeamDetails({ navigation, route }) {
     ? t('tournamentTeamDetails.searchForAFoundclubPlayer', 'Rechercher un joueur FoundClub')
     : t('tournamentTeamDetails.searchForAClubPlayer', 'Rechercher un joueur du club');
 
+  // T-REJOINDRE (17/11, Clément D50, registre D210) — « le capitaine consulte le profil, peut envoyer
+  // un message direct avant d'accepter la demande ». Le profil : l'écran existant (UserDetails).
+  // Le message : le fil direct créé ou retrouvé par le serveur, qui rejuge À CHAQUE FOIS la règle
+  // des mineurs (chat `createWhisperChat`, minor-chat-guard) ; son refus s'affiche tel quel.
+  const openRequesterProfile = (/** @type {string} */ userId) => {
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { userId },
+      screen: RouteNames.UserDetails,
+    });
+  };
+  const writeToRequester = async (/** @type {string} */ userId) => {
+    try {
+      // Chargé à la demande (comme le lien d'invitation) : les suites de la fiche n'en simulent
+      // pas le réseau.
+      // eslint-disable-next-line global-require
+      const { createWhisperChat } = require('@/services/chat/chatService');
+      const chat = await createWhisperChat([userId]);
+      if (chat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      }
+    } catch (/** @type {any} */ writeError) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        writeError?.response?.data?.error?.message || writeError?.message || t(
+          'tournamentJoin.writeError',
+          'Impossible d’ouvrir la conversation pour le moment.',
+        ),
+      );
+    }
+  };
+
   const renderMemberCard = (member, variant) => {
     const isCaptain = normalizeTournamentText(member?.role) === 'captain';
     const memberStatusMeta = getMemberStatusMeta(member?.responseStatus, Colors);
@@ -591,6 +622,29 @@ function TournamentTeamDetails({ navigation, route }) {
             title={t('tournamentTeamDetails.cancelTheInvitation', "Annuler l'invitation")}
             variant="SecondaryLight"
           />
+        ) : null}
+
+        {/* T-REJOINDRE (17/11, Clément D50) : le capitaine voit qui demande avant d'accepter. */}
+        {variant === 'requested' && canManageRoster && member?.user?.documentId ? (
+          <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+            <Button
+              onPress={() => openRequesterProfile(member.user.documentId)}
+              size="sm"
+              testID={`tournament-request-profile-${member.documentId}`}
+              title={t('tournamentJoin.seeProfile', 'Voir le profil')}
+              variant="SecondaryLight"
+            />
+            {/* MINEURS : « Écrire » seulement si le garde du serveur l'a permis (`viewerCanWrite`). */}
+            {member?.viewerCanWrite === true ? (
+              <Button
+                onPress={() => writeToRequester(member.user.documentId)}
+                size="sm"
+                testID={`tournament-request-write-${member.documentId}`}
+                title={t('tournamentJoin.write', 'Écrire')}
+                variant="SecondaryLight"
+              />
+            ) : null}
+          </View>
         ) : null}
 
         {variant === 'requested' && canManageRoster ? (

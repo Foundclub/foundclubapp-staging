@@ -25694,6 +25694,24 @@ export default {
     shareLink: 'Share the link',
     title: 'Guests',
   },
+  tournamentJoin: {
+    button: 'Join a team',
+    // eslint-disable-next-line max-len
+    hintFree: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you are in the team.',
+    // eslint-disable-next-line max-len
+    hintPaid: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you pay for your spot.',
+    listTitle: 'Teams looking for a player',
+    none: 'No team is looking for a player right now: create yours or come back later.',
+    playersOutOf_one: '{{count}} player out of {{max}}',
+    playersOutOf_other: '{{count}} players out of {{max}}',
+    seeProfile: 'View profile',
+    visitorExpected_one: '{{count}} team expected',
+    visitorExpected_other: '{{count}} teams expected',
+    visitorRegistered_one: '{{count}} team registered out of {{max}}',
+    visitorRegistered_other: '{{count}} teams registered out of {{max}}',
+    write: 'Message',
+    writeError: 'The conversation could not be opened right now.',
+  },
   tournamentManagement: {
     aClubTeam: 'a club team',
     afterPublishingTheSportsStructure: 'After publishing, the sports structure will be locked. Only times, facilities and scores will stay editable.',

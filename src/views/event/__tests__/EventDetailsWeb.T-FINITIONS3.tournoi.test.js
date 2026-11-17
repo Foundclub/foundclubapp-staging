@@ -404,3 +404,52 @@ test('T-F3 validation caractérisant — gratuit en « manual » : « Manuelle �
   mounted = null;
   expect(ligneValidation(monter(tournoiRegle({ entryFeeCents: 2000, registrationMode: 'auto' })))).toContain('Automatique');
 });
+
+// --- T-REJOINDRE (17/11, décisions de Clément, registre D210) -------------------------------------------
+// D49 : le visiteur sans compte ne reçoit pas les équipes ; il lit le résumé public
+// (`tournamentTeamsSummary`), avec le seuil des 30 %. D50 : « Rejoindre une équipe » pour le joueur seul.
+const VISITEUR = { ...JOUEUR, userData: null };
+const ligneVisiteur = (/** @type {any} */ arbre) => arbre.root
+  .findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-visitor-teams').map(texte);
+const tournoiPublic = (/** @type {any} */ tournamentTeamsSummary) => TOURNOI_19_12({
+  tournamentConfig: { maxTeams: 24, minAge: 16 }, tournamentTeams: undefined, tournamentTeamsSummary,
+});
+const panneauRejoindre = (/** @type {any} */ arbre) => arbre.root
+  .findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-join-team-panel' && typeof n.type === 'string').length;
+
+test('🔴 T-REJ visiteur — 5 inscrites sur 24 (sous 30 %) : « 24 équipes attendues », plus de « 0 équipe » ni de « Aucune équipe n est encore inscrite »', () => {
+  const arbre = monter(tournoiPublic({ expectedCount: 24, registeredCount: 5 }), VISITEUR);
+  expect(ligneVisiteur(arbre)).toEqual(['24 équipes attendues']);
+  expect(texte(blocTournoi(arbre))).not.toContain('encore inscrite');
+  const compteurs = blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'div'
+    && n.props.style?.flexWrap === 'wrap' && texte(n).includes('en attente'))[0];
+  expect(compteurs.props.style.display).toBe('none');
+});
+
+test('🔴 T-REJ visiteur — 8 inscrites sur 24 (30 %, arrondi au supérieur) : « 8 équipes inscrites sur 24 » ; sans capacité : aucune ligne', () => {
+  expect(ligneVisiteur(monter(tournoiPublic({ expectedCount: 24, registeredCount: 8 }), VISITEUR)))
+    .toEqual(['8 équipes inscrites sur 24']);
+  act(() => mounted.unmount());
+  mounted = null;
+  const sansCapacite = monter(TOURNOI_19_12({ tournamentTeams: undefined, tournamentTeamsSummary: { expectedCount: null, registeredCount: 5 } }), VISITEUR);
+  expect(ligneVisiteur(sansCapacite)).toEqual([]);
+  expect(texte(blocTournoi(sansCapacite))).not.toContain('encore inscrite');
+});
+
+test('T-REJ visiteur caractérisant — un compte connecté garde ses compteurs et « Aucune équipe n est encore inscrite »', () => {
+  const arbre = monter(TOURNOI_19_12({ tournamentTeamsSummary: { expectedCount: 24, registeredCount: 0 } }), compteNeLe('2008-01-01'));
+  expect(ligneVisiteur(arbre)).toEqual([]);
+  expect(texte(blocTournoi(arbre))).toContain('encore inscrite');
+});
+
+test('🔴 T-REJ joueur seul — « Rejoindre une équipe » pour un compte de 18 ans sans équipe ; ni pour le visiteur, ni pour le compte de 15 ans', () => {
+  const arbre = monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), compteNeLe('2008-01-01'));
+  expect(panneauRejoindre(arbre)).toBe(1);
+  expect(texte(blocMonStatut(arbre))).toContain('Rejoindre une équipe');
+  act(() => mounted.unmount());
+  mounted = null;
+  expect(panneauRejoindre(monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), VISITEUR))).toBe(0);
+  act(() => mounted.unmount());
+  mounted = null;
+  expect(panneauRejoindre(monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), compteNeLe('2011-06-01')))).toBe(0);
+});
