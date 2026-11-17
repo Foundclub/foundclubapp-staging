@@ -629,9 +629,11 @@ function TournamentTeamDetails({ navigation, route }) {
     }
   };
 
+  // T-NOMS-EQUIPE (Adel « 3- B », D227) : un lecteur sans lien reçoit `user: null` et `displayName`
+  // (« Prénom I. », calculé par le serveur) ; « Participant » seulement si le serveur ne rend aucun nom.
   const memberName = (/** @type {any} */ member) => [
     member?.user?.firstname, member?.user?.lastname,
-  ].filter(Boolean).join(' ') || t('tournamentTeamDetails.participant', 'Participant');
+  ].filter(Boolean).join(' ') || member?.displayName || t('tournamentTeamDetails.participant', 'Participant');
 
   const renderMemberCard = (member, variant) => {
     const isCaptain = normalizeTournamentText(member?.role) === 'captain';

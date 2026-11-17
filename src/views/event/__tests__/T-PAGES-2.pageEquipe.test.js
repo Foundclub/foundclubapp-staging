@@ -585,3 +585,47 @@ describe('M1312 (testeur, 17/11) — le capitaine fondateur', () => {
     expect(texte(arbre)).not.toContain('Ajout exceptionnel');
   });
 });
+
+describe('T-NOMS-EQUIPE (Adel « 3- B », D227, défaut M1331) — le roster vu par un joueur tiers', () => {
+  /**
+   * L'équipe telle que le serveur la rend à un lecteur SANS LIEN : `user: null`, et `displayName`
+   * (« Prénom I. ») sur chaque membre actif (admin tournament-competition.js `rosterShortName`).
+   * @returns {any} L'équipe.
+   */
+  const vueTiers = () => ({
+    ...equipe(),
+    adminUsers: null,
+    captainUser: null,
+    members: [
+      {
+        displayName: 'Capi T.', documentId: 'mb-1', origin: 'external_addition', responseStatus: 'present', role: 'captain', user: null,
+      },
+      {
+        displayName: 'Djibril D.', documentId: 'mb-2', origin: 'invited', responseStatus: 'pending', role: 'member', user: null,
+      },
+      {
+        documentId: 'mb-5', origin: 'invited', responseStatus: 'pending', role: 'member', user: null,
+      },
+    ],
+  });
+  const textes = (/** @type {any} */ arbre, /** @type {string} */ valeur) => arbre.root.findAll(
+    (/** @type {any} */ n) => n.type === 'Text' && n.props?.children === valeur,
+  );
+
+  test('🔴 le Roster actif montre « Prénom I. » de chaque joueur, pas « Participant »', async () => {
+    const arbre = await monter(vueTiers(), 'u-9');
+    expect(textes(arbre, 'Djibril D.')).toHaveLength(1);
+    expect(textes(arbre, 'Capi T.')).toHaveLength(1);
+  });
+
+  test('sans nom rendu par le serveur (compte supprimé, identités masquées) : « Participant » reste', async () => {
+    const arbre = await monter(vueTiers(), 'u-9');
+    expect(textes(arbre, 'Participant')).toHaveLength(1);
+  });
+
+  test('un membre de l’équipe garde le nom que le serveur lui rend en entier (pas de displayName)', async () => {
+    const arbre = await monter(equipe(), 'u-2');
+    expect(textes(arbre, 'Capi')).toHaveLength(1);
+    expect(texte(arbre)).not.toContain('Participant');
+  });
+});
