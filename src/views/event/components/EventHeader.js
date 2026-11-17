@@ -353,7 +353,7 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
           </View>
         )}
 
-        {/* T-PARCOURS-2, point 1 : le prix d'un tournoi payant, comme « Prix / personne » du site. */}
+        {/* T-PARCOURS-2, point 1 : le prix d'un tournoi payant (« Prix / personne » du site). */}
         {isTournamentEvent && getTournamentEntryFeeLabel(event) ? (
           <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="event-header-entry-fee">
             {getTournamentEntryFeeLabel(event)}

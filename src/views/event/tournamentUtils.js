@@ -410,6 +410,7 @@ export const isTournamentTeamOpenToJoinRequests = (team) => {
 // T-PARCOURS-2, point 1 (17/11) : le prix d un tournoi payant, par joueur, au format de la carte
 // d equipe (TournamentMemberPlace : « 20 € par joueur ») ; `null` sur un tournoi gratuit.
 /**
+ * Le prix par joueur d un tournoi payant, ou `null`.
  * @param {any} event - le tournoi.
  * @returns {string | null}
  */
