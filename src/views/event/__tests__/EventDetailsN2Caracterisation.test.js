@@ -993,7 +993,9 @@ describe('N2 · 4E — « Personnes » : QUI VIENT, TOUTES EQUIPES CONFONDUES', 
     expect(contient(root, 'Chloe Meunier')).toBe(true);
   });
 
-  test('🔒 un VISITEUR voit l onglet et son compte, JAMAIS les noms', () => {
+  // ♻️ T-PAGES-4 (17/11, chef « 4 », dans l'esprit de « 4- A ») : plus de compteur « Personnes »
+  // pour qui n'organise pas le tournoi ; l'onglet reste, les noms restent cachés.
+  test('🔒 un VISITEUR voit l onglet sans compte, JAMAIS les noms', () => {
     // ⚠️ C'est la reunion des effectifs de toutes les equipes — souvent des
     // dizaines de personnes, parfois mineures. Un nombre ne designe personne ;
     // une liste de noms, si.
@@ -1002,7 +1004,8 @@ describe('N2 · 4E — « Personnes » : QUI VIENT, TOUTES EQUIPES CONFONDUES', 
       event: buildTournoi(),
     });
 
-    expect(libellesDesOnglets(root)).toContain('Personnes · 3');
+    expect(libellesDesOnglets(root)).toContain('Personnes');
+    expect(libellesDesOnglets(root)).not.toContain('Personnes · 3');
 
     allerSurLOnglet(root, 'participants');
     expect(parTestID(root, 'tournament-people-locked')).toHaveLength(1);
@@ -1557,7 +1560,8 @@ describe('T-FINITIONS-3 — âge minimum et catégorie du tournoi', () => {
 
   test('🔴 15 ans au jour du tournoi : « ouvert à partir de 16 ans », aucun bouton', () => {
     const root = monter({ auth: joueurNeLe('2011-06-01'), event: tournoi1912() });
-    expect(contient(root, 'Ce tournoi est ouvert à partir de 16 ans.')).toBe(true);
+    // ♻️ T-PAGES-4 : le titre de la carte, texte du site (tournamentFicheWeb.signUp.tooYoungTitle).
+    expect(contient(root, 'Ce tournoi est ouvert à partir de 16 ans')).toBe(true);
     expect(contient(root, 'Créer mon équipe')).toBe(false);
     expect(contient(root, 'Inscrire une équipe du club')).toBe(false);
   });
