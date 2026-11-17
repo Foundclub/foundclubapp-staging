@@ -90,6 +90,19 @@ export const getTournamentTeamPlayersLine = ({ maxRosterSize, playerCount }) => 
  * @param {any} [params.user] - Le compte connecté.
  * @returns {boolean} Vrai si le bouton est montré.
  */
+/**
+ * T-PAGES-6 (17/11/2026, question 5 de T-REJOINDRE, « C ») — le compte est-il l'organisateur de CE
+ * tournoi (`event.organizer`, même lecture que `canManageEvent` de useAuth) ? Il ne rejoint pas une
+ * équipe de son propre tournoi. Règle partagée : la fiche (T-PAGES-3 et 4) l'appelle.
+ * @param {any} event - Le tournoi.
+ * @param {any} [user] - Le compte connecté.
+ * @returns {boolean} Vrai seulement si l'organisateur est connu et que c'est ce compte.
+ */
+export const isTournamentOrganizer = (event, user) => {
+  const organizerId = String(event?.organizer?.documentId || '').trim();
+  return Boolean(organizerId) && organizerId === String(user?.documentId || '').trim();
+};
+
 export const canAskToJoinTournamentTeam = ({
   accountRoleKey, event, teams, user,
 }) => {
@@ -98,6 +111,7 @@ export const canAskToJoinTournamentTeam = ({
   if (!normalizeTournamentText(event?.type?.name).includes('tournoi')) return false;
   if (getTournamentClosure(event).isClosed || event?.isActive === false) return false;
   if (isTooYoungForTournament(event, user)) return false;
+  if (isTournamentOrganizer(event, user)) return false;
   const equipes = Array.isArray(teams) ? teams : [];
   // Personne n'a `tournament-team-member.find` : la fiche reçoit `members` vide. Le lecteur se
   // reconnaît donc par le capitaine, les admins de l'équipe, et par la marque du serveur

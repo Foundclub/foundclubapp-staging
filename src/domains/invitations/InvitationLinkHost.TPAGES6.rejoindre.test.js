@@ -55,7 +55,6 @@ jest.mock('@/views/event/tournamentUtils', () => ({
       ? `${Number(event.tournamentConfig.entryFeeCents) / 100} € par joueur` : null
   ),
 }));
-jest.mock('@/utils/date', () => ({ formatDateTimeWithDayPrefix: () => 'Sam. 19 déc. à 19:00' }));
 
 const { describeCodedTournamentInvite } = require('./InvitationLinkHost');
 
@@ -66,7 +65,7 @@ const apercu = (/** @type {any} */ sur = {}) => ({
   captainName: 'Dorian D.',
   entryFeeCents: 2000,
   event: {
-    date: '2026-12-19T18:00:00.000Z', documentId: 'tournoi-1912', name: 'FoundClub x AR Soccer', place: 'AR Soccer',
+    date: '2026-12-19T00:00:00.000Z', documentId: 'tournoi-1912', name: 'FoundClub x AR Soccer', place: 'AR Soccer', startTime: '19:00:00.000',
   },
   maxRosterSize: 5,
   minAge: 16,
@@ -81,7 +80,7 @@ test('🔴 connecté : un seul écran, capitaine, tournoi, date, lieu, places et
   const coded = connecte({ alreadyMember: false, canJoin: true, reason: null });
   expect(coded.body.split('\n')).toEqual([
     "Dorian D. t'invite dans son équipe Recette Site 333, pour le tournoi FoundClub x AR Soccer.",
-    'Sam. 19 déc. à 19:00 · AR Soccer',
+    expect.stringMatching(/^Sam\. 19 déc\.? · 19:00 · AR Soccer$/),
     '3 joueurs sur 5 · 20 € par joueur',
   ]);
   expect(coded.primary).toBe("Rejoindre l'équipe");

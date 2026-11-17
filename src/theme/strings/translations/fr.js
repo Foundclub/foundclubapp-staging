@@ -14821,6 +14821,7 @@ export default {
     },
     tournamentTeam: {
       ageNotice: 'À partir de {{minAge}} ans.',
+      // eslint-disable-next-line max-len
       ageNoticeMinor: "À partir de {{minAge}} ans. Pour les {{minAge}}-17 ans, un parent remplit l'autorisation au moment de payer.",
       captainBody: 'Ce lien sert à inviter tes joueurs. Envoie-le-leur.',
       captainTitle: "C'est ton équipe",
@@ -25818,9 +25819,12 @@ export default {
     count_one: '{{count}} nouveau',
     count_other: '{{count}} nouveaux',
   },
-  // T-PAGES-6 (17/11/2026, R9) : « L'essentiel en 6 lignes », en tête de /conditions-tournoi. Texte APPROUVÉ par
-  // Adel (« 10- ok », design/PARCOURS-INSCRIPTION/RESUME-CONDITIONS-A-RELIRE.md), copié tel quel. Il SUIT
-  // app/src/domains/tournoi/conditionsTournoi.js (parties citées en « § ») et doit changer avec lui.
+  // T-PAGES-6 (17/11/2026, R9) : « L'essentiel en 6 lignes », en tête de /conditions-tournoi. Texte
+  // APPROUVÉ par
+  // Adel (« 10- ok », design/PARCOURS-INSCRIPTION/RESUME-CONDITIONS-A-RELIRE.md), copié tel quel.
+  // Il SUIT
+  // app/src/domains/tournoi/conditionsTournoi.js (parties citées en « § ») et doit changer avec
+  // lui.
   tournamentConditionsSummary: {
     autorisation: 'Autorisation parentale',
     back: 'Retour au tournoi',
@@ -25831,6 +25835,7 @@ export default {
     // eslint-disable-next-line max-len
     ligne2Suite: " L'équipe est validée quand 5 joueurs ont payé, au plus tard le 10 décembre à 23 h 59. Sinon, chacun est remboursé.",
     ligne3Gras: 'À partir de 16 ans',
+    // eslint-disable-next-line max-len
     ligne3Suite: ", révolus le 19 décembre. De 16 à 17 ans, un parent coche l'autorisation sur la page de paiement.",
     ligne4Gras: 'Maillot offert en bonus',
     ligne4Suite: ', dans la limite des tailles et des stocks. Il ne fait pas partie du prix.',
@@ -27197,7 +27202,6 @@ export default {
       payMine: 'Payer ma place',
       summary: 'Places payées : {{paid}}/{{needed}} pour valider l’équipe ({{amount}} par joueur).',
     },
-    // eslint-disable-next-line max-len
     playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe.',
     present: 'Présent',
     remove: 'Retirer',

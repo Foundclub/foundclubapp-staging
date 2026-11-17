@@ -40,6 +40,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import Button from '@/components/atoms/button/Button';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import { openTournamentTerms } from '@/views/event/components/tournamentTerms';
+import { formatEventWhenLine } from '@/views/event/eventInfoLines';
 import { getTournamentEntryFeeLabel } from '@/views/event/tournamentUtils';
 
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
@@ -52,8 +53,6 @@ import {
   createTeamMembershipRequest,
   refuseTeamInvitation,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
-
-import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
 /**
  * Les raisons qui meritent une explication a l'ecran. Les autres (« ce n'est pas
@@ -286,7 +285,9 @@ const describeTournamentInviteDetails = (preview, t) => {
     tournamentConfig: { entryFeeCents: preview?.entryFeeCents },
   });
   return [
-    [formatDateTimeWithDayPrefix(preview?.event?.date), place].filter(Boolean).join(' · '),
+    // T-PAGES-6 (M1319, chef 17/11) : le jour et l'heure SAISIE (`startTime`), avec la règle de la
+    // fiche ; la date seule (minuit UTC) se lisait 01:00.
+    [formatEventWhenLine(preview?.event), place].filter(Boolean).join(' · '),
     [roster, fee].filter(Boolean).join(' · '),
   ].filter(Boolean);
 };
@@ -624,7 +625,8 @@ function InvitationLinkHost({ userId } = {}) {
     return () => {
       isCurrent = false;
     };
-  }, [codedTournamentInvite?.code]);
+    // T-PAGES-6 : relu quand le compte arrive, pour recevoir le verdict du compte connecté.
+  }, [codedTournamentInvite?.code, isSignedIn]);
 
   const closeWindow = useCallback(() => {
     setPendingInvite(null);

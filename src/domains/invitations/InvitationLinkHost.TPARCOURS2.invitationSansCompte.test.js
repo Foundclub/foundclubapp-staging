@@ -11,7 +11,7 @@
  */
 import { act, create } from 'react-test-renderer';
 
-import { formatDateTimeWithDayPrefix } from '@/utils/date';
+import { formatEventWhenLine } from '@/views/event/eventInfoLines';
 
 const CODE = 'Abcdefghijklmnopqrstuvwx';
 const LIEN = `https://foundclub.app/i/tournament/tournoi-1912?c=${CODE}`;
@@ -110,7 +110,8 @@ describe('T-PARCOURS-2 point 5 — l invitation de tournoi ouverte SANS compte',
     const coded = describeCodedTournamentInvite({ isSignedIn: false, preview: apercu(), t });
     expect(coded.body.split('\n')).toEqual([
       INTRO,
-      `${formatDateTimeWithDayPrefix(DATE)} · AR Soccer`,
+      // T-PAGES-6 (M1319) : la règle de la fiche (jour + heure saisie).
+      `${formatEventWhenLine({ date: DATE })} · AR Soccer`,
       '3 joueurs sur 5 · 20 € par joueur',
       ATTENDRA,
     ]);
