@@ -522,13 +522,16 @@ export const isTournamentTeamOpenToJoinRequests = (team) => {
 
 // T-PARCOURS-2, point 1 (17/11) : le prix d un tournoi payant, par joueur, au format de la carte
 // d equipe (TournamentMemberPlace : « 20 € par joueur ») ; `null` sur un tournoi gratuit.
+// Récolte du train 12, « P7 prix C » (chef, 17/11) : sans montant encaissé, le prix saisi par
+// l organisateur (`pricePerPerson`, en euros) au même format ; jamais « Gratuit » sur un prix saisi.
 /**
  * Le prix par joueur d un tournoi payant, ou `null`.
  * @param {any} event - le tournoi.
  * @returns {string | null}
  */
 export const getTournamentEntryFeeLabel = (event) => {
-  const fee = Math.round(Number(event?.tournamentConfig?.entryFeeCents));
+  const cents = Number(event?.tournamentConfig?.entryFeeCents);
+  const fee = Math.round(cents > 0 ? cents : Number(event?.pricePerPerson) * 100);
   if (!Number.isFinite(fee) || fee <= 0) return null;
   return i18next.t('tournamentUtils.entryFeePerPlayer', {
     amount: `${(fee / 100).toLocaleString('fr-FR')} €`,

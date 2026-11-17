@@ -67,6 +67,11 @@ describe('T-PARCOURS-2 — le prix sur la fiche du tournoi, au téléphone', () 
     expect(textes(tournoi({ entryFeeCents: 2000 }))).toContain('20 € par joueur');
   });
 
+  it('« P7 prix C » : sans montant encaissé, le prix saisi au même format (« 7 € par joueur »)', () => {
+    expect(textes({ ...tournoi(), pricePerPerson: 7 })).toContain('7 € par joueur');
+    expect(textes({ ...tournoi({ entryFeeCents: 2000 }), pricePerPerson: 7 })).toContain('20 € par joueur');
+  });
+
   it('tournoi gratuit ou sans prix : aucune ligne de prix', () => {
     [tournoi({ entryFeeCents: 0 }), tournoi()].forEach((evenement) => {
       expect(textes(evenement).some((texte) => texte.includes('par joueur'))).toBe(false);

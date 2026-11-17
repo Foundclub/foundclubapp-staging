@@ -276,14 +276,16 @@ test('match : pas de lien (caractérisant)', () => {
 const contient = (/** @type {any} */ arbre, /** @type {string} */ bout) => arbre.root
   .findAll((/** @type {any} */ n) => typeof n.type === 'string' && texte(n).includes(bout)).length > 0;
 
-test('5. tournoi payant : « Prix / personne » lit entryFeeCents (20 EUR), pas pricePerPerson', () => {
+// Récolte du train 12, « P7 prix C » (chef, 17/11) : mêmes attentes, au format du téléphone
+// (getTournamentEntryFeeLabel, « … € par joueur »).
+test('5. tournoi payant : « Prix / personne » lit entryFeeCents (20 € par joueur), pas pricePerPerson', () => {
   const arbre = monter(tournoiAutonome({ pricePerPerson: 0, tournamentConfig: { entryFeeCents: 2000 } }));
-  expect(contient(arbre, '20 EUR')).toBe(true);
-  expect(contient(arbre, '0 EUR') && !contient(arbre, '20 EUR')).toBe(false);
+  expect(contient(arbre, '20 € par joueur')).toBe(true);
+  expect(contient(arbre, '0 € par joueur') && !contient(arbre, '20 € par joueur')).toBe(false);
 });
 
 test('5. tournoi gratuit : pricePerPerson reste affiché (caractérisant)', () => {
-  expect(contient(monter(tournoiAutonome({ pricePerPerson: 7 })), '7 EUR')).toBe(true);
+  expect(contient(monter(tournoiAutonome({ pricePerPerson: 7 })), '7 € par joueur')).toBe(true);
 });
 
 test('7. tournoi payant en validation manuelle : « Équipe validée au 5ᵉ joueur payé » (seuil lu)', () => {
