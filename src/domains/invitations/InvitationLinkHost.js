@@ -442,7 +442,7 @@ function InvitationLinkHost({ userId } = {}) {
     previousUserIdRef.current = String(userId || '');
     if (!previous || previous === previousUserIdRef.current) return;
     if (String(readPendingInvite()?.ownerId || '') === previous) clearPendingInvite();
-    setPendingInvite((current) => {
+    setPendingInvite((/** @type {any} */ current) => {
       if (String(current?.ownerId || '') !== previous) return current;
       clearPendingInvite();
       return null;
