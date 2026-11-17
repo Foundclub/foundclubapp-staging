@@ -92,6 +92,32 @@ export const isTournamentOrganizer = (event, user) => {
 };
 
 /**
+ * Le compte a-t-il déjà une équipe dans ce tournoi (capitaine, admin, membre actif, invitation
+ * ou demande en attente) ? Extrait de `canAskToJoinTournamentTeam` (T-PAGES-2, 17/11) pour que
+ * la page d'une équipe dise cette raison AVANT la déclaration (fait F22), avec la même règle.
+ * Personne n'a `tournament-team-member.find` : la fiche reçoit `members` vide. Le lecteur se
+ * reconnaît donc par le capitaine, les admins de l'équipe, et par la marque du serveur
+ * `viewerMembership` (T-PARCOURS-2, son statut à lui seul, par équipe) quand elle est là.
+ * @param {any[] | undefined} teams - Les équipes du tournoi (`event.tournamentTeams`).
+ * @param {string | undefined} userId - Le compte connecté.
+ * @returns {boolean} Vrai s'il est déjà pris dans une équipe.
+ */
+export const hasTournamentTeamForUser = (teams, userId) => {
+  if (!userId) return false;
+  const equipes = Array.isArray(teams) ? teams : [];
+  const dejaDansUneEquipe = equipes.some((team) => (
+    team?.captainUser?.documentId === userId
+    || (team?.adminUsers || []).some((/** @type {any} */ admin) => admin?.documentId === userId)
+    || (team?.members || []).some((/** @type {any} */ member) => (
+      member?.user?.documentId === userId && isTournamentActiveMemberStatus(member?.responseStatus)
+    ))
+    || isTournamentActiveMemberStatus(team?.viewerMembership?.responseStatus)
+    || isTournamentPendingMembershipStatus(team?.viewerMembership?.responseStatus)
+  ));
+  return dejaDansUneEquipe || Boolean(getTournamentPendingMembershipForUser(equipes, userId));
+};
+
+/**
  * D50 — qui voit « Rejoindre une équipe » sur la fiche d'un tournoi : un compte connecté, qui
  * n'est pas un compte Parent (il lit, il ne joue pas), assez âgé pour le tournoi (même règle que
  * T-FINITIONS-3 : âge connu sous `minAge` ⇒ pas de bouton), sans équipe ni invitation ni demande
@@ -112,28 +138,14 @@ export const canAskToJoinTournamentTeam = ({
   if (getTournamentClosure(event).isClosed || event?.isActive === false) return false;
   if (isTooYoungForTournament(event, user)) return false;
   if (isTournamentOrganizer(event, user)) return false;
-  const equipes = Array.isArray(teams) ? teams : [];
-  // Personne n'a `tournament-team-member.find` : la fiche reçoit `members` vide. Le lecteur se
-  // reconnaît donc par le capitaine, les admins de l'équipe, et par la marque du serveur
-  // `viewerMembership` (T-PARCOURS-2, son statut à lui seul, par équipe) quand elle est là.
-  const dejaDansUneEquipe = equipes.some((team) => (
-    team?.captainUser?.documentId === userId
-    || (team?.adminUsers || []).some((/** @type {any} */ admin) => admin?.documentId === userId)
-    || (team?.members || []).some((/** @type {any} */ member) => (
-      member?.user?.documentId === userId && isTournamentActiveMemberStatus(member?.responseStatus)
-    ))
-    || isTournamentActiveMemberStatus(team?.viewerMembership?.responseStatus)
-    || isTournamentPendingMembershipStatus(team?.viewerMembership?.responseStatus)
-  ));
-  return !dejaDansUneEquipe && !getTournamentPendingMembershipForUser(equipes, userId);
+  return !hasTournamentTeamForUser(teams, userId);
 };
 
 /**
  * T-PAGES-6 (17/11/2026, point 3, fait F22) — la raison de refus connue AVANT la déclaration et les
- * cases, montrée dès le premier écran du panneau. L'âge connu sous le minimum, une équipe déjà
- * prise
- * et une demande en cours cachent déjà le bouton (`canAskToJoinTournamentTeam`) ; reste le compte
- * sans date de naissance, que le serveur refuse à l'envoi (même phrase,
+ * cases, montrée dès le premier écran du panneau. L'âge connu sous le minimum, une équipe
+ * déjà prise et une demande en cours cachent déjà le bouton (`canAskToJoinTournamentTeam`) ;
+ * reste le compte sans date de naissance, que le serveur refuse à l'envoi (même phrase,
  * `assertTargetUserAgeAllowed`).
  * @param {object} params - Le contexte.
  * @param {any} params.event - Le tournoi.

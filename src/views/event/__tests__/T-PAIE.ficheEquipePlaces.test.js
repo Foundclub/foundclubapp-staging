@@ -13,6 +13,8 @@ let mockTeam = null;
 let mockAuth = {};
 const mockCopier = jest.fn(async () => true);
 const mockOpenUrl = jest.fn(async () => true);
+// T-PAGES-2 (R8) : « Payer ma place » passe par openUrlHere (même onglet sur le site) ; même espion.
+const mockOpenUrlInPlace = (...args) => mockOpenUrl(...args);
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ isPending: false, mutate: jest.fn() }),
@@ -58,7 +60,7 @@ jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({}));
 jest.mock('@/services/user/userService', () => ({ searchScopedUsers: jest.fn(), searchUsers: jest.fn() }));
 jest.mock('@/platform/share', () => ({ __esModule: true, copier: (...args) => mockCopier(...args), default: { copier: (...args) => mockCopier(...args) } }));
-jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: (...args) => mockOpenUrl(...args) } }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: (...args) => mockOpenUrl(...args), openUrlHere: (...args) => mockOpenUrlInPlace(...args) } }));
 
 const LIEN_2 = 'https://foundclub.app/licenses/pay/jeton-joueur-2';
 const LIEN_3 = 'https://foundclub.app/licenses/pay/jeton-joueur-3';
@@ -159,7 +161,8 @@ describe('T-PAIE — les places sur la fiche d équipe', () => {
     const contenu = texte(arbre);
     expect(contenu).toContain('Place payée');
     expect(contenu).toContain('Place à payer');
-    expect(contenu).toContain('1/5');
+    // T-PAGES-2 (17/11) : le compteur de la carte « Où en est l'équipe » s'écrit « 1 / 5 » (maquette c).
+    expect(contenu).toContain('1 / 5');
     const copier = boutons(arbre, 'Copier le lien de paiement');
     expect(copier).toHaveLength(2);
     await act(async () => { await copier[0].props.onPress(); });
