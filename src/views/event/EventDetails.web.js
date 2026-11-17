@@ -58,8 +58,10 @@ import TrainingReviewsCard, {
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   canRegisterSourceTeamToTournament,
+  formatTournamentPlayersShortList,
   getTournamentAgeNotice,
   getTournamentClosure,
+  getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -3960,21 +3962,35 @@ function EventDetails({ navigation, route }) {
                               color: mutedTextColor, display: 'flex', flexWrap: 'wrap', fontSize: 13, gap: 12,
                             }}
                             >
-                              <span>
-                                {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
-                                  count: rosterSummary.totalCount,
-                                })}
-                              </span>
-                              <span>
-                                {t('tournamentManagement.rosterPresent', '{{count}} présents', {
-                                  count: rosterSummary.presentCount,
-                                })}
-                              </span>
-                              <span>
-                                {rosterSummary.pendingCount}
-                                {' '}
-                                {t('eventDetails.pendingLower', 'en attente')}
-                              </span>
+                              {/* T-JOUEURS (17/11) : « 3 joueurs · 1 payé · 2 en
+                                  attente », lu dans le résumé du serveur ;
+                                  absent, les trois compteurs d'avant. */}
+                              {rosterSummary.membersSummary ? (
+                                <span>
+                                  {getTournamentMembersSummaryLine(
+                                    rosterSummary.membersSummary,
+                                    tournamentConfig,
+                                  )}
+                                </span>
+                              ) : (
+                                <>
+                                  <span>
+                                    {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
+                                      count: rosterSummary.totalCount,
+                                    })}
+                                  </span>
+                                  <span>
+                                    {t('tournamentManagement.rosterPresent', '{{count}} présents', {
+                                      count: rosterSummary.presentCount,
+                                    })}
+                                  </span>
+                                  <span>
+                                    {rosterSummary.pendingCount}
+                                    {' '}
+                                    {t('eventDetails.pendingLower', 'en attente')}
+                                  </span>
+                                </>
+                              )}
                               {rosterSummary.invitedCount > 0 ? (
                                 <span>
                                   {rosterSummary.invitedCount}
@@ -4003,6 +4019,18 @@ function EventDetails({ navigation, route }) {
                                 </span>
                               ) : null}
                             </div>
+                            {rosterSummary.membersSummary?.list.length > 0 ? (
+                              <div
+                                style={{
+                                  color: mutedTextColor, fontSize: 13, whiteSpace: 'pre-line',
+                                }}
+                              >
+                                {formatTournamentPlayersShortList(
+                                  rosterSummary.membersSummary,
+                                  tournamentConfig,
+                                )}
+                              </div>
+                            ) : null}
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                               <button
                                 onClick={() => handleOpenTournamentTeam(team?.documentId)}

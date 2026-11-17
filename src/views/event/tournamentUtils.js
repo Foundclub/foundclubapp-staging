@@ -50,8 +50,98 @@ export const getTournamentRosterMembers = (members = []) => (
   getTournamentMemberBuckets(members).activeMembers
 );
 
+// T-JOUEURS (17/11/2026, Adel « joueurs- B ») — LE RÉSUMÉ DES JOUEURS RENDU PAR LE SERVEUR
+// (`membersSummary`, admin tournament-payment.js `membersSummaries`) :
+// `{ count, paidCount, pendingCount, list: [{ firstName, lastInitial, paid }] }`.
+// Personne d'autre que le SuperAdmin ne lit les membres d'une équipe : `members` arrive vide et
+// la carte disait « 0 joueur ». Absent (serveur plus ancien) : `null`, l'affichage d'avant reste.
+// Témoin : tournamentMembersSummary.test.js.
+
+/**
+ * Le résumé des joueurs d'une équipe, lu et borné.
+ * @param {any} team - L'équipe telle que la fiche la reçoit.
+ * @returns {any} Le résumé, ou `null` sans résumé.
+ */
+export const getTournamentMembersSummary = (team) => {
+  const summary = team?.membersSummary;
+  if (!summary || typeof summary !== 'object') return null;
+  if (!Number.isFinite(Number(summary.count))) return null;
+  const list = Array.isArray(summary.list) ? summary.list : [];
+  return {
+    count: Number(summary.count),
+    list: list.map((/** @type {any} */ item) => ({
+      firstName: String(item?.firstName || '').trim(),
+      lastInitial: String(item?.lastInitial || '').trim(),
+      paid: item?.paid === true,
+    })),
+    paidCount: Number(summary.paidCount) || 0,
+    pendingCount: Number(summary.pendingCount) || 0,
+  };
+};
+
+/**
+ * Le tournoi est-il payant ?
+ * @param {any} tournamentConfig - Le réglage du tournoi.
+ * @returns {boolean} Vrai si la place est payante.
+ */
+const isPaidTournament = (tournamentConfig) => Number(tournamentConfig?.entryFeeCents) > 0;
+
+/**
+ * « 3 joueurs · 1 payé · 2 en attente » (tournoi payant) ou « 3 joueurs ».
+ * @param {any} membersSummary - Le résumé lu (`getTournamentMembersSummary`).
+ * @param {any} [tournamentConfig] - Le réglage du tournoi.
+ * @returns {string | null} La ligne de la carte, `null` sans résumé.
+ */
+export const getTournamentMembersSummaryLine = (membersSummary, tournamentConfig = {}) => {
+  if (!membersSummary) return null;
+  const parts = [i18next.t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
+    count: membersSummary.count,
+  })];
+  if (isPaidTournament(tournamentConfig)) {
+    parts.push(
+      i18next.t('tournamentManagement.rosterPaid', '{{count}} payés', {
+        count: membersSummary.paidCount,
+      }),
+      i18next.t('tournamentManagement.rosterPending', '{{count}} en attente', {
+        count: membersSummary.pendingCount,
+      }),
+    );
+  }
+  return parts.join(' · ');
+};
+
+/**
+ * « Samir B. · payé » / « Lina D. · en attente » (payant), « Samir B. » sinon ; masqué : « Joueur »
+ * @param {any} item - Un joueur du résumé.
+ * @param {any} [tournamentConfig] - Le réglage du tournoi.
+ * @returns {string} La ligne du joueur.
+ */
+export const formatTournamentPlayerShortLine = (item, tournamentConfig = {}) => {
+  const initial = item?.lastInitial ? `${item.lastInitial}.` : '';
+  const name = [item?.firstName, initial].filter(Boolean).join(' ')
+    || i18next.t('tournamentManagement.playerAnonymous', 'Joueur');
+  if (!isPaidTournament(tournamentConfig)) return name;
+  const state = item?.paid === true
+    ? i18next.t('tournamentManagement.playerPaid', 'payé')
+    : i18next.t('eventDetails.pendingLower', 'en attente');
+  return `${name} · ${state}`;
+};
+
+/**
+ * Les lignes courtes de tous les joueurs du résumé, une par ligne (cartes de l'app et du site).
+ * @param {any} membersSummary - Le résumé lu.
+ * @param {any} [tournamentConfig] - Le réglage du tournoi.
+ * @returns {string} Le texte de la liste ('' sans joueur).
+ */
+export const formatTournamentPlayersShortList = (membersSummary, tournamentConfig = {}) => (
+  (membersSummary?.list || [])
+    .map((/** @type {any} */ player) => formatTournamentPlayerShortLine(player, tournamentConfig))
+    .join('\n')
+);
+
 export const getTournamentRosterSummary = (team, tournamentConfig = {}) => {
   const buckets = getTournamentMemberBuckets(team?.members || []);
+  const membersSummary = getTournamentMembersSummary(team);
   const rosterMembers = buckets.activeMembers;
   const presentCount = rosterMembers.filter((member) => normalizeTournamentText(member?.responseStatus) === 'present').length;
   const absentCount = rosterMembers.filter((member) => normalizeTournamentText(member?.responseStatus) === 'absent').length;
@@ -62,7 +152,8 @@ export const getTournamentRosterSummary = (team, tournamentConfig = {}) => {
   const maxRosterSize = Number.isFinite(Number(tournamentConfig?.maxRosterSize))
     ? Number(tournamentConfig.maxRosterSize)
     : null;
-  const totalCount = rosterMembers.length;
+  // T-JOUEURS : le nombre de la carte vient du résumé du serveur quand il est là.
+  const totalCount = membersSummary ? membersSummary.count : rosterMembers.length;
   const shouldApplyMinRoster = normalizeTournamentText(team?.sourceType) !== 'club_team';
   const meetsMinRoster = !shouldApplyMinRoster || !minRosterSize || totalCount >= minRosterSize;
   const meetsMaxRoster = !maxRosterSize || totalCount <= maxRosterSize;
@@ -74,6 +165,7 @@ export const getTournamentRosterSummary = (team, tournamentConfig = {}) => {
     maxRosterSize,
     meetsMaxRoster,
     meetsMinRoster,
+    membersSummary,
     minRosterSize,
     pendingCount,
     presentCount,

@@ -235,10 +235,12 @@ import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
   canRegisterSourceTeamToTournament,
+  formatTournamentPlayersShortList,
   getTournamentAgeNotice,
   getTournamentCategoryLabel,
   getTournamentClosure,
   getTournamentMemberBuckets,
+  getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -7825,6 +7827,26 @@ function EventDetails({ navigation, route }) {
                     ...SANS_ECHAPPEMENT,
                   })}
                 </Text>
+              ) : null}
+              {/* T-JOUEURS (17/11) : le vrai nombre et la liste courte (prénom, initiale,
+                  payé), lus dans le résumé du serveur ; absent, la carte reste celle d'avant. */}
+              {rosterSummary.membersSummary ? (
+                <View style={[Spaces.gap[4]]}>
+                  <Text style={[Fonts.p4, Fonts.neutral200]}>
+                    {getTournamentMembersSummaryLine(
+                      rosterSummary.membersSummary,
+                      tournamentConfig,
+                    )}
+                  </Text>
+                  {rosterSummary.membersSummary.list.length > 0 ? (
+                    <Text style={[Fonts.p4, Fonts.neutral300]}>
+                      {formatTournamentPlayersShortList(
+                        rosterSummary.membersSummary,
+                        tournamentConfig,
+                      )}
+                    </Text>
+                  ) : null}
+                </View>
               ) : null}
               <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                 {rosterSummary.invitedCount > 0 ? (

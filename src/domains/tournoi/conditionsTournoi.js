@@ -14,6 +14,14 @@
 export const VERSION_DES_CONDITIONS = 'Version du 16 novembre 2026';
 
 /**
+ * D48 (17/11/2026) — L'ADRESSE DU COMPLEXE, en UN seul endroit du code : lue par les conditions (§ 1), le
+ * règlement (reglementTournoi.js) et le modèle d'autorisation parentale (modeleAutorisationParentale.js).
+ * ⚠️ À confirmer par Adel le 18/11 (« Rauze basse, 34070 » dans nos textes ; « Rauzé Basse, 34000 » sur le site
+ * d'AR Soccer) : changer cette ligne change les trois textes publiés.
+ */
+export const ADRESSE_DU_COMPLEXE = '119 rue de la Rauze basse, 34070 Montpellier';
+
+/**
  * Les paragraphes, dans l'ordre : le titre, la version, puis chaque titre de partie (« 1. … ») suivi de ses
  * paragraphes.
  * @type {ReadonlyArray<string>}
@@ -22,7 +30,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   'Conditions d\'inscription au tournoi FoundClub x AR Soccer du 19 décembre 2026',
   VERSION_DES_CONDITIONS,
   '1. Objet',
-  'Ces conditions encadrent l\'inscription au tournoi de football à 5 organisé par Found Club (SIREN 940 032 253, siège au 25 boulevard des Dames, 13002 Marseille, contact : contact@foundclubpro.com) le samedi 19 décembre 2026, au complexe AR Soccer, 119 rue de la Rauze basse, 34070 Montpellier, en salle, sur 3 terrains. Accueil à 19 h, premier match à 19 h 30, fin au plus tard à 1 h. L\'inscription se fait sur FoundClub (site ou application), joueur par joueur. S\'inscrire, c\'est accepter ces conditions et le règlement du tournoi.',
+  `Ces conditions encadrent l'inscription au tournoi de football à 5 organisé par Found Club (SIREN 940 032 253, siège au 25 boulevard des Dames, 13002 Marseille, contact : contact@foundclubpro.com) le samedi 19 décembre 2026, au complexe AR Soccer, ${ADRESSE_DU_COMPLEXE}, en salle, sur 3 terrains. Accueil à 19 h, premier match à 19 h 30, fin au plus tard à 1 h. L'inscription se fait sur FoundClub (site ou application), joueur par joueur. S'inscrire, c'est accepter ces conditions et le règlement du tournoi.`,
   '2. Prix',
   '20 € TTC par joueur, pour la participation au tournoi : 4 matchs de ligue, et jusqu\'à 3 matchs de phase finale, l\'arbitrage et les récompenses. Le prix ne comprend pas le déplacement ni l\'assurance personnelle du joueur (§ 6).',
   'Le maillot du tournoi est offert, en bonus, que le joueur garde, dans la limite des tailles et des stocks disponibles le jour du tournoi. Il ne fait pas partie du prix : un maillot absent, livré en retard ou d\'une autre taille que celle demandée ne donne lieu à aucun remboursement ni à aucune réduction.',
