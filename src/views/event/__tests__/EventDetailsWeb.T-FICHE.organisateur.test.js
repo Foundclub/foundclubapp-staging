@@ -182,6 +182,12 @@ const VISITEUR = {
   },
 };
 
+// T-PAGES-3 (17/11) : sur un tournoi, « Infos rapides » n'est plus montré qu'à l'organisateur (point 4,
+// témoin EventDetailsWeb.T-PAGES-3.fiche) ; ces lignes se lisent donc avec son compte.
+const ORGANISATEUR = {
+  ...VISITEUR, canEditClub: () => true, canEditEvent: () => true, canManageEvent: () => true,
+};
+
 const evenement = (/** @type {Record<string, any>} */ sur) => ({
   capacity: 160,
   date: '2099-12-19T08:00:00.000Z',
@@ -204,7 +210,7 @@ let mounted = null;
 const monter = (/** @type {any} */ event) => {
   mockEventQuery.data = event;
   mockAttendanceQuery.data = { data: { items: [], serverNow: '2099-12-01T10:00:00.000Z', timezone: 'Europe/Paris' } };
-  mockUseAuth.mockReturnValue(VISITEUR);
+  mockUseAuth.mockReturnValue(ORGANISATEUR);
   act(() => {
     mounted = renderer.create(
       <EventDetailsWeb

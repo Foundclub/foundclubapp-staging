@@ -252,8 +252,14 @@ const texte = (noeud) => (typeof noeud === 'string'
   ? noeud
   : (noeud.children || []).map(texte).join(''));
 
+// T-PAGES-3 (17/11) : le joueur lit le lien dans « Avant de t'inscrire » (« Lire les conditions
+// d'inscription », maquette (a)) ; l'organisateur garde « Conditions d'inscription ».
 const lien = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'button'
-  && texte(n) === "Conditions d'inscription");
+  && ["Conditions d'inscription", 'Lire les conditions d’inscription'].includes(texte(n)));
+// T-PAGES-3 point 4 : « Infos rapides » et les réglages « Mode tournoi » restent au seul organisateur.
+const ORGANISATEUR = {
+  ...JOUEUR, canEditClub: () => true, canEditEvent: () => true, canManageEvent: () => true,
+};
 
 test('tournoi payant : le lien est là et ouvre /conditions-tournoi', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: { entryFeeCents: 2000 } }));
@@ -279,24 +285,25 @@ const contient = (/** @type {any} */ arbre, /** @type {string} */ bout) => arbre
 // Récolte du train 12, « P7 prix C » (chef, 17/11) : mêmes attentes, au format du téléphone
 // (getTournamentEntryFeeLabel, « … € par joueur »).
 test('5. tournoi payant : « Prix / personne » lit entryFeeCents (20 € par joueur), pas pricePerPerson', () => {
-  const arbre = monter(tournoiAutonome({ pricePerPerson: 0, tournamentConfig: { entryFeeCents: 2000 } }));
+  // T-PAGES-3 point 4 : « Infos rapides » reste à l'organisateur sur un tournoi.
+  const arbre = monter(tournoiAutonome({ pricePerPerson: 0, tournamentConfig: { entryFeeCents: 2000 } }), ORGANISATEUR);
   expect(contient(arbre, '20 € par joueur')).toBe(true);
   expect(contient(arbre, '0 € par joueur') && !contient(arbre, '20 € par joueur')).toBe(false);
 });
 
 test('5. tournoi gratuit : pricePerPerson reste affiché (caractérisant)', () => {
-  expect(contient(monter(tournoiAutonome({ pricePerPerson: 7 })), '7 € par joueur')).toBe(true);
+  expect(contient(monter(tournoiAutonome({ pricePerPerson: 7 }), ORGANISATEUR), '7 € par joueur')).toBe(true);
 });
 
 test('7. tournoi payant en validation manuelle : « Équipe validée au 5ᵉ joueur payé » (seuil lu)', () => {
-  const arbre = monter(tournoiAutonome({ tournamentConfig: { entryFeeCents: 2000, registrationMode: 'manual' } }));
+  const arbre = monter(tournoiAutonome({ tournamentConfig: { entryFeeCents: 2000, registrationMode: 'manual' } }), ORGANISATEUR);
   expect(contient(arbre, 'Équipe validée au 5ᵉ joueur payé')).toBe(true);
   expect(contient(arbre, 'Manuelle')).toBe(false);
   if (mounted) act(() => mounted.unmount());
-  const six = monter(tournoiAutonome({ tournamentConfig: { entryFeeCents: 2000, paidMembersToValidate: 6, registrationMode: 'manual' } }));
+  const six = monter(tournoiAutonome({ tournamentConfig: { entryFeeCents: 2000, paidMembersToValidate: 6, registrationMode: 'manual' } }), ORGANISATEUR);
   expect(contient(six, 'Équipe validée au 6ᵉ joueur payé')).toBe(true);
 });
 
 test('7. tournoi gratuit en validation manuelle : « Manuelle » (caractérisant)', () => {
-  expect(contient(monter(tournoiAutonome({ tournamentConfig: { registrationMode: 'manual' } })), 'Manuelle')).toBe(true);
+  expect(contient(monter(tournoiAutonome({ tournamentConfig: { registrationMode: 'manual' } }), ORGANISATEUR), 'Manuelle')).toBe(true);
 });
