@@ -323,6 +323,7 @@ const inventaire = (arbre) => {
 // Ce que chaque lecteur voyait AVANT T-PAGES-3 (base eea820221 + T-PARCOURS2 + T-REJOINDRE + T-PAGES-A).
 // L'organisateur garde ce relevé à l'identique (« il garde ce qu'il a aujourd'hui ») ; les autres
 // lecteurs suivent la maquette (relevé APRÈS plus bas).
+/** @type {Record<string, any>} */
 const AVANT = {
   capitaine: {
     boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Voir la compétition', 'Gérer mon équipe', "Conditions d'inscription", 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
@@ -374,6 +375,7 @@ test.each(LECTEURS.filter(([nom]) => nom === 'organisateur'))('T-PAGES-3 (0) car
 
 // Ce que chaque lecteur voit APRÈS T-PAGES-3 (maquette (a) et (b)) ; diff gardé / déplacé / retiré :
 // .local/bancs/T-PAGES-3-1711/INVENTAIRE.md.
+/** @type {Record<string, any>} */
 const APRES = {
   capitaine: {
     boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],

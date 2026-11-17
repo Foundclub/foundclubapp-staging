@@ -5,12 +5,13 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { useGetTournamentTeam } from '@/services/tournamentTeam/tournamentTeamQueries';
 
-import LinksPlatform from '@/platform/links';
-
-// eslint-disable-next-line perfectionist/sort-imports -- « @/platform » (plus haut) est hors groupe pour perfectionist ; import/order le veut avant les chemins relatifs.
 import { getTournamentEntryFeeLabel, getTournamentMinAge } from '../tournamentUtils';
 import TournamentTeamProgress from './TournamentTeamProgress';
 import { isPaidTournament } from './tournamentTerms';
+// « @/platform » est hors des groupes de perfectionist (il le veut en dernier) ; import/order le
+// voudrait avant les chemins relatifs : on suit perfectionist.
+// eslint-disable-next-line import/order
+import LinksPlatform from '@/platform/links';
 
 // T-PAGES-3 (17/11/2026, maquette DESIGN-TOURNOI-PAGES validée, écrans (a) et (b), ordinateur) —
 // LES BLOCS DE LA FICHE DU TOURNOI SUR LE SITE, vus par qui n'organise pas le tournoi :
@@ -27,6 +28,7 @@ import { isPaidTournament } from './tournamentTerms';
  *   textColor: string }} FicheUi
  */
 
+/** @type {import('react').CSSProperties} */
 const BOUTON_LARGE = {
   boxSizing: 'border-box',
   minHeight: 44,
@@ -40,7 +42,7 @@ const BOUTON_LARGE = {
  * Le style d'une carte de la fiche.
  * @param {FicheUi} ui - Les couleurs de la fiche.
  * @param {boolean} [accent] - La carte d'action (bord bleu).
- * @returns {Record<string, any>} Le style.
+ * @returns {import('react').CSSProperties} Le style.
  */
 const styleDeCarte = (ui, accent = false) => ({
   background: ui.sectionBackground,
@@ -99,7 +101,9 @@ export function TournamentHowItWorks({ event, ui }) {
       >
         {etapes.map(([titre, detail]) => (
           <li key={titre} style={{ color: ui.textColor, lineHeight: 1.5 }}>
-            <span style={{ display: 'block', fontFamily: 'Montserrat-Bold, sans-serif' }}>{titre}</span>
+            <span style={{ display: 'block', fontFamily: 'Montserrat-Bold, sans-serif' }}>
+              {titre}
+            </span>
             <span style={{ color: ui.mutedTextColor }}>{detail}</span>
           </li>
         ))}
@@ -124,23 +128,32 @@ export function TournamentBeforeSignUp({
   const { t } = useTranslation();
   const minAge = getTournamentMinAge(event);
   const payant = isPaidTournament(event);
-  const lignes = [
-    minAge ? [
+  /** @type {string[][]} */
+  const lignes = [];
+  if (minAge) {
+    lignes.push([
       t('tournamentFicheWeb.before.age', { minAge }),
       minAge < 18 ? t('tournamentFicheWeb.before.ageConsent') : '',
-    ] : null,
-    event?.tournamentConfig?.jerseySizeRequired === true
-      ? [t('tournamentFicheWeb.before.jersey'), t('tournamentFicheWeb.before.jerseyDetail')]
-      : null,
-    payant ? ['', t('tournamentFicheWeb.before.withdrawal')] : null,
-  ].filter(Boolean);
+    ]);
+  }
+  if (event?.tournamentConfig?.jerseySizeRequired === true) {
+    lignes.push([
+      t('tournamentFicheWeb.before.jersey'),
+      t('tournamentFicheWeb.before.jerseyDetail'),
+    ]);
+  }
+  if (payant) lignes.push(['', t('tournamentFicheWeb.before.withdrawal')]);
   if (lignes.length === 0 && !payant) return null;
   return (
     <section data-testid="tournament-before-sign-up" style={styleDeCarte(ui)}>
       <h2 style={ui.sectionTitleStyle}>{title || t('tournamentFicheWeb.before.title')}</h2>
       {lignes.map(([gras, reste]) => (
         <p key={`${gras}${reste}`} style={{ color: ui.mutedTextColor, lineHeight: 1.6, margin: 0 }}>
-          {gras ? <span style={{ color: ui.textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>{gras}</span> : null}
+          {gras ? (
+            <span style={{ color: ui.textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
+              {gras}
+            </span>
+          ) : null}
           {gras && reste ? ' ' : null}
           {reste}
         </p>
@@ -173,7 +186,7 @@ export function TournamentBeforeSignUp({
  * @param {() => void} [props.onLogin] - « J'ai déjà un compte » (visiteur).
  * @param {boolean} [props.canRegisterClubTeam] - « Inscrire une équipe du club » est permis.
  * @param {() => void} [props.onRegisterClubTeam] - « Inscrire une équipe du club ».
- * @param {import('react').ReactNode} [props.children] - Le panneau « Rejoindre une équipe », les erreurs.
+ * @param {import('react').ReactNode} [props.children] - Le panneau « Rejoindre une équipe ».
  * @returns {import('react').ReactElement} La carte.
  */
 export function TournamentSignUpCard({
@@ -211,7 +224,10 @@ export function TournamentSignUpCard({
       </span>
       <h2 style={ui.sectionTitleStyle}>{t('tournamentFicheWeb.signUp.title')}</h2>
       {prix ? (
-        <div style={{ color: ui.textColor, fontFamily: 'Montserrat-Black, sans-serif', fontSize: 26 }}>
+        <div style={{
+          color: ui.textColor, fontFamily: 'Montserrat-Black, sans-serif', fontSize: 26,
+        }}
+        >
           {prix}
         </div>
       ) : null}
@@ -271,7 +287,7 @@ export function TournamentSignUpCard({
  * @returns {any} La place.
  */
 const maPlace = (team) => (Array.isArray(team?.payment?.members) ? team.payment.members : [])
-  .find((place) => place?.isSelf) || null;
+  .find((/** @type {any} */ place) => place?.isSelf) || null;
 
 /**
  * La carte « Mon équipe » (écran (b), R4) : où en est l'équipe (TournamentTeamProgress) et le seul
@@ -298,9 +314,15 @@ export function TournamentMyTeamCard({
   const ouvrir = () => onOpenTeam(team?.documentId);
   let principal = { libelle: t('eventDetails.seeMyTeam', 'Voir mon équipe'), onClick: ouvrir };
   if (role === 'invited') {
-    principal = { libelle: t('eventDetails.answerMyInvitation', 'Répondre à mon invitation'), onClick: ouvrir };
+    principal = {
+      libelle: t('eventDetails.answerMyInvitation', 'Répondre à mon invitation'),
+      onClick: ouvrir,
+    };
   } else if (role === 'requested') {
-    principal = { libelle: t('eventDetails.followMyRequest', 'Suivre ma demande'), onClick: ouvrir };
+    principal = {
+      libelle: t('eventDetails.followMyRequest', 'Suivre ma demande'),
+      onClick: ouvrir,
+    };
   } else if (payer) {
     principal = {
       libelle: t('tournamentTeamDetails.places.payMine', 'Payer ma place'),

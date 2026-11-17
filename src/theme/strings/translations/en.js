@@ -25707,9 +25707,7 @@ export default {
       step2TitleFree: 'You invite your players',
       step3_one: 'The team is confirmed as soon as {{count}} spot is paid.',
       step3_other: 'The team is confirmed as soon as {{count}} spots are paid.',
-      // eslint-disable-next-line max-len
       step3Jersey_one: 'and picks a jersey size. The team is confirmed as soon as {{count}} spot is paid.',
-      // eslint-disable-next-line max-len
       step3Jersey_other: 'and picks a jersey size. The team is confirmed as soon as {{count}} spots are paid.',
       step3Title: 'Everyone pays their spot, {{price}}',
       title: 'How it works',
