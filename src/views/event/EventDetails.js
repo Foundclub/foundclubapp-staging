@@ -1177,11 +1177,16 @@ function EventDetails({ navigation, route }) {
   }, [tournamentTeams, userData?.documentId]);
   const currentUserTournamentMember = useMemo(() => {
     const currentUserId = userData?.documentId;
-    if (!currentUserId || !currentUserTournamentTeam) return null;
+    // T-PARCOURS-2 (point 3) : `members` SEULEMENT, exprès. La ligne du lecteur rendue par le
+    // serveur (`viewerMembership`) ne sert qu'au bouton « Voir mon équipe » ; elle ne rouvre pas la
+    // carte « Ma réponse au tournoi » (présent / absent), qui se donne sur la page de l'équipe.
+    if (!currentUserId || !currentUserTournamentTeam?.members) return null;
 
-    return getTournamentViewerMember(
-      currentUserTournamentTeam, currentUserId, isTournamentActiveMemberStatus,
-    );
+    // @ts-ignore: FIXME: Baseline TS regression
+    return currentUserTournamentTeam.members.find((member) => (
+      member?.user?.documentId === currentUserId
+      && isTournamentActiveMemberStatus(member?.responseStatus)
+    )) || null;
   }, [currentUserTournamentTeam, userData?.documentId]);
   const currentUserTournamentStatus = normalizeTournamentText(currentUserTournamentMember?.responseStatus);
   const currentUserPendingTournamentTeam = useMemo(

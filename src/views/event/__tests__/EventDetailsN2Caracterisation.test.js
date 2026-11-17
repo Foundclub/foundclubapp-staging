@@ -1643,6 +1643,18 @@ describe('T-PARCOURS-2 — « Voir mon équipe » et le bouton du visiteur', () 
     });
   });
 
+  test('3 — la ligne du lecteur ne rouvre PAS la carte « Ma réponse au tournoi »', () => {
+    // Cette carte (Je suis présent / Je suis absent) ne lisait que `members`, que le serveur ne
+    // rend plus : elle dort. Le lot ne change que le bouton ; la présence se donne sur la page de
+    // l'équipe.
+    const root = monter({
+      auth: authPour('u-777', false),
+      event: tournoiDuServeur({ responseStatus: 'pending' }),
+    });
+    expect(contient(root, 'Ma réponse au tournoi')).toBe(false);
+    expect(contient(root, 'Je suis présent')).toBe(false);
+  });
+
   test('🔴 3 — invité en attente : « Répondre à mon invitation », plus de « Créer »', () => {
     const root = monter({
       auth: authPour('u-777', false),
