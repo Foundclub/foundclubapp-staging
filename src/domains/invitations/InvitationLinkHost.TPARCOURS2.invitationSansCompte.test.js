@@ -3,8 +3,9 @@
  * INVITÉ.
  *
  * Avant : « Tu es invité·e à rejoindre l'équipe … Connecte-toi ou crée ton compte : l'invitation
- * t'attendra. », sans la date, le lieu, les joueurs ni le prix (capture app-P2-01), et « Continuer »
- * fermait la fenêtre sur l'Accueil du visiteur (app-P2-02). Maintenant : la date, le lieu, les
+ * t'attendra. », sans la date, le lieu, les joueurs ni le prix (capture app-P2-01), et
+ * « Continuer » fermait la fenêtre sur l'Accueil du visiteur (app-P2-02).
+ * Maintenant : la date, le lieu, les
  * joueurs sur N et le prix (si le serveur le rend) sont lus dans l'aperçu public, et « Continuer »
  * ouvre la connexion. AUCUNE personne n'est affichée (décision d'Adel en attente).
  */

@@ -38,6 +38,7 @@ import {
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
+import { getTournamentEntryFeeLabel } from '@/views/event/tournamentUtils';
 
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { navigate, navigationRef } from '@/navigation/navigationService';
@@ -49,8 +50,6 @@ import {
   createTeamMembershipRequest,
   refuseTeamInvitation,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
-
-import { getTournamentEntryFeeLabel } from '@/views/event/tournamentUtils';
 
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
 

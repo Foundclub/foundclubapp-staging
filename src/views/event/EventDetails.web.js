@@ -3653,7 +3653,8 @@ function EventDetails({ navigation, route }) {
                     {
                       label: t('eventDetails.pricePerson', 'Prix / personne'),
                       // T-PARCOURS-2 (point 7) : pour un tournoi, le montant encaissé (la règle
-                      // du téléphone, getTournamentEntryFeeLabel), jamais le prix saisi sur l'événement.
+                      // du téléphone, getTournamentEntryFeeLabel), jamais le prix saisi sur
+                      // l'événement.
                       value: (isTournamentEvent ? getTournamentEntryFeeLabel(event) : null)
                         || (!isTournamentEvent && event?.pricePerPerson != null
                           ? `${event.pricePerPerson} EUR`
@@ -3851,9 +3852,12 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        {normalizeTournamentText(getTournamentViewerMember(
-                          currentUserPendingTournamentTeam, userData?.documentId,
-                        )?.responseStatus) === 'invited'
+                        {normalizeTournamentText(
+                          getTournamentViewerMember(
+                            currentUserPendingTournamentTeam,
+                            userData?.documentId,
+                          )?.responseStatus,
+                        ) === 'invited'
                           ? t('eventDetails.answerMyInvitation', 'Répondre à mon invitation')
                           : t('eventDetails.followMyRequest', 'Suivre ma demande')}
                       </button>

@@ -408,34 +408,40 @@ test('T-F3 validation caractérisant — gratuit en « manual » : « Manuelle �
 // ==========================================================================
 // T-PARCOURS-2 (17/11, recette 42) — restes de T-FINITIONS-3 sur la fiche du SITE.
 // ==========================================================================
-const pastilles = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'span'
-  && n.props?.style?.borderRadius === 999).map(texte);
+const pastilles = (/** @type {any} */ arbre) => arbre.root
+  .findAll((/** @type {any} */ n) => n.type === 'span' && n.props?.style?.borderRadius === 999)
+  .map(texte);
 const PAYANT = { entryFeeCents: 2000, registrationMode: 'manual' };
 
-test('🔴 T-PARCOURS2 (9) — tournoi payant : la pastille du haut dit « Équipe validée au 5ᵉ joueur payé »', () => {
+test('🔴 T-PARCOURS2 (9) — tournoi payant : la pastille dit la règle du 5ᵉ joueur payé', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: PAYANT, validationMode: 'manual' }));
   expect(pastilles(arbre)).toContain('Équipe validée au 5ᵉ joueur payé');
   expect(pastilles(arbre)).not.toContain('Validation manuelle');
 });
 
-test('T-PARCOURS2 (9) caractérisant — tournoi gratuit en « manual », ou match : « Validation manuelle » reste', () => {
-  const gratuit = monter(tournoiAutonome({ tournamentConfig: { registrationMode: 'manual' }, validationMode: 'manual' }));
+test('T-PARCOURS2 (9) caractérisant — tournoi gratuit, ou match : « Validation manuelle »', () => {
+  const gratuit = monter(tournoiAutonome({
+    tournamentConfig: { registrationMode: 'manual' }, validationMode: 'manual',
+  }));
   expect(pastilles(gratuit)).toContain('Validation manuelle');
   act(() => mounted.unmount());
   mounted = null;
-  expect(pastilles(monter({ ...MATCH_EQUIPE, validationMode: 'manual' }))).toContain('Validation manuelle');
+  const match = monter({ ...MATCH_EQUIPE, validationMode: 'manual' });
+  expect(pastilles(match)).toContain('Validation manuelle');
 });
 
 // T-PARCOURS-2 (point 7) — « Prix / personne » d'un TOURNOI : le montant encaissé
 // (tournamentConfig.entryFeeCents, la règle du téléphone), jamais event.pricePerPerson.
-test('🔴 T-PARCOURS2 (7) — tournoi payant : « 20 € par joueur », pas le prix saisi sur l événement', () => {
+test('🔴 T-PARCOURS2 (7) — tournoi payant : « 20 € par joueur », pas le prix saisi', () => {
   const arbre = monter(tournoiAutonome({ pricePerPerson: 35, tournamentConfig: PAYANT }));
   expect(texte(arbre.root)).toContain('20 € par joueur');
   expect(texte(arbre.root)).not.toContain('35 EUR');
 });
 
-test('🔴 T-PARCOURS2 (7) — tournoi sans prix encaissé : « Gratuit ou non défini », même avec un prix saisi', () => {
-  const arbre = monter(tournoiAutonome({ pricePerPerson: 35, tournamentConfig: { registrationMode: 'manual' } }));
+test('🔴 T-PARCOURS2 (7) — tournoi sans prix encaissé : « Gratuit ou non défini »', () => {
+  const arbre = monter(tournoiAutonome({
+    pricePerPerson: 35, tournamentConfig: { registrationMode: 'manual' },
+  }));
   expect(texte(arbre.root)).toContain('Gratuit ou non défini');
   expect(texte(arbre.root)).not.toContain('35 EUR');
 });
@@ -444,8 +450,9 @@ test('T-PARCOURS2 (7) caractérisant — un événement ordinaire garde son prix
   expect(texte(monter({ ...MATCH_EQUIPE, pricePerPerson: 12 }).root)).toContain('12 EUR');
 });
 
-// T-PARCOURS-2 (point 10) — la colonne principale de la fiche : depuis que la liste des participants
-// n'est plus rendue sur un tournoi (T-FINITIONS-3), un joueur y voyait une carte VIDE sous l'en-tête.
+// T-PARCOURS-2 (point 10) — la colonne principale de la fiche : depuis que la liste des
+// participants n'est plus rendue sur un tournoi (T-FINITIONS-3), un joueur y voyait une carte
+// VIDE sous l'en-tête.
 /**
  * La colonne principale dans l'arbre rendu (JSON) : ses enfants réellement rendus.
  * @param {any} noeud
@@ -467,7 +474,7 @@ test('🔴 T-PARCOURS2 (10) — joueur sur un tournoi : la colonne vide n est pa
   expect(colonne.props.style.display).toBe('none');
 });
 
-test('T-PARCOURS2 (10) caractérisant — dès qu un bloc y est rendu, la colonne reste affichée', () => {
+test('T-PARCOURS2 (10) caractérisant — un bloc rendu : la colonne reste affichée', () => {
   [
     () => monter(tournoiAutonome(), ORGANISATEUR),
     () => monter(MATCH_EQUIPE),
@@ -487,15 +494,20 @@ test('T-PARCOURS2 (10) caractérisant — dès qu un bloc y est rendu, la colonn
   expect(organisateur.children).not.toBeNull();
 });
 
-// T-PARCOURS-2 (point 3) — le site lit la même ligne du lecteur que le téléphone (`viewerMembership`,
-// règle partagée getTournamentViewerMember) : le serveur ne rend plus `members` sur la fiche.
+// T-PARCOURS-2 (point 3) — le site lit la même ligne du lecteur que le téléphone
+// (`viewerMembership`, règle partagée getTournamentViewerMember) : le serveur ne rend plus
+// `members` sur la fiche.
 const equipeDuLecteur = (/** @type {any} */ viewerMembership) => tournoiAutonome({
   tournamentTeams: [{
-    documentId: 'equipe-a', name: 'Les Aigles', sourceType: 'custom', status: 'accepted', viewerMembership,
+    documentId: 'equipe-a',
+    name: 'Les Aigles',
+    sourceType: 'custom',
+    status: 'accepted',
+    viewerMembership,
   }],
 });
 
-test('T-PARCOURS2 (3) site — déjà membre : « Voir mon équipe », plus « Inscrire mon équipe »', () => {
+test('T-PARCOURS2 (3) site — déjà membre : « Voir mon équipe »', () => {
   const boutons = tousLesBoutons(monter(equipeDuLecteur({ responseStatus: 'pending' })));
   expect(boutons).toContain('Voir mon équipe');
   expect(boutons).not.toContain('Inscrire mon équipe');

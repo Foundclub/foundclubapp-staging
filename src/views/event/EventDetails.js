@@ -7232,9 +7232,11 @@ function EventDetails({ navigation, route }) {
     }
 
     if (currentUserPendingTournamentTeam?.documentId) {
-      const pendingStatus = normalizeTournamentText(getTournamentViewerMember(
-        currentUserPendingTournamentTeam, userData?.documentId,
-      )?.responseStatus);
+      const pendingMember = getTournamentViewerMember(
+        currentUserPendingTournamentTeam,
+        userData?.documentId,
+      );
+      const pendingStatus = normalizeTournamentText(pendingMember?.responseStatus);
       return {
         onPress: () => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId),
         title: pendingStatus === 'invited' ? t(

@@ -290,13 +290,13 @@ describe('T-PARCOURS-2 point 11 — la validation des équipes d un tournoi paya
     competitionState: 'draft', formatMode: 'groups_only', registrationMode: 'manual', ...sur,
   });
 
-  test('🔴 payant en « manual » : « Équipe validée au 5ᵉ joueur payé », plus « Manuelle »', async () => {
+  test('🔴 payant en « manual » : « Équipe validée au 5ᵉ joueur payé »', async () => {
     const arbre = await monter(tableau({ config: config({ entryFeeCents: 2000 }) }));
     expect(texte(arbre)).toContain('Équipe validée au 5ᵉ joueur payé');
     expect(texte(arbre)).not.toContain('Manuelle');
   });
 
-  test('caractérisant — gratuit : « Manuelle » ; « auto », même payant : « Automatique »', async () => {
+  test('caractérisant — gratuit : « Manuelle » ; « auto » : « Automatique »', async () => {
     expect(texte(await monter(tableau({ config: config() })))).toContain('Manuelle');
     const auto = await monter(tableau({
       config: config({ entryFeeCents: 2000, registrationMode: 'auto' }),
