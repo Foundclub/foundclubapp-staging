@@ -26830,6 +26830,26 @@ export default {
     shareLink: 'Partager le lien',
     title: 'Invités',
   },
+  tournamentJoin: {
+    button: 'Rejoindre une équipe',
+    // eslint-disable-next-line max-len
+    hintFree: 'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à rejoindre ». Quand le capitaine accepte, tu es dans l’équipe.',
+    // eslint-disable-next-line max-len
+    hintPaid: 'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à rejoindre ». Quand le capitaine accepte, tu paies ta place.',
+    listTitle: 'Équipes qui cherchent un joueur',
+    // eslint-disable-next-line max-len
+    none: 'Aucune équipe ne cherche de joueur pour l’instant : crée la tienne ou reviens plus tard.',
+    playersOutOf_one: '{{count}} joueur sur {{max}}',
+    playersOutOf_other: '{{count}} joueurs sur {{max}}',
+    seeProfile: 'Voir le profil',
+    sendError: 'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
+    visitorExpected_one: '{{count}} équipe attendue',
+    visitorExpected_other: '{{count}} équipes attendues',
+    visitorRegistered_one: '{{count}} équipe inscrite sur {{max}}',
+    visitorRegistered_other: '{{count}} équipes inscrites sur {{max}}',
+    write: 'Écrire',
+    writeError: 'Impossible d’ouvrir la conversation pour le moment.',
+  },
   tournamentManagement: {
     aClubTeam: 'une équipe club',
     // eslint-disable-next-line max-len
@@ -27138,7 +27158,7 @@ export default {
       summary: 'Places payées : {{paid}}/{{needed}} pour valider l’équipe ({{amount}} par joueur).',
     },
     // eslint-disable-next-line max-len
-    playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.',
+    playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe.',
     present: 'Présent',
     remove: 'Retirer',
     removeThisMember: 'Retirer ce membre',

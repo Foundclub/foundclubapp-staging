@@ -209,6 +209,7 @@ import MatchBilanCard from './components/MatchBilanCard';
 import MonMatchCard from './components/MonMatchCard';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
+import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
 import {
@@ -234,6 +235,7 @@ import {
 } from './matchPageModel';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import { getTournamentVisitorTeamsLine } from './tournamentJoinRules';
 import {
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
@@ -1260,6 +1262,11 @@ function EventDetails({ navigation, route }) {
     () => tournamentTeams.filter(isTournamentTeamOpenToJoinRequests),
     [tournamentTeams],
   );
+  // T-REJOINDRE (17/11, Clément D49, registre D210) — le visiteur sans compte ne reçoit pas les
+  // équipes (le rôle Public n'a pas ce droit) : ses compteurs disaient « 0 équipe » sur un tournoi
+  // qui en avait 5. Il lit la ligne du résumé public, avec le seuil des 30 % (tournamentJoinRules).
+  const estVisiteurDuTournoi = isTournamentEvent && !userData?.documentId;
+  const ligneEquipesDuVisiteur = estVisiteurDuTournoi ? getTournamentVisitorTeamsLine(event) : null;
   // 🔄 CHANGER D EVENEMENT REMET L ONGLET SUR L APERÇU. Cet effet existait deja,
   // mais il ne remettait que l ancien etat du stage. Il commande desormais
   // l etat UNIQUE : sans lui, ouvrir une journee de stage depuis l onglet
@@ -5927,7 +5934,10 @@ function EventDetails({ navigation, route }) {
       return [
         overviewTab,
         {
-          label: withTabCount(t('eventDetails.tabs.teams', 'Équipes'), tournamentTeams.length),
+          label: withTabCount(
+            t('eventDetails.tabs.teams', 'Équipes'),
+            estVisiteurDuTournoi ? NaN : tournamentTeams.length,
+          ),
           value: 'tournamentTeams',
         },
         {
@@ -5940,6 +5950,7 @@ function EventDetails({ navigation, route }) {
     return [];
   }, [
     acceptedPeopleCount,
+    estVisiteurDuTournoi,
     isDetectionEvent,
     isMatchEvent,
     isStageDayEvent,
@@ -7611,7 +7622,9 @@ function EventDetails({ navigation, route }) {
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
               <Text style={[Fonts.p4, Fonts.neutral300]}>{t('eventDetails.teams', 'Équipes')}</Text>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{tournamentTeams.length}</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {estVisiteurDuTournoi ? (ligneEquipesDuVisiteur || '-') : tournamentTeams.length}
+              </Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
               <Text style={[Fonts.p4, Fonts.neutral300]}>Validation</Text>
@@ -7756,7 +7769,12 @@ function EventDetails({ navigation, route }) {
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                 {t('eventDetails.tournamentTeams2', 'Équipes tournoi')}
               </Text>
-              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>{teamsSummary}</Text>
+              <Text
+                style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}
+                testID="event-tournament-teams-summary"
+              >
+                {estVisiteurDuTournoi ? ligneEquipesDuVisiteur : teamsSummary}
+              </Text>
             </View>
             {tournamentTeamCounters.warning > 0 ? (
               <Tag
@@ -7774,7 +7792,7 @@ function EventDetails({ navigation, route }) {
 
         </View>
 
-        {tournamentTeams.length === 0 ? (
+        {tournamentTeams.length === 0 && !estVisiteurDuTournoi ? (
           <View style={tournamentDs.styles.panelCard}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t(
@@ -8550,6 +8568,14 @@ function EventDetails({ navigation, route }) {
               <Text style={[Fonts.p3, Fonts.neutral200]}>{openTrainingPublicLine}</Text>
             ) : null}
             {renderTournamentActionsPanel()}
+            {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte. */}
+            {isTournamentEvent && !isStageDayEvent ? (
+              <TournamentJoinTeamPanel
+                event={event}
+                onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
+                teams={tournamentTeams}
+              />
+            ) : null}
             {renderTournamentTermsLink()}
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
