@@ -442,7 +442,12 @@ const LECTEURS = {
       tournamentTeams: [{ ...AIGLES, viewerMembership: { responseStatus: 'present' } }, LIONS],
     }),
   }),
-  organisateur: () => ({ auth: compte('orga-1', { peutGerer: true }), event: TOURNOI() }),
+  // Récolte du train 12 (chef, 17/11) : l organisateur est celui de CE tournoi (`event.organizer`,
+  // règle isTournamentOrganizer de T-PAGES-6).
+  organisateur: () => ({
+    auth: compte('orga-1', { peutGerer: true }),
+    event: TOURNOI({ organizer: { documentId: 'orga-1' } }),
+  }),
   sansEquipe: () => ({ auth: compte('joueur-seul'), event: TOURNOI() }),
   // 14 ans au jour du tournoi (19/12/2099).
   tropJeune: () => ({ auth: compte('ado-1', { birthdate: '2085-06-01' }), event: TOURNOI() }),
@@ -1033,6 +1038,11 @@ describe('T-PAGES-4 · point 4 — retirés pour qui n est pas l organisateur', 
 describe('T-PAGES-4 · point 5 — « Rejoindre une équipe » caché à l organisateur', () => {
   test('🔴 organisateur : pas de panneau', () => {
     expect(parTestID(monter(LECTEURS.organisateur()), 'tournament-join-team-panel')).toHaveLength(0);
+  });
+
+  test('récolte du train 12 (chef, 17/11) : un gérant qui n organise pas CE tournoi peut rejoindre', () => {
+    const gerant = { auth: compte('gerant-1', { peutGerer: true }), event: TOURNOI() };
+    expect(parTestID(monter(gerant), 'tournament-join-team-panel')).toHaveLength(1);
   });
 });
 
