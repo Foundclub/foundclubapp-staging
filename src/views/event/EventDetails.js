@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import i18next from 'i18next';
 import {
   useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
@@ -87,6 +86,7 @@ import FacilityClosureBanner from '@/components/molecules/facilityClosure/Facili
 import RelocationProposalCard from '@/components/molecules/facilityClosure/RelocationProposalCard';
 import FacilityReportEntry from '@/components/molecules/facilityReport/FacilityReportEntry';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
+import OuvrirDansLeGps from '@/components/molecules/ouvrirDansLeGps/OuvrirDansLeGps';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FeuilleDeSucces from '@/components/organisms/feuilleDeSucces/FeuilleDeSucces';
@@ -139,6 +139,7 @@ import { useGetEventParticipations } from '@/services/eventParticipation/eventPa
 import { COMPLEXES_JOUEUR } from '@/config/fonctionsMasquees';
 import useRetraitDuClavierAndroid from '@/hooks/useRetraitDuClavierAndroid';
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
+import { openExternalMap } from '@/platform/maps/externalMap';
 import SharePlatform from '@/platform/share';
 // 🧾 N2 — AUCUN MODULE NOUVEAU N'ENTRE ICI : `licenseQueries` etait deja
 // importe pour `useLicenseCampaigns`. Les deux fonctions de service qui
@@ -212,12 +213,14 @@ import MonMatchCard from './components/MonMatchCard';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentEssentials, { getTournamentEssentials } from './components/TournamentEssentials';
+import { TournamentBeforeSignUpCard, TournamentHowItWorksCard } from './components/TournamentFicheBlocks';
 import TournamentFicheMyTeamCard from './components/TournamentFicheMyTeamCard';
+import { withTournamentTeamsLine } from './components/TournamentFicheWeb';
 import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
 import {
-  isPaidTournament, openTournamentTerms,
+  isPaidTournament, openTournamentTerms, tournamentPaidThreshold,
 } from './components/tournamentTerms';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
@@ -239,16 +242,20 @@ import {
 } from './matchPageModel';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { getTournamentVisitorTeamsLine } from './tournamentJoinRules';
+import {
+  getTournamentTeamsSeekingPlayers,
+  getTournamentVisitorTeamsLine,
+  TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT,
+} from './tournamentJoinRules';
 import {
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
-  getTournamentAgeNotice,
   getTournamentCategoryLabel,
   getTournamentClosure,
   getTournamentEntryFeeLabel,
   getTournamentMemberBuckets,
   getTournamentMembersSummaryLine,
+  getTournamentMinAge,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -1358,6 +1365,40 @@ function EventDetails({ navigation, route }) {
     || currentUserTournamentTeam
     || currentUserPendingTournamentTeam
     || null;
+  let roleDuLecteurAuTournoi = /** @type {'captain' | 'member' | 'invited' | 'requested'} */ (
+    'member'
+  );
+  if (managedTournamentTeam) roleDuLecteurAuTournoi = 'captain';
+  else if (!currentUserTournamentTeam && currentUserPendingTournamentTeam) {
+    roleDuLecteurAuTournoi = normalizeTournamentText(getTournamentViewerMember(
+      currentUserPendingTournamentTeam,
+      userData?.documentId,
+    )?.responseStatus) === 'invited' ? 'invited' : 'requested';
+  }
+  // T-PAGES-4 (17/11, chef, dans l'esprit de « 4- A » + « 2 ok ») — sous le seuil des 30 %, un
+  // non-organisateur ne lit le nombre d'équipes nulle part : l'onglet Équipes ne liste que les
+  // équipes qui cherchent un joueur, et la sienne. La liste complète paraît au seuil.
+  // ponytail: le seuil se recalcule ici avec la constante de tournamentJoinRules.js (qui ne rend
+  // qu'une phrase) ; sortie : une règle booléenne exportée par ce fichier (T-PAGES-6).
+  const capaciteDuTournoi = Math.round(Number(
+    event?.tournamentTeamsSummary?.expectedCount ?? tournamentConfig?.maxTeams,
+  ));
+  const equipesInscritesDuTournoi = Number.isFinite(
+    Number(event?.tournamentTeamsSummary?.registeredCount),
+  ) && event?.tournamentTeamsSummary?.registeredCount !== null
+    ? Number(event.tournamentTeamsSummary.registeredCount)
+    : tournamentTeamCounters.accepted + tournamentTeamCounters.pending;
+  const listeDesEquipesMasquee = Boolean(isTournamentEvent && !canEdit && capaciteDuTournoi > 0
+    && equipesInscritesDuTournoi < Math.ceil(
+      (capaciteDuTournoi * TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT) / 100,
+    ));
+  const equipesMontreesDuTournoi = listeDesEquipesMasquee
+    ? tournamentTeams.filter((team) => (
+      team?.documentId === equipeDuLecteurAuTournoi?.documentId
+      || getTournamentTeamsSeekingPlayers(tournamentTeams, tournamentConfig)
+        .some((entry) => entry.team?.documentId === team?.documentId)
+    ))
+    : tournamentTeams;
   const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(event || {}), [event]);
   const canManageTrainingVisibility = Boolean(canEdit && trainingOpenConfig.isTraining);
   const eventClubId = event?.team?.club?.documentId || event?.club?.documentId || '';
@@ -5969,7 +6010,7 @@ function EventDetails({ navigation, route }) {
         {
           label: withTabCount(
             t('eventDetails.tabs.people', 'Personnes'),
-            estVisiteurDuTournoi ? NaN : tournamentPeopleCount,
+            canEdit ? tournamentPeopleCount : NaN,
           ),
           value: 'participants',
         },
@@ -5980,7 +6021,6 @@ function EventDetails({ navigation, route }) {
   }, [
     acceptedPeopleCount,
     canEdit,
-    estVisiteurDuTournoi,
     isDetectionEvent,
     isMatchEvent,
     isStageDayEvent,
@@ -7329,23 +7369,45 @@ function EventDetails({ navigation, route }) {
 
   const renderTournamentEssentials = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
-    const capacite = Math.round(Number(tournamentConfig?.maxTeams));
-    // ponytail: la case Format dit « 24 équipes au plus » ; pour qui n'est pas l'organisateur,
-    // ce morceau devient la ligne du seuil des 30 % (« 4- A »), par remplacement du texte rendu
-    // par la brique (même appel `i18next.t` qu'elle). Limite : suit le libellé
-    // `tournamentEssentials.maxTeams`. Sortie : une propriété `teamsLine` dans
-    // TournamentEssentials (fichier de T-PAGES-A).
-    const auPlus = capacite > 0
-      ? i18next.t('tournamentEssentials.maxTeams', { count: capacite })
-      : '';
-    const items = getTournamentEssentials(event).map((item) => (
-      item.key === 'format' && ligneEquipesDuTournoi && auPlus ? {
-        ...item,
-        note: item.note ? item.note.replace(auPlus, ligneEquipesDuTournoi) : item.note,
-        value: item.value.replace(auPlus, ligneEquipesDuTournoi),
-      } : item
-    ));
-    return <TournamentEssentials items={items} />;
+    // La case Format : « 24 équipes au plus » devient la ligne du seuil des 30 % pour qui n'est
+    // pas l'organisateur, par la règle du site (`withTournamentTeamsLine`, T-PAGES-3).
+    const items = canEdit
+      ? getTournamentEssentials(event)
+      : withTournamentTeamsLine(getTournamentEssentials(event), event, ligneEquipesDuTournoi);
+    const lieu = getEventLocationText(event);
+    return (
+      <TournamentEssentials
+        actions={lieu ? {
+          place: (
+            <OuvrirDansLeGps
+              onPress={() => openExternalMap({ label: String(lieu).trim() })}
+              testID="tournament-essentials-itinerary"
+            />
+          ),
+        } : undefined}
+        items={items}
+      />
+    );
+  };
+
+  // T-PAGES-4 (maquette (a) et (b)) — « Comment ça marche » (sans équipe) et « Avant de
+  // t'inscrire » (« Avant le match » avec une équipe), pour qui n'est pas l'organisateur ; ce
+  // dernier porte le lien des conditions. L'organisateur garde le lien seul.
+  const renderTournamentPlayerGuide = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+    if (canEdit) return renderTournamentTermsLink();
+    return (
+      <>
+        {equipeDuLecteurAuTournoi || tropJeunePourLeTournoi ? null : (
+          <TournamentHowItWorksCard event={event} />
+        )}
+        <TournamentBeforeSignUpCard
+          event={event}
+          onOpenTerms={openTournamentTerms}
+          title={equipeDuLecteurAuTournoi ? t('tournamentFicheWeb.before.beforeMatch') : undefined}
+        />
+      </>
+    );
   };
 
   // T-PAGES-4 (maquette (b), R4) — « Mon équipe » en tête, pour qui a une équipe dans le tournoi.
@@ -7355,6 +7417,8 @@ function EventDetails({ navigation, route }) {
     return (
       <TournamentFicheMyTeamCard
         action={getTournamentPrimaryAction()}
+        navigation={navigation}
+        role={roleDuLecteurAuTournoi}
         team={equipeDuLecteurAuTournoi}
         tournamentConfig={tournamentConfig}
       />
@@ -7379,15 +7443,20 @@ function EventDetails({ navigation, route }) {
     // T-PAGES-4 (maquette (a)) : la carte « Ton inscription ».
     const surtitre = (
       <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-        {t('eventDetails.yourRegistration', 'Ton inscription')}
+        {t('tournamentFicheWeb.signUp.kicker')}
       </Text>
     );
     if (tropJeunePourLeTournoi) {
       return (
         <View style={tournamentDs.styles.panelCard} testID="tournament-registration-card">
           {surtitre}
-          <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.neutral00]}>
-            {getTournamentAgeNotice(event)}
+          <Text accessibilityRole="alert" style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('tournamentFicheWeb.signUp.tooYoungTitle', {
+              minAge: getTournamentMinAge(event),
+            })}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('tournamentFicheWeb.signUp.tooYoungText')}
           </Text>
         </View>
       );
@@ -7398,14 +7467,16 @@ function EventDetails({ navigation, route }) {
     // ⛔ Il ne reste ici que les deux gestes d'INSCRIPTION.
     if (!canRegisterTournamentSourceTeam && !canCreateCustomTournamentTeam) return null;
     const prix = getTournamentEntryFeeLabel(event);
-    const regle = getTournamentPaidValidationLabel(event);
+    const regle = isPaidTournament(event)
+      ? t('tournamentFicheWeb.signUp.rule', { count: tournamentPaidThreshold(event) })
+      : null;
 
     return (
       <View style={tournamentDs.styles.panelCard} testID="tournament-registration-card">
         <View style={Spaces.gap[4]}>
           {surtitre}
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {t('eventDetails.registerYourTeam', 'Inscris ton équipe')}
+            {t('tournamentFicheWeb.signUp.title')}
           </Text>
         </View>
         {prix ? <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{prix}</Text> : null}
@@ -7417,7 +7488,7 @@ function EventDetails({ navigation, route }) {
           <Button
             onPress={() => setIsTournamentCreateModalVisible(true)}
             style={{ minHeight: 44 }}
-            title={t('eventDetails.createMyTeam', 'Créer mon équipe')}
+            title={t('tournamentFicheWeb.signUp.create')}
             variant="Primary"
           />
         ) : null}
@@ -7904,7 +7975,7 @@ function EventDetails({ navigation, route }) {
                 {canEdit ? teamsSummary : ligneEquipesDuTournoi}
               </Text>
             </View>
-            {tournamentTeamCounters.warning > 0 ? (
+            {canEdit && tournamentTeamCounters.warning > 0 ? (
               <Tag
                 style={tournamentDs.getToneTagStyle(Colors.gold500)}
                 text={t(
@@ -7931,7 +8002,7 @@ function EventDetails({ navigation, route }) {
           </View>
         ) : null}
 
-        {tournamentTeams.map((tournamentTeam) => {
+        {equipesMontreesDuTournoi.map((tournamentTeam) => {
           const rosterSummary = getTournamentRosterSummary(tournamentTeam, tournamentConfig);
           const hasRosterWarning = isTournamentTeamNonCompliant(tournamentTeam, tournamentConfig);
           // 🏷️ Les quatre etats, tels que la planche 04 les nomme : deux mots
@@ -8716,7 +8787,7 @@ function EventDetails({ navigation, route }) {
                 teams={tournamentTeams}
               />
             ) : null}
-            {renderTournamentTermsLink()}
+            {renderTournamentPlayerGuide()}
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>

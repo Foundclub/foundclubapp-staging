@@ -132,6 +132,12 @@ jest.mock('@/services/license/licenseQueries', () => ({
 // qui tire `@/services/client`. Sans cette doublure MUETTE, la suite entiere
 // tombe a 0 test (piege connu : un import de service de plus). `data: undefined`
 // = le calcul de repli de la page, identique a ce que ces temoins decrivaient.
+// L'itinéraire de la case Lieu (T-PAGES-4, chef 17/11).
+const mockOpenExternalMap = jest.fn();
+jest.mock('@/platform/maps/externalMap', () => ({
+  openExternalMap: (/** @type {any} */ cible) => mockOpenExternalMap(cible),
+}));
+
 // Sans ce double, l'import tire `@/services/client`, qui jette sans `.env`.
 jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
   useGetTrainingReviews: () => ({ data: null }),
@@ -589,7 +595,7 @@ const RELEVE_DU_LECTEUR = {
     onglets: [
       'Aperçu',
       'Équipes',
-      'Personnes · 0',
+      'Personnes',
     ],
     participer: 0,
     rail: 0,
@@ -618,7 +624,7 @@ const RELEVE_DU_LECTEUR = {
     onglets: [
       'Aperçu',
       'Équipes',
-      'Personnes · 0',
+      'Personnes',
     ],
     participer: 0,
     rail: 0,
@@ -647,7 +653,7 @@ const RELEVE_DU_LECTEUR = {
     onglets: [
       'Aperçu',
       'Équipes',
-      'Personnes · 0',
+      'Personnes',
     ],
     participer: 0,
     rail: 0,
@@ -705,7 +711,7 @@ const RELEVE_DU_LECTEUR = {
     onglets: [
       'Aperçu',
       'Équipes',
-      'Personnes · 0',
+      'Personnes',
     ],
     participer: 0,
     rail: 0,
@@ -734,7 +740,7 @@ const RELEVE_DU_LECTEUR = {
     onglets: [
       'Aperçu',
       'Équipes',
-      'Personnes · 0',
+      'Personnes',
     ],
     participer: 0,
     rail: 0,
@@ -791,6 +797,8 @@ const ORDRE = [
   'tournament-essentials',
   'tournament-registration-card',
   'tournament-join-team-panel',
+  'tournament-how-it-works',
+  'tournament-before-sign-up',
   'event-tournament-terms-link',
   'doublure-onglets',
 ];
@@ -840,6 +848,8 @@ describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
       'tournament-essentials',
       'tournament-registration-card',
       'tournament-join-team-panel',
+      'tournament-how-it-works',
+      'tournament-before-sign-up',
       'event-tournament-terms-link',
       'doublure-onglets',
     ]);
@@ -873,9 +883,11 @@ describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
     expect(ordreDe(root)).toEqual([
       'tournament-fiche-my-team',
       'tournament-essentials',
+      'tournament-before-sign-up',
       'event-tournament-terms-link',
       'doublure-onglets',
     ]);
+    expect(textes(parTestID(root, 'tournament-before-sign-up')[0])[0]).toBe('Avant le match');
     const [carte] = parTestID(root, 'tournament-fiche-my-team');
     expect(textes(carte)).toEqual(expect.arrayContaining(['Les Aigles', 'Voir mon équipe', '1 / 5']));
     expect(parTestID(root, 'tournament-team-progress-todo')).toHaveLength(1);
@@ -902,13 +914,17 @@ describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
     mockTeamQuery.data = null;
     const root = monter(LECTEURS.capitaine());
     const [carte] = parTestID(root, 'tournament-fiche-my-team');
-    expect(textes(carte)).toEqual(['Les Aigles', 'Voir mon équipe']);
+    expect(textes(carte)).toEqual(['Mon équipe · Capitaine', 'Les Aigles', 'Voir mon équipe']);
   });
 
   test('🔴 trop jeune : le message dans la carte, aucun bouton, rien en bas', () => {
     const root = monter(LECTEURS.tropJeune());
     const [carte] = parTestID(root, 'tournament-registration-card');
-    expect(textes(carte)).toEqual(['Ton inscription', 'Ce tournoi est ouvert à partir de 16 ans.']);
+    expect(textes(carte)).toEqual([
+      'Ton inscription',
+      'Ce tournoi est ouvert à partir de 16 ans',
+      'Tu pourras t’inscrire à un prochain tournoi ouvert à ton âge.',
+    ]);
     expect(carte.findAllByType(TouchableOpacity)).toHaveLength(0);
     expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(0);
   });
@@ -961,7 +977,7 @@ describe('T-PAGES-4 · point 3 — nombre d équipes, seuil des 30 %, pour tous 
     const root = monter(LECTEURS.sansEquipe());
     expect(essentielDe(root)).toContain('24 équipes attendues');
     expect(textes(root).join(' ')).not.toContain('équipes au plus');
-    expect(ongletsDe(root)).toEqual(['Aperçu', 'Équipes', 'Personnes · 0']);
+    expect(ongletsDe(root)).toEqual(['Aperçu', 'Équipes', 'Personnes']);
     allerSurLOnglet(root, 'tournamentTeams');
     expect(parTestID(root, 'event-tournament-teams-summary').map(textOf))
       .toEqual(['24 équipes attendues']);
@@ -1044,5 +1060,149 @@ describe('T-PAGES-4 · point 6 — R10, la feuille « Créer une équipe » du t
       creer.props.onPress();
     });
     expect(textes(root)).toContain('Ensuite : invite 4 joueurs, chacun paie 20 €.');
+  });
+});
+
+// ============================================================================================
+// SUITE DU CHEF (17/11, réponses 1 et 4) — textes de T-PAGES-3 (« Comment ça marche », « Avant de
+// t'inscrire », rôle), itinéraire, paiement et discussion dans « Mon équipe », nombre caché.
+// ============================================================================================
+
+describe('T-PAGES-4 · chef 1 — « Comment ça marche », « Avant de t inscrire », rôle, itinéraire', () => {
+  test('🔴 sans équipe : les 3 étapes et « Avant de t’inscrire » avec le lien des conditions', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(textes(parTestID(root, 'tournament-how-it-works')[0])).toEqual([
+      'Comment ça marche',
+      '1. Tu crées ton équipe',
+      'Tu en deviens le capitaine. Elle n’existe que pour ce tournoi.',
+      '2. Tu invites 4 joueurs',
+      'Par un lien à partager, ou en cherchant leur profil FoundClub.',
+      '3. Chacun paie sa place, 20 € par joueur',
+      'L’équipe est validée dès la 5ᵉ place payée.',
+    ]);
+    const [avant] = parTestID(root, 'tournament-before-sign-up');
+    expect(textes(avant)).toEqual(expect.arrayContaining([
+      'Avant de t’inscrire', 'Lire les conditions d’inscription',
+    ]));
+  });
+
+  test('🔴 avec une équipe : pas de « Comment ça marche » ; l organisateur garde le lien seul', () => {
+    expect(parTestID(monter(LECTEURS.capitaine()), 'tournament-how-it-works')).toHaveLength(0);
+    const orga = monter(LECTEURS.organisateur());
+    expect(parTestID(orga, 'tournament-before-sign-up')).toHaveLength(0);
+    expect(parTestID(orga, 'event-tournament-terms-link')).toHaveLength(1);
+  });
+
+  test('🔴 la carte « Ton inscription » dit la règle des places payées', () => {
+    const [carte] = parTestID(monter(LECTEURS.sansEquipe()), 'tournament-registration-card');
+    expect(textes(carte)).toContain('Ton équipe est validée dès la 5ᵉ place payée.');
+  });
+
+  test('🔴 le rôle en surtitre de « Mon équipe » : capitaine, membre, invité', () => {
+    const surtitre = (/** @type {any} */ lecteur) => textes(
+      parTestID(monter(lecteur), 'tournament-fiche-my-team')[0],
+    )[0];
+    expect(surtitre(LECTEURS.capitaine())).toBe('Mon équipe · Capitaine');
+    expect(surtitre(LECTEURS.membre())).toBe('Mon équipe');
+    mockTeamQuery.data = { ...LIONS, members: [] };
+    expect(surtitre(LECTEURS.invite())).toBe('Mon équipe · Invitation');
+  });
+
+  test('🔴 « Itinéraire » sous le lieu de l essentiel ouvre la carte du téléphone', () => {
+    const lecteur = LECTEURS.sansEquipe();
+    lecteur.event.location = 'AR Soccer, 119 rue de la Rauze basse, Montpellier';
+    const root = monter(lecteur);
+    const [lien] = parTestID(root, 'tournament-essentials-itinerary');
+    expect(lien).toBeTruthy();
+    mockOpenExternalMap.mockClear();
+    act(() => {
+      lien.props.onPress();
+    });
+    expect(mockOpenExternalMap).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('T-PAGES-4 · chef 1 — « Mon équipe » : payer sa place, discussion de l équipe', () => {
+  test('🔴 membre dont la place est due : « Payer ma place » ouvre la page de paiement', () => {
+    // eslint-disable-next-line global-require
+    const liens = require('@/platform/links').default;
+    const ouvrir = jest.spyOn(liens, 'openUrl').mockImplementation(() => Promise.resolve());
+    mockTeamQuery.data = {
+      ...EQUIPE_DETAILLEE,
+      payment: {
+        ...EQUIPE_DETAILLEE.payment,
+        members: [
+          { memberDocumentId: 'm-cap', status: 'paid' },
+          {
+            isSelf: true, memberDocumentId: 'm-2', paymentUrl: 'https://pay.example/m-2', status: 'due',
+          },
+        ],
+      },
+    };
+    const root = monter(LECTEURS.membre());
+    const [payer] = parTestID(root, 'tournament-fiche-my-team-pay');
+    act(() => {
+      payer.props.onPress();
+    });
+    expect(ouvrir).toHaveBeenCalledWith('https://pay.example/m-2');
+    ouvrir.mockRestore();
+  });
+
+  test('🔴 la discussion de l équipe, si le serveur la rend, s ouvre depuis la carte', () => {
+    mockTeamQuery.data = { ...EQUIPE_DETAILLEE, discussion: { chat: 'chat-aigles' } };
+    const root = monter(LECTEURS.capitaine());
+    const [carte] = parTestID(root, 'tournament-fiche-my-team');
+    const bouton = carte.findAllByType(TouchableOpacity)
+      .find((/** @type {any} */ node) => textOf(node) === 'Discussion de l\'équipe');
+    mockNavigate.mockClear();
+    act(() => {
+      bouton.props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('Conversation', { chatId: 'chat-aigles' });
+  });
+});
+
+describe('T-PAGES-4 · chef 4 — sous le seuil, le nombre ne se lit nulle part', () => {
+  const nomsDesEquipes = (/** @type {any} */ root) => {
+    allerSurLOnglet(root, 'tournamentTeams');
+    // Les noms rendus hors de la carte « Mon équipe » (qui dit toujours le nom de la sienne).
+    const carte = parTestID(root, 'tournament-fiche-my-team')[0];
+    const dansLaCarte = carte ? textes(carte) : [];
+    return textes(root)
+      .filter((ligne) => ['Les Aigles', 'Les Lions'].includes(ligne) || /^Équipe \d+$/.test(ligne))
+      .filter((ligne) => {
+        // Retire une seule fois chaque nom lu dans la carte.
+        const index = dansLaCarte.indexOf(ligne);
+        if (index === -1) return true;
+        dansLaCarte.splice(index, 1);
+        return false;
+      });
+  };
+
+  test('🔴 sans équipe, sous le seuil : seulement les équipes qui cherchent un joueur', () => {
+    expect(nomsDesEquipes(monter(LECTEURS.sansEquipe()))).toEqual(['Les Aigles']);
+  });
+
+  test('🔴 membre d une équipe fermée, sous le seuil : la sienne, et celles qui cherchent', () => {
+    mockTeamQuery.data = null;
+    const lecteur = {
+      auth: compte('lion-1'),
+      event: TOURNOI({
+        tournamentTeams: [AIGLES, { ...LIONS, viewerMembership: { responseStatus: 'present' } }],
+      }),
+    };
+    expect(nomsDesEquipes(monter(lecteur))).toEqual(['Les Aigles', 'Les Lions']);
+  });
+
+  test('au seuil (8 sur 24) : la liste complète', () => {
+    const lecteur = LECTEURS.sansEquipe();
+    lecteur.event.tournamentTeams = Array.from({ length: 8 }, (_, index) => ({
+      ...LIONS, documentId: `eq-${index}`, name: `Équipe ${index}`,
+    }));
+    expect(nomsDesEquipes(monter(lecteur))).toHaveLength(8);
+  });
+
+  test('l organisateur voit toutes les équipes', () => {
+    expect(nomsDesEquipes(monter(LECTEURS.organisateur()))).toEqual(['Les Aigles', 'Les Lions']);
   });
 });
