@@ -25705,6 +25705,7 @@ export default {
     playersOutOf_one: '{{count}} player out of {{max}}',
     playersOutOf_other: '{{count}} players out of {{max}}',
     seeProfile: 'View profile',
+    sendError: 'The request was not sent. Check your connection, then try again.',
     visitorExpected_one: '{{count}} team expected',
     visitorExpected_other: '{{count}} teams expected',
     visitorRegistered_one: '{{count}} team registered out of {{max}}',

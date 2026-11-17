@@ -53,7 +53,13 @@ function TournamentJoinTeamPanel({ event, onRequested, teams = [] }) {
   })) return null;
 
   const seekingTeams = getTournamentTeamsSeekingPlayers(teams, event?.tournamentConfig);
-  const fallbackError = t('tournamentTeamDetails.unableToSendThisRequest', "Impossible d'envoyer cette demande.");
+  // Le serveur refuse avec une phrase (âge, autre équipe…) : elle est montrée telle quelle. Sans
+  // phrase (réseau coupé : le client rejette une simple chaîne), le joueur lit quoi faire
+  // (fait de recette du 17/11 : « Impossible d'envoyer cette demande. » ne l'aidait pas).
+  const fallbackError = t(
+    'tournamentJoin.sendError',
+    'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
+  );
 
   const closeDeclaration = () => {
     setChosenTeam(null);

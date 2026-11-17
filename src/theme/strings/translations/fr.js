@@ -26833,6 +26833,7 @@ export default {
     playersOutOf_one: '{{count}} joueur sur {{max}}',
     playersOutOf_other: '{{count}} joueurs sur {{max}}',
     seeProfile: 'Voir le profil',
+    sendError: 'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
     visitorExpected_one: '{{count}} équipe attendue',
     visitorExpected_other: '{{count}} équipes attendues',
     visitorRegistered_one: '{{count}} équipe inscrite sur {{max}}',

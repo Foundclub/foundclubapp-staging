@@ -202,6 +202,17 @@ describe('T-REJOINDRE — le panneau « Rejoindre une équipe »', () => {
     expect(onRequested).not.toHaveBeenCalled();
   });
 
+  it('erreur SANS message (réseau coupé : le client rejette une simple chaîne) : le joueur lit quoi faire', async () => {
+    mockRequestJoin.mockRejectedValue('Network Error');
+    const arbre = await monter();
+    await appuyer(arbre, 'tournament-join-team-button');
+    await appuyer(arbre, 'tournament-join-team-ask-eq-seuls');
+    await act(async () => {
+      await arbre.root.findByProps({ testID: 'doublure-declaration' }).props.onConfirm({});
+    });
+    expect(textes(arbre)).toContain('La demande n’est pas partie. Vérifie ta connexion, puis réessaie.');
+  });
+
   it('ni le visiteur sans compte, ni le joueur de 15 ans, ni le Parent ne voient le bouton', async () => {
     mockAuth = { accountRoleKey: undefined, userData: null };
     expect((await monter()).toJSON()).toBeNull();
