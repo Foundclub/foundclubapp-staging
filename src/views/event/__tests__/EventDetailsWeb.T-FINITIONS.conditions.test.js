@@ -276,14 +276,19 @@ test('match : pas de lien (caractérisant)', () => {
 const contient = (/** @type {any} */ arbre, /** @type {string} */ bout) => arbre.root
   .findAll((/** @type {any} */ n) => typeof n.type === 'string' && texte(n).includes(bout)).length > 0;
 
-test('5. tournoi payant : « Prix / personne » lit entryFeeCents (20 EUR), pas pricePerPerson', () => {
+// T-PAGES-6 (17/11), fusion de T-PARCOURS-2 (point 7) : le prix d'un TOURNOI suit la règle du
+// téléphone (getTournamentEntryFeeLabel, « 20 € par joueur ») ; sans montant encaissé, « Gratuit ou
+// non défini », jamais le prix saisi (T-PARCOURS2 (7), EventDetailsWeb.T-FINITIONS3.tournoi.test.js).
+test('5. tournoi payant : « Prix / personne » lit entryFeeCents (20 € par joueur), pas pricePerPerson', () => {
   const arbre = monter(tournoiAutonome({ pricePerPerson: 0, tournamentConfig: { entryFeeCents: 2000 } }));
-  expect(contient(arbre, '20 EUR')).toBe(true);
-  expect(contient(arbre, '0 EUR') && !contient(arbre, '20 EUR')).toBe(false);
+  expect(contient(arbre, '20 € par joueur')).toBe(true);
+  expect(contient(arbre, '0 EUR')).toBe(false);
 });
 
-test('5. tournoi gratuit : pricePerPerson reste affiché (caractérisant)', () => {
-  expect(contient(monter(tournoiAutonome({ pricePerPerson: 7 })), '7 EUR')).toBe(true);
+test('5. tournoi sans montant encaissé : « Gratuit ou non défini », plus le prix saisi', () => {
+  const arbre = monter(tournoiAutonome({ pricePerPerson: 7 }));
+  expect(contient(arbre, 'Gratuit ou non défini')).toBe(true);
+  expect(contient(arbre, '7 EUR')).toBe(false);
 });
 
 test('7. tournoi payant en validation manuelle : « Équipe validée au 5ᵉ joueur payé » (seuil lu)', () => {
