@@ -9,6 +9,7 @@ import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import Tag from '@/components/atoms/tag/Tag';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import OuvrirDansLeGps from '@/components/molecules/ouvrirDansLeGps/OuvrirDansLeGps';
 
@@ -98,9 +99,12 @@ const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ even
  *     value: string;
  *     verdict?: 'win' | 'draw' | 'loss' | null;
  *   } | null;
+ *   tournamentHero?: { statusLabel?: string | null } | null;
  * }} props
  */
-function EventHeader({ detectionSummary = null, event, matchScoreSummary = null }) {
+function EventHeader({
+  detectionSummary = null, event, matchScoreSummary = null, tournamentHero = null,
+}) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -203,6 +207,22 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
   } else if (isTournamentEvent) {
     headerSecondaryTitle = [clubName, activityName, categoryName].filter(Boolean).join(' - ');
   }
+  // T-PAGES-4b (18/11, maquette design/DESIGN-TOURNOI-PAGES (b), téléphone) — demandé par la fiche
+  // (`tournamentHero`), le haut d'un tournoi devient un bandeau : « Organisé par … », puis les
+  // étiquettes statut / section / âge. Date, lieu et prix sont dans « L'essentiel », sous « Mon
+  // équipe » : le bandeau ne les redit pas, et l'âge n'y paraît qu'une fois (M1328).
+  const enBandeau = isTournamentEvent && Boolean(tournamentHero);
+  if (enBandeau) {
+    headerSecondaryTitle = [
+      clubName
+        ? t('tournamentFicheWeb.organizedBy', { name: clubName, ...SANS_ECHAPPEMENT })
+        : '',
+      activityName,
+    ].filter(Boolean).join(' · ');
+  }
+  const etiquettesDuBandeau = enBandeau
+    ? [tournamentHero?.statusLabel, sectionName, categoryName].filter(Boolean)
+    : [];
   const invitedTeamNames = (event?.invitedTeams || [])
     .map((/** @type {any} */ team) => toDisplayText(team?.name))
     .filter(Boolean);
@@ -445,6 +465,24 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
                 {headerSecondaryTitle}
               </Text>
             ) : null}
+            {etiquettesDuBandeau.length ? (
+              <View
+                style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}
+                testID="event-header-tournament-tags"
+              >
+                {etiquettesDuBandeau.map((etiquette, index) => (
+                  <Tag
+                    key={etiquette}
+                    style={{}}
+                    text={String(etiquette)}
+                    textColor={
+                      index === 0 && tournamentHero?.statusLabel ? 'success500' : 'neutral00'
+                    }
+                    textStyle={Fonts.p4}
+                  />
+                ))}
+              </View>
+            ) : null}
             {facilityName ? (
               <View
                 style={[
@@ -607,7 +645,16 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
             </Text>
           ) : null}
         </View>
-      ) : defaultInfoBlock}
+      ) : null}
+      {/* Les équipes invitées d'un tournoi restent lisibles dans le bandeau. */}
+      {!matchScoreSummary && enBandeau && invitedTeamNames.length > 0 ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t('eventDetails.header.invitedTeams', 'Équipes invitées')}
+          {' : '}
+          {invitedTeamNames.join(' • ')}
+        </Text>
+      ) : null}
+      {!matchScoreSummary && !enBandeau ? defaultInfoBlock : null}
     </ImageBackground>
   );
 }

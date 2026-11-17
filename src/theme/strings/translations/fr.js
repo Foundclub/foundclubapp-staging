@@ -11073,6 +11073,8 @@ export default {
     full: 'Complet',
     header: {
       invitedTeams: 'Équipes invitées',
+      registrationOpen: 'Inscriptions ouvertes',
+      teamRegistered: 'Ton équipe est inscrite',
       tournamentFallback: 'Tournoi',
     },
     iDonTKnow: 'Je ne sais pas',
