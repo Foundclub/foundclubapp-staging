@@ -16,6 +16,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { niveauxPourLeSport } from '@/domains/level/niveauxDuSport';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { Joi } from '@/theme/strings';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -122,6 +123,34 @@ const getClubAddress = (club) => {
   }
   return null;
 };
+
+/**
+ * NIVEAUX-PAR-SPORT (17/11/2026) — les niveaux proposes suivent le sport choisi : ceux du sport
+ * s'il en a, sinon les niveaux « tous sports ». L'abonnement au champ `activities` vit ICI, pour
+ * ne re-rendre que le champ Niveau (et pas tout l'ecran) quand le sport change ou se pose.
+ * La valeur deja posee reste affichee : elle se lit dans `levels`, la liste entiere.
+ * @param {object} props - Les proprietes.
+ * @param {(options: Option[]) => import('react').ReactElement} props.children - Le champ.
+ * @param {any} props.control - Le controle du formulaire.
+ * @param {Level[] | undefined} props.levels - Tous les niveaux.
+ * @param {string} props.search - Le texte cherche.
+ * @returns {import('react').ReactElement}
+ */
+function NiveauxDuSportChoisi({
+  children, control, levels, search,
+}) {
+  const sport = useWatch({ control, name: 'activities' });
+  const options = useMemo(() => niveauxPourLeSport(levels, sport).reduce(
+    (/** @type {Option[]} */ acc, level) => {
+      if (level.name.toLowerCase().includes(search.toLowerCase())) {
+        acc.push({ label: level.name, value: level.documentId || '' });
+      }
+      return acc;
+    },
+    [],
+  ), [levels, search, sport]);
+  return children(options);
+}
 
 /**
  * Team edit screen component. Allows users to create or edit a team.
@@ -315,18 +344,6 @@ function TeamEdit({ navigation, route }) {
       return acc;
     }, [])
   ), [categories, categorySearch]);
-
-  const levelOptions = useMemo(() => (
-    levels?.reduce((/** @type {Option[]} */acc, level) => {
-      if (level.name.toLowerCase().includes(levelSearch.toLowerCase())) {
-        acc.push({
-          label: level.name,
-          value: level.documentId || '',
-        });
-      }
-      return acc;
-    }, [])
-  ), [levels, levelSearch]);
 
   const trainerOptions = useMemo(() => {
     const members = clubData?.members
@@ -848,31 +865,35 @@ function TeamEdit({ navigation, route }) {
               )}
             />
 
-            <Controller
-              control={control}
-              name="level"
-              render={({
-                field: {
-                  name, onBlur, onChange, ref, value,
-                },
-              }) => (
-                <AutocompleteSelect
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  isSearchable
-                  label={t('teamEdit.fields.level.label')}
-                  onBlur={onBlur}
-                  options={levelOptions || []}
-                  placeholder={t('teamEdit.fields.level.placeholder')}
-                  ref={ref}
-                  searchValue={levelSearch}
-                  setSearchValue={setLevelSearch}
-                  setValue={(/** @type {Option | undefined} */ option) => onChange(
-                    option?.value || '',
+            <NiveauxDuSportChoisi control={control} levels={levels} search={levelSearch}>
+              {(/** @type {Option[]} */ levelOptions) => (
+                <Controller
+                  control={control}
+                  name="level"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <AutocompleteSelect
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      isSearchable
+                      label={t('teamEdit.fields.level.label')}
+                      onBlur={onBlur}
+                      options={levelOptions || []}
+                      placeholder={t('teamEdit.fields.level.placeholder')}
+                      ref={ref}
+                      searchValue={levelSearch}
+                      setSearchValue={setLevelSearch}
+                      setValue={(/** @type {Option | undefined} */ option) => onChange(
+                        option?.value || '',
+                      )}
+                      value={levels?.find((opt) => opt.documentId === value)?.name || ''}
+                    />
                   )}
-                  value={levels?.find((opt) => opt.documentId === value)?.name || ''}
                 />
               )}
-            />
+            </NiveauxDuSportChoisi>
 
             <Controller
               control={control}

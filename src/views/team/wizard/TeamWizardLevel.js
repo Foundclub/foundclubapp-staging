@@ -5,6 +5,7 @@ import {
   View,
 } from 'react-native';
 
+import { niveauxPourLeSport } from '@/domains/level/niveauxDuSport';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -33,7 +34,8 @@ function TeamWizardLevel({ navigation }) {
   const { dispatch, state } = useTeamWizard();
   const handleExitWizard = useTeamWizardExit(navigation);
   const levelsQuery = useGetLevels();
-  const { data: levels } = levelsQuery;
+  // NIVEAUX-PAR-SPORT : seulement les niveaux du sport choisi a l'etape Sport, s'il en a.
+  const levels = niveauxPourLeSport(levelsQuery.data, state.activities);
   const { isLoading } = levelsQuery;
   const hasError = Boolean(levelsQuery.error);
   // W06 — le referentiel a repondu, et il n'a rien a proposer : voir
@@ -112,7 +114,7 @@ function TeamWizardLevel({ navigation }) {
           />
         ) : null}
 
-        {(levels || []).map((level) => {
+        {levels.map((level) => {
           const levelDocumentId = level.documentId || '';
           return (
             <WizardOptionCard
