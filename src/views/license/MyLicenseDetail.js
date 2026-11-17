@@ -1326,7 +1326,7 @@ function MyLicenseDetail({ navigation, route }) {
         >
           {tournamentPayUrl ? (
             <Button
-              onPress={() => LinksPlatform.openUrlInPlace(tournamentPayUrl)}
+              onPress={() => LinksPlatform.openUrlHere(tournamentPayUrl)}
               style={ApplicationStyle.shadow200}
               title={t('tournamentTeamDetails.places.payMine', 'Payer ma place')}
             />

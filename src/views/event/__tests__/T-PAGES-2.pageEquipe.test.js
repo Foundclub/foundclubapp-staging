@@ -128,9 +128,9 @@ jest.mock('@/platform/share', () => {
 });
 jest.mock('@/platform/links', () => {
   const openUrl = jest.fn(async () => true);
-  const openUrlInPlace = jest.fn(async () => true);
+  const openUrlHere = jest.fn(async () => true);
   return {
-    __esModule: true, default: { openUrl, openUrlInPlace }, openUrl, openUrlInPlace,
+    __esModule: true, default: { openUrl, openUrlHere }, openUrl, openUrlHere,
   };
 });
 
@@ -489,10 +489,10 @@ describe('T-PAGES-2 — joueur qui n’est pas capitaine (R6, R8)', () => {
     expect(tous[tous.length - 1].props.accessibilityLabel).toBe("Quitter l'équipe");
   });
 
-  test('🔴 R8 : « Payer ma place » ouvre la page de paiement DANS LE MÊME ONGLET (openUrlInPlace), pas une fenêtre', async () => {
+  test('🔴 R8 : « Payer ma place » ouvre la page de paiement DANS LE MÊME ONGLET (openUrlHere), pas une fenêtre', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
     await appuyer(arbre, ['Payer ma place']);
-    expect(liens.default.openUrlInPlace).toHaveBeenCalledWith(LIEN_2);
+    expect(liens.default.openUrlHere).toHaveBeenCalledWith(LIEN_2);
     expect(liens.default.openUrl).not.toHaveBeenCalled();
   });
 

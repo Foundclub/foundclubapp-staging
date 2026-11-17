@@ -93,7 +93,7 @@ jest.mock('react-native-blob-util', () => ({
   default: { config: jest.fn(), fs: { dirs: { CacheDir: '/cache' }, stat: jest.fn() } },
 }));
 
-jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn(), openUrlInPlace: jest.fn() } }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn(), openUrlHere: jest.fn() } }));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
 jest.mock('@/platform/media/downloadRemoteFile', () => ({
   __esModule: true,
@@ -163,7 +163,7 @@ describe('T-TAILLE — « Mes licences » ne paie pas une place de tournoi', () 
     const [payer] = arbre.root.findAllByType(Button).filter((/** @type {any} */ b) => b.props.title === 'Payer ma place');
     await act(async () => { await payer.props.onPress(); });
     const liens = jest.requireMock('@/platform/links').default;
-    expect(liens.openUrlInPlace).toHaveBeenCalledWith(expect.stringMatching(/\/licenses\/pay\/jeton-de-test$/));
+    expect(liens.openUrlHere).toHaveBeenCalledWith(expect.stringMatching(/\/licenses\/pay\/jeton-de-test$/));
     expect(createLicenseCheckout).not.toHaveBeenCalled();
   });
 

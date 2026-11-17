@@ -125,9 +125,9 @@ jest.mock('@/platform/share', () => {
 });
 jest.mock('@/platform/links', () => {
   const openUrl = jest.fn(async () => true);
-  const openUrlInPlace = jest.fn(async () => true);
+  const openUrlHere = jest.fn(async () => true);
   return {
-    __esModule: true, default: { openUrl, openUrlInPlace }, openUrl, openUrlInPlace,
+    __esModule: true, default: { openUrl, openUrlHere }, openUrl, openUrlHere,
   };
 });
 
@@ -495,8 +495,8 @@ describe('T-PAGES-2 — joueur non capitaine (u-2)', () => {
   test('12. « Payer ma place » ouvre SON lien de paiement', async () => {
     const arbre = await monter(equipe(paiement(true)), 'u-2');
     await appuyer(arbre, ['Payer ma place']);
-    // L'ouverture peut passer par `openUrl` ou `openUrlInPlace` : un seul appel, avec SON lien.
-    const appels = [...liens.default.openUrl.mock.calls, ...liens.default.openUrlInPlace.mock.calls];
+    // L'ouverture peut passer par `openUrl` ou `openUrlHere` : un seul appel, avec SON lien.
+    const appels = [...liens.default.openUrl.mock.calls, ...liens.default.openUrlHere.mock.calls];
     expect(appels.some((/** @type {any[]} */ a) => a[0] === LIEN_2)).toBe(true);
   });
 });
