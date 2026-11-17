@@ -839,12 +839,14 @@ describe('EventDetails — panneau organisateur : etats recenses', () => {
     expect(reachableManageActions(root)).toContain('edit');
   });
 
-  test('etat 8 — tournoi vu par un visiteur : il consulte, il ne gere pas', () => {
+  // ♻️ T-PAGES-4 (17/11, maquette (a)) : un compte sans équipe, compétition pas publiée, lit
+  // « Créer mon équipe » en bas (avant : « Voir le tournoi ») ; il ne gère toujours rien.
+  test('etat 8 — tournoi vu par un visiteur : il s inscrit, il ne gere pas', () => {
     const root = mountScreen({
       event: buildEvent({ type: { name: 'Tournoi' } }),
     });
 
-    expect(hasText(root, 'Voir le tournoi')).toBe(true);
+    expect(hasText(root, 'Créer mon équipe')).toBe(true);
     expect(reachableManageActions(root)).toEqual([]);
   });
 });

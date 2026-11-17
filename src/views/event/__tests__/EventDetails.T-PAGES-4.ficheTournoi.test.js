@@ -945,7 +945,7 @@ describe('T-PAGES-4 · point 2 — réservés à l organisateur (A2, R11)', () =
     };
     const root = monter(lecteur);
     const [carte] = parTestID(root, 'tournament-player-rules');
-    expect(textes(carte)).toEqual(['Poules + finale', 'Matchs de 10 minutes.']);
+    expect(textes(carte)).toEqual(['Poules + finale', 'À partir de 16 ans', 'Matchs de 10 minutes.']);
   });
 });
 

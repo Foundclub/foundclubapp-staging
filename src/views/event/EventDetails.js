@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
@@ -7331,9 +7332,12 @@ function EventDetails({ navigation, route }) {
     const capacite = Math.round(Number(tournamentConfig?.maxTeams));
     // ponytail: la case Format dit « 24 équipes au plus » ; pour qui n'est pas l'organisateur,
     // ce morceau devient la ligne du seuil des 30 % (« 4- A »), par remplacement du texte rendu
-    // par la brique. Limite : suit le libellé `tournamentEssentials.maxTeams`. Sortie : une
-    // propriété `teamsLine` dans TournamentEssentials (fichier de T-PAGES-A).
-    const auPlus = capacite > 0 ? t('tournamentEssentials.maxTeams', { count: capacite }) : '';
+    // par la brique (même appel `i18next.t` qu'elle). Limite : suit le libellé
+    // `tournamentEssentials.maxTeams`. Sortie : une propriété `teamsLine` dans
+    // TournamentEssentials (fichier de T-PAGES-A).
+    const auPlus = capacite > 0
+      ? i18next.t('tournamentEssentials.maxTeams', { count: capacite })
+      : '';
     const items = getTournamentEssentials(event).map((item) => (
       item.key === 'format' && ligneEquipesDuTournoi && auPlus ? {
         ...item,
@@ -7551,11 +7555,29 @@ function EventDetails({ navigation, route }) {
     }
     // T-PAGES-4 (17/11, A2, R11) : la carte « TOURNOI » (brouillon, compteurs, validation,
     // points), le rail et « Ma réponse au tournoi » sont des outils d'organisateur. Le joueur
-    // garde le format et le règlement écrit.
+    // garde le format, l'activité, la section, la catégorie (ou « À partir de N ans ») et le
+    // règlement écrit.
     if (!canEdit) {
+      const etiquettesDuJoueur = [
+        event?.tournamentActivity?.name,
+        event?.tournamentSection?.name,
+        getTournamentCategoryLabel(event, event?.tournamentCategory?.name),
+      ].filter(Boolean);
       return (
         <View style={tournamentDs.styles.panelCard} testID="tournament-player-rules">
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{tournamentFormatLabel}</Text>
+          {etiquettesDuJoueur.length > 0 ? (
+            <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+              {etiquettesDuJoueur.map((label) => (
+                <Tag
+                  key={label}
+                  style={tournamentDs.getToneTagStyle(Colors.primary500)}
+                  text={label}
+                  textColor="primary500"
+                />
+              ))}
+            </View>
+          ) : null}
           {event?.tournamentConfig?.rulesText ? (
             <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
               {event.tournamentConfig.rulesText}

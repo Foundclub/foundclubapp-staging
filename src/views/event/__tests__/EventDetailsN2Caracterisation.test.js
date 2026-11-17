@@ -625,6 +625,13 @@ jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
   useGetTrainingReviews: () => ({ data: null }),
 }));
 
+// T-PAGES-4 (17/11) — la carte « Mon équipe » de la fiche lit la page d'équipe : sans ce double,
+// `useQuery` (absent de la doublure de react-query ci-dessus) fait tomber chaque lecteur qui a une
+// équipe. `data: null` = la carte réduite au nom et au geste.
+jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
+  useGetTournamentTeam: () => ({ data: null, isLoading: false }),
+}));
+
 describe('N2 · 4F — LE STAGE PARENT SE RANGE EN TROIS ONGLETS', () => {
   // ♻️ REECRITS PAR L'ETAPE 3. Les quatre temoins de caracterisation disaient :
   // deux pastilles maison, pas d'onglets · les puces « 2 jour(s) / 2 inscrit(s) »
@@ -719,7 +726,9 @@ describe('N2 · caracterisation — LE TOURNOI ET SES EQUIPES INSCRITES', () => 
     expect(textesVisibles(barre[0]).join(' ')).toContain('Gérer le tournoi');
   });
 
-  test('un lecteur qui ne gere PAS lit « Voir le tournoi », dans la barre', () => {
+  // ♻️ T-PAGES-4 (17/11, maquette (a)) : sans équipe, compétition pas publiée, le bas dit
+  // « Créer mon équipe » (avant : « Voir le tournoi »).
+  test('un lecteur qui ne gere PAS lit « Créer mon équipe », dans la barre', () => {
     const root = monter({
       auth: authPour('visiteur-1', false),
       event: buildTournoi(),
@@ -727,7 +736,7 @@ describe('N2 · caracterisation — LE TOURNOI ET SES EQUIPES INSCRITES', () => 
 
     const barre = parTestID(root, 'tournament-bottom-bar');
     expect(barre).toHaveLength(1);
-    expect(textesVisibles(barre[0]).join(' ')).toContain('Voir le tournoi');
+    expect(textesVisibles(barre[0]).join(' ')).toContain('Créer mon équipe');
   });
 
   // ♻️ REECRITS PAR L'ETAPE 5 : tout ce qui parle des EQUIPES a rejoint son
@@ -1091,7 +1100,9 @@ describe('N2 · 4E — LA BARRE DU BAS DU TOURNOI DIT CE QUE CE LECTEUR-LA PEUT 
     expect(libelleDeLaBarre(root)).toContain('Gérer le tournoi');
   });
 
-  test('2/6 — le CAPITAINE d une equipe lit « Gérer mon équipe inscrite »', () => {
+  // ♻️ T-PAGES-4 (maquette (b)) : « Voir mon équipe » remplace « Gérer mon équipe inscrite » et
+  // « Voir mon équipe inscrite ».
+  test('2/6 — le CAPITAINE d une equipe lit « Voir mon équipe »', () => {
     const root = monter({
       auth: authPour('cap-1', false),
       event: buildTournoi({
@@ -1105,17 +1116,17 @@ describe('N2 · 4E — LA BARRE DU BAS DU TOURNOI DIT CE QUE CE LECTEUR-LA PEUT 
       }),
     });
 
-    expect(libelleDeLaBarre(root)).toContain('Gérer mon équipe inscrite');
+    expect(libelleDeLaBarre(root)).toContain('Voir mon équipe');
   });
 
-  test('3/6 — un MEMBRE lit « Voir mon équipe inscrite »', () => {
+  test('3/6 — un MEMBRE lit « Voir mon équipe »', () => {
     // `u-1` est membre actif des Aigles dans la charge de reference.
     const root = monter({
       auth: authPour('u-1', false),
       event: buildTournoi(),
     });
 
-    expect(libelleDeLaBarre(root)).toContain('Voir mon équipe inscrite');
+    expect(libelleDeLaBarre(root)).toContain('Voir mon équipe');
   });
 
   test('4/6 — un INVITE lit « Répondre à mon invitation »', () => {
@@ -1154,13 +1165,23 @@ describe('N2 · 4E — LA BARRE DU BAS DU TOURNOI DIT CE QUE CE LECTEUR-LA PEUT 
     expect(libelleDeLaBarre(root)).toContain('Suivre ma demande');
   });
 
-  test('6/6 — un VISITEUR lit « Voir le tournoi »', () => {
+  // ♻️ T-PAGES-4 (maquette (a)) : un compte sans équipe lit « Créer mon équipe » tant que la
+  // compétition n'est pas publiée ; ensuite, « Voir le tournoi ».
+  test('6/6 — un compte SANS EQUIPE lit « Créer mon équipe », puis « Voir le tournoi »', () => {
     const root = monter({
       auth: authPour('inconnu-1', false),
       event: buildTournoi(),
     });
 
-    expect(libelleDeLaBarre(root)).toContain('Voir le tournoi');
+    expect(libelleDeLaBarre(root)).toContain('Créer mon équipe');
+
+    const publie = monter({
+      auth: authPour('inconnu-1', false),
+      event: buildTournoi({
+        tournamentConfig: { ...buildTournoi().tournamentConfig, competitionState: 'published' },
+      }),
+    });
+    expect(libelleDeLaBarre(publie)).toContain('Voir le tournoi');
   });
 
   test('⛔ une JOURNEE de stage n est pas un tournoi : elle garde sa barre normale', () => {
@@ -1495,11 +1516,13 @@ describe('T-FINITIONS2 — la fiche du tournoi pour qui n organise pas', () => {
     expect(contient(root, 'Inscrire une équipe du club')).toBe(true);
   });
 
-  test('🔴 a — qui ne gère pas : ni le rail ni « inscriptions à vérifier » ; le badge reste', () => {
+  // ♻️ T-PAGES-4 (17/11, A2, R11) : le badge « Compétition en brouillon » est désormais réservé
+  // à l'organisateur, comme le rail.
+  test('🔴 a — qui ne gère pas : ni le rail ni « inscriptions à vérifier », ni le badge', () => {
     const root = monter({ auth: authPour('visiteur-1', false), event: buildTournoi() });
     expect(contient(root, 'OÙ EN EST LE TOURNOI')).toBe(false);
     expect(contient(root, 'à vérifier')).toBe(false);
-    expect(contient(root, 'Compétition en brouillon')).toBe(true);
+    expect(contient(root, 'Compétition en brouillon')).toBe(false);
   });
 
   test('a caractérisant — l organisateur garde le rail', () => {
@@ -1535,14 +1558,15 @@ describe('T-FINITIONS-3 — âge minimum et catégorie du tournoi', () => {
   test('🔴 15 ans au jour du tournoi : « ouvert à partir de 16 ans », aucun bouton', () => {
     const root = monter({ auth: joueurNeLe('2011-06-01'), event: tournoi1912() });
     expect(contient(root, 'Ce tournoi est ouvert à partir de 16 ans.')).toBe(true);
-    expect(contient(root, 'Créer une équipe pour ce tournoi')).toBe(false);
+    expect(contient(root, 'Créer mon équipe')).toBe(false);
     expect(contient(root, 'Inscrire une équipe du club')).toBe(false);
   });
 
-  test('caractérisant — 18 ans, ou âge inconnu : « Créer une équipe… » reste', () => {
+  // ♻️ T-PAGES-4 (maquette (a)) : le bouton s'appelle « Créer mon équipe ».
+  test('caractérisant — 18 ans, ou âge inconnu : « Créer mon équipe » reste', () => {
     ['2008-01-01', null].forEach((birthdate) => {
       const root = monter({ auth: joueurNeLe(birthdate), event: tournoi1912() });
-      expect(contient(root, 'Créer une équipe pour ce tournoi')).toBe(true);
+      expect(contient(root, 'Créer mon équipe')).toBe(true);
       expect(contient(root, 'Ce tournoi est ouvert à partir de')).toBe(false);
     });
   });
@@ -1618,26 +1642,27 @@ describe('T-PARCOURS-2 — « Voir mon équipe » et le bouton du visiteur', () 
       },
     ],
   });
-  const CREER = 'Créer une équipe pour ce tournoi';
+  // ♻️ T-PAGES-4 (maquette (a)) : « Créer mon équipe » (avant : « … pour ce tournoi »).
+  const CREER = 'Créer mon équipe';
 
   beforeEach(() => {
     mockNavigate.mockClear();
   });
 
-  test('3 caractérisant — sans équipe : « Créer une équipe », barre « Voir le tournoi »', () => {
+  test('3 caractérisant — sans équipe : « Créer mon équipe », dans la carte et dans la barre', () => {
     const root = monter({ auth: authPour('u-777', false), event: tournoiDuServeur() });
     expect(contient(root, CREER)).toBe(true);
-    expect(libelleDeLaBarre(root)).toContain('Voir le tournoi');
+    expect(libelleDeLaBarre(root)).toContain('Créer mon équipe');
   });
 
-  test('🔴 3 — déjà membre (ligne du lecteur) : « Voir mon équipe inscrite »', () => {
+  test('🔴 3 — déjà membre (ligne du lecteur) : « Voir mon équipe »', () => {
     const root = monter({
       auth: authPour('u-777', false),
       event: tournoiDuServeur({ responseStatus: 'pending' }),
     });
     expect(contient(root, CREER)).toBe(false);
-    expect(libelleDeLaBarre(root)).toContain('Voir mon équipe inscrite');
-    appuyerSur(root, 'Voir mon équipe inscrite');
+    expect(libelleDeLaBarre(root)).toContain('Voir mon équipe');
+    appuyerSur(root, 'Voir mon équipe');
     expect(mockNavigate).toHaveBeenCalledWith('TournamentTeamDetails', {
       eventId: 'event-1', teamId: 'equipe-a',
     });
