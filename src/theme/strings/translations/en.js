@@ -13959,6 +13959,8 @@ export default {
       intro: "You're invited to join the {{team}} team for the {{event}} tournament.",
       introShort: "You're invited to join a tournament team.",
       join: 'Join the team',
+      roster_one: '{{count}} player out of {{max}}',
+      roster_other: '{{count}} players out of {{max}}',
       title: 'Join {{team}}',
     },
   },

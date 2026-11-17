@@ -14818,6 +14818,8 @@ export default {
       intro: "Tu es invité·e à rejoindre l'équipe {{team}} pour le tournoi {{event}}.",
       introShort: 'Tu es invité·e à rejoindre une équipe de tournoi.',
       join: "Rejoindre l'équipe",
+      roster_one: '{{count}} joueur sur {{max}}',
+      roster_other: '{{count}} joueurs sur {{max}}',
       title: 'Rejoindre {{team}}',
     },
   },
