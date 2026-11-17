@@ -25715,6 +25715,7 @@ export default {
     title: 'Guests',
   },
   tournamentJoin: {
+    birthdateMissing: 'Add your date of birth to your profile to join this tournament (open from {{minAge}} years old).',
     button: 'Join a team',
     hintFree: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you are in the team.',
     hintPaid: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you pay for your spot.',

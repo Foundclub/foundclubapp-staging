@@ -2,6 +2,7 @@ import i18next from 'i18next';
 
 import {
   getTournamentClosure,
+  getTournamentMinAge,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   isTooYoungForTournament,
@@ -111,6 +112,28 @@ export const canAskToJoinTournamentTeam = ({
     || isTournamentPendingMembershipStatus(team?.viewerMembership?.responseStatus)
   ));
   return !dejaDansUneEquipe && !getTournamentPendingMembershipForUser(equipes, userId);
+};
+
+/**
+ * T-PAGES-6 (17/11/2026, point 3, fait F22) — la raison de refus connue AVANT la déclaration et les
+ * cases, montrée dès le premier écran du panneau. L'âge connu sous le minimum, une équipe déjà prise
+ * et une demande en cours cachent déjà le bouton (`canAskToJoinTournamentTeam`) ; reste le compte
+ * sans date de naissance, que le serveur refuse à l'envoi (même phrase,
+ * `assertTargetUserAgeAllowed`).
+ * @param {object} params - Le contexte.
+ * @param {any} params.event - Le tournoi.
+ * @param {any} [params.user] - Le compte connecté.
+ * @returns {string} La phrase, ou une chaîne vide.
+ */
+export const getTournamentJoinBlockingNotice = ({ event, user }) => {
+  const minAge = getTournamentMinAge(event);
+  if (!minAge || !user?.documentId || String(user?.birthdate || '').trim()) return '';
+  return i18next.t(
+    'tournamentJoin.birthdateMissing',
+    'Renseigne ta date de naissance dans ton profil pour rejoindre ce tournoi (ouvert à partir de '
+      + '{{minAge}} ans).',
+    { minAge },
+  );
 };
 
 // D49 « 3- A » avec un seuil (Clément, 17/11, registre D210), mot pour mot : « si ~30 % équipes

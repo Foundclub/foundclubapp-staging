@@ -26842,6 +26842,8 @@ export default {
     title: 'Invités',
   },
   tournamentJoin: {
+    // eslint-disable-next-line max-len
+    birthdateMissing: 'Renseigne ta date de naissance dans ton profil pour rejoindre ce tournoi (ouvert à partir de {{minAge}} ans).',
     button: 'Rejoindre une équipe',
     // eslint-disable-next-line max-len
     hintFree: 'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à rejoindre ». Quand le capitaine accepte, tu es dans l’équipe.',
