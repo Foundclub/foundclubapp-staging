@@ -185,9 +185,14 @@ const total = (comptes) => Object.values(comptes).reduce((somme, n) => somme + n
 // 368 A, Adel 16/11, textes juridiques du tournoi de Montpellier : l'autorisation parentale (6)
 // et les conditions du tournoi (51) restent en français seulement. Tolérance CHIFFRÉE à ces 2
 // fichiers, la baseline (589) ne bouge pas : une ligne de plus dans l'un d'eux fait rougir.
+// D210, Clément (a la main en l'absence d'Adel), 17/11 : textes légaux du tournoi en français
+// seulement. « 368 A » élargie, même mécanisme : conditions 51 -> 52 (constante
+// ADRESSE_DU_COMPLEXE), règlement (46) et modèle d'autorisation parentale (25), T-JOUEURS / D48 A.
 const EXCEPTIONS_D78 = Object.freeze({
   'src/domains/tournoi/autorisationParentale.js': 6,
-  'src/domains/tournoi/conditionsTournoi.js': 51,
+  'src/domains/tournoi/conditionsTournoi.js': 52,
+  'src/domains/tournoi/modeleAutorisationParentale.js': 25,
+  'src/domains/tournoi/reglementTournoi.js': 46,
 });
 
 const fichiersEnHausse = (comptes, plafonds) => Object.entries(comptes)
