@@ -13914,6 +13914,7 @@ export default {
       secondary: 'Not now',
       title: 'Did you follow an invitation?',
     },
+    close: 'Close',
     club: {
       body: "You've received an invitation to join this club. Send your request?",
       primary: 'View club',
@@ -13960,12 +13961,22 @@ export default {
       title: 'Tournament invitation',
     },
     tournamentTeam: {
+      ageNotice: 'From {{minAge}} years old.',
+      ageNoticeMinor: 'From {{minAge}} years old. For players aged {{minAge}}-17, a parent fills in the consent form when paying.',
+      captainBody: 'This link is for inviting your players. Send it to them.',
+      captainTitle: "It's your team",
       closed: 'Registrations for this tournament are closed.',
       intro: "You're invited to join the {{team}} team for the {{event}} tournament.",
+      introCaptain: '{{captain}} invites you to their team {{team}}, for the {{event}} tournament.',
       introShort: "You're invited to join a tournament team.",
       join: 'Join the team',
+      memberBody: 'Your spot is paid on your team page.',
+      memberTitle: "You're already in the team",
+      openTeam: 'See my team',
       roster_one: '{{count}} player out of {{max}}',
       roster_other: '{{count}} players out of {{max}}',
+      shareLink: 'Send the link',
+      terms: 'Registration terms',
       title: 'Join {{team}}',
     },
   },
@@ -24713,6 +24724,29 @@ export default {
     count_one: '{{count}} new',
     count_other: '{{count}} new',
   },
+  // T-PAGES-6 (17/11/2026, R9): "The essentials in 6 lines", at the top of /conditions-tournoi. Follows the French
+  // text approved by Adel and app/src/domains/tournoi/conditionsTournoi.js; it must change with them.
+  tournamentConditionsSummary: {
+    autorisation: 'Parental consent',
+    back: 'Back to the tournament',
+    backSticky: 'Back to the tournament',
+    ligne1Gras: 'Saturday 19 December 2026, at AR Soccer, Montpellier.',
+    ligne1Suite: ' Check-in at 7 pm, first match at 7:30 pm, ends at 1 am at the latest.',
+    ligne2Gras: '€20 per player, paid online.',
+    ligne2Suite: ' The team is confirmed once 5 players have paid, by 10 December at 11:59 pm at the latest. Otherwise, everyone is refunded.',
+    ligne3Gras: 'From 16 years old',
+    ligne3Suite: ', reached by 19 December. For players aged 16 to 17, a parent ticks the consent box on the payment page.',
+    ligne4Gras: 'Jersey offered as a bonus',
+    ligne4Suite: ', subject to sizes and stock. It is not part of the price.',
+    ligne5Gras: 'No right of withdrawal',
+    ligne5Suite: ' (leisure activity on a fixed date). If you pull out by 5 December inclusive, you get a full refund. After that, you can hand over your spot.',
+    ligne6Gras: 'Your data',
+    ligne6Suite: ' is used to register you and to reach you on the evening of the tournament. AR Soccer is added to your favourites; you can remove it in one tap.',
+    notice: 'This summary does not replace the full terms, just below.',
+    reglement: 'Tournament rules',
+    summaryTitle: 'Contents',
+    title: 'The essentials in 6 lines',
+  },
   // ST-VUES2 (02/10) — the "Weekend results" card of "Club management" (screen 18).
   weekendResults: {
     // ST-VUES3-ORDI (03/10) — the screen 18 table on desktop.
@@ -25762,6 +25796,7 @@ export default {
     title: 'Guests',
   },
   tournamentJoin: {
+    birthdateMissing: 'Add your date of birth to your profile to join this tournament (open from {{minAge}} years old).',
     button: 'Join a team',
     hintFree: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you are in the team.',
     hintPaid: 'No team yet? Join one that is already registered: tap “Ask to join”. Once the captain accepts, you pay for your spot.',

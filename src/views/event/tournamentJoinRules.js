@@ -2,6 +2,7 @@ import i18next from 'i18next';
 
 import {
   getTournamentClosure,
+  getTournamentMinAge,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   isTooYoungForTournament,
@@ -78,6 +79,19 @@ export const getTournamentTeamPlayersLine = ({ maxRosterSize, playerCount }) => 
 };
 
 /**
+ * T-PAGES-6 (17/11/2026, question 5 de T-REJOINDRE, « C ») — le compte est-il l'organisateur de CE
+ * tournoi (`event.organizer`, même lecture que `canManageEvent` de useAuth) ? Il ne rejoint pas une
+ * équipe de son propre tournoi. Règle partagée : la fiche (T-PAGES-3 et 4) l'appelle.
+ * @param {any} event - Le tournoi.
+ * @param {any} [user] - Le compte connecté.
+ * @returns {boolean} Vrai seulement si l'organisateur est connu et que c'est ce compte.
+ */
+export const isTournamentOrganizer = (event, user) => {
+  const organizerId = String(event?.organizer?.documentId || '').trim();
+  return Boolean(organizerId) && organizerId === String(user?.documentId || '').trim();
+};
+
+/**
  * Le compte a-t-il déjà une équipe dans ce tournoi (capitaine, admin, membre actif, invitation
  * ou demande en attente) ? Extrait de `canAskToJoinTournamentTeam` (T-PAGES-2, 17/11) pour que
  * la page d'une équipe dise cette raison AVANT la déclaration (fait F22), avec la même règle.
@@ -123,7 +137,30 @@ export const canAskToJoinTournamentTeam = ({
   if (!normalizeTournamentText(event?.type?.name).includes('tournoi')) return false;
   if (getTournamentClosure(event).isClosed || event?.isActive === false) return false;
   if (isTooYoungForTournament(event, user)) return false;
+  if (isTournamentOrganizer(event, user)) return false;
   return !hasTournamentTeamForUser(teams, userId);
+};
+
+/**
+ * T-PAGES-6 (17/11/2026, point 3, fait F22) — la raison de refus connue AVANT la déclaration et les
+ * cases, montrée dès le premier écran du panneau. L'âge connu sous le minimum, une équipe
+ * déjà prise et une demande en cours cachent déjà le bouton (`canAskToJoinTournamentTeam`) ;
+ * reste le compte sans date de naissance, que le serveur refuse à l'envoi (même phrase,
+ * `assertTargetUserAgeAllowed`).
+ * @param {object} params - Le contexte.
+ * @param {any} params.event - Le tournoi.
+ * @param {any} [params.user] - Le compte connecté.
+ * @returns {string} La phrase, ou une chaîne vide.
+ */
+export const getTournamentJoinBlockingNotice = ({ event, user }) => {
+  const minAge = getTournamentMinAge(event);
+  if (!minAge || !user?.documentId || String(user?.birthdate || '').trim()) return '';
+  return i18next.t(
+    'tournamentJoin.birthdateMissing',
+    'Renseigne ta date de naissance dans ton profil pour rejoindre ce tournoi (ouvert à partir de '
+      + '{{minAge}} ans).',
+    { minAge },
+  );
 };
 
 // D49 « 3- A » avec un seuil (Clément, 17/11, registre D210), mot pour mot : « si ~30 % équipes

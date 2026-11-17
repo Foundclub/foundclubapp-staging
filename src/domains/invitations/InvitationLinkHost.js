@@ -37,7 +37,10 @@ import {
 } from '@/domains/invitations/pendingInvite';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
+import Button from '@/components/atoms/button/Button';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
+import { openTournamentTerms } from '@/views/event/components/tournamentTerms';
+import { formatEventWhenLine } from '@/views/event/eventInfoLines';
 import { getTournamentEntryFeeLabel } from '@/views/event/tournamentUtils';
 
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
@@ -50,8 +53,6 @@ import {
   createTeamMembershipRequest,
   refuseTeamInvitation,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
-
-import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
 /**
  * Les raisons qui meritent une explication a l'ecran. Les autres (« ce n'est pas
@@ -268,7 +269,7 @@ export const describeCodedTeamInvite = ({
  * dit du tournoi : « date · lieu », puis « N joueurs sur M · 20 € par joueur ». Le prix n'apparaît
  * que si le serveur le rend (`entryFeeCents`, même règle que la fiche :
  * getTournamentEntryFeeLabel).
- * AUCUNE personne : ni capitaine ni joueurs nommés (décision d'Adel en attente).
+ * Aucun joueur nommé ; le capitaine, en prénom et initiale, est dans la phrase d'intro (T-PAGES-6).
  * @param {any} preview - L'aperçu public.
  * @param {any} t - La traduction (react-i18next ou une doublure).
  * @returns {string[]} Les lignes, sans les vides.
@@ -284,9 +285,32 @@ const describeTournamentInviteDetails = (preview, t) => {
     tournamentConfig: { entryFeeCents: preview?.entryFeeCents },
   });
   return [
-    [formatDateTimeWithDayPrefix(preview?.event?.date), place].filter(Boolean).join(' · '),
+    // T-PAGES-6 (M1319, chef 17/11) : le jour et l'heure SAISIE (`startTime`), avec la règle de la
+    // fiche ; la date seule (minuit UTC) se lisait 01:00.
+    [formatEventWhenLine(preview?.event), place].filter(Boolean).join(' · '),
     [roster, fee].filter(Boolean).join(' · '),
   ].filter(Boolean);
+};
+
+/**
+ * T-PAGES-6 (17/11/2026, ajout du chef à R5) — le rappel de l'âge sous l'invitation, lu dans
+ * l'aperçu public (`minAge`) : « À partir de 16 ans. Pour les 16-17 ans, un parent remplit
+ * l'autorisation au moment de payer. » La 2ᵉ phrase n'existe que sous 18 ans.
+ * @param {any} preview - L'aperçu public.
+ * @param {any} t - La traduction.
+ * @returns {string} Le rappel, ou une chaîne vide (âge inconnu).
+ */
+const describeTournamentAgeNotice = (preview, t) => {
+  const minAge = Math.round(Number(preview?.minAge));
+  if (!Number.isFinite(minAge) || minAge <= 0) return '';
+  return minAge < 18
+    ? t(
+      'invitationLink.tournamentTeam.ageNoticeMinor',
+      "À partir de {{minAge}} ans. Pour les {{minAge}}-17 ans, un parent remplit l'autorisation "
+        + 'au moment de payer.',
+      { minAge },
+    )
+    : t('invitationLink.tournamentTeam.ageNotice', 'À partir de {{minAge}} ans.', { minAge });
 };
 
 /**
@@ -299,8 +323,11 @@ const describeTournamentInviteDetails = (preview, t) => {
  * @param {boolean} params.isSignedIn - la personne est-elle connectee ?
  * @param {any} [params.preview] - l'apercu public (tournoi, equipe, statut).
  * @param {any} params.t - la traduction (react-i18next ou une doublure).
- * @returns {{ body: string, closed: boolean, primary: string, primaryDisabled?: boolean,
- *   secondary: string, title: string }} la fenetre (`primaryDisabled` : T-FINITIONS-3).
+ * @returns {{ action: 'join' | 'none' | 'openTeam' | 'openTournament' | 'shareLink' | 'signIn',
+ *   ageNotice: string, body: string, closed: boolean, primary: string | null,
+ *   primaryDisabled?: boolean, secondary: string, secondaryAction: 'dismiss' | 'openTeam',
+ *   showTerms: boolean, title: string }} la fenetre (`primaryDisabled` : T-FINITIONS-3 ;
+ *   `action`, `ageNotice`, `showTerms` : T-PAGES-6).
  */
 export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
   const teamName = String(preview?.team?.name || '').trim();
@@ -312,6 +339,8 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
     : t('invitationLink.tournament.title', 'Invitation à un tournoi');
   if (preview?.status === 'closed') {
     return {
+      action: 'openTournament',
+      ageNotice: '',
       body: t(
         'invitationLink.tournamentTeam.closed',
         'Les inscriptions de ce tournoi sont closes.',
@@ -319,10 +348,20 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       closed: true,
       primary: t('invitationLink.tournament.primary', 'Voir le tournoi'),
       secondary: t('invitationLink.later', 'Plus tard'),
+      secondaryAction: 'dismiss',
+      showTerms: false,
       title,
     };
   }
-  const intro = teamName && eventName
+  // T-PAGES-6 (décision « 4a A ») : qui invite, en prénom et initiale (le serveur ne rend rien de
+  // plus).
+  const captainName = String(preview?.captainName || '').trim();
+  // T-PAGES-6 : sous le texte, l'âge, et le lien des conditions pour un tournoi payant.
+  const notes = {
+    ageNotice: describeTournamentAgeNotice(preview, t),
+    showTerms: Number(preview?.entryFeeCents) > 0,
+  };
+  const withTeam = teamName && eventName
     ? t(
       'invitationLink.tournamentTeam.intro',
       "Tu es invité·e à rejoindre l'équipe {{team}} pour le tournoi {{event}}.",
@@ -332,6 +371,15 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       'invitationLink.tournamentTeam.introShort',
       'Tu es invité·e à rejoindre une équipe de tournoi.',
     );
+  const intro = captainName && teamName && eventName
+    ? t(
+      'invitationLink.tournamentTeam.introCaptain',
+      "{{captain}} t'invite dans son équipe {{team}}, pour le tournoi {{event}}.",
+      {
+        ...SANS_ECHAPPEMENT, captain: captainName, event: eventName, team: teamName,
+      },
+    )
+    : withTeam;
   if (!isSignedIn) {
     // T-PARCOURS-2 (point 5) : sans compte, la fenêtre dit à quoi on est invité (une ligne par
     // information) ; tant que l'aperçu n'est pas arrivé, la phrase d'avant, sur une ligne.
@@ -341,11 +389,46 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       "Connecte-toi ou crée ton compte : l'invitation t'attendra.",
     );
     return {
+      ...notes,
+      action: 'signIn',
       body: details.length ? [intro, ...details, signIn].join('\n') : `${intro} ${signIn}`,
       closed: false,
       primary: t('invitationLink.coded.continue', 'Continuer'),
       secondary: t('invitationLink.later', 'Plus tard'),
+      secondaryAction: 'dismiss',
       title,
+    };
+  }
+  // T-PAGES-6 (R5, planche 4) : le capitaine qui ouvre son lien ne se voit plus proposer de
+  // rejoindre sa propre équipe ; le joueur déjà dedans va droit à son équipe (la place s'y paie).
+  if (preview?.viewer?.isCaptain === true) {
+    return {
+      ...notes,
+      action: 'shareLink',
+      body: t(
+        'invitationLink.tournamentTeam.captainBody',
+        'Ce lien sert à inviter tes joueurs. Envoie-le-leur.',
+      ),
+      closed: false,
+      primary: t('invitationLink.tournamentTeam.shareLink', 'Envoyer le lien'),
+      secondary: t('invitationLink.tournamentTeam.openTeam', 'Voir mon équipe'),
+      secondaryAction: 'openTeam',
+      title: t('invitationLink.tournamentTeam.captainTitle', "C'est ton équipe"),
+    };
+  }
+  if (preview?.viewer?.alreadyMember === true) {
+    return {
+      ...notes,
+      action: 'openTeam',
+      body: t(
+        'invitationLink.tournamentTeam.memberBody',
+        'Ta place se paie sur la page de ton équipe.',
+      ),
+      closed: false,
+      primary: t('invitationLink.tournamentTeam.openTeam', 'Voir mon équipe'),
+      secondary: t('invitationLink.later', 'Plus tard'),
+      secondaryAction: 'dismiss',
+      title: t('invitationLink.tournamentTeam.memberTitle', "Tu es déjà dans l'équipe"),
     };
   }
   // T-FINITIONS-3 (16/11, chef d'orchestre) : le serveur dit d'avance si rejoindre est impossible
@@ -354,18 +437,33 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
   // alors désactivé et
   // sa phrase remplace l'invitation. Sans `viewer` (serveur d'avant) : rien ne change, le serveur
   // tranche à l'appui.
-  const refus = preview?.viewer?.canJoin === false;
-  return {
-    body: refus
-      ? String(preview?.viewer?.reason || '').trim() || t(
+  // T-PAGES-6 : le refus connu d'avance est un message SEUL (plus de bouton grisé) ; sinon, un seul
+  // écran : l'invitation, la date, le lieu, les places et le prix, puis « Rejoindre l'équipe ».
+  if (preview?.viewer?.canJoin === false) {
+    return {
+      ...notes,
+      action: 'none',
+      body: String(preview?.viewer?.reason || '').trim() || t(
         'invitationLink.coded.errorBody',
         'Impossible de répondre à cette invitation pour le moment. Réessaie dans un instant.',
-      )
-      : intro,
+      ),
+      closed: false,
+      primary: null,
+      primaryDisabled: true,
+      secondary: t('invitationLink.close', 'Fermer'),
+      secondaryAction: 'dismiss',
+      title,
+    };
+  }
+  return {
+    ...notes,
+    action: 'join',
+    body: [intro, ...describeTournamentInviteDetails(preview, t)].join('\n'),
     closed: false,
     primary: t('invitationLink.tournamentTeam.join', "Rejoindre l'équipe"),
-    primaryDisabled: refus,
+    primaryDisabled: false,
     secondary: t('invitationLink.later', 'Plus tard'),
+    secondaryAction: 'dismiss',
     title,
   };
 };
@@ -527,7 +625,8 @@ function InvitationLinkHost({ userId } = {}) {
     return () => {
       isCurrent = false;
     };
-  }, [codedTournamentInvite?.code]);
+    // T-PAGES-6 : relu quand le compte arrive, pour recevoir le verdict du compte connecté.
+  }, [codedTournamentInvite?.code, isSignedIn]);
 
   const closeWindow = useCallback(() => {
     setPendingInvite(null);
@@ -695,6 +794,30 @@ function InvitationLinkHost({ userId } = {}) {
     });
   }, [closeWindow, codedTournamentInvite, goTo, isSignedIn, t, tournamentPreview?.status]);
 
+  // T-PAGES-6 (R5) : le capitaine envoie son lien ; le joueur déjà dans l'équipe ouvre sa page.
+  const openOwnTournamentTeam = useCallback(() => {
+    clearPendingInvite();
+    closeWindow();
+    goTo({
+      params: {
+        eventId: String(tournamentPreview?.event?.documentId || codedTournamentInvite?.id || ''),
+        teamId: String(tournamentPreview?.team?.documentId || ''),
+      },
+      route: RouteNames.TournamentTeamDetails,
+    });
+  }, [closeWindow, codedTournamentInvite?.id, goTo, tournamentPreview]);
+
+  const shareOwnTournamentTeamLink = useCallback(async () => {
+    // eslint-disable-next-line global-require -- chargé à l'appui, comme le partage de la fiche
+    const { shareTournamentTeamInviteLink } = require('@/services/teamInvite/teamInviteShare');
+    await shareTournamentTeamInviteLink({
+      eventId: String(tournamentPreview?.event?.documentId || codedTournamentInvite?.id || ''),
+      eventName: String(tournamentPreview?.event?.name || ''),
+      teamId: String(tournamentPreview?.team?.documentId || ''),
+      teamName: String(tournamentPreview?.team?.name || ''),
+    });
+  }, [codedTournamentInvite?.id, tournamentPreview]);
+
   const handleCodedSecondary = useCallback(async () => {
     if (isSignedIn && claimDecision?.mode === 'answer') {
       try {
@@ -768,20 +891,36 @@ function InvitationLinkHost({ userId } = {}) {
 
   if (codedTournamentInvite) {
     const coded = describeCodedTournamentInvite({ isSignedIn, preview: tournamentPreview, t });
+    /** @type {() => (void | Promise<void>)} */
+    let onPrimary = handleTournamentPrimary;
+    if (coded.action === 'openTeam') onPrimary = openOwnTournamentTeam;
+    if (coded.action === 'shareLink') onPrimary = shareOwnTournamentTeamLink;
     return (
       <GlobalPromptModal
         body={coded.body}
         eyebrow={t('invitationLink.eyebrow', 'Invitation')}
         onRequestClose={closeWindow}
-        primaryAction={{
+        primaryAction={coded.primary ? {
           disabled: coded.primaryDisabled === true,
           label: coded.primary,
-          onPress: handleTournamentPrimary,
+          onPress: onPrimary,
+        } : undefined}
+        secondaryAction={{
+          label: coded.secondary,
+          onPress: coded.secondaryAction === 'openTeam' ? openOwnTournamentTeam : handleDismiss,
         }}
-        secondaryAction={{ label: coded.secondary, onPress: handleDismiss }}
+        supportingText={coded.ageNotice || undefined}
         title={coded.title}
         visible
-      />
+      >
+        {coded.showTerms ? (
+          <Button
+            onPress={openTournamentTerms}
+            title={t('invitationLink.tournamentTeam.terms', "Conditions d'inscription")}
+            variant="SecondaryLight"
+          />
+        ) : null}
+      </GlobalPromptModal>
     );
   }
 

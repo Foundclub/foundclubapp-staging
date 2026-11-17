@@ -14,6 +14,7 @@ import { requestJoinTournamentTeam } from '@/services/tournamentTeam/tournamentT
 
 import {
   canAskToJoinTournamentTeam,
+  getTournamentJoinBlockingNotice,
   getTournamentTeamPlayersLine,
   getTournamentTeamsSeekingPlayers,
 } from '../tournamentJoinRules';
@@ -51,6 +52,22 @@ function TournamentJoinTeamPanel({ event, onRequested, teams = [] }) {
   if (!canAskToJoinTournamentTeam({
     accountRoleKey, event, teams, user: userData,
   })) return null;
+
+  // T-PAGES-6 (F22) : un refus connu d'avance se lit ici, avant la liste et la déclaration.
+  const blockingNotice = getTournamentJoinBlockingNotice({ event, user: userData });
+  if (blockingNotice) {
+    return (
+      <View style={Spaces.gap[12]} testID="tournament-join-team-panel">
+        <Text
+          accessibilityRole="alert"
+          style={[Fonts.p3, Fonts.neutral00]}
+          testID="tournament-join-team-blocked"
+        >
+          {blockingNotice}
+        </Text>
+      </View>
+    );
+  }
 
   const seekingTeams = getTournamentTeamsSeekingPlayers(teams, event?.tournamentConfig);
   // Le serveur refuse avec une phrase (âge, autre équipe…) : elle est montrée telle quelle. Sans

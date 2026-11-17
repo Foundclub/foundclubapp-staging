@@ -11,7 +11,7 @@
  */
 import { act, create } from 'react-test-renderer';
 
-import { formatDateTimeWithDayPrefix } from '@/utils/date';
+import { formatEventWhenLine } from '@/views/event/eventInfoLines';
 
 const CODE = 'Abcdefghijklmnopqrstuvwx';
 const LIEN = `https://foundclub.app/i/tournament/tournoi-1912?c=${CODE}`;
@@ -20,6 +20,10 @@ const DATE = '2026-12-19T18:00:00.000Z';
 const mockNavigate = jest.fn(() => true);
 const mockApercu = jest.fn();
 
+// T-PAGES-6 : le bouton « Conditions d'inscription » de la fenêtre (doublures, react-native est
+// simulé ici).
+jest.mock('@/components/atoms/button/Button', () => () => null);
+jest.mock('@/views/event/components/tournamentTerms', () => ({ openTournamentTerms: jest.fn() }));
 jest.mock('react-native', () => ({
   Alert: { alert: jest.fn() },
   Linking: {
@@ -106,7 +110,8 @@ describe('T-PARCOURS-2 point 5 — l invitation de tournoi ouverte SANS compte',
     const coded = describeCodedTournamentInvite({ isSignedIn: false, preview: apercu(), t });
     expect(coded.body.split('\n')).toEqual([
       INTRO,
-      `${formatDateTimeWithDayPrefix(DATE)} · AR Soccer`,
+      // T-PAGES-6 (M1319) : la règle de la fiche (jour + heure saisie).
+      `${formatEventWhenLine({ date: DATE })} · AR Soccer`,
       '3 joueurs sur 5 · 20 € par joueur',
       ATTENDRA,
     ]);
@@ -143,9 +148,11 @@ describe('T-PARCOURS-2 point 5 — l invitation de tournoi ouverte SANS compte',
     expect(coded.body).toBe(`Tu es invité·e à rejoindre une équipe de tournoi. ${ATTENDRA}`);
   });
 
-  test('caractérisant — avec un compte : la fenêtre « Rejoindre l équipe » ne change pas', () => {
+  // T-PAGES-6 (R5, un seul écran) : connecté, la fenêtre dit aussi la date, le lieu, les places et
+  // le prix, sous la même phrase d'invitation.
+  test('caractérisant — avec un compte : « Rejoindre l équipe », la même phrase en tête', () => {
     const coded = describeCodedTournamentInvite({ isSignedIn: true, preview: apercu(), t });
-    expect(coded.body).toBe(INTRO);
+    expect(coded.body.split('\n')[0]).toBe(INTRO);
     expect(coded.primary).toBe("Rejoindre l'équipe");
   });
 

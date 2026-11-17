@@ -2322,17 +2322,14 @@ function EventDetails({ navigation, route }) {
           tooYoung={tropJeunePourLeTournoi}
           ui={uiDeLaFiche}
         >
-          {/* T-REJOINDRE (D50), posé tel quel ; jamais pour l'organisateur (point 5).
-              ponytail: la garde `!canEdit` vit ici, pas dans la règle partagée (le téléphone ne
-              l'a pas) ; sortie : remplacer par la règle de tournamentJoinRules.js (T-PAGES-6)
-              à la récolte. */}
-          {!canEdit ? (
-            <TournamentJoinTeamPanel
-              event={event}
-              onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
-              teams={tournamentTeams}
-            />
-          ) : null}
+          {/* T-REJOINDRE (D50) ; jamais pour l'organisateur (point 5) : récolte du train 12
+              (chef, 17/11), la règle partagée isTournamentOrganizer (tournamentJoinRules.js,
+              T-PAGES-6) décide, dans canAskToJoinTournamentTeam du panneau. */}
+          <TournamentJoinTeamPanel
+            event={event}
+            onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
+            teams={tournamentTeams}
+          />
         </TournamentSignUpCard>
       ) : null}
       {erreurDeLaCarte ? (

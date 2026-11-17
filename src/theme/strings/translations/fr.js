@@ -14772,6 +14772,7 @@ export default {
       secondary: 'Pas maintenant',
       title: 'Tu as suivi une invitation ?',
     },
+    close: 'Fermer',
     club: {
       body: 'Tu as reçu une invitation à rejoindre ce club. Envoyer ta demande ?',
       primary: 'Voir le club',
@@ -14819,12 +14820,23 @@ export default {
       title: 'Invitation à un tournoi',
     },
     tournamentTeam: {
+      ageNotice: 'À partir de {{minAge}} ans.',
+      // eslint-disable-next-line max-len
+      ageNoticeMinor: "À partir de {{minAge}} ans. Pour les {{minAge}}-17 ans, un parent remplit l'autorisation au moment de payer.",
+      captainBody: 'Ce lien sert à inviter tes joueurs. Envoie-le-leur.',
+      captainTitle: "C'est ton équipe",
       closed: 'Les inscriptions de ce tournoi sont closes.',
       intro: "Tu es invité·e à rejoindre l'équipe {{team}} pour le tournoi {{event}}.",
+      introCaptain: "{{captain}} t'invite dans son équipe {{team}}, pour le tournoi {{event}}.",
       introShort: 'Tu es invité·e à rejoindre une équipe de tournoi.',
       join: "Rejoindre l'équipe",
+      memberBody: 'Ta place se paie sur la page de ton équipe.',
+      memberTitle: "Tu es déjà dans l'équipe",
+      openTeam: 'Voir mon équipe',
       roster_one: '{{count}} joueur sur {{max}}',
       roster_other: '{{count}} joueurs sur {{max}}',
+      shareLink: 'Envoyer le lien',
+      terms: "Conditions d'inscription",
       title: 'Rejoindre {{team}}',
     },
   },
@@ -25807,6 +25819,37 @@ export default {
     count_one: '{{count}} nouveau',
     count_other: '{{count}} nouveaux',
   },
+  // T-PAGES-6 (17/11/2026, R9) : « L'essentiel en 6 lignes », en tête de /conditions-tournoi. Texte
+  // APPROUVÉ par
+  // Adel (« 10- ok », design/PARCOURS-INSCRIPTION/RESUME-CONDITIONS-A-RELIRE.md), copié tel quel.
+  // Il SUIT
+  // app/src/domains/tournoi/conditionsTournoi.js (parties citées en « § ») et doit changer avec
+  // lui.
+  tournamentConditionsSummary: {
+    autorisation: 'Autorisation parentale',
+    back: 'Retour au tournoi',
+    backSticky: 'Revenir au tournoi',
+    ligne1Gras: 'Samedi 19 décembre 2026, à AR Soccer, Montpellier.',
+    ligne1Suite: ' Accueil à 19 h, premier match à 19 h 30, fin au plus tard à 1 h.',
+    ligne2Gras: '20 € par joueur, payé en ligne.',
+    // eslint-disable-next-line max-len
+    ligne2Suite: " L'équipe est validée quand 5 joueurs ont payé, au plus tard le 10 décembre à 23 h 59. Sinon, chacun est remboursé.",
+    ligne3Gras: 'À partir de 16 ans',
+    // eslint-disable-next-line max-len
+    ligne3Suite: ", révolus le 19 décembre. De 16 à 17 ans, un parent coche l'autorisation sur la page de paiement.",
+    ligne4Gras: 'Maillot offert en bonus',
+    ligne4Suite: ', dans la limite des tailles et des stocks. Il ne fait pas partie du prix.',
+    ligne5Gras: 'Pas de droit de rétractation',
+    // eslint-disable-next-line max-len
+    ligne5Suite: " (loisir à date fixe). Si tu te retires jusqu'au 5 décembre inclus, tu es remboursé en entier. Après, tu peux céder ta place.",
+    ligne6Gras: 'Tes données',
+    // eslint-disable-next-line max-len
+    ligne6Suite: " servent à t'inscrire et à te joindre le soir du tournoi. AR Soccer est ajouté à tes favoris ; tu peux le retirer en un geste.",
+    notice: 'Ce résumé ne remplace pas les conditions complètes, juste en dessous.',
+    reglement: 'Règlement du tournoi',
+    summaryTitle: 'Sommaire',
+    title: "L'essentiel en 6 lignes",
+  },
   // ST-VUES2 (02/10) — la carte « Résultats du week-end » de « Gestion du club » (écran 18).
   weekendResults: {
     // ST-VUES3-ORDI (03/10) — le tableau de l'écran 18 sur ordinateur.
@@ -26893,6 +26936,8 @@ export default {
     title: 'Invités',
   },
   tournamentJoin: {
+    // eslint-disable-next-line max-len
+    birthdateMissing: 'Renseigne ta date de naissance dans ton profil pour rejoindre ce tournoi (ouvert à partir de {{minAge}} ans).',
     button: 'Rejoindre une équipe',
     // eslint-disable-next-line max-len
     hintFree: 'Tu n’as pas d’équipe ? Rejoins-en une déjà inscrite : touche « Demander à rejoindre ». Quand le capitaine accepte, tu es dans l’équipe.',
@@ -27236,7 +27281,6 @@ export default {
       sizeAtPayment: 'Taille : au paiement',
       summary: 'Places payées : {{paid}}/{{needed}} pour valider l’équipe ({{amount}} par joueur).',
     },
-    // eslint-disable-next-line max-len
     playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe.',
     present: 'Présent',
     remove: 'Retirer',

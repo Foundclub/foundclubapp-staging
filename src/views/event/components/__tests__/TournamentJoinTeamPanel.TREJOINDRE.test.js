@@ -227,3 +227,26 @@ describe('T-REJOINDRE — le panneau « Rejoindre une équipe »', () => {
     expect((await monter()).toJSON()).toBeNull();
   });
 });
+
+// T-PAGES-6 (17/11/2026, point 3, fait F22 de la recette 42) — toute raison de refus connue d'avance se lit dès le
+// premier écran, AVANT la déclaration et les cases. L'âge connu sous le minimum, une équipe déjà prise et une
+// demande en cours cachent déjà le panneau (la fiche dit pourquoi) ; restait le compte SANS date de naissance, que
+// le serveur refusait seulement à la fin (« Renseigne ta date de naissance… »).
+describe('T-PAGES-6 — le refus connu d avance, dès le premier écran', () => {
+  it('🔴 compte sans date de naissance, tournoi à âge minimum : la phrase, sans bouton ni liste ni déclaration', async () => {
+    mockAuth = { accountRoleKey: 'player', userData: { documentId: 'u-sans-date' } };
+    const arbre = await monter();
+    expect(textes(arbre)).toContain(
+      'Renseigne ta date de naissance dans ton profil pour rejoindre ce tournoi (ouvert à partir de 16 ans).',
+    );
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-join-team-button' && typeof n.type === 'string')).toHaveLength(0);
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'doublure-declaration')).toHaveLength(0);
+  });
+
+  it('caractérisant : sans âge minimum, le compte sans date de naissance garde « Rejoindre une équipe »', async () => {
+    mockAuth = { accountRoleKey: 'player', userData: { documentId: 'u-sans-date' } };
+    const arbre = await monter({ event: { ...TOURNOI, tournamentConfig: { ...TOURNOI.tournamentConfig, minAge: null } } });
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-join-team-button' && typeof n.type === 'string')).toHaveLength(1);
+    expect(textes(arbre)).not.toContain('Renseigne ta date de naissance');
+  });
+});

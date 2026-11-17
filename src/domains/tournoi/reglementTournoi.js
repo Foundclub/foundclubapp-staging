@@ -40,7 +40,7 @@ export const SECTIONS_DU_REGLEMENT = Object.freeze([
   },
   {
     paragraphes: [
-      'Chaque match dure 12 min, sans mi-temps, phase finale comprise.',
+      'Chaque match dure 12 min, sans mi-temps, phase finale comprise. À 24 équipes, si le premier coup d\'envoi part après 19 h 45, les matchs de la phase de ligue durent 10 min au lieu de 12. La phase finale reste à 12 min. L\'organisateur l\'annonce au briefing des capitaines.',
       'Pas de hors-jeu. Pas de tacle glissé : faute directe. Murs, rentrées et hauteur du ballon : selon les règles d\'AR Soccer, rappelées au briefing des capitaines.',
       'Coup d\'envoi : l\'équipe nommée en premier sur le planning.',
       'Points : victoire 3, nul 1, défaite 0.',
