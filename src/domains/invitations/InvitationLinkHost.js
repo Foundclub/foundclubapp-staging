@@ -38,6 +38,7 @@ import {
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
+import { getTournamentEntryFeeLabel } from '@/views/event/tournamentUtils';
 
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { navigate, navigationRef } from '@/navigation/navigationService';
@@ -49,6 +50,8 @@ import {
   createTeamMembershipRequest,
   refuseTeamInvitation,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+
+import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
 /**
  * Les raisons qui meritent une explication a l'ecran. Les autres (« ce n'est pas
@@ -261,6 +264,32 @@ export const describeCodedTeamInvite = ({
 };
 
 /**
+ * T-PARCOURS-2 (17/11/2026, point 5, R13) — ce que l'aperçu PUBLIC d'un lien d'équipe de tournoi
+ * dit du tournoi : « date · lieu », puis « N joueurs sur M · 20 € par joueur ». Le prix n'apparaît
+ * que si le serveur le rend (`entryFeeCents`, même règle que la fiche :
+ * getTournamentEntryFeeLabel).
+ * AUCUNE personne : ni capitaine ni joueurs nommés (décision d'Adel en attente).
+ * @param {any} preview - L'aperçu public.
+ * @param {any} t - La traduction (react-i18next ou une doublure).
+ * @returns {string[]} Les lignes, sans les vides.
+ */
+const describeTournamentInviteDetails = (preview, t) => {
+  const place = String(preview?.event?.place || '').trim();
+  const count = Number(preview?.rosterCount);
+  const max = Number(preview?.maxRosterSize);
+  const roster = Number.isFinite(count) && count >= 0 && Number.isFinite(max) && max > 0
+    ? t('invitationLink.tournamentTeam.roster', '{{count}} joueurs sur {{max}}', { count, max })
+    : '';
+  const fee = getTournamentEntryFeeLabel({
+    tournamentConfig: { entryFeeCents: preview?.entryFeeCents },
+  });
+  return [
+    [formatDateTimeWithDayPrefix(preview?.event?.date), place].filter(Boolean).join(' · '),
+    [roster, fee].filter(Boolean).join(' · '),
+  ].filter(Boolean);
+};
+
+/**
  * T-INVITE (15/11/2026, Adel D37 « B ») — Decision PURE : la fenetre d'un lien d'EQUIPE DE TOURNOI
  * (`/i/tournament/<tournoi>?c=<code>`). Connecte : « Rejoindre l'equipe » (le serveur verifie club,
  * age,
@@ -304,11 +333,15 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       'Tu es invité·e à rejoindre une équipe de tournoi.',
     );
   if (!isSignedIn) {
+    // T-PARCOURS-2 (point 5) : sans compte, la fenêtre dit à quoi on est invité (une ligne par
+    // information) ; tant que l'aperçu n'est pas arrivé, la phrase d'avant, sur une ligne.
+    const details = describeTournamentInviteDetails(preview, t);
+    const signIn = t(
+      'invitationLink.coded.signIn',
+      "Connecte-toi ou crée ton compte : l'invitation t'attendra.",
+    );
     return {
-      body: `${intro} ${t(
-        'invitationLink.coded.signIn',
-        "Connecte-toi ou crée ton compte : l'invitation t'attendra.",
-      )}`,
+      body: details.length ? [intro, ...details, signIn].join('\n') : `${intro} ${signIn}`,
       closed: false,
       primary: t('invitationLink.coded.continue', 'Continuer'),
       secondary: t('invitationLink.later', 'Plus tard'),
@@ -431,6 +464,29 @@ function InvitationLinkHost({ userId } = {}) {
     if (!isSignedIn) return;
     setPendingInvite((current) => current || readPendingInvite());
   }, [isSignedIn]);
+
+  // T-PARCOURS-2, point 4 (P2-5b, planche « App 3 ») : l'invitation appartient au premier compte
+  // connecté pendant qu'elle attend (ouverte sans compte : celui qui se connecte ensuite). Sa
+  // déconnexion ou un changement de compte la vide, en mémoire et dans le magasin : le compte
+  // suivant ne se la voit plus proposer.
+  const previousUserIdRef = useRef(String(userId || ''));
+  useEffect(() => {
+    const previous = previousUserIdRef.current;
+    previousUserIdRef.current = String(userId || '');
+    if (!previous || previous === previousUserIdRef.current) return;
+    if (String(readPendingInvite()?.ownerId || '') === previous) clearPendingInvite();
+    setPendingInvite((/** @type {any} */ current) => {
+      if (String(current?.ownerId || '') !== previous) return current;
+      clearPendingInvite();
+      return null;
+    });
+  }, [userId]);
+  useEffect(() => {
+    if (!isSignedIn || !pendingInvite || pendingInvite.ownerId) return;
+    const owned = { ...pendingInvite, ownerId: String(userId) };
+    savePendingInvite(owned);
+    setPendingInvite(owned);
+  }, [isSignedIn, pendingInvite, userId]);
 
   // INVIT2 — un lien d'equipe AVEC code : l'apercu (public) nomme l'invitant et
   // l'equipe ; connecte, `claim` dit ce que la personne peut faire.
@@ -594,6 +650,11 @@ function InvitationLinkHost({ userId } = {}) {
     if (!isSignedIn) {
       // 🔒 Comme le lien d'equipe : on NE L'EFFACE PAS, l'invitation attend le compte (I7).
       closeWindow();
+      // T-PARCOURS-2 (point 5, R13) : « Continuer » ouvre la connexion ; avant, la fenêtre se
+      // fermait sur l'Accueil du visiteur et il fallait chercher « Profil » (app-P2-02).
+      navigate(RouteNames.PublicAuthStack, {
+        params: { source: 'tournament-team-invite' }, screen: RouteNames.Login,
+      });
       return;
     }
     if (tournamentPreview?.status === 'closed') {

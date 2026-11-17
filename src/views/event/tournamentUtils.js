@@ -215,15 +215,36 @@ export const getTournamentStatusCounters = (teams = [], tournamentConfig = {}) =
   warning: 0,
 });
 
+/**
+ * T-PARCOURS-2 (17/11, point 3) — LA LIGNE DU LECTEUR dans une équipe de tournoi. Personne n'a
+ * `tournament-team-member.find` : le serveur retire `members` de la fiche et rend, par équipe, le
+ * statut du lecteur seul (`viewerMembership`). Sans elle, la fiche proposait « Créer une équipe »
+ * à qui en avait déjà une. Une charge qui porte encore `members` reste lue comme avant.
+ * @param {any} team - L'équipe du tournoi.
+ * @param {string} [userDocumentId] - Le compte connecté.
+ * @param {(status: any) => boolean} [matchesStatus] - Le statut attendu (tous, par défaut).
+ * @returns {any} Sa ligne (`responseStatus`), ou null.
+ */
+export const getTournamentViewerMember = (
+  team,
+  userDocumentId = '',
+  matchesStatus = () => true,
+) => {
+  if (!userDocumentId) return null;
+  const members = Array.isArray(team?.members) ? team.members : [];
+  const row = members.find((/** @type {any} */ member) => (
+    member?.user?.documentId === userDocumentId && matchesStatus(member?.responseStatus)
+  ));
+  if (row) return row;
+  const viewer = team?.viewerMembership;
+  return viewer?.responseStatus && matchesStatus(viewer.responseStatus) ? viewer : null;
+};
+
 export const getTournamentPendingMembershipForUser = (teams = [], userDocumentId = '') => {
   if (!userDocumentId) return null;
 
   return (Array.isArray(teams) ? teams : []).find((team) => (
-    Array.isArray(team?.members)
-    && team.members.some((member) => (
-      member?.user?.documentId === userDocumentId
-      && isTournamentPendingMembershipStatus(member?.responseStatus)
-    ))
+    getTournamentViewerMember(team, userDocumentId, isTournamentPendingMembershipStatus)
   )) || null;
 };
 
@@ -497,6 +518,22 @@ export const isTournamentTeamOpenToJoinRequests = (team) => {
   if (normalizeTournamentText(team?.sourceType) !== 'custom_team') return false;
   if (team?.isOpenToJoinRequests !== true) return false;
   return !['archived', 'declined'].includes(normalizeTournamentText(team?.status));
+};
+
+// T-PARCOURS-2, point 1 (17/11) : le prix d un tournoi payant, par joueur, au format de la carte
+// d equipe (TournamentMemberPlace : « 20 € par joueur ») ; `null` sur un tournoi gratuit.
+/**
+ * Le prix par joueur d un tournoi payant, ou `null`.
+ * @param {any} event - le tournoi.
+ * @returns {string | null}
+ */
+export const getTournamentEntryFeeLabel = (event) => {
+  const fee = Math.round(Number(event?.tournamentConfig?.entryFeeCents));
+  if (!Number.isFinite(fee) || fee <= 0) return null;
+  return i18next.t('tournamentUtils.entryFeePerPlayer', {
+    amount: `${(fee / 100).toLocaleString('fr-FR')} €`,
+    defaultValue: '{{amount}} par joueur',
+  });
 };
 
 // T-FINITIONS-3, ajout du chef (17/11, recette 41) — le serveur (tournament-payment.js

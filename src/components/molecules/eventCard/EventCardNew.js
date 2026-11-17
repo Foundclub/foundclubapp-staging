@@ -1082,7 +1082,10 @@ function EventCardNew({
 
         {/* CTA - Interactive (Captures touches) */}
         {/* PARENT-PLANNING (06/10) — l evenement de l enfant se LIT, il ne se repond pas. */}
-        {!isShareMode && !readOnly ? (
+        {/* T-PARCOURS-2 (17/11, recette 42) — un tournoi n'a pas de « Participer » : on s'y inscrit
+            par une équipe, depuis la fiche (comme la fiche depuis T-FINITIONS-3). Les deux boutons
+            de l'organisateur (Valider / Refuser) restent. */}
+        {!isShareMode && !readOnly && !(isTournamentEvent && !(onValidate && onRefuse)) ? (
           <View pointerEvents="auto" style={styles.ctaContainer}>
             {renderCtaContent()}
           </View>

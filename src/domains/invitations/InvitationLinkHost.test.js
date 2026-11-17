@@ -596,6 +596,42 @@ describe('INVIT2 — un lien d equipe AVEC code : qui invite, et repondre en un 
     expect(mockClaim).toHaveBeenCalledWith(CODE);
   });
 
+  // T-PARCOURS-2, point 4 (tournée du 17/11, P2-5b ; planche « App 3 ») : l'invitation ouverte par
+  // le 777 restait en mémoire et revenait au 666 après déconnexion / connexion.
+  it('T-PARCOURS-2 — ouverte connectée : vidée à la déconnexion', async () => {
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    const tree = await monterAvec('compte-777');
+    expect(lastModalProps.visible).toBe(true);
+
+    await act(async () => {
+      tree.update(<InvitationLinkHost userId={undefined} />);
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(mockClearPendingInvite).toHaveBeenCalled();
+    expect(lastModalProps.visible).toBe(false);
+
+    mockClaim.mockClear();
+    await act(async () => {
+      tree.update(<InvitationLinkHost userId="compte-666" />);
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(lastModalProps.visible).toBe(false);
+    expect(mockClaim).not.toHaveBeenCalled();
+  });
+
+  it('T-PARCOURS-2 — ouverte sans compte : au premier compte connecté', async () => {
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    const tree = await monterAvec(undefined);
+    await act(async () => {
+      tree.update(<InvitationLinkHost userId="compte-777" />);
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(lastModalProps.visible).toBe(true);
+    expect(mockSavePendingInvite)
+      .toHaveBeenLastCalledWith(expect.objectContaining({ code: CODE, ownerId: 'compte-777' }));
+    expect(mockClearPendingInvite).not.toHaveBeenCalled();
+  });
+
   it('INVIT3 — compte existant : l invitation revient sans rouvrir le lien', async () => {
     mockGetInitialURL.mockResolvedValue(URL_CODEE);
     const tree = await monterAvec(undefined);

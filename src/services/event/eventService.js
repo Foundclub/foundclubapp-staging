@@ -853,6 +853,11 @@ const COMPACT_EVENT_CARD_FIELDS = [
   'stageStartDate',
   'startTime',
   'totalPlayers',
+  // T-PARCOURS-2 (17/11, point 8) — l'âge minimum d'un tournoi (`tournamentConfig.minAge`) :
+  // `EventCardNew` en fait « À partir de 16 ans » (getTournamentCategoryLabel) ; sans lui, la
+  // carte du Planning gardait « Sénior (+18 ans) ».
+  // Temoin : eventService.compactEVTAUTREPLAN.test.js.
+  'tournamentConfig',
 ];
 
 const REQUEST_HUB_EVENT_FIELDS = [
