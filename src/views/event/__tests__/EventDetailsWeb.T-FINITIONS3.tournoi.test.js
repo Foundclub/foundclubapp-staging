@@ -486,3 +486,23 @@ test('T-PARCOURS2 (10) caractérisant — dès qu un bloc y est rendu, la colonn
   expect(organisateur.props.style.display).toBe('grid');
   expect(organisateur.children).not.toBeNull();
 });
+
+// T-PARCOURS-2 (point 3) — le site lit la même ligne du lecteur que le téléphone (`viewerMembership`,
+// règle partagée getTournamentViewerMember) : le serveur ne rend plus `members` sur la fiche.
+const equipeDuLecteur = (/** @type {any} */ viewerMembership) => tournoiAutonome({
+  tournamentTeams: [{
+    documentId: 'equipe-a', name: 'Les Aigles', sourceType: 'custom', status: 'accepted', viewerMembership,
+  }],
+});
+
+test('T-PARCOURS2 (3) site — déjà membre : « Voir mon équipe », plus « Inscrire mon équipe »', () => {
+  const boutons = tousLesBoutons(monter(equipeDuLecteur({ responseStatus: 'pending' })));
+  expect(boutons).toContain('Voir mon équipe');
+  expect(boutons).not.toContain('Inscrire mon équipe');
+});
+
+test('T-PARCOURS2 (3) site caractérisant — sans ligne du lecteur : « Inscrire mon équipe »', () => {
+  const boutons = tousLesBoutons(monter(equipeDuLecteur(null)));
+  expect(boutons).toContain('Inscrire mon équipe');
+  expect(boutons).not.toContain('Voir mon équipe');
+});
