@@ -48,3 +48,42 @@ describe('D48 A — le règlement du tournoi', () => {
     expect(conditions).toContain('CM2C, 49 rue de Ponthieu, 75008 Paris');
   });
 });
+
+// D48, 3e tache (17/11, chef FoundClub) — LE MODÈLE D'AUTORISATION PARENTALE PAPIER, sous le
+// règlement (`#autorisation`) ; l'adresse du complexe en UN seul endroit du code.
+describe('D48 — le modèle d\'autorisation parentale', () => {
+  // eslint-disable-next-line global-require
+  const modele = () => require('../modeleAutorisationParentale');
+  // eslint-disable-next-line global-require
+  const conditions = () => require('../conditionsTournoi');
+  // (PARAGRAPHES_DES_CONDITIONS : l'import du haut, le même module.)
+
+  test('le titre, et rien de pré-rempli ni de commentaire pour le lot', () => {
+    const { BLOCS_DE_L_AUTORISATION, TITRE_DE_L_AUTORISATION } = modele();
+    expect(TITRE_DE_L_AUTORISATION)
+      .toBe('Autorisation parentale — Tournoi FoundClub x AR Soccer du 19 décembre 2026');
+    const texte = BLOCS_DE_L_AUTORISATION.map((bloc) => bloc.texte || '').join('\n');
+    expect(texte).not.toMatch(/<!--|-->|Note pour le lot|<br>|\*\*/);
+    expect(texte).toContain('Signature du parent ou du représentant légal :');
+    expect(BLOCS_DE_L_AUTORISATION.filter((bloc) => bloc.genre === 'signature')).toHaveLength(1);
+  });
+
+  test('l\'adresse du complexe vient de la constante unique, dans les trois textes', () => {
+    const { ADRESSE_DU_COMPLEXE } = conditions();
+    expect(ADRESSE_DU_COMPLEXE).toBe('119 rue de la Rauze basse, 34070 Montpellier');
+    const textes = {
+      autorisation: modele().BLOCS_DE_L_AUTORISATION.map((bloc) => bloc.texte || '').join('\n'),
+      conditions: PARAGRAPHES_DES_CONDITIONS.join('\n'),
+      reglement: SECTIONS_DU_REGLEMENT.flatMap((section) => section.paragraphes).join('\n'),
+    };
+    Object.values(textes).forEach((texte) => expect(texte).toContain(ADRESSE_DU_COMPLEXE));
+    // Écrite une seule fois dans le code : les trois fichiers la lisent.
+    const fs = jest.requireActual('fs');
+    const path = jest.requireActual('path');
+    const ecrite = ['conditionsTournoi.js', 'reglementTournoi.js', 'modeleAutorisationParentale.js']
+      .map((fichier) => fs.readFileSync(path.join(__dirname, '..', fichier), 'utf8'))
+      .join('\n')
+      .split(ADRESSE_DU_COMPLEXE).length - 1;
+    expect(ecrite).toBe(1);
+  });
+});

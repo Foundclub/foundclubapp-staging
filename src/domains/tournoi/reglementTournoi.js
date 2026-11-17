@@ -4,9 +4,11 @@
  * (`/conditions-tournoi#reglement`) : un seul lien donne tout. Source : `pilotage/tournoi-mtp/REGLEMENT.md` (v3,
  * 15/11, dépôt méthode ace3971c du 17/11, qui porte déjà les 2 retouches du chef du tournoi : la phrase sur les
  * points entre crochets retirée, « Murs, rentrées et hauteur du ballon » tranché), recopiée telle quelle, gras et
- * puces retirés. Aucun crochet ne reste.
+ * puces retirés. Aucun crochet ne reste. L'adresse du complexe : ADRESSE_DU_COMPLEXE (conditionsTournoi.js).
  * ⚠️ Une virgule changée ici change la page publiée. Témoin : __tests__/D48-reglement-et-autorisation.test.js.
  */
+
+import { ADRESSE_DU_COMPLEXE } from './conditionsTournoi';
 
 /** La ligne de titre du règlement, affichée sous « Règlement du tournoi ». */
 export const EN_TETE_DU_REGLEMENT = 'Règlement du tournoi FoundClub x AR Soccer — samedi 19 décembre 2026, à partir de 19 h (v3, 15/11)';
@@ -18,7 +20,7 @@ export const EN_TETE_DU_REGLEMENT = 'Règlement du tournoi FoundClub x AR Soccer
 export const SECTIONS_DU_REGLEMENT = Object.freeze([
   {
     paragraphes: [
-      'Organisé par FoundClub, à AR Soccer (119 rue de la Rauze basse, 34070 Montpellier), sur 3 terrains en salle. Chaque joueur accepte ce règlement en s\'inscrivant.',
+      `Organisé par FoundClub, à AR Soccer (${ADRESSE_DU_COMPLEXE}), sur 3 terrains en salle. Chaque joueur accepte ce règlement en s'inscrivant.`,
       'Horaire : accueil à 19 h ; briefing des capitaines à 19 h 20 ; premier coup d\'envoi à 19 h 30 ; fin de la phase de ligue vers 22 h 45 (20 équipes) ou 23 h 15 (24 équipes) ; finale vers 23 h 45 (20 équipes) ou 0 h 15 (24 équipes), puis la remise des prix. Fin au plus tard à 1 h. Le planning exact de chaque équipe est publié sur FoundClub avant le tournoi.',
     ],
     titre: null,
