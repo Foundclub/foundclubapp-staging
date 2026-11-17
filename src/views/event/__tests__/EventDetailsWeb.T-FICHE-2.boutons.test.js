@@ -296,11 +296,12 @@ const lignesInfosRapides = (arbre) => {
   return grille.children.map((/** @type {any} */ ligne) => texte(ligne.children[0]));
 };
 
-test('tournoi à équipes libres : « Inscrire mon équipe » plein en tête, « Participer » en contour', () => {
+// T-FINITIONS-3 (16/11, règle (a) du chef d'orchestre) remplace « Participer en contour » (14/11) : sur un tournoi,
+// plus de demande de participation d'événement (le serveur la refuse). Voir EventDetailsWeb.T-FINITIONS3.tournoi.
+test('tournoi à équipes libres : « Inscrire mon équipe » plein en tête, et plus de « Participer » (T-FINITIONS-3)', () => {
   const arbre = monter(tournoiAutonome());
   expect(boutonsMonStatut(arbre)).toEqual([
     ['Inscrire mon équipe', 'plein'],
-    ['Participer', 'contour'],
   ]);
 });
 
@@ -346,9 +347,9 @@ test('membre actif (pas capitaine) : « Voir mon équipe » ouvre son équipe', 
   expect(mockNavigate).toHaveBeenCalledWith(expect.any(String), { eventId: 'event-1', teamId: 'equipe-amis' });
 });
 
-test('tournoi SANS équipes libres : rien ne change, « Participer » seul et plein', () => {
+test('tournoi SANS équipes libres : aucun bouton dans « Mon statut » (plus de « Participer », T-FINITIONS-3)', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCustomTeams: false } }));
-  expect(boutonsMonStatut(arbre)).toEqual([['Participer', 'plein']]);
+  expect(boutonsMonStatut(arbre)).toEqual([]);
 });
 
 test('match d équipe : rien ne change, « Participer » seul et plein', () => {
@@ -375,10 +376,9 @@ test('« Infos rapides » d un match d équipe : la ligne « Section » reste, a
 // ==========================================================================
 const VISITEUR_ANONYME = { ...JOUEUR, userData: null };
 
-test('visiteur, tournoi à équipes libres : « Inscrire mon équipe » plein, « Se connecter pour participer » en contour', () => {
+test('visiteur, tournoi à équipes libres : « Inscrire mon équipe » plein, seul (T-FINITIONS-3)', () => {
   expect(boutonsMonStatut(monter(tournoiAutonome(), VISITEUR_ANONYME))).toEqual([
     ['Inscrire mon équipe', 'plein'],
-    ['Se connecter pour participer', 'contour'],
   ]);
 });
 
@@ -393,9 +393,9 @@ test('visiteur : « Inscrire mon équipe » ouvre la connexion (tunnel de Partic
   expect(mockFeuilleEquipe).not.toHaveBeenCalledWith('name');
 });
 
-test('visiteur, tournoi SANS équipes libres : rien ne change', () => {
+test('visiteur, tournoi SANS équipes libres : aucun bouton (plus de « Se connecter pour participer », T-FINITIONS-3)', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCustomTeams: false } }), VISITEUR_ANONYME);
-  expect(boutonsMonStatut(arbre)).toEqual([['Se connecter pour participer', 'plein']]);
+  expect(boutonsMonStatut(arbre)).toEqual([]);
 });
 
 test('visiteur, match d équipe : rien ne change', () => {
@@ -419,8 +419,9 @@ test('« Mode tournoi » : l équipe du club s inscrit par « Inscrire une équi
 
 // T-FICHE-2, suite 2 (chef d'orchestre, Q2 « B », 14/11) : « Se connecter pour participer » demande
 // lui aussi le retour sur la fiche ; son texte, sa place et son tunnel ne changent pas.
+// T-FINITIONS-3 : le bouton n'existe plus sur un tournoi ; son tunnel se prouve sur un match d'équipe (même action).
 test('visiteur : « Se connecter pour participer » ouvre la connexion et demande le retour sur la fiche', () => {
-  const arbre = monter(tournoiAutonome(), VISITEUR_ANONYME);
+  const arbre = monter(MATCH_EQUIPE, VISITEUR_ANONYME);
   cliquer(arbre, 'Se connecter pour participer');
   expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {
     params: expect.objectContaining({

@@ -1,5 +1,7 @@
 import i18next from 'i18next';
 
+import { computeAge } from '@/domains/playerCard/cardModel';
+
 export const normalizeTournamentText = (value = '') => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -333,4 +335,97 @@ export const canRegisterSourceTeamToTournament = (event, sourceTeam) => {
   const eventClubId = String(event?.club?.documentId || '').trim();
   const teamClubId = String(sourceTeam?.club?.documentId || '').trim();
   return !eventClubId || !teamClubId || eventClubId === teamClubId;
+};
+
+// T-FINITIONS-3 (16/11, tournoi du 19/12) — L AGE MINIMUM D UN TOURNOI (`tournamentConfig.minAge`),
+// lu comme le
+// serveur (admin tournament-team.js `getTournamentConfig` et `assertTargetUserAgeAllowed`) : un
+// nombre > 0, l age
+// compte AU JOUR DU TOURNOI. Age inconnu : rien ne change ici, le serveur tranche (« renseigne ta
+// date »).
+/**
+ * L age minimum du tournoi.
+ * @param {any} event - le tournoi.
+ * @returns {number | null} l age minimum, ou `null` sans regle.
+ */
+export const getTournamentMinAge = (event) => {
+  const minAge = Number(event?.tournamentConfig?.minAge);
+  return minAge > 0 ? Math.round(minAge) : null;
+};
+
+/**
+ * Le compte est-il trop jeune pour ce tournoi ?
+ * @param {any} event - le tournoi.
+ * @param {any} user - le compte (`birthdate`).
+ * @returns {boolean} vrai seulement si l age est connu et sous `minAge` au jour du tournoi.
+ */
+export const isTooYoungForTournament = (event, user) => {
+  const minAge = getTournamentMinAge(event);
+  if (!minAge) return false;
+  const jour = event?.date ? new Date(event.date) : new Date();
+  const age = computeAge(user?.birthdate, Number.isNaN(jour.getTime()) ? new Date() : jour);
+  return age !== null && age < minAge;
+};
+
+/**
+ * La phrase montree a la place des boutons d inscription.
+ * @param {any} event - le tournoi.
+ * @returns {string}
+ */
+export const getTournamentAgeNotice = (event) => i18next.t(
+  'tournamentUtils.openFromAge',
+  'Ce tournoi est ouvert à partir de {{minAge}} ans.',
+  { minAge: getTournamentMinAge(event) },
+);
+
+/**
+ * « A partir de {minAge} ans » remplace l age de la categorie (« Sénior (+18 ans) ») quand le
+ * tournoi a un age
+ * minimum ; sinon la categorie reste.
+ * @param {any} event - le tournoi.
+ * @param {string | null | undefined} categoryLabel - le nom de la categorie.
+ * @returns {string | null | undefined}
+ */
+export const getTournamentCategoryLabel = (event, categoryLabel) => {
+  const minAge = getTournamentMinAge(event);
+  return minAge
+    ? i18next.t('tournamentUtils.fromAge', 'À partir de {{minAge}} ans', { minAge })
+    : categoryLabel;
+};
+
+/**
+ * Une equipe que le joueur seul peut demander a rejoindre (meme regle que le serveur `requestJoin`)
+ * : equipe
+ * ephemere, ouverte aux demandes, ni refusee ni archivee. Regle unique de l app et du site.
+ * @param {any} team - l equipe du tournoi.
+ * @returns {boolean}
+ */
+export const isTournamentTeamOpenToJoinRequests = (team) => {
+  if (!team?.documentId) return false;
+  if (normalizeTournamentText(team?.sourceType) !== 'custom_team') return false;
+  if (team?.isOpenToJoinRequests !== true) return false;
+  return !['archived', 'declined'].includes(normalizeTournamentText(team?.status));
+};
+
+// T-FINITIONS-3, ajout du chef (17/11, recette 41) — le serveur (tournament-payment.js
+// `recountTeam`) valide une equipe `pending` d un tournoi PAYANT (`entryFeeCents` > 0) quand ses
+// places payees atteignent `paidMembersToValidate` (5 par defaut), quel que soit
+// `registrationMode` ; « auto » la valide a la creation.
+/**
+ * La regle de validation d un tournoi payant en mode manuel, ou `null` (le libelle d avant reste).
+ * @param {any} event - le tournoi.
+ * @returns {string | null}
+ */
+export const getTournamentPaidValidationLabel = (event) => {
+  const config = event?.tournamentConfig || {};
+  if (config.registrationMode === 'auto') return null;
+  const fee = Math.round(Number(config.entryFeeCents));
+  if (!Number.isFinite(fee) || fee <= 0) return null;
+  const seuil = Math.round(Number(config.paidMembersToValidate));
+  const count = Number.isFinite(seuil) && seuil > 0 ? seuil : 5;
+  return i18next.t('tournamentUtils.validatedAtPaid', {
+    count,
+    defaultValue_one: 'Équipe validée au 1er joueur payé',
+    defaultValue_other: 'Équipe validée au {{count}}ᵉ joueur payé',
+  });
 };

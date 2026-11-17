@@ -270,8 +270,8 @@ export const describeCodedTeamInvite = ({
  * @param {boolean} params.isSignedIn - la personne est-elle connectee ?
  * @param {any} [params.preview] - l'apercu public (tournoi, equipe, statut).
  * @param {any} params.t - la traduction (react-i18next ou une doublure).
- * @returns {{ body: string, closed: boolean, primary: string, secondary: string, title: string }}
- * la fenetre.
+ * @returns {{ body: string, closed: boolean, primary: string, primaryDisabled?: boolean,
+ *   secondary: string, title: string }} la fenetre (`primaryDisabled` : T-FINITIONS-3).
  */
 export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
   const teamName = String(preview?.team?.name || '').trim();
@@ -315,10 +315,23 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       title,
     };
   }
+  // T-FINITIONS-3 (16/11, chef d'orchestre) : le serveur dit d'avance si rejoindre est impossible
+  // (`viewer`, envoyé à
+  // un compte connecté : autre équipe du tournoi, effectif plein, âge) ; « Rejoindre l'équipe » est
+  // alors désactivé et
+  // sa phrase remplace l'invitation. Sans `viewer` (serveur d'avant) : rien ne change, le serveur
+  // tranche à l'appui.
+  const refus = preview?.viewer?.canJoin === false;
   return {
-    body: intro,
+    body: refus
+      ? String(preview?.viewer?.reason || '').trim() || t(
+        'invitationLink.coded.errorBody',
+        'Impossible de répondre à cette invitation pour le moment. Réessaie dans un instant.',
+      )
+      : intro,
     closed: false,
     primary: t('invitationLink.tournamentTeam.join', "Rejoindre l'équipe"),
+    primaryDisabled: refus,
     secondary: t('invitationLink.later', 'Plus tard'),
     title,
   };
@@ -699,7 +712,11 @@ function InvitationLinkHost({ userId } = {}) {
         body={coded.body}
         eyebrow={t('invitationLink.eyebrow', 'Invitation')}
         onRequestClose={closeWindow}
-        primaryAction={{ label: coded.primary, onPress: handleTournamentPrimary }}
+        primaryAction={{
+          disabled: coded.primaryDisabled === true,
+          label: coded.primary,
+          onPress: handleTournamentPrimary,
+        }}
         secondaryAction={{ label: coded.secondary, onPress: handleDismiss }}
         title={coded.title}
         visible
