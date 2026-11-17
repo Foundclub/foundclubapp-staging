@@ -2561,9 +2561,12 @@ function EventDetails({ navigation, route }) {
                       >
                         {/* CORR-EVENEMENTS 126 : le serveur ne valide seul que les membres des
                             équipes conviées ; extérieurs et enfants attendent l'organisateur. */}
-                        {event.validationMode === 'manual'
-                          ? t('eventDetails.validationPill.manual', 'Validation manuelle')
-                          : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes')}
+                        {/* T-PARCOURS-2 (point 9) : un tournoi payant suit la règle du bloc
+                            « Mode tournoi » (équipe validée au seuil payé). */}
+                        {(isTournamentEvent && getTournamentPaidValidationLabel(event))
+                          || (event.validationMode === 'manual'
+                            ? t('eventDetails.validationPill.manual', 'Validation manuelle')
+                            : t('eventDetails.validationPill.auto', 'Validation auto pour les membres des équipes'))}
                       </span>
                     ) : null}
                     {/* REPRISE-EVENEMENTS 123 : un réglage d'organisateur. */}

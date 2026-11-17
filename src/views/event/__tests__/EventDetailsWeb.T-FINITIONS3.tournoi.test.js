@@ -404,3 +404,24 @@ test('T-F3 validation caractérisant — gratuit en « manual » : « Manuelle �
   mounted = null;
   expect(ligneValidation(monter(tournoiRegle({ entryFeeCents: 2000, registrationMode: 'auto' })))).toContain('Automatique');
 });
+
+// ==========================================================================
+// T-PARCOURS-2 (17/11, recette 42) — restes de T-FINITIONS-3 sur la fiche du SITE.
+// ==========================================================================
+const pastilles = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'span'
+  && n.props?.style?.borderRadius === 999).map(texte);
+const PAYANT = { entryFeeCents: 2000, registrationMode: 'manual' };
+
+test('🔴 T-PARCOURS2 (9) — tournoi payant : la pastille du haut dit « Équipe validée au 5ᵉ joueur payé »', () => {
+  const arbre = monter(tournoiAutonome({ tournamentConfig: PAYANT, validationMode: 'manual' }));
+  expect(pastilles(arbre)).toContain('Équipe validée au 5ᵉ joueur payé');
+  expect(pastilles(arbre)).not.toContain('Validation manuelle');
+});
+
+test('T-PARCOURS2 (9) caractérisant — tournoi gratuit en « manual », ou match : « Validation manuelle » reste', () => {
+  const gratuit = monter(tournoiAutonome({ tournamentConfig: { registrationMode: 'manual' }, validationMode: 'manual' }));
+  expect(pastilles(gratuit)).toContain('Validation manuelle');
+  act(() => mounted.unmount());
+  mounted = null;
+  expect(pastilles(monter({ ...MATCH_EQUIPE, validationMode: 'manual' }))).toContain('Validation manuelle');
+});
