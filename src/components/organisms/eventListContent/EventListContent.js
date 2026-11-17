@@ -62,6 +62,7 @@ import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutat
 import { OwnAnswerAction, resolveOwnAnswerAction } from '@/views/event/ownAnswerAction';
 import { useEnTeteDeRecherche } from '@/views/search/components/enTeteDeRecherche';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
@@ -911,9 +912,13 @@ function EventListContent({
       return;
     }
     eventListLogger.debug('Navigating to event détails', { eventDocumentId: event.documentId });
-    navigation.navigate(RouteNames.EventStack, {
+    // T-PAGES-4 (17/11, recette 44) : un visiteur sans compte est dans la pile publique
+    // (PublicMainNavigator), sans `EventStack` ; la fiche y est un écran direct. L'appui ne
+    // faisait rien. La même aide que la liste de clubs.
+    navigateToStackScreenOrScreen(navigation, {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
+      stack: RouteNames.EventStack,
     });
   }, [navigation]);
 

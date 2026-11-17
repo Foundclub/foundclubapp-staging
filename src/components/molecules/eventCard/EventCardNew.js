@@ -34,6 +34,11 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureCardTag from '@/components/molecules/facilityClosure/FacilityClosureCardTag';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
+import {
+  getTournamentRegisteredTeamsCount,
+  getTournamentTeamsCapacity,
+  getTournamentTeamsLine,
+} from '@/views/event/tournamentTeamsCount';
 import { getTournamentCategoryLabel } from '@/views/event/tournamentUtils';
 
 import {
@@ -381,20 +386,34 @@ const resolveTypeInfoText = ({
 /**
  * Jauge de places : inscrits/capacité, équipes pour un tournoi.
  * @param {any} eventItem - Événement affiché.
- * @param {{ isReservation: boolean, isTournamentEvent: boolean }} kind - Nature de l'événement.
- * @returns {{ taken: number, total: number, unit: string } | null} - Jauge ou null.
+ * @param {{ isOrganizer?: boolean, isReservation: boolean, isTournamentEvent: boolean }} kind -
+ *   Nature de l'événement, et si le lecteur organise ce tournoi.
+ * @returns {{ line?: string, taken: number, total: number, unit: string } | null} - Jauge, ou
+ *   seulement sa phrase (`line`), ou null.
  */
-const resolveCapacityGauge = (eventItem, { isReservation, isTournamentEvent }) => {
+const resolveCapacityGauge = (eventItem, {
+  isOrganizer = false, isReservation, isTournamentEvent,
+}) => {
   if (isReservation) {
     const total = Number(eventItem?.totalPlayers || 0);
     if (!total) return null;
     return { taken: Number(eventItem?.currentPlayers || 0), total, unit: '' };
   }
   if (isTournamentEvent) {
-    const total = Number(eventItem?.tournamentConfig?.maxTeams || 0);
+    // T-PAGES-4 (17/11, « 4- A », recette 44) : qui n'organise pas le tournoi lit la phrase de
+    // la règle, jamais une jauge : « 24 équipes attendues » sous le seuil des 30 %, puis
+    // « N équipes inscrites sur 24 » (les INSCRITES, résumé du serveur). L'organisateur garde la
+    // jauge du vrai nombre. La carte disait « 0 / 24 » (les équipes reçues, aucune pour un
+    // visiteur) alors que 6 étaient inscrites.
+    const total = getTournamentTeamsCapacity(eventItem);
     if (!total) return null;
+    if (!isOrganizer) {
+      return {
+        line: getTournamentTeamsLine(eventItem) || '', taken: 0, total, unit: '',
+      };
+    }
     return {
-      taken: (eventItem?.tournamentTeams || []).length,
+      taken: Number(getTournamentRegisteredTeamsCount(eventItem)),
       total,
       unit: i18next.t('eventCardNew.teamsUnit', ' équipes'),
     };
@@ -627,9 +646,15 @@ function EventCardNew({
       .filter((value, index, values) => value && values.indexOf(value) === index)
       .join(' • ')
     : defaultSecondaryTitle;
+  // T-PAGES-4 (17/11, recette 44) : sur un tournoi, la catégorie et la section étaient écrites
+  // deux fois sous le titre (sous-titre, puis cette ligne) : un morceau déjà dit n'est pas redit.
+  const morceauxDuSousTitre = String(secondaryTitle || '').split(' • ').filter(Boolean);
   const teamMetaLine = isTeamFocusedCard
     ? [typeName, matchContextLabel, defaultTeamMetaLine].filter(Boolean).join(' • ')
-    : defaultTeamMetaLine;
+    : defaultTeamMetaLine
+      .split(' • ')
+      .filter((morceau) => morceau && !(isTournamentEvent && morceauxDuSousTitre.includes(morceau)))
+      .join(' • ');
 
   const facilityAccentColor = useFacilityAccentColor
     ? resolveFacilityPlanningColor(item?.facility)
@@ -655,19 +680,30 @@ function EventCardNew({
     timeLabel = format(new Date(item.date), 'HH:mm');
   }
 
+  // T-PAGES-4 : l'encart d'un tournoi ne redit pas ce que les lignes du titre disent déjà.
+  const tournoiDejaDit = isTournamentEvent && Boolean(tournamentMetaName)
+    && tournamentMetaName.split(' • ').every((morceau) => (
+      morceauxDuSousTitre.includes(morceau) || teamMetaLine.split(' • ').includes(morceau)
+    ));
   const typeInfoText = resolveTypeInfoText({
     eventItem: item,
     matchContextLabel,
     matchOpponent: stripMatchPrefix(eventTitle),
-    tournamentMetaName,
+    tournamentMetaName: tournoiDejaDit ? '' : tournamentMetaName,
     typeName,
   });
-  const capacityGauge = resolveCapacityGauge(item, { isReservation, isTournamentEvent });
+  const capacityGauge = resolveCapacityGauge(item, {
+    isOrganizer: Boolean(isTournamentEvent && canManageEvent?.(item)),
+    isReservation,
+    isTournamentEvent,
+  });
   const gaugeRatio = capacityGauge
     ? Math.min(1, Math.max(0, capacityGauge.taken / capacityGauge.total))
     : 0;
   let gaugeCountLabel = '';
-  if (capacityGauge) {
+  if (capacityGauge?.line) {
+    gaugeCountLabel = capacityGauge.line;
+  } else if (capacityGauge) {
     if (isReservation && isShared && missingPlayers > 0) {
       const countSuffix = `(${currentPlayers}/${totalPlayers})`;
       gaugeCountLabel = t(
@@ -1020,8 +1056,15 @@ function EventCardNew({
             </View>
           ) : null}
 
+          {/* T-PAGES-4 : sous le seuil, la phrase seule (« 24 équipes attendues »), sans jauge. */}
+          {capacityGauge?.line ? (
+            <Text style={[styles.gaugeLabel, { color: Colors.neutral200 }]}>
+              {capacityGauge.line}
+            </Text>
+          ) : null}
+
           {/* Jauge de places */}
-          {capacityGauge ? (
+          {capacityGauge && !capacityGauge.line ? (
             <View style={styles.gaugeBlock}>
               <View style={styles.gaugeLabelsRow}>
                 <Text style={[styles.gaugeLabel, { color: Colors.neutral200 }]}>Places</Text>

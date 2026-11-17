@@ -334,7 +334,9 @@ describe('EventCardNew — déclinaison par type (handoff 3b)', () => {
     expect(getBackgroundSource(tree)).toBe('image-eventCardTournament');
     const texts = textsOf(tree);
     expect(texts).toContain('Football • Masculine • Sénior');
-    expect(texts).toContain('12 / 16 équipes');
+    // ♻️ T-PAGES-4 (17/11, « 4- A ») : qui n'organise pas lit la phrase de la règle des 30 %
+    // (« N équipes inscrites sur M »), plus la jauge « 12 / 16 équipes ».
+    expect(texts).toContain('12 équipes inscrites sur 16');
   });
 
   it('stage : chip warning, fond stage, encart description tarif', () => {
