@@ -1,8 +1,7 @@
 /* eslint-disable max-len -- les libellés et les témoins se lisent en entier. */
 import renderer, { act } from 'react-test-renderer';
 
-// ===================================================================});
-
+// ==========================================================================
 // T-FINITIONS-3 (16/11, tournoi Montpellier du 19/12) — la fiche du tournoi sur le SITE.
 // Règles du chef d'orchestre (16/11) :
 // (a) sur un tournoi, ni « Participer » (demande d'événement ordinaire), ni le bloc « Participants »
@@ -519,6 +518,7 @@ test('T-PARCOURS2 (3) site caractérisant — sans ligne du lecteur : « Inscrir
   expect(boutons).toContain('Inscrire mon équipe');
   expect(boutons).not.toContain('Voir mon équipe');
 });
+
 
 // --- T-REJOINDRE (17/11, décisions de Clément, registre D210) -------------------------------------------
 // D49 : le visiteur sans compte ne reçoit pas les équipes ; il lit le résumé public
