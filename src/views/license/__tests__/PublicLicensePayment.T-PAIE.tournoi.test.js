@@ -101,8 +101,8 @@ describe('T-PAIE — page publique d une place de tournoi', () => {
 
   test('🔴 campagne `tournament` : le bouton Stripe est là et lance Stripe', () => {
     monter(placeDeTournoi());
-    expect(titres()).toContain('Payer ma place');
-    const bouton = mockBoutons.find((props) => props.title === 'Payer ma place');
+    expect(titres()).toContain('Payer 20 € par carte');
+    const bouton = mockBoutons.find((props) => props.title === 'Payer 20 € par carte');
     act(() => bouton.onPress());
     expect(mockMutation.mutate).toHaveBeenCalledWith('stripe', expect.anything());
   });
@@ -111,7 +111,7 @@ describe('T-PAIE — page publique d une place de tournoi', () => {
     monter(placeDeTournoi());
     const contenu = texte();
     expect(contenu).toContain(MENTION);
-    expect(contenu.indexOf(MENTION)).toBeLessThan(contenu.indexOf('[Payer ma place]'));
+    expect(contenu.indexOf(MENTION)).toBeLessThan(contenu.indexOf('[Payer 20 € par carte]'));
     expect(titres()).toContain("Conditions d'inscription");
   });
 
@@ -119,7 +119,7 @@ describe('T-PAIE — page publique d une place de tournoi', () => {
     monter({
       ...placeDeTournoi(), campaignType: 'license', paymentModes: { external_link: true, stripe: true }, tournament: undefined,
     });
-    expect(titres()).not.toContain('Payer ma place');
+    expect(titres()).not.toContain('Payer 20 € par carte');
     expect(texte()).not.toContain(MENTION);
     expect(titres()).toContain('Ouvrir le lien externe du club');
   });
@@ -131,7 +131,7 @@ describe('T-PAIE — page publique d une place de tournoi', () => {
     const contenu = texte();
     expect(contenu).toContain('Place payée');
     expect(contenu).toContain('Les Rapides');
-    expect(titres()).not.toContain('Payer ma place');
+    expect(titres()).not.toContain('Payer 20 € par carte');
     const fiche = mockBoutons.find((props) => props.title === 'Voir la fiche du tournoi');
     expect(fiche).toBeTruthy();
     act(() => fiche.onPress());
@@ -153,13 +153,17 @@ describe('T-FINITIONS2 — le reçu et les textes de la page de paiement', () =>
   afterEach(() => act(() => arbre.unmount()));
   test('🔴 « Statut » du reçu : « Émis », jamais « issued » ; « proposé » accentué', () => {
     mockBoutons.length = 0;
+    // T-PARCOURS-1 (17/11, R8) : « Choisis le moyen proposé par le club » est le texte d'une COTISATION ; une place
+    // de tournoi ne l'écrit plus. L'accent se lit donc sur une cotisation.
     mockPaiement = placeDeTournoi({
+      campaignType: 'license',
       receipts: [{
         amountCents: 2000, documentId: 'r1', number: 'FC-2026-87981-000416', status: 'issued',
       }],
       remainingCents: 0,
       status: 'paid',
       totalPaidCents: 2000,
+      tournament: undefined,
     });
     act(() => {
       arbre = renderer.create(<PublicLicensePayment navigation={{ navigate: jest.fn() }} route={{ params: { token: 'tok' } }} />);

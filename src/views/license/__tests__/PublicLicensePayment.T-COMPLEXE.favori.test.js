@@ -100,7 +100,7 @@ describe('T-COMPLEXE — la phrase du favori sur la page de paiement d une place
     }));
     const contenu = texte();
     expect(contenu).toContain(PHRASE);
-    expect(contenu.indexOf(PHRASE)).toBeLessThan(contenu.indexOf('[Payer ma place]'));
+    expect(contenu.indexOf(PHRASE)).toBeLessThan(contenu.indexOf('[Payer 20 € par carte]'));
   });
 
   test('sans complexe (champ absent ou null), licence, place déjà payée : aucune phrase', () => {

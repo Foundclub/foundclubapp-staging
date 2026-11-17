@@ -105,7 +105,7 @@ describe('T-PARENT — autorisation parentale sur la page de paiement d une plac
   const texte = () => JSON.stringify(arbre.toJSON());
   // Deux mutations par rendu, dans l'ordre de la page : le paiement, puis la déclaration hors app.
   const checkout = () => mockOptions.at(-2);
-  const payer = () => mockBoutons.filter((props) => props.title === 'Payer ma place').at(-1);
+  const payer = () => mockBoutons.filter((props) => props.title === 'Payer 20 € par carte').at(-1);
   const champ = (/** @type {string} */ id) => arbre.root.find((/** @type {any} */ node) => node.props.testID === id && (node.props.onPress || node.props.onChangeText));
   const saisir = (/** @type {string} */ id, /** @type {string} */ valeur) => act(() => champ(id).props.onChangeText(valeur));
   const toucher = (/** @type {string} */ id) => act(() => champ(id).props.onPress());
@@ -130,7 +130,7 @@ describe('T-PARENT — autorisation parentale sur la page de paiement d une plac
     expect(contenu).toContain('Autorisation parentale');
     expect(contenu).toContain('pas de contre-indication');
     expect(contenu).toContain('appeler les secours');
-    expect(contenu.indexOf('Autorisation parentale')).toBeLessThan(contenu.indexOf('[Payer ma place]'));
+    expect(contenu.indexOf('Autorisation parentale')).toBeLessThan(contenu.indexOf('[Payer 20 € par carte]'));
     expect(champ('parental-consent-image').props.accessibilityState).toEqual({ checked: false });
   });
 

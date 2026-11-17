@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Platform, ScrollView, Text, View,
+  Image, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,7 +28,7 @@ function Login({ navigation }) {
   const [phone, setPhone] = useState('');
   // hooks
   const {
-    Alignments, Fonts, Images, Spaces,
+    Alignments, ApplicationStyle, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -145,14 +145,25 @@ function Login({ navigation }) {
           ) : null}
           {/* CORR-INSCRIPTION p12 (consigne d'Adel) : un petit bouton en bas, qui bascule sur
               « Crée ton compte », à la place du séparateur « OU » et du gros bouton. */}
+          {/* T-PARCOURS-1 (17/11, R7) : un lien qui revient à la ligne. Le bouton (hauteur
+              fixe, une ligne) coupait le libellé à 375 sur le site, qui ne rétrécit pas la
+              police : « Créer ton com… ». */}
           {canShowCodeButton ? null : (
-            <Button
+            <TouchableOpacity
+              accessibilityRole="button"
               disabled={otpMutation.isPending}
               onPress={handleGoToRegister}
-              style={Alignments.fullWidth}
-              title={t('login.actions.noAccount')}
-              variant="Ghost"
-            />
+              style={[
+                Alignments.fullWidth,
+                Alignments.alignCenter,
+                Alignments.justifyCenter,
+                { minHeight: 44 },
+              ]}
+            >
+              <Text style={[Fonts.p1Bold, ApplicationStyle.buttonTextGhost, Fonts.textCenter]}>
+                {t('login.actions.noAccount')}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>
