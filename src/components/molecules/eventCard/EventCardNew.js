@@ -391,7 +391,9 @@ const resolveTypeInfoText = ({
  * @returns {{ line?: string, taken: number, total: number, unit: string } | null} - Jauge, ou
  *   seulement sa phrase (`line`), ou null.
  */
-const resolveCapacityGauge = (eventItem, { isOrganizer = false, isReservation, isTournamentEvent }) => {
+const resolveCapacityGauge = (eventItem, {
+  isOrganizer = false, isReservation, isTournamentEvent,
+}) => {
   if (isReservation) {
     const total = Number(eventItem?.totalPlayers || 0);
     if (!total) return null;

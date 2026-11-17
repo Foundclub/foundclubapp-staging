@@ -38,7 +38,7 @@ export const getTournamentRegisteredTeamsCount = (event) => {
     return Math.round(Number(resume));
   }
   if (!Array.isArray(event?.tournamentTeams)) return null;
-  return event.tournamentTeams.filter((team) => (
+  return event.tournamentTeams.filter((/** @type {any} */ team) => (
     team && !team.archivedAt
     && STATUTS_INSCRITS.includes(String(team.status || 'pending').toLowerCase())
   )).length;

@@ -164,7 +164,7 @@ describe('EventCardNew — T-PAGES-4, la carte d un tournoi (recette 44)', () =>
     expect(texte).not.toContain('/ 24');
   });
 
-  test('🔴 1 — l organisateur garde la jauge, au vrai nombre des inscrites (6, pas 0 validée)', () => {
+  test('🔴 1 — l organisateur garde la jauge, au nombre des inscrites (6, pas 0 validée)', () => {
     mockCanManageEvent.mockReturnValue(true);
     const texte = textsOf(renderCard({ item: TOURNOI() }));
     mockCanManageEvent.mockReturnValue(false);

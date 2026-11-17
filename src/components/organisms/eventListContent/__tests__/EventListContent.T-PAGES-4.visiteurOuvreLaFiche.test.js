@@ -213,7 +213,7 @@ const TOURNOI = {
 };
 
 describe('EventListContent — T-PAGES-4, le visiteur ouvre la fiche du tournoi', () => {
-  test('🔴 sans compte, toucher la carte ouvre la fiche publique (EventDetails), pas EventStack', () => {
+  test('🔴 sans compte, toucher la carte ouvre la fiche publique, pas EventStack', () => {
     act(() => {
       monte = renderer.create(<EventListContent events={[TOURNOI]} />);
     });
