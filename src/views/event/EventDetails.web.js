@@ -62,6 +62,7 @@ import {
   formatTournamentPlayersShortList,
   getTournamentAgeNotice,
   getTournamentClosure,
+  getTournamentMembersSummaryLine,
   getTournamentEntryFeeLabel,
   getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
