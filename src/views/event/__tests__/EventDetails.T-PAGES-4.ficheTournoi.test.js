@@ -1140,7 +1140,7 @@ describe('T-PAGES-4 · chef 1 — « Mon équipe » : payer sa place, discussion
       },
     };
     const root = monter(LECTEURS.membre());
-    const [payer] = parTestID(root, 'tournament-fiche-my-team-pay');
+    const [payer] = parTestID(root, 'tournament-fiche-my-team-pay')[0].findAllByType(TouchableOpacity);
     act(() => {
       payer.props.onPress();
     });

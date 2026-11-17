@@ -79,13 +79,15 @@ function TournamentFicheMyTeamCard({
         />
       ) : null}
       {payer ? (
-        <Button
-          onPress={() => LinksPlatform.openUrl(maPlace.paymentUrl)}
-          style={{ minHeight: 44 }}
-          testID="tournament-fiche-my-team-pay"
-          title={t('tournamentTeamDetails.places.payMine', 'Payer ma place')}
-          variant="Primary"
-        />
+        // L'identifiant des témoins sur une enveloppe : le bouton commun ne le déclare pas.
+        <View testID="tournament-fiche-my-team-pay">
+          <Button
+            onPress={() => LinksPlatform.openUrl(maPlace.paymentUrl)}
+            style={{ minHeight: 44 }}
+            title={t('tournamentTeamDetails.places.payMine', 'Payer ma place')}
+            variant="Primary"
+          />
+        </View>
       ) : null}
       {action ? (
         <Button

@@ -117,13 +117,15 @@ export function TournamentBeforeSignUpCard({ event, onOpenTerms, title }) {
         );
       })}
       {payant ? (
-        <Button
-          onPress={onOpenTerms}
-          style={{ minHeight: 44 }}
-          testID="event-tournament-terms-link"
-          title={t('tournamentFicheWeb.before.termsLink')}
-          variant="SecondaryLight"
-        />
+        // L'identifiant des témoins sur une enveloppe : le bouton commun ne le déclare pas.
+        <View testID="event-tournament-terms-link">
+          <Button
+            onPress={onOpenTerms}
+            style={{ minHeight: 44 }}
+            title={t('tournamentFicheWeb.before.termsLink')}
+            variant="SecondaryLight"
+          />
+        </View>
       ) : null}
     </View>
   );

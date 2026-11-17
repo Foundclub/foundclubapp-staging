@@ -8779,7 +8779,11 @@ function EventDetails({ navigation, route }) {
             {renderTournamentEssentials()}
             {renderTournamentActionsPanel()}
             {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte.
-                T-PAGES-4 (point 5, tranché C) : jamais pour l'organisateur du tournoi. */}
+                T-PAGES-4 (point 5, tranché C) : jamais pour l'organisateur du tournoi.
+                ponytail: garde locale (`canEdit`, la lecture de canManageEvent) ; la règle
+                partagée isTournamentOrganizer de T-PAGES-6 (tournamentJoinRules.js, branche
+                fix/T-PAGES-6-app, non fusionnée ici) ne lit que `event.organizer`. Sortie : la
+                récolte unifie, puis TournamentJoinTeamPanel suffit seul. */}
             {isTournamentEvent && !isStageDayEvent && !canEdit ? (
               <TournamentJoinTeamPanel
                 event={event}
