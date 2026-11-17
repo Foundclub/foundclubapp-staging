@@ -24,6 +24,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { formatEuros } from '@/domains/complexe/complexeTerrain';
 import { canSeeClubAudience } from '@/domains/event/clubAudience';
 import {
   isMatchTypeName,
@@ -209,6 +210,8 @@ import MatchBilanCard from './components/MatchBilanCard';
 import MonMatchCard from './components/MonMatchCard';
 import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
+import TournamentEssentials, { getTournamentEssentials } from './components/TournamentEssentials';
+import TournamentFicheMyTeamCard from './components/TournamentFicheMyTeamCard';
 import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
@@ -242,6 +245,7 @@ import {
   getTournamentAgeNotice,
   getTournamentCategoryLabel,
   getTournamentClosure,
+  getTournamentEntryFeeLabel,
   getTournamentMemberBuckets,
   getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
@@ -1245,7 +1249,9 @@ function EventDetails({ navigation, route }) {
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
     && !currentUserTournamentTeam
-    && !currentUserPendingTournamentTeam,
+    && !currentUserPendingTournamentTeam
+    // T-PAGES-4 (R11) : un capitaine que la fiche ne connaît que par `captainUser`.
+    && !managedTournamentTeam,
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
@@ -1254,6 +1260,7 @@ function EventDetails({ navigation, route }) {
     && !tropJeunePourLeTournoi
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
+    && !managedTournamentTeam
     && availableTournamentSourceTeams.length > 0,
   );
   // T-FINITIONS-3 : la règle vit dans tournamentUtils (le site montre les mêmes équipes « Ouverte
@@ -1332,6 +1339,24 @@ function EventDetails({ navigation, route }) {
     externalMatchDisplay?.title,
   ]);
   const canEdit = Boolean(canManageEvent(event));
+  // T-PAGES-4 (17/11, décision d'Adel « 4- A ») — le nombre d'équipes, avec le seuil des 30 %
+  // de T-REJOINDRE, pour TOUT lecteur qui n'est pas l'organisateur : « 24 équipes attendues »,
+  // puis « N équipes inscrites sur 24 ». Le résumé du serveur s'il est là (visiteur), sinon le
+  // même compte que le serveur (en attente + validées, hors archivées). L'organisateur garde ses
+  // vrais nombres.
+  const ligneEquipesDuTournoi = isTournamentEvent && !canEdit
+    ? getTournamentVisitorTeamsLine(event?.tournamentTeamsSummary ? event : {
+      ...event,
+      tournamentTeamsSummary: {
+        registeredCount: tournamentTeamCounters.accepted + tournamentTeamCounters.pending,
+      },
+    })
+    : null;
+  // T-PAGES-4 (maquette (b), R4) — l'équipe du lecteur : capitaine, membre, invité ou demandeur.
+  const equipeDuLecteurAuTournoi = managedTournamentTeam
+    || currentUserTournamentTeam
+    || currentUserPendingTournamentTeam
+    || null;
   const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(event || {}), [event]);
   const canManageTrainingVisibility = Boolean(canEdit && trainingOpenConfig.isTraining);
   const eventClubId = event?.team?.club?.documentId || event?.club?.documentId || '';
@@ -5936,12 +5961,15 @@ function EventDetails({ navigation, route }) {
         {
           label: withTabCount(
             t('eventDetails.tabs.teams', 'Équipes'),
-            estVisiteurDuTournoi ? NaN : tournamentTeams.length,
+            canEdit ? tournamentTeams.length : NaN,
           ),
           value: 'tournamentTeams',
         },
         {
-          label: withTabCount(t('eventDetails.tabs.people', 'Personnes'), tournamentPeopleCount),
+          label: withTabCount(
+            t('eventDetails.tabs.people', 'Personnes'),
+            estVisiteurDuTournoi ? NaN : tournamentPeopleCount,
+          ),
           value: 'participants',
         },
       ];
@@ -5950,6 +5978,7 @@ function EventDetails({ navigation, route }) {
     return [];
   }, [
     acceptedPeopleCount,
+    canEdit,
     estVisiteurDuTournoi,
     isDetectionEvent,
     isMatchEvent,
@@ -7205,7 +7234,10 @@ function EventDetails({ navigation, route }) {
    * ⛔ AUCUN LIBELLE N'EST INVENTE ICI : les six existaient deja dans le
    * panneau de tete. C'est un DEPLACEMENT, pas un elargissement de droits —
    * les conditions sont reprises telles quelles, dans le meme ordre.
-   * @returns {{ onPress: () => void, title: string } | null}
+   * T-PAGES-4 (17/11, maquettes (a) et (b)) : « Voir mon équipe » pour le capitaine et le membre ;
+   * « Créer mon équipe », avec le prix, pour qui peut en créer une tant que la compétition n'est
+   * pas publiée ; rien pour le trop jeune. Ensuite, « Voir le tournoi » reste la porte du déroulé.
+   * @returns {{ note?: string | null, onPress: () => void, title: string } | null}
    */
   const getTournamentPrimaryAction = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
@@ -7236,14 +7268,14 @@ function EventDetails({ navigation, route }) {
     if (managedTournamentTeam?.documentId) {
       return {
         onPress: () => handleOpenTournamentTeam(managedTournamentTeam.documentId),
-        title: t('eventDetails.manageMyRegisteredTeam', 'Gérer mon équipe inscrite'),
+        title: t('eventDetails.seeMyTeam', 'Voir mon équipe'),
       };
     }
 
     if (currentUserTournamentTeam?.documentId) {
       return {
         onPress: () => handleOpenTournamentTeam(currentUserTournamentTeam.documentId),
-        title: t('eventDetails.seeMyRegisteredTeam', 'Voir mon équipe inscrite'),
+        title: t('eventDetails.seeMyTeam', 'Voir mon équipe'),
       };
     }
 
@@ -7265,10 +7297,64 @@ function EventDetails({ navigation, route }) {
       };
     }
 
+    const competitionPubliee = event?.tournamentConfig?.competitionState === 'published';
+    if (!competitionPubliee && tropJeunePourLeTournoi) return null;
+    if (!competitionPubliee && canCreateCustomTournamentTeam) {
+      return {
+        note: getTournamentEntryFeeLabel(event),
+        onPress: () => setIsTournamentCreateModalVisible(true),
+        title: t('eventDetails.createMyTeam', 'Créer mon équipe'),
+      };
+    }
+
     return {
       onPress: handleOpenTournamentManagement,
       title: t('eventDetails.seeTheTournament', 'Voir le tournoi'),
     };
+  };
+
+  // T-PAGES-4 (17/11) — L'essentiel en cases (brique de T-PAGES-A), pour tous les lecteurs.
+  // T-PAGES-4 (R10) : « Ensuite : invite 4 joueurs, chacun paie 20 €. » (rien si gratuit).
+  const prixDUnePlace = Number(tournamentConfig?.entryFeeCents) > 0
+    ? formatEuros(Number(tournamentConfig.entryFeeCents) / 100)
+    : '';
+  const coequipiersAInviter = Number(tournamentConfig?.maxRosterSize) - 1;
+  let ligneEnsuiteDeLaCreation = '';
+  if (prixDUnePlace) {
+    ligneEnsuiteDeLaCreation = coequipiersAInviter > 0
+      ? t('eventDetails.createMyTeamNext', { count: coequipiersAInviter, prix: prixDUnePlace })
+      : t('eventDetails.createMyTeamNextAnyPlayers', { prix: prixDUnePlace });
+  }
+
+  const renderTournamentEssentials = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+    const capacite = Math.round(Number(tournamentConfig?.maxTeams));
+    // ponytail: la case Format dit « 24 équipes au plus » ; pour qui n'est pas l'organisateur,
+    // ce morceau devient la ligne du seuil des 30 % (« 4- A »), par remplacement du texte rendu
+    // par la brique. Limite : suit le libellé `tournamentEssentials.maxTeams`. Sortie : une
+    // propriété `teamsLine` dans TournamentEssentials (fichier de T-PAGES-A).
+    const auPlus = capacite > 0 ? t('tournamentEssentials.maxTeams', { count: capacite }) : '';
+    const items = getTournamentEssentials(event).map((item) => (
+      item.key === 'format' && ligneEquipesDuTournoi && auPlus ? {
+        ...item,
+        note: item.note ? item.note.replace(auPlus, ligneEquipesDuTournoi) : item.note,
+        value: item.value.replace(auPlus, ligneEquipesDuTournoi),
+      } : item
+    ));
+    return <TournamentEssentials items={items} />;
+  };
+
+  // T-PAGES-4 (maquette (b), R4) — « Mon équipe » en tête, pour qui a une équipe dans le tournoi.
+  const renderTournamentMyTeamCard = () => {
+    if (!isTournamentEvent || isStageDayEvent || canEdit) return null;
+    if (!equipeDuLecteurAuTournoi?.documentId) return null;
+    return (
+      <TournamentFicheMyTeamCard
+        action={getTournamentPrimaryAction()}
+        team={equipeDuLecteurAuTournoi}
+        tournamentConfig={tournamentConfig}
+      />
+    );
   };
 
   // T-FINITIONS (16/11) : le joueur lit les conditions AVANT de s'inscrire (tournoi payant seul).
@@ -7286,9 +7372,16 @@ function EventDetails({ navigation, route }) {
 
   const renderTournamentActionsPanel = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
+    // T-PAGES-4 (maquette (a)) : la carte « Ton inscription ».
+    const surtitre = (
+      <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+        {t('eventDetails.yourRegistration', 'Ton inscription')}
+      </Text>
+    );
     if (tropJeunePourLeTournoi) {
       return (
-        <View style={tournamentDs.styles.panelCard}>
+        <View style={tournamentDs.styles.panelCard} testID="tournament-registration-card">
+          {surtitre}
           <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.neutral00]}>
             {getTournamentAgeNotice(event)}
           </Text>
@@ -7300,39 +7393,38 @@ function EventDetails({ navigation, route }) {
     // hors de portee du pouce, et invisibles des qu'on avait defile.
     // ⛔ Il ne reste ici que les deux gestes d'INSCRIPTION.
     if (!canRegisterTournamentSourceTeam && !canCreateCustomTournamentTeam) return null;
+    const prix = getTournamentEntryFeeLabel(event);
+    const regle = getTournamentPaidValidationLabel(event);
 
     return (
-      <View style={[Spaces.gap[12]]}>
-        <View
-          style={[
-            ApplicationStyle.backgroundColor.primary700,
-            ApplicationStyle.borderRadius24,
-            Spaces.paddingHorizontal[16],
-            Spaces.paddingVertical[16],
-            Spaces.gap[12],
-            {
-              borderColor: withAlpha(Colors.primary500, 0.27),
-              borderWidth: 1,
-              overflow: 'hidden',
-            },
-          ]}
-        >
-          {canRegisterTournamentSourceTeam ? (
-            <Button
-              onPress={() => setIsTournamentRegisterModalVisible(true)}
-              title={t('eventDetails.registerAClubTeam', 'Inscrire une équipe du club')}
-              variant="Secondary"
-            />
-          ) : null}
-
-          {canCreateCustomTournamentTeam ? (
-            <Button
-              onPress={() => setIsTournamentCreateModalVisible(true)}
-              title={t('eventDetails.createATeamForThis', 'Créer une équipe pour ce tournoi')}
-              variant="Secondary"
-            />
-          ) : null}
+      <View style={tournamentDs.styles.panelCard} testID="tournament-registration-card">
+        <View style={Spaces.gap[4]}>
+          {surtitre}
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('eventDetails.registerYourTeam', 'Inscris ton équipe')}
+          </Text>
         </View>
+        {prix ? <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{prix}</Text> : null}
+        {regle ? <Text style={[Fonts.p3, Fonts.neutral200]}>{regle}</Text> : null}
+        {/* Le seul bouton principal de la carte : « Créer mon équipe » (le même geste que le
+            bouton du bas). L'équipe du club, pour l'entraîneur du club organisateur, reste
+            secondaire (maquette (a), variante). */}
+        {canCreateCustomTournamentTeam ? (
+          <Button
+            onPress={() => setIsTournamentCreateModalVisible(true)}
+            style={{ minHeight: 44 }}
+            title={t('eventDetails.createMyTeam', 'Créer mon équipe')}
+            variant="Primary"
+          />
+        ) : null}
+        {canRegisterTournamentSourceTeam ? (
+          <Button
+            onPress={() => setIsTournamentRegisterModalVisible(true)}
+            style={{ minHeight: 44 }}
+            title={t('eventDetails.registerAClubTeam', 'Inscrire une équipe du club')}
+            variant="Secondary"
+          />
+        ) : null}
       </View>
     );
   };
@@ -7456,6 +7548,21 @@ function EventDetails({ navigation, route }) {
       tournamentFormatLabel = 'Phase finale directe';
     } else if (event?.tournamentConfig?.formatMode === 'round_robin') {
       tournamentFormatLabel = 'Championnat';
+    }
+    // T-PAGES-4 (17/11, A2, R11) : la carte « TOURNOI » (brouillon, compteurs, validation,
+    // points), le rail et « Ma réponse au tournoi » sont des outils d'organisateur. Le joueur
+    // garde le format et le règlement écrit.
+    if (!canEdit) {
+      return (
+        <View style={tournamentDs.styles.panelCard} testID="tournament-player-rules">
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{tournamentFormatLabel}</Text>
+          {event?.tournamentConfig?.rulesText ? (
+            <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20 }]}>
+              {event.tournamentConfig.rulesText}
+            </Text>
+          ) : null}
+        </View>
+      );
     }
     const isCompetitionPublished = event?.tournamentConfig?.competitionState === 'published';
     const competitionStateLabel = isCompetitionPublished
@@ -7760,9 +7867,8 @@ function EventDetails({ navigation, route }) {
 
     return (
       <View style={Spaces.gap[16]}>
-        {renderTournamentActionsPanel()}
-        {renderTournamentTermsLink()}
-
+        {/* T-PAGES-4 : le panneau d'inscription et les conditions ne sont plus montés une 2ᵉ fois
+            ici ; ils sont en haut de la fiche. */}
         <View style={tournamentDs.styles.panelCard}>
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
@@ -7773,7 +7879,7 @@ function EventDetails({ navigation, route }) {
                 style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}
                 testID="event-tournament-teams-summary"
               >
-                {estVisiteurDuTournoi ? ligneEquipesDuVisiteur : teamsSummary}
+                {canEdit ? teamsSummary : ligneEquipesDuTournoi}
               </Text>
             </View>
             {tournamentTeamCounters.warning > 0 ? (
@@ -7792,7 +7898,7 @@ function EventDetails({ navigation, route }) {
 
         </View>
 
-        {tournamentTeams.length === 0 && !estVisiteurDuTournoi ? (
+        {tournamentTeams.length === 0 && canEdit ? (
           <View style={tournamentDs.styles.panelCard}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t(
@@ -8004,10 +8110,18 @@ function EventDetails({ navigation, route }) {
       if (!primaryAction) return null;
 
       return (
-        <View testID="tournament-bottom-bar">
+        <View
+          style={primaryAction.note
+            ? [Alignments.row, Alignments.alignCenter, Spaces.gap[12]]
+            : null}
+          testID="tournament-bottom-bar"
+        >
+          {primaryAction.note ? (
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{primaryAction.note}</Text>
+          ) : null}
           <Button
             onPress={primaryAction.onPress}
-            style={{ height: 52 }}
+            style={primaryAction.note ? { flex: 1, height: 52 } : { height: 52 }}
             title={primaryAction.title}
             variant="Primary"
           />
@@ -8567,9 +8681,13 @@ function EventDetails({ navigation, route }) {
             {openTrainingPublicLine ? (
               <Text style={[Fonts.p3, Fonts.neutral200]}>{openTrainingPublicLine}</Text>
             ) : null}
+            {/* T-PAGES-4 (17/11) : « Mon équipe » (b), L'essentiel, puis l'inscription (a). */}
+            {renderTournamentMyTeamCard()}
+            {renderTournamentEssentials()}
             {renderTournamentActionsPanel()}
-            {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte. */}
-            {isTournamentEvent && !isStageDayEvent ? (
+            {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte.
+                T-PAGES-4 (point 5, tranché C) : jamais pour l'organisateur du tournoi. */}
+            {isTournamentEvent && !isStageDayEvent && !canEdit ? (
               <TournamentJoinTeamPanel
                 event={event}
                 onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
@@ -9860,6 +9978,12 @@ function EventDetails({ navigation, route }) {
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {t('eventDetails.thisTeamWillOnlyExist', 'Cette équipe n existera que pour ce tournoi. Tu en deviendras automatiquement le capitaine.')}
             </Text>
+            {/* T-PAGES-4 (R10) : la suite, mêmes clés que la feuille du site (T-PARCOURS-1). */}
+            {ligneEnsuiteDeLaCreation ? (
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="tournament-create-next">
+                {ligneEnsuiteDeLaCreation}
+              </Text>
+            ) : null}
           </View>
 
           <TextInput

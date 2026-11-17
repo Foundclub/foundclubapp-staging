@@ -11411,6 +11411,8 @@ export default {
     registerAClubTeam: 'Inscrire une équipe du club',
     registerMyTeam: 'Inscrire mon équipe',
     registerMyTournamentTeam: 'Inscrire mon équipe',
+    // T-PAGES-4 (17/11) : la carte d'inscription de la fiche du tournoi (maquette (a)).
+    registerYourTeam: 'Inscris ton équipe',
     registrationsToCheck_one: '{{count}} inscription à vérifier',
     registrationsToCheck_other: '{{count}} inscriptions à vérifier',
     reload: 'Recharger',
@@ -11699,6 +11701,7 @@ export default {
     yourParticipationForThisPosition: 'Ta participation a bien été envoyée sur ce poste.',
     yourPersonalPostMatchDraft: 'Ton brouillon perso post-match attend encore une validation.',
     yourPersonalStatsAndRating: 'Tes stats personnelles et ta note sont enregistrées.',
+    yourRegistration: 'Ton inscription',
     yourTeam: 'Ton équipe',
     yourTeamMembersCanStill: 'Les membres de ton équipe peuvent encore finaliser ce rapport.',
     youSaidYouWerenT: 'Tu as indique ne pas être concerné par ce match.',
