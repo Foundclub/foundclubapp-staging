@@ -55,6 +55,7 @@ import {
   getTournamentCompetitionActions,
   getTournamentCompetitionStateLabel,
   getTournamentFormatLabel,
+  getTournamentPaidValidationLabel,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
   getTournamentTeamStatusMeta,
@@ -440,9 +441,12 @@ function TournamentManagement({ navigation, route }) {
         <View style={Spaces.gap[8]}>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t('tournamentManagement.teamApprovalMode', 'Validation des équipes: {{mode}}', {
-              mode: tournamentConfig?.registrationMode === 'auto'
-                ? t('tournamentManagement.automatic', 'Automatique')
-                : t('tournamentManagement.manual', 'Manuelle'),
+              // T-PARCOURS-2 (point 11) : un tournoi payant valide l'équipe au seuil payé (la
+              // règle de la fiche) ; sinon le mode choisi par l'organisateur.
+              mode: getTournamentPaidValidationLabel({ tournamentConfig })
+                || (tournamentConfig?.registrationMode === 'auto'
+                  ? t('tournamentManagement.automatic', 'Automatique')
+                  : t('tournamentManagement.manual', 'Manuelle')),
             })}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
