@@ -242,11 +242,12 @@ import {
 } from './matchPageModel';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import { getTournamentTeamsSeekingPlayers } from './tournamentJoinRules';
 import {
-  getTournamentTeamsSeekingPlayers,
-  getTournamentVisitorTeamsLine,
-  TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT,
-} from './tournamentJoinRules';
+  getTournamentTeamsCapacity,
+  getTournamentTeamsLine,
+  isTournamentTeamsCountShown,
+} from './tournamentTeamsCount';
 import {
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
@@ -1281,7 +1282,7 @@ function EventDetails({ navigation, route }) {
   // équipes (le rôle Public n'a pas ce droit) : ses compteurs disaient « 0 équipe » sur un tournoi
   // qui en avait 5. Il lit la ligne du résumé public, avec le seuil des 30 % (tournamentJoinRules).
   const estVisiteurDuTournoi = isTournamentEvent && !userData?.documentId;
-  const ligneEquipesDuVisiteur = estVisiteurDuTournoi ? getTournamentVisitorTeamsLine(event) : null;
+  const ligneEquipesDuVisiteur = estVisiteurDuTournoi ? getTournamentTeamsLine(event) : null;
   // 🔄 CHANGER D EVENEMENT REMET L ONGLET SUR L APERÇU. Cet effet existait deja,
   // mais il ne remettait que l ancien etat du stage. Il commande desormais
   // l etat UNIQUE : sans lui, ouvrir une journee de stage depuis l onglet
@@ -1353,12 +1354,7 @@ function EventDetails({ navigation, route }) {
   // même compte que le serveur (en attente + validées, hors archivées). L'organisateur garde ses
   // vrais nombres.
   const ligneEquipesDuTournoi = isTournamentEvent && !canEdit
-    ? getTournamentVisitorTeamsLine(event?.tournamentTeamsSummary ? event : {
-      ...event,
-      tournamentTeamsSummary: {
-        registeredCount: tournamentTeamCounters.accepted + tournamentTeamCounters.pending,
-      },
-    })
+    ? getTournamentTeamsLine(event)
     : null;
   // T-PAGES-4 (maquette (b), R4) — l'équipe du lecteur : capitaine, membre, invité ou demandeur.
   const equipeDuLecteurAuTournoi = managedTournamentTeam
@@ -1378,20 +1374,8 @@ function EventDetails({ navigation, route }) {
   // T-PAGES-4 (17/11, chef, dans l'esprit de « 4- A » + « 2 ok ») — sous le seuil des 30 %, un
   // non-organisateur ne lit le nombre d'équipes nulle part : l'onglet Équipes ne liste que les
   // équipes qui cherchent un joueur, et la sienne. La liste complète paraît au seuil.
-  // ponytail: le seuil se recalcule ici avec la constante de tournamentJoinRules.js (qui ne rend
-  // qu'une phrase) ; sortie : une règle booléenne exportée par ce fichier (T-PAGES-6).
-  const capaciteDuTournoi = Math.round(Number(
-    event?.tournamentTeamsSummary?.expectedCount ?? tournamentConfig?.maxTeams,
-  ));
-  const equipesInscritesDuTournoi = Number.isFinite(
-    Number(event?.tournamentTeamsSummary?.registeredCount),
-  ) && event?.tournamentTeamsSummary?.registeredCount !== null
-    ? Number(event.tournamentTeamsSummary.registeredCount)
-    : tournamentTeamCounters.accepted + tournamentTeamCounters.pending;
-  const listeDesEquipesMasquee = Boolean(isTournamentEvent && !canEdit && capaciteDuTournoi > 0
-    && equipesInscritesDuTournoi < Math.ceil(
-      (capaciteDuTournoi * TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT) / 100,
-    ));
+  const listeDesEquipesMasquee = Boolean(isTournamentEvent && !canEdit
+    && getTournamentTeamsCapacity(event) && !isTournamentTeamsCountShown(event));
   const equipesMontreesDuTournoi = listeDesEquipesMasquee
     ? tournamentTeams.filter((team) => (
       team?.documentId === equipeDuLecteurAuTournoi?.documentId
