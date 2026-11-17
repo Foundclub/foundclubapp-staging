@@ -26814,6 +26814,56 @@ export default {
     playersRange: '{{min}} à {{max}} joueurs par équipe',
     price: 'Prix',
   },
+  tournamentFicheWeb: {
+    before: {
+      age: 'À partir de {{minAge}} ans.',
+      // eslint-disable-next-line max-len
+      ageConsent: 'Autorisation parentale pour les mineurs : un parent la remplit au moment de payer la place.',
+      beforeMatch: 'Avant le match',
+      jersey: 'Maillot offert en bonus,',
+      // eslint-disable-next-line max-len
+      jerseyDetail: 'dans la limite des tailles et des stocks. Chaque joueur choisit sa taille en payant.',
+      termsLink: 'Lire les conditions d’inscription',
+      title: 'Avant de t’inscrire',
+      withdrawal: 'Activité de loisir à date fixe : pas de droit de rétractation.',
+    },
+    how: {
+      step1: 'Tu en deviens le capitaine. Elle n’existe que pour ce tournoi.',
+      step1Title: 'Tu crées ton équipe',
+      step2: 'Par un lien à partager, ou en cherchant leur profil FoundClub.',
+      step2Title_one: 'Tu invites {{count}} joueur',
+      step2Title_other: 'Tu invites {{count}} joueurs',
+      step2TitleFree: 'Tu invites tes joueurs',
+      step3_one: 'L’équipe est validée dès la {{count}}ʳᵉ place payée.',
+      step3_other: 'L’équipe est validée dès la {{count}}ᵉ place payée.',
+      // eslint-disable-next-line max-len
+      step3Jersey_one: 'et choisit la taille de son maillot. L’équipe est validée dès la {{count}}ʳᵉ place payée.',
+      // eslint-disable-next-line max-len
+      step3Jersey_other: 'et choisit la taille de son maillot. L’équipe est validée dès la {{count}}ᵉ place payée.',
+      step3Title: 'Chacun paie sa place, {{price}}',
+      title: 'Comment ça marche',
+    },
+    myTeam: {
+      kicker: {
+        captain: 'Mon équipe · Capitaine',
+        invited: 'Mon équipe · Invitation',
+        member: 'Mon équipe',
+        requested: 'Mon équipe · Demande envoyée',
+      },
+    },
+    organizedBy: 'Organisé par {{name}}',
+    signUp: {
+      create: 'Créer mon équipe',
+      haveAccount: 'J’ai déjà un compte',
+      kicker: 'Ton inscription',
+      rule_one: 'Ton équipe est validée dès la {{count}}ʳᵉ place payée.',
+      rule_other: 'Ton équipe est validée dès la {{count}}ᵉ place payée.',
+      title: 'Inscris ton équipe',
+      tooYoungText: 'Tu pourras t’inscrire à un prochain tournoi ouvert à ton âge.',
+      tooYoungTitle: 'Ce tournoi est ouvert à partir de {{minAge}} ans',
+    },
+    teams: 'Les équipes',
+  },
   tournamentInvitation: {
     error: "La demande n'a pas pu partir.",
     noTeam: 'Il faut encadrer une équipe pour demander à participer.',

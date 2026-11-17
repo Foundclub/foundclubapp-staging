@@ -261,7 +261,6 @@ const texte = (noeud) => (typeof noeud === 'string'
 
 const boutonsDe = (/** @type {any} */ noeud) => noeud.findAll((/** @type {any} */ n) => n.type === 'button').map(texte);
 const tousLesBoutons = (/** @type {any} */ arbre) => boutonsDe(arbre.root);
-// eslint-disable-next-line no-unused-vars -- servira au critère R11 (point 6).
 const blocParticipants = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.id === 'event.participants').length;
 // 15 ans le 19/12/2026 ; 18 ans ; le tournoi du samedi 19/12/2026 ouvert dès 16 ans.
 const compteNeLe = (/** @type {string | null} */ birthdate) => ({ ...JOUEUR, userData: { ...JOUEUR.userData, birthdate } });
@@ -373,6 +372,203 @@ test.each(LECTEURS.filter(([nom]) => nom === 'organisateur'))('T-PAGES-3 (0) car
   expect(inventaire(monter(ev(), compte))).toEqual(AVANT[nom]);
 });
 
-test.each(LECTEURS.filter(([nom]) => nom !== 'organisateur'))('T-PAGES-3 (0) relevé d avant — %s', (nom, compte, ev) => {
-  expect(inventaire(monter(ev(), compte))).toEqual(AVANT[nom]);
+// Ce que chaque lecteur voit APRÈS T-PAGES-3 (maquette (a) et (b)) ; diff gardé / déplacé / retiré :
+// .local/bancs/T-PAGES-3-1711/INVENTAIRE.md.
+const APRES = {
+  capitaine: {
+    boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
+    mots: ['équipes attendues', 'Mon équipe'],
+    pastilles: ['Terrain A'],
+    titres: ['Tournoi Montpellier', 'Recette Site 333', 'Avant le match', 'Les équipes'],
+  },
+  invité: {
+    boutons: ['Planning', 'Partager', '', 'Répondre à mon invitation', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
+    mots: ['équipes attendues', 'Mon équipe'],
+    pastilles: ['Terrain A'],
+    titres: ['Tournoi Montpellier', 'Recette Site 333', 'Avant le match', 'Les équipes'],
+  },
+  'joueur sans équipe': {
+    boutons: ['Planning', 'Partager', '', 'Créer mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe'],
+    mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire', 'Rejoindre une équipe'],
+    pastilles: ['Terrain A'],
+    titres: ['Tournoi Montpellier', 'Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
+  },
+  membre: {
+    boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
+    mots: ['équipes attendues', 'Mon équipe'],
+    pastilles: ['Terrain A'],
+    titres: ['Tournoi Montpellier', 'Recette Site 333', 'Avant le match', 'Les équipes'],
+  },
+  'trop jeune': {
+    boutons: ['Planning', 'Partager', '', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe'],
+    mots: ['équipes attendues', 'Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire'],
+    pastilles: ['Terrain A'],
+    titres: ['Tournoi Montpellier', 'Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
+  },
+  visiteur: {
+    boutons: ['Retour', 'Partager', 'Créer mon équipe', 'J’ai déjà un compte', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire'],
+    pastilles: ['Terrain A'],
+    titres: ['Tournoi Montpellier', 'Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
+  },
+};
+
+test.each(LECTEURS.filter(([nom]) => nom !== 'organisateur'))('🔴 T-PAGES-3 (1) — %s : la fiche suit la maquette', (nom, compte, ev) => {
+  const vu = inventaire(monter(ev(), compte));
+  expect(vu).toEqual(APRES[nom]);
+  expect(vu).not.toEqual(AVANT[nom]);
+});
+
+// --- Les points de la consigne, un témoin chacun ---------------------------------------------------
+const parTestId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
+  .findAll((/** @type {any} */ n) => (n.props?.['data-testid'] === id || n.props?.testID === id) && typeof n.type === 'string');
+const unSeul = (/** @type {any} */ arbre, /** @type {string} */ id) => {
+  const trouves = parTestId(arbre, id);
+  expect(trouves).toHaveLength(1);
+  return trouves[0];
+};
+const boutonsPleins = (/** @type {any} */ noeud) => noeud.findAll((/** @type {any} */ n) => n.type === 'button'
+  && n.props.style?.background !== 'transparent').map(texte);
+
+test('🔴 T-PAGES-3 (1a) sans équipe — l essentiel en 4 cases, « Comment ça marche » en 3 étapes, la carte « Inscris ton équipe » à 20 € par joueur, règle des 5, « Créer mon équipe » seul bouton plein, puis « Rejoindre une équipe »', () => {
+  const arbre = monter(fiche([EQUIPE_OUVERTE], { location: 'AR Soccer, 119 rue de la Rauze basse, 34070 Montpellier' }), SEUL_18_ANS);
+  expect(parTestId(arbre, 'tournament-essentials').length).toBeGreaterThan(0);
+  ['date', 'place', 'price', 'format'].forEach((cle) => expect(parTestId(arbre, `tournament-essentials-${cle}`).length).toBeGreaterThan(0));
+  expect(unSeul(arbre, 'tournament-how-it-works').findAll((/** @type {any} */ n) => n.type === 'li')).toHaveLength(3);
+  expect(texte(unSeul(arbre, 'tournament-before-sign-up'))).toContain('À partir de 16 ans.');
+  const carte = unSeul(arbre, 'tournament-sign-up-card');
+  expect(texte(carte)).toContain('Inscris ton équipe');
+  expect(texte(carte)).toContain('20 € par joueur');
+  expect(texte(carte)).toContain('Ton équipe est validée dès la 5ᵉ place payée.');
+  expect(boutonsPleins(carte)).toEqual(['Créer mon équipe']);
+  expect(carte.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-join-team-panel').length).toBeGreaterThan(0);
+  act(() => { unSeul(arbre, 'tournament-create-my-team').props.onClick(); });
+  expect(mockFeuille.props.mode).toBe('name');
+});
+
+test('🔴 T-PAGES-3 (1b) avec une équipe — capitaine, membre, invité : la carte « Mon équipe », un seul bouton plein, jamais « Créer »', () => {
+  [
+    [CAPITAINE_EQUIPE, 'Mon équipe · Capitaine', 'Voir mon équipe'],
+    [MEMBRE_EQUIPE, 'Mon équipe', 'Voir mon équipe'],
+    [INVITE_EQUIPE, 'Mon équipe · Invitation', 'Répondre à mon invitation'],
+  ].forEach(([equipe, surtitre, geste]) => {
+    const arbre = monter(fiche([EQUIPE_OUVERTE, equipe]), SEUL_18_ANS);
+    const carte = unSeul(arbre, 'tournament-my-team-card');
+    expect(texte(carte)).toContain(surtitre);
+    expect(texte(carte)).toContain('Recette Site 333');
+    expect(boutonsPleins(carte)).toEqual([geste]);
+    expect(parTestId(arbre, 'tournament-sign-up-card')).toHaveLength(0);
+    expect(parTestId(arbre, 'tournament-how-it-works')).toHaveLength(0);
+    act(() => { unSeul(arbre, 'tournament-my-team-primary').props.onClick(); });
+    expect(mockNavigate).toHaveBeenLastCalledWith('TournamentTeamDetails', { eventId: 'event-1', teamId: 'equipe-lecteur' });
+    act(() => mounted.unmount());
+    mounted = null;
+  });
+});
+
+test('🔴 T-PAGES-3 (1b) capitaine dont la place est due — « Payer ma place » en plein (le lien de paiement), « Voir mon équipe » dessous, et où en est l équipe', () => {
+  mockEquipeLue.data = {
+    documentId: 'equipe-lecteur',
+    event: { tournamentConfig: CONFIG },
+    members: [{ documentId: 'm1', responseStatus: 'present', user: { documentId: 'joueur-1', firstname: 'Hugo' } }],
+    name: 'Recette Site 333',
+    payment: {
+      members: [{
+        isSelf: true, memberDocumentId: 'm1', paymentUrl: 'https://pay.example/m1', status: 'due',
+      }],
+      paidCount: 1,
+      paidMembersToValidate: 5,
+    },
+    status: 'pending',
+  };
+  try {
+    const arbre = monter(fiche([CAPITAINE_EQUIPE]), SEUL_18_ANS);
+    const carte = unSeul(arbre, 'tournament-my-team-card');
+    expect(boutonsPleins(carte)).toEqual(['Payer ma place']);
+    expect(texte(carte)).toContain('Voir mon équipe');
+    expect(carte.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-progress').length).toBeGreaterThan(0);
+    act(() => { unSeul(arbre, 'tournament-my-team-primary').props.onClick(); });
+    expect(mockOuvrirLien).toHaveBeenCalledWith('https://pay.example/m1');
+  } finally {
+    mockEquipeLue.data = null;
+  }
+});
+
+test('🔴 T-PAGES-3 (1c) compte trop jeune — « Ce tournoi est ouvert à partir de 16 ans », aucun bouton dans la carte', () => {
+  const carte = unSeul(monter(fiche(), TROP_JEUNE), 'tournament-sign-up-card');
+  expect(texte(carte)).toContain('Ce tournoi est ouvert à partir de 16 ans');
+  expect(carte.findAll((/** @type {any} */ n) => n.type === 'button')).toHaveLength(0);
+});
+
+test('🔴 T-PAGES-3 (2) visiteur — un seul bouton plein « Créer mon équipe », vers la connexion avec retour au tournoi ; « J ai déjà un compte » dessous', () => {
+  const arbre = monter(fiche([EQUIPE_OUVERTE], { tournamentTeams: undefined }), VISITEUR);
+  const carte = unSeul(arbre, 'tournament-sign-up-card');
+  expect(boutonsPleins(carte)).toEqual(['Créer mon équipe']);
+  expect(boutonsDe(carte)).toEqual(['Créer mon équipe', 'J’ai déjà un compte']);
+  expect(tousLesBoutons(arbre)).not.toContain('Se connecter pour participer');
+  expect(tousLesBoutons(arbre)).not.toContain('Inscrire mon équipe');
+  act(() => { unSeul(arbre, 'tournament-create-my-team').props.onClick(); });
+  expect(mockNavigate).toHaveBeenLastCalledWith('PublicAuthStack', expect.objectContaining({
+    params: expect.objectContaining({ retourApresConnexion: true }),
+  }));
+});
+
+test.each([
+  ['visiteur', VISITEUR],
+  ['joueur connecté', SEUL_18_ANS],
+])('🔴 T-PAGES-3 (3) %s — sous 30 % : « 24 équipes attendues », jamais le compte ni « au plus » ; à 8 sur 24 : « 8 équipes inscrites sur 24 »', (_nom, compte) => {
+  const cinq = fiche([EQUIPE_OUVERTE], { tournamentTeamsSummary: { expectedCount: 24, registeredCount: 5 } });
+  let arbre = monter(compte === VISITEUR ? { ...cinq, tournamentTeams: undefined } : cinq, compte);
+  expect(parTestId(arbre, 'event-tournament-visitor-teams').map(texte)).toEqual(['24 équipes attendues']);
+  expect(texte(unSeul(arbre, 'tournament-essentials-format'))).toContain('24 équipes attendues');
+  expect(texte(arbre.root)).not.toContain('au plus');
+  // Les compteurs de l organisateur (« N en attente · N validées · N effectifs à revoir ») ne sont pas rendus.
+  expect(texte(arbre.root)).not.toMatch(/[0-9] effectifs? à revoir/);
+  act(() => mounted.unmount());
+  arbre = monter(fiche([EQUIPE_OUVERTE], { tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 } }), compte);
+  expect(parTestId(arbre, 'event-tournament-visitor-teams').map(texte)).toEqual(['8 équipes inscrites sur 24']);
+});
+
+test('T-PAGES-3 (3) caractérisant — l organisateur garde le vrai nombre (compteurs), sans la ligne des 30 %', () => {
+  const arbre = monter(fiche([EQUIPE_OUVERTE], { tournamentTeamsSummary: { expectedCount: 24, registeredCount: 5 } }), ORGANISATEUR);
+  expect(parTestId(arbre, 'event-tournament-visitor-teams')).toHaveLength(0);
+  expect(texte(arbre.root)).toMatch(/[0-9] effectifs? à revoir/);
+});
+
+test('🔴 T-PAGES-3 (4) non-organisateur — ni Infos rapides, ni réglages Mode tournoi, ni pastille de validation, ni « Participer »', () => {
+  LECTEURS.filter(([nom]) => nom !== 'organisateur').forEach(([, compte, ev]) => {
+    const arbre = monter(ev(), compte);
+    const tout = texte(arbre.root);
+    ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Validation des', 'Aucun participant confirm'].forEach((mot) => expect(tout).not.toContain(mot));
+    expect(inventaire(arbre).pastilles).toEqual(['Terrain A']);
+    expect(tousLesBoutons(arbre)).not.toContain('Participer');
+    act(() => mounted.unmount());
+    mounted = null;
+  });
+});
+
+test('🔴 T-PAGES-3 (5) organisateur de CE tournoi — « Rejoindre une équipe » n est pas rendu', () => {
+  const arbre = monter(fiche([EQUIPE_OUVERTE]), ORGANISATEUR);
+  expect(parTestId(arbre, 'tournament-join-team-panel')).toHaveLength(0);
+});
+
+test('T-PAGES-3 (6) R11 — « Créer » jamais à qui a une équipe ; Présent·e·s / Absent·e·s jamais sur un tournoi ; les boutons des cartes tiennent dans leur carte (pleine largeur, retour à la ligne)', () => {
+  LECTEURS.forEach(([nom, compte, ev]) => {
+    const arbre = monter(ev(), compte);
+    const tout = texte(arbre.root);
+    expect(tout).not.toContain('Présent·e·s');
+    expect(tout).not.toContain('Absent·e·s');
+    expect(blocParticipants(arbre)).toBe(0);
+    if (['capitaine', 'invité', 'membre'].includes(nom)) {
+      ['Créer une équipe', 'Créer mon équipe', 'Inscrire mon équipe'].forEach((libelle) => expect(tousLesBoutons(arbre)).not.toContain(libelle));
+    }
+    ['tournament-sign-up-card', 'tournament-my-team-card'].forEach((id) => parTestId(arbre, id).forEach((carte) => {
+      carte.findAll((/** @type {any} */ n) => n.type === 'button').forEach((/** @type {any} */ b) => {
+        expect(b.props.style).toEqual(expect.objectContaining({ boxSizing: 'border-box', whiteSpace: 'normal', width: '100%' }));
+        expect(b.props.style.minHeight).toBeGreaterThanOrEqual(44);
+      });
+    }));
+    act(() => mounted.unmount());
+    mounted = null;
+  });
 });

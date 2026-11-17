@@ -62,8 +62,8 @@ import {
   formatTournamentPlayersShortList,
   getTournamentAgeNotice,
   getTournamentClosure,
-  getTournamentMembersSummaryLine,
   getTournamentEntryFeeLabel,
+  getTournamentMembersSummaryLine,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -141,6 +141,14 @@ import EventChildRegistration, {
 import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import TournamentEssentials, { getTournamentEssentials } from './components/TournamentEssentials';
+import {
+  TournamentBeforeSignUp,
+  TournamentHowItWorks,
+  TournamentMyTeamCard,
+  TournamentSignUpCard,
+  withTournamentTeamsLine,
+} from './components/TournamentFicheWeb';
 import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentTeamSheet from './components/TournamentTeamSheet';
 import MatchBilanCard from './components/MatchBilanCard';
@@ -685,8 +693,12 @@ function EventDetails({ navigation, route }) {
   // équipes (le rôle Public n'a pas ce droit) : la fiche disait « 0 équipe / Aucune équipe n'est
   // encore inscrite » sur un tournoi qui en avait 5. Il lit la ligne du résumé public, avec le
   // seuil des 30 % (tournamentJoinRules).
-  const estVisiteurDuTournoi = isTournamentEvent && !isSignedIn;
-  const ligneEquipesDuVisiteur = estVisiteurDuTournoi ? getTournamentVisitorTeamsLine(event) : null;
+  // T-PAGES-3 (17/11, maquette DESIGN-TOURNOI-PAGES (a) et (b)) : qui n'organise pas CE tournoi
+  // (`canEdit` = canManageEvent) lit la fiche redessinée ; l'organisateur garde la sienne.
+  const vueJoueurDuTournoi = isTournamentEvent && !canEdit;
+  // T-PAGES-3 point 3 (Adel « 4- A », 17/11) : le seuil des 30 % vaut pour TOUS les
+  // non-organisateurs, connectés compris (le serveur envoie le résumé à chaque lecteur).
+  const ligneEquipesDuVisiteur = vueJoueurDuTournoi ? getTournamentVisitorTeamsLine(event) : null;
   const facilityId = getEntityDocumentId(event?.facility);
   const eventLink = buildPublicEventUrl({ eventId });
   const participationLabel = getParticipationLabel(
@@ -1969,7 +1981,9 @@ function EventDetails({ navigation, route }) {
   // plus rendue (T-FINITIONS-3) ; pour un joueur, la colonne principale n'avait alors plus aucun
   // bloc et restait une carte vide sous l'en-tête. Règle PRUDENTE : vide seulement si aucun de
   // ses blocs ne peut être rendu (un doute la laisse affichée).
-  const colonnePrincipaleVide = isTournamentEvent && !canEdit
+  // T-PAGES-3 : le joueur a toujours l'essentiel du tournoi dans cette colonne ; la règle ne
+  // s'applique plus (elle reste écrite, fausse partout, pour la lire d'un coup d'œil).
+  const colonnePrincipaleVide = isTournamentEvent && !canEdit && !vueJoueurDuTournoi
     && !event?.facilityClosure
     && !event?.facilityReportable
     && !matchEncartSummary
@@ -2230,6 +2244,565 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  // ==========================================================================
+  // T-PAGES-3 (17/11/2026, maquette DESIGN-TOURNOI-PAGES validée, écrans (a) et (b)) — LA FICHE DU
+  // JOUEUR. À gauche : l'essentiel en 4 cases, « Comment ça marche » (sans équipe), « Avant de
+  // t'inscrire », puis « Les équipes ». À droite, collée à l'ordinateur : la carte « Ton
+  // inscription » (sans équipe) ou « Mon équipe » (capitaine, membre, invité : R4). Les gestes de
+  // l'ancien « Mon statut » y sont tous repris (inventaire : .local/bancs/T-PAGES-3-1711).
+  // Témoin : __tests__/EventDetailsWeb.T-PAGES-3.fiche.test.js.
+  // ==========================================================================
+  const uiDeLaFiche = {
+    accentColor,
+    borderColor,
+    mutedTextColor,
+    outlineButtonStyle,
+    primaryButtonStyle,
+    sectionBackground,
+    sectionTitleStyle,
+    softSurfaceColor,
+    textColor,
+  };
+  const essentielDuTournoi = vueJoueurDuTournoi
+    ? withTournamentTeamsLine(getTournamentEssentials(event), event, ligneEquipesDuVisiteur)
+    : [];
+  let equipeDuLecteur = null;
+  let roleDuLecteur = /** @type {'captain' | 'member' | 'invited' | 'requested'} */ ('member');
+  if (managedTournamentTeam) {
+    equipeDuLecteur = managedTournamentTeam;
+    roleDuLecteur = 'captain';
+  } else if (currentUserTournamentTeam) {
+    equipeDuLecteur = currentUserTournamentTeam;
+  } else if (currentUserPendingTournamentTeam) {
+    equipeDuLecteur = currentUserPendingTournamentTeam;
+    roleDuLecteur = normalizeTournamentText(getTournamentViewerMember(
+      currentUserPendingTournamentTeam,
+      userData?.documentId,
+    )?.responseStatus) === 'invited' ? 'invited' : 'requested';
+  }
+  const ouvrirLaConnexionDuTournoi = () => openPublicAuthFlow(navigation, {
+    origin: RouteNames.EventDetails,
+    retourApresConnexion: true,
+    source: 'event-details-register-team',
+  });
+  const erreurDeLaCarte = erreurEquipeTournoi || actionError;
+  const carteDuTournoi = vueJoueurDuTournoi ? (
+    <div data-testid="event-tournament-side" style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+      {equipeDuLecteur ? (
+        <TournamentMyTeamCard
+          onOpenTeam={handleOpenTournamentTeam}
+          role={roleDuLecteur}
+          team={equipeDuLecteur}
+          tournamentConfig={tournamentConfig}
+          ui={uiDeLaFiche}
+        />
+      ) : null}
+      {!equipeDuLecteur && !tournoiClos && !offreAuxEnfants ? (
+        <TournamentSignUpCard
+          canCreate={isSignedIn ? canCreateCustomTournamentTeam : inscrireMonEquipeVisiteur}
+          canRegisterClubTeam={canRegisterTournamentSourceTeam}
+          event={event}
+          isPending={createTournamentTeamMutation.isPending || registerTournamentTeamMutation.isPending}
+          isVisitor={!isSignedIn}
+          onCreate={isSignedIn ? handleCreateTournamentTeam : ouvrirLaConnexionDuTournoi}
+          onLogin={ouvrirLaConnexionDuTournoi}
+          onRegisterClubTeam={handleRegisterTournamentTeam}
+          tooYoung={tropJeunePourLeTournoi}
+          ui={uiDeLaFiche}
+        >
+          {/* T-REJOINDRE (D50), posé tel quel ; jamais pour l'organisateur (point 5). */}
+          {!canEdit ? (
+            <TournamentJoinTeamPanel
+              event={event}
+              onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
+              teams={tournamentTeams}
+            />
+          ) : null}
+        </TournamentSignUpCard>
+      ) : null}
+      {erreurDeLaCarte ? (
+        <div role="alert" style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
+          {erreurDeLaCarte}
+        </div>
+      ) : null}
+      {offreAuxEnfants ? (
+        <div style={{ minWidth: 0, width: '100%' }}>
+          <EventChildRegistration event={event} navigation={navigation} />
+        </div>
+      ) : null}
+      {activeParticipationRequestId ? (
+        <button
+          disabled={cancelParticipationMutation.isPending}
+          onClick={handleCancelParticipation}
+          style={{ ...outlineButtonStyle, justifySelf: 'start', minHeight: 44 }}
+          type="button"
+        >
+          {cancelParticipationMutation.isPending
+            ? t('eventDetails.cancelling', 'Annulation...')
+            : t('eventDetails.cancelMyRequest', 'Annuler ma demande')}
+        </button>
+      ) : null}
+      {event?.team?.club?.name ? (
+        <div style={{ color: mutedTextColor, fontSize: 13 }}>
+          {t('eventDetails.organisingClub', 'Club organisateur:')}
+          {' '}
+          {event.team.club.name}
+          {' · '}
+          {clubCertificationLabel}
+        </div>
+      ) : null}
+    </div>
+  ) : null;
+
+  // T-PAGES-3 : le bloc du tournoi, posé à droite pour l organisateur (comme avant) et dans la
+  // colonne principale pour le joueur, sous le titre « Les équipes », sans les réglages.
+  const blocDuTournoi = isTournamentEvent ? (
+    <div
+      data-event-section="tournament"
+      style={{
+        background: sectionBackground,
+        border: `1px solid ${borderColor}`,
+        borderRadius: 24,
+        display: 'grid',
+        gap: 14,
+        padding: 22,
+      }}
+    >
+      <h2 style={sectionTitleStyle}>
+        {vueJoueurDuTournoi
+          ? t('tournamentFicheWeb.teams')
+          : t('eventDetails.tournamentMode', 'Mode tournoi')}
+      </h2>
+      {/* T-PAGES-3 point 4 : les réglages (validation, effectif, Mix clubs) restent à l'organisateur. */}
+      {vueJoueurDuTournoi ? null : (
+        <div style={{
+          color: mutedTextColor, display: 'grid', fontSize: 14, gap: 10,
+        }}
+        >
+          <span>
+            {t('eventDetails.teamApproval', 'Validation des equipes:')}
+            {' '}
+            {/* T-FINITIONS-3 : un tournoi payant valide l'équipe au seuil payé. */}
+            {getTournamentPaidValidationLabel(event)
+              || (event?.tournamentConfig?.registrationMode === 'auto'
+                ? t('eventDetails.automatic', 'Automatique')
+                : t('eventDetails.manual', 'Manuelle'))}
+          </span>
+          <span>
+            {t('eventDetails.maxTeams', 'Max equipes:')}
+            {' '}
+            {event?.tournamentConfig?.maxTeams ?? t(
+              'eventDetails.unlimited',
+              'Non limite',
+            )}
+          </span>
+          <span>
+            {t('eventDetails.squadSize', 'Effectif:')}
+            {' '}
+            {event?.tournamentConfig?.minRosterSize ?? t('eventDetails.open2', 'Libre')}
+            {' '}
+            -
+            {' '}
+            {event?.tournamentConfig?.maxRosterSize ?? t('eventDetails.open2', 'Libre')}
+          </span>
+          <span>
+            {t('eventDetails.temporaryTeams', 'Equipes ephemeres:')}
+            {' '}
+            {event?.tournamentConfig?.allowCustomTeams !== false
+              ? t('eventDetails.allowed', 'Autorisees')
+              : t('eventDetails.disabled', 'Desactivees')}
+          </span>
+          <span>
+            {t('eventDetails.mixedClubs', 'Mix clubs:')}
+            {' '}
+            {event?.tournamentConfig?.allowCrossClubPlayers === true ? t('eventDetails.allowedSingular', 'Autorisé') : t('eventDetails.notAllowed', 'Non autorisé')}
+          </span>
+        </div>
+      )}
+      {String(event?.tournamentConfig?.rulesText || '').trim() ? (
+        <div style={{ color: textColor, fontSize: 14, lineHeight: 1.6 }}>
+          {String(event?.tournamentConfig?.rulesText || '').trim()}
+        </div>
+      ) : null}
+      {ligneEquipesDuVisiteur ? (
+        <div
+          data-testid="event-tournament-visitor-teams"
+          style={{ color: textColor, fontSize: 14 }}
+        >
+          {ligneEquipesDuVisiteur}
+        </div>
+      ) : null}
+      {/* T-PAGES-3 point 3 : les compteurs d'équipes (le vrai nombre) restent à l'organisateur ;
+          les autres lisent la ligne des 30 % ci-dessus. Le masquage par le style de T-REJOINDRE
+          (ponytail) est retiré. */}
+      {vueJoueurDuTournoi ? null : (
+        <div style={{
+          color: mutedTextColor,
+          display: 'flex',
+          flexWrap: 'wrap',
+          fontSize: 13,
+          gap: 12,
+        }}
+        >
+          <span>
+            {tournamentTeams.length}
+            {' '}
+            {t('eventDetails.teamS', 'équipes', { count: tournamentTeams.length })}
+          </span>
+          <span>
+            {tournamentTeamCounters.pending}
+            {' '}
+            {t('eventDetails.pendingLower', 'en attente')}
+          </span>
+          <span>
+            {tournamentTeamCounters.accepted}
+            {' '}
+            {t(
+              'eventDetails.approved2',
+              'validées',
+              { count: tournamentTeamCounters.accepted },
+            )}
+          </span>
+          <span>
+            {t('tournamentManagement.rosterAlertsCount', '{{count}} effectifs à revoir', {
+              count: tournamentTeamCounters.warning,
+            })}
+          </span>
+        </div>
+      )}
+      {/* T-PAGES-3 : pour le joueur, ses gestes d'équipe (créer, inscrire l'équipe du club, voir
+          ou gérer la sienne, répondre, suivre sa demande) et les conditions sont dans les cartes
+          de la fiche ; ici reste « Voir la compétition ». */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        <button
+          onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
+          style={{
+            background: canEdit ? accentColor : 'transparent',
+            border: canEdit ? 0 : `1px solid ${borderColor}`,
+            borderRadius: 999,
+            color: textColor,
+            cursor: 'pointer',
+            fontFamily: canEdit ? 'Montserrat-Bold, sans-serif' : 'Montserrat-Regular, sans-serif',
+            padding: '10px 16px',
+          }}
+          type="button"
+        >
+          {canEdit ? t(
+            'eventDetails.runTheCompetition',
+            'Piloter la compétition',
+          ) : t(
+            'eventDetails.seeTheCompetition',
+            'Voir la compétition',
+          )}
+        </button>
+        {canEdit && !tournoiClos ? (
+          <button
+            onClick={() => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId })}
+            style={primaryButtonStyle}
+            type="button"
+          >
+            {t('eventDetails.editTheSettings', 'Modifier les paramètres')}
+          </button>
+        ) : null}
+        {!vueJoueurDuTournoi && managedTournamentTeam?.documentId ? (
+          <button
+            onClick={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: textColor,
+              cursor: 'pointer',
+              padding: '10px 16px',
+            }}
+            type="button"
+          >
+            {t('eventDetails.manageMyTeam', 'Gérer mon équipe')}
+          </button>
+        ) : null}
+        {!vueJoueurDuTournoi && !managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
+          <button
+            onClick={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: textColor,
+              cursor: 'pointer',
+              padding: '10px 16px',
+            }}
+            type="button"
+          >
+            {t('eventDetails.seeMyTeam', 'Voir mon équipe')}
+          </button>
+        ) : null}
+        {!vueJoueurDuTournoi && !managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
+          <button
+            onClick={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: textColor,
+              cursor: 'pointer',
+              padding: '10px 16px',
+            }}
+            type="button"
+          >
+            {normalizeTournamentText(
+              getTournamentViewerMember(
+                currentUserPendingTournamentTeam,
+                userData?.documentId,
+              )?.responseStatus,
+            ) === 'invited'
+              ? t('eventDetails.answerMyInvitation', 'Répondre à mon invitation')
+              : t('eventDetails.followMyRequest', 'Suivre ma demande')}
+          </button>
+        ) : null}
+        {!vueJoueurDuTournoi && canRegisterTournamentSourceTeam ? (
+          <button
+            disabled={registerTournamentTeamMutation.isPending}
+            onClick={handleRegisterTournamentTeam}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: textColor,
+              cursor: registerTournamentTeamMutation.isPending ? 'not-allowed' : 'pointer',
+              opacity: registerTournamentTeamMutation.isPending ? 0.7 : 1,
+              padding: '10px 16px',
+            }}
+            type="button"
+          >
+            {/* T-FICHE-2 (chef du tournoi « B », 14/11) : l'équipe du CLUB, comme au
+                téléphone ; « Inscrire mon équipe » est le bouton de tête. */}
+            {t('eventDetails.registerAClubTeam', 'Inscrire une équipe du club')}
+          </button>
+        ) : null}
+        {!vueJoueurDuTournoi && canCreateCustomTournamentTeam ? (
+          <button
+            disabled={createTournamentTeamMutation.isPending}
+            onClick={handleCreateTournamentTeam}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: textColor,
+              cursor: createTournamentTeamMutation.isPending ? 'not-allowed' : 'pointer',
+              opacity: createTournamentTeamMutation.isPending ? 0.7 : 1,
+              padding: '10px 16px',
+            }}
+            type="button"
+          >
+            {t('eventDetails.createATeam', 'Créer une équipe')}
+          </button>
+        ) : null}
+        {/* T-FINITIONS (16/11) : conditions avant l'inscription. */}
+        {!vueJoueurDuTournoi && isPaidTournament(event) ? (
+          <button
+            data-testid="event-tournament-terms-link"
+            onClick={openTournamentTerms}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: textColor,
+              cursor: 'pointer',
+              padding: '10px 16px',
+            }}
+            type="button"
+          >
+            {t('publicLicensePayment.tournament.termsLink', "Conditions d'inscription")}
+          </button>
+        ) : null}
+      </div>
+      {!vueJoueurDuTournoi && erreurEquipeTournoi ? (
+        <div role="alert" style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
+          {erreurEquipeTournoi}
+        </div>
+      ) : null}
+      {tournamentTeams.length === 0 && !vueJoueurDuTournoi ? (
+        <div style={{ color: mutedTextColor, fontSize: 14 }}>
+          {t(
+            'eventDetails.noTeamIsRegisteredYet',
+            'Aucune équipe n est encore inscrite.',
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {tournamentTeams.map((team) => {
+            const rosterSummary = getTournamentRosterSummary(team, tournamentConfig);
+            const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
+            const status = normalizeTournamentText(team?.status);
+            const statusLabel = getTournamentTeamStatusLabel(status);
+
+            return (
+              <div
+                key={getEntityDocumentId(team) || team?.name}
+                style={{
+                  background: softSurfaceColor,
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: 16,
+                  display: 'grid',
+                  gap: 8,
+                  padding: '12px 14px',
+                }}
+              >
+                <div style={{
+                  alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'space-between',
+                }}
+                >
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
+                      {team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
+                    </span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      {team?.sourceType === 'club_team'
+                        ? t('eventDetails.fromTeam', 'Depuis {{teamName}}', {
+                          teamName: team?.sourceTeam?.name
+                            || t('eventDetails.aClubTeam', 'une équipe club'),
+                          ...SANS_ECHAPPEMENT,
+                        })
+                        : t('eventDetails.temporaryTeam', 'Équipe éphémère')}
+                    </span>
+                    {isTournamentTeamOpenToJoinRequests(team) ? (
+                      <span style={{ color: textColor, fontSize: 13 }}>
+                        {t('tournamentUtils.openToRequests', 'Ouverte aux demandes')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <span style={{ color: accentColor, fontSize: 13 }}>
+                    {statusLabel}
+                  </span>
+                </div>
+                <div style={{
+                  color: mutedTextColor, display: 'flex', flexWrap: 'wrap', fontSize: 13, gap: 12,
+                }}
+                >
+                  {/* T-JOUEURS (17/11) : « 3 joueurs · 1 payé · 2 en
+                      attente », lu dans le résumé du serveur ;
+                      absent, les trois compteurs d'avant. */}
+                  {rosterSummary.membersSummary ? (
+                    <span>
+                      {getTournamentMembersSummaryLine(
+                        rosterSummary.membersSummary,
+                        tournamentConfig,
+                      )}
+                    </span>
+                  ) : (
+                    <>
+                      <span>
+                        {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
+                          count: rosterSummary.totalCount,
+                        })}
+                      </span>
+                      <span>
+                        {t('tournamentManagement.rosterPresent', '{{count}} présents', {
+                          count: rosterSummary.presentCount,
+                        })}
+                      </span>
+                      <span>
+                        {rosterSummary.pendingCount}
+                        {' '}
+                        {t('eventDetails.pendingLower', 'en attente')}
+                      </span>
+                    </>
+                  )}
+                  {rosterSummary.invitedCount > 0 ? (
+                    <span>
+                      {rosterSummary.invitedCount}
+                      {' '}
+                      {t(
+                        'eventDetails.invitationS',
+                        'invitations',
+                        { count: rosterSummary.invitedCount },
+                      )}
+                    </span>
+                  ) : null}
+                  {rosterSummary.requestedCount > 0 ? (
+                    <span>
+                      {rosterSummary.requestedCount}
+                      {' '}
+                      {t(
+                        'eventDetails.requestS',
+                        'demandes',
+                        { count: rosterSummary.requestedCount },
+                      )}
+                    </span>
+                  ) : null}
+                  {hasRosterWarning ? (
+                    <span style={{ color: '#ffd54a' }}>
+                      {t('tournamentManagement.rosterToReview', 'Effectif à revoir')}
+                    </span>
+                  ) : null}
+                </div>
+                {rosterSummary.membersSummary?.list.length > 0 ? (
+                  <div
+                    style={{
+                      color: mutedTextColor, fontSize: 13, whiteSpace: 'pre-line',
+                    }}
+                  >
+                    {formatTournamentPlayersShortList(
+                      rosterSummary.membersSummary,
+                      tournamentConfig,
+                    )}
+                  </div>
+                ) : null}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  <button
+                    onClick={() => handleOpenTournamentTeam(team?.documentId)}
+                    style={{
+                      background: 'transparent',
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: 999,
+                      color: textColor,
+                      cursor: 'pointer',
+                      padding: '9px 14px',
+                    }}
+                    type="button"
+                  >
+                    {t('eventDetails.openTheTeam', 'Ouvrir l équipe')}
+                  </button>
+                  {canEdit && status === 'pending' ? (
+                    <>
+                      <button
+                        onClick={() => handleReviewTournamentTeam(team?.documentId, 'accepted')}
+                        style={{
+                          ...primaryButtonStyle,
+                          padding: '9px 14px',
+                        }}
+                        type="button"
+                      >
+                        {t('eventDetails.approve', 'Valider')}
+                      </button>
+                      <button
+                        onClick={() => confirmerLeRefus(
+                          t,
+                          () => handleReviewTournamentTeam(team?.documentId, 'declined'),
+                        )}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid rgba(255, 107, 129, 0.38)',
+                          borderRadius: 999,
+                          color: '#ff6b81',
+                          cursor: 'pointer',
+                          padding: '9px 14px',
+                        }}
+                        type="button"
+                      >
+                        {t('eventDetails.decline', 'Refuser')}
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  ) : null;
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -2341,7 +2914,7 @@ function EventDetails({ navigation, route }) {
               alignItems: 'stretch',
               display: 'grid',
               gap: 0,
-              gridTemplateColumns: isDesktop && hasEvent ? 'minmax(0, 1.2fr) 320px' : 'minmax(0, 1fr)',
+              gridTemplateColumns: isDesktop && hasEvent && !vueJoueurDuTournoi ? 'minmax(0, 1.2fr) 320px' : 'minmax(0, 1fr)',
             }}
           >
             <div style={{ display: 'grid', gap: 18, padding: isTablet ? 32 : 22 }}>
@@ -2555,6 +3128,12 @@ function EventDetails({ navigation, route }) {
                     >
                       {headerTitle}
                     </h1>
+                    {/* T-PAGES-3 : « Organisé par » (maquette (a)) remplace la ligne des Infos rapides. */}
+                    {vueJoueurDuTournoi && quickInfoOrganizerName ? (
+                      <span data-testid="event-tournament-organizer" style={{ color: softTextColor, fontSize: 15 }}>
+                        {t('tournamentFicheWeb.organizedBy', { name: quickInfoOrganizerName, ...SANS_ECHAPPEMENT })}
+                      </span>
+                    ) : null}
                     {eventInfoLine ? (
                       <div style={{
                         color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
@@ -2582,7 +3161,9 @@ function EventDetails({ navigation, route }) {
                         {event.facility.name}
                       </span>
                     ) : null}
-                    {event?.validationMode ? (
+                    {/* T-PAGES-3 point 4 (M1316) : sur un tournoi, la pastille de validation reste à
+                        l'organisateur ; la règle est dite dans la carte « Ton inscription ». */}
+                    {event?.validationMode && !vueJoueurDuTournoi ? (
                       <span style={{
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}
@@ -2630,7 +3211,9 @@ function EventDetails({ navigation, route }) {
               ) : null}
             </div>
 
-            {hasEvent ? (
+            {/* T-PAGES-3 : pour le joueur, « Mon statut » et ses boutons passent dans la carte
+                « Ton inscription » / « Mon équipe », à droite du corps de la fiche. */}
+            {hasEvent && !vueJoueurDuTournoi ? (
               <div
                 style={{
                   background: heroImage ? `linear-gradient(rgba(3, 13, 20, 0.22), rgba(3, 13, 20, 0.48)), url(${heroImage}) center/cover` : 'linear-gradient(160deg, rgba(1,179,244,0.16), rgba(23,56,68,0.4))',
@@ -2804,16 +3387,10 @@ function EventDetails({ navigation, route }) {
                     >
                       {t('eventDetails.openTheCalendar', 'Ouvrir le calendrier')}
                     </button>
-                  ) : null}
+                    ) : null}
                 </div>
-                {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte. */}
-                {isTournamentEvent && !isCancelled ? (
-                  <TournamentJoinTeamPanel
-                    event={event}
-                    onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
-                    teams={tournamentTeams}
-                  />
-                ) : null}
+                {/* T-PAGES-3 : le panneau « Rejoindre une équipe » (T-REJOINDRE) est dans la carte
+                    « Ton inscription » du joueur ; l'organisateur ne le voit plus (point 5). */}
                 {actionError ? (
                   <div style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
                     {actionError}
@@ -2940,9 +3517,23 @@ function EventDetails({ navigation, route }) {
             <section
               data-testid="event-main-column"
               style={{
-                alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: colonnePrincipaleVide ? 'none' : 'grid', gap: 18, padding: 22,
+                alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: colonnePrincipaleVide ? 'none' : 'grid', gap: 18, minWidth: 0, padding: 22,
               }}
             >
+              {vueJoueurDuTournoi ? (
+                <>
+                  <TournamentEssentials items={essentielDuTournoi} />
+                  {/* Au téléphone, la carte d'inscription suit l'essentiel (ordre de la maquette). */}
+                  {isDesktop ? null : carteDuTournoi}
+                  {equipeDuLecteur ? null : <TournamentHowItWorks event={event} ui={uiDeLaFiche} />}
+                  <TournamentBeforeSignUp
+                    event={event}
+                    onOpenTerms={openTournamentTerms}
+                    title={equipeDuLecteur ? t('tournamentFicheWeb.before.beforeMatch') : undefined}
+                    ui={uiDeLaFiche}
+                  />
+                </>
+              ) : null}
               {/* CRFERM (13/10, COL-010, « D8 B », planche P8v4-fermee-ordi B et C) — la Ville a
                   fermé l installation ce jour-là : le bandeau du téléphone (même composant), ses
                   deux gestes pour qui peut modifier la séance ; un joueur lit le bandeau seul. La
@@ -3510,9 +4101,15 @@ function EventDetails({ navigation, route }) {
                   )}
                 </>
               ) : null}
+              {vueJoueurDuTournoi ? blocDuTournoi : null}
             </section>
 
-            <section style={{ alignContent: 'start', display: 'grid', gap: 24 }}>
+            <section style={{ alignContent: 'start', display: 'grid', gap: 24, minWidth: 0 }}>
+              {vueJoueurDuTournoi && isDesktop ? (
+                <div style={{ alignSelf: 'start', position: 'sticky', top: 24, zIndex: 1 }}>
+                  {carteDuTournoi}
+                </div>
+              ) : null}
               {/* 🎯 ST-VUES3-ORDI (écran 7 sur ordinateur, planche P3-match-ordi) — « STATS DU
                   MATCH », À DROITE du match : les cartes du téléphone, servies telles quelles.
                   · l'ENCADREMENT (`canManage`) : les trois étapes, l'auteur du score, qui
@@ -3630,545 +4227,118 @@ function EventDetails({ navigation, route }) {
                   trainerFirstname={(event?.team?.trainers || [])[0]?.firstname || null}
                 />
               ) : null}
-              <div style={{
-                background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
-              }}
-              >
-                <h2 style={sectionTitleStyle}>{t('eventDetails.quickInfo', 'Infos rapides')}</h2>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  {[
-                    {
-                      label: 'Type',
-                      value: event?.type?.name || t('eventDetails.notSet', 'Non défini'),
-                    },
-                    // T-FICHE (14/11) : un tournoi autonome n'a pas d'équipe, seulement un club
-                    // (`event.club`) → « Organisateur » ; ni équipe ni club → ligne masquée.
-                    ...(event?.team ? [{
-                      label: t('eventDetails.teamFallback', 'Equipe'),
-                      value: event.team.name || t('eventDetails.notSetFeminine', 'Non définie'),
-                    }] : []),
-                    ...(quickInfoOrganizerName ? [{
-                      label: t('eventDetails.organizer', 'Organisateur'),
-                      value: quickInfoOrganizerName,
-                    }] : []),
-                    // T-FICHE-2 (14/11) : la section est celle de l'équipe ;
-                    // sans équipe, ligne masquée.
-                    ...(event?.team ? [{
-                      label: 'Section',
-                      value: event.team.section?.name
-                        || t('eventDetails.notSetFeminine', 'Non définie'),
-                    }] : []),
-                    // T-FINITIONS2 (16/11, M1294) : sur un tournoi, une case à 0 ne s'affiche pas
-                    // (« Capacité 0 ») ; « Non défini » reste (décision T-FICHE).
-                    ...(!isTournamentEvent || Number(event?.capacity ?? 1) !== 0 ? [{
-                      label: t('eventDetails.capacity', 'Capacité'),
-                      value: event?.capacity ?? t('eventDetails.open2', 'Libre'),
-                    }] : []),
-                    ...(!trainingOpenConfig.isOpenTraining
-                      && (!isTournamentEvent || Number(expectedPlayersCount ?? event?.totalPlayers ?? 1) !== 0)
-                      ? [{
-                        label: t('eventDetails.expectedPlayers', 'Joueurs attendus'),
-                        value: expectedPlayersCount ?? event?.totalPlayers ?? t('eventDetails.notSet', 'Non défini'),
-                      }]
-                      : []),
-                    {
-                      label: t('eventDetails.pricePerson', 'Prix / personne'),
-                      // T-PARCOURS-2 (point 7) : pour un tournoi, le montant encaissé (la règle
-                      // du téléphone, getTournamentEntryFeeLabel), jamais le prix saisi sur
-                      // l'événement.
-                      value: (isTournamentEvent ? getTournamentEntryFeeLabel(event) : null)
-                        || (!isTournamentEvent && event?.pricePerPerson != null
-                          ? `${event.pricePerPerson} EUR`
-                          : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini')),
-                    },
-                  ].map((item, index, rows) => (
-                    <div
-                      key={item.label}
-                      style={{
-                        borderBottom: index < rows.length - 1 ? `1px solid ${borderColor}` : 'none',
-                        display: 'grid',
-                        gap: 4,
-                        paddingBottom: index < rows.length - 1 ? 12 : 0,
-                      }}
-                    >
-                      <span style={{
-                        color: mutedTextColor, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase',
-                      }}
-                      >
-                        {item.label}
-                      </span>
-                      <span style={{ color: textColor, fontFamily: 'Montserrat-SemiBold, Montserrat-Bold, sans-serif', fontSize: 15 }}>
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {isTournamentEvent ? (
-                <div
-                  data-event-section="tournament"
-                  style={{
-                    background: sectionBackground,
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: 24,
-                    display: 'grid',
-                    gap: 14,
-                    padding: 22,
-                  }}
+              {/* T-PAGES-3 point 4 : « Infos rapides » (capacité, joueurs attendus) reste à l organisateur. */}
+              {vueJoueurDuTournoi ? null : (
+                <div style={{
+                  background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
+                }}
                 >
-                  <h2 style={sectionTitleStyle}>
-                    {t('eventDetails.tournamentMode', 'Mode tournoi')}
-                  </h2>
-                  <div style={{
-                    color: mutedTextColor, display: 'grid', fontSize: 14, gap: 10,
-                  }}
-                  >
-                    <span>
-                      {t('eventDetails.teamApproval', 'Validation des equipes:')}
-                      {' '}
-                      {/* T-FINITIONS-3 : un tournoi payant valide l'équipe au seuil payé. */}
-                      {getTournamentPaidValidationLabel(event)
-                        || (event?.tournamentConfig?.registrationMode === 'auto'
-                          ? t('eventDetails.automatic', 'Automatique')
-                          : t('eventDetails.manual', 'Manuelle'))}
-                    </span>
-                    <span>
-                      {t('eventDetails.maxTeams', 'Max equipes:')}
-                      {' '}
-                      {event?.tournamentConfig?.maxTeams ?? t(
-                        'eventDetails.unlimited',
-                        'Non limite',
-                      )}
-                    </span>
-                    <span>
-                      {t('eventDetails.squadSize', 'Effectif:')}
-                      {' '}
-                      {event?.tournamentConfig?.minRosterSize ?? t('eventDetails.open2', 'Libre')}
-                      {' '}
-                      -
-                      {' '}
-                      {event?.tournamentConfig?.maxRosterSize ?? t('eventDetails.open2', 'Libre')}
-                    </span>
-                    <span>
-                      {t('eventDetails.temporaryTeams', 'Equipes ephemeres:')}
-                      {' '}
-                      {event?.tournamentConfig?.allowCustomTeams !== false
-                        ? t('eventDetails.allowed', 'Autorisees')
-                        : t('eventDetails.disabled', 'Desactivees')}
-                    </span>
-                    <span>
-                      {t('eventDetails.mixedClubs', 'Mix clubs:')}
-                      {' '}
-                      {event?.tournamentConfig?.allowCrossClubPlayers === true ? t('eventDetails.allowedSingular', 'Autorisé') : t('eventDetails.notAllowed', 'Non autorisé')}
-                    </span>
-                  </div>
-                  {String(event?.tournamentConfig?.rulesText || '').trim() ? (
-                    <div style={{ color: textColor, fontSize: 14, lineHeight: 1.6 }}>
-                      {String(event?.tournamentConfig?.rulesText || '').trim()}
-                    </div>
-                  ) : null}
-                  {ligneEquipesDuVisiteur ? (
-                    <div
-                      data-testid="event-tournament-visitor-teams"
-                      style={{ color: textColor, fontSize: 14 }}
-                    >
-                      {ligneEquipesDuVisiteur}
-                    </div>
-                  ) : null}
-                  {/* ponytail: T-REJOINDRE — les compteurs d'équipes sont cachés au visiteur par le
-                      style, pas retirés (diff étroit : T-JOUEURS et T-PARCOURS-2 écrivent ici).
-                      Sortie : T-PAGES-1 redessine ce bloc. */}
-                  <div style={{
-                    color: mutedTextColor,
-                    display: estVisiteurDuTournoi ? 'none' : 'flex',
-                    flexWrap: 'wrap',
-                    fontSize: 13,
-                    gap: 12,
-                  }}
-                  >
-                    <span>
-                      {tournamentTeams.length}
-                      {' '}
-                      {t('eventDetails.teamS', 'équipes', { count: tournamentTeams.length })}
-                    </span>
-                    <span>
-                      {tournamentTeamCounters.pending}
-                      {' '}
-                      {t('eventDetails.pendingLower', 'en attente')}
-                    </span>
-                    <span>
-                      {tournamentTeamCounters.accepted}
-                      {' '}
-                      {t(
-                        'eventDetails.approved2',
-                        'validées',
-                        { count: tournamentTeamCounters.accepted },
-                      )}
-                    </span>
-                    <span>
-                      {t('tournamentManagement.rosterAlertsCount', '{{count}} effectifs à revoir', {
-                        count: tournamentTeamCounters.warning,
-                      })}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                    <button
-                      onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
-                      style={{
-                        background: canEdit ? accentColor : 'transparent',
-                        border: canEdit ? 0 : `1px solid ${borderColor}`,
-                        borderRadius: 999,
-                        color: textColor,
-                        cursor: 'pointer',
-                        fontFamily: canEdit ? 'Montserrat-Bold, sans-serif' : 'Montserrat-Regular, sans-serif',
-                        padding: '10px 16px',
-                      }}
-                      type="button"
-                    >
-                      {canEdit ? t(
-                        'eventDetails.runTheCompetition',
-                        'Piloter la compétition',
-                      ) : t(
-                        'eventDetails.seeTheCompetition',
-                        'Voir la compétition',
-                      )}
-                    </button>
-                    {canEdit && !tournoiClos ? (
-                      <button
-                        onClick={() => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId })}
-                        style={primaryButtonStyle}
-                        type="button"
-                      >
-                        {t('eventDetails.editTheSettings', 'Modifier les paramètres')}
-                      </button>
-                    ) : null}
-                    {managedTournamentTeam?.documentId ? (
-                      <button
-                        onClick={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 999,
-                          color: textColor,
-                          cursor: 'pointer',
-                          padding: '10px 16px',
-                        }}
-                        type="button"
-                      >
-                        {t('eventDetails.manageMyTeam', 'Gérer mon équipe')}
-                      </button>
-                    ) : null}
-                    {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
-                      <button
-                        onClick={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 999,
-                          color: textColor,
-                          cursor: 'pointer',
-                          padding: '10px 16px',
-                        }}
-                        type="button"
-                      >
-                        {t('eventDetails.seeMyTeam', 'Voir mon équipe')}
-                      </button>
-                    ) : null}
-                    {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
-                      <button
-                        onClick={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 999,
-                          color: textColor,
-                          cursor: 'pointer',
-                          padding: '10px 16px',
-                        }}
-                        type="button"
-                      >
-                        {normalizeTournamentText(
-                          getTournamentViewerMember(
-                            currentUserPendingTournamentTeam,
-                            userData?.documentId,
-                          )?.responseStatus,
-                        ) === 'invited'
-                          ? t('eventDetails.answerMyInvitation', 'Répondre à mon invitation')
-                          : t('eventDetails.followMyRequest', 'Suivre ma demande')}
-                      </button>
-                    ) : null}
-                    {canRegisterTournamentSourceTeam ? (
-                      <button
-                        disabled={registerTournamentTeamMutation.isPending}
-                        onClick={handleRegisterTournamentTeam}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 999,
-                          color: textColor,
-                          cursor: registerTournamentTeamMutation.isPending ? 'not-allowed' : 'pointer',
-                          opacity: registerTournamentTeamMutation.isPending ? 0.7 : 1,
-                          padding: '10px 16px',
-                        }}
-                        type="button"
-                      >
-                        {/* T-FICHE-2 (chef du tournoi « B », 14/11) : l'équipe du CLUB, comme au
-                            téléphone ; « Inscrire mon équipe » est le bouton de tête. */}
-                        {t('eventDetails.registerAClubTeam', 'Inscrire une équipe du club')}
-                      </button>
-                    ) : null}
-                    {canCreateCustomTournamentTeam ? (
-                      <button
-                        disabled={createTournamentTeamMutation.isPending}
-                        onClick={handleCreateTournamentTeam}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 999,
-                          color: textColor,
-                          cursor: createTournamentTeamMutation.isPending ? 'not-allowed' : 'pointer',
-                          opacity: createTournamentTeamMutation.isPending ? 0.7 : 1,
-                          padding: '10px 16px',
-                        }}
-                        type="button"
-                      >
-                        {t('eventDetails.createATeam', 'Créer une équipe')}
-                      </button>
-                    ) : null}
-                    {/* T-FINITIONS (16/11) : conditions avant l'inscription. */}
-                    {isPaidTournament(event) ? (
-                      <button
-                        data-testid="event-tournament-terms-link"
-                        onClick={openTournamentTerms}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${borderColor}`,
-                          borderRadius: 999,
-                          color: textColor,
-                          cursor: 'pointer',
-                          padding: '10px 16px',
-                        }}
-                        type="button"
-                      >
-                        {t('publicLicensePayment.tournament.termsLink', "Conditions d'inscription")}
-                      </button>
-                    ) : null}
-                  </div>
-                  {erreurEquipeTournoi ? (
-                    <div role="alert" style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
-                      {erreurEquipeTournoi}
-                    </div>
-                  ) : null}
-                  {tournamentTeams.length === 0 && !estVisiteurDuTournoi ? (
-                    <div style={{ color: mutedTextColor, fontSize: 14 }}>
-                      {t(
-                        'eventDetails.noTeamIsRegisteredYet',
-                        'Aucune équipe n est encore inscrite.',
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gap: 10 }}>
-                      {tournamentTeams.map((team) => {
-                        const rosterSummary = getTournamentRosterSummary(team, tournamentConfig);
-                        const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
-                        const status = normalizeTournamentText(team?.status);
-                        const statusLabel = getTournamentTeamStatusLabel(status);
-
-                        return (
-                          <div
-                            key={getEntityDocumentId(team) || team?.name}
-                            style={{
-                              background: softSurfaceColor,
-                              border: `1px solid ${borderColor}`,
-                              borderRadius: 16,
-                              display: 'grid',
-                              gap: 8,
-                              padding: '12px 14px',
-                            }}
-                          >
-                            <div style={{
-                              alignItems: 'center', display: 'flex', gap: 12, justifyContent: 'space-between',
-                            }}
-                            >
-                              <div style={{ display: 'grid', gap: 4 }}>
-                                <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
-                                  {team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
-                                </span>
-                                <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                                  {team?.sourceType === 'club_team'
-                                    ? t('eventDetails.fromTeam', 'Depuis {{teamName}}', {
-                                      teamName: team?.sourceTeam?.name
-                                        || t('eventDetails.aClubTeam', 'une équipe club'),
-                                      ...SANS_ECHAPPEMENT,
-                                    })
-                                    : t('eventDetails.temporaryTeam', 'Équipe éphémère')}
-                                </span>
-                                {isTournamentTeamOpenToJoinRequests(team) ? (
-                                  <span style={{ color: textColor, fontSize: 13 }}>
-                                    {t('tournamentUtils.openToRequests', 'Ouverte aux demandes')}
-                                  </span>
-                                ) : null}
-                              </div>
-                              <span style={{ color: accentColor, fontSize: 13 }}>
-                                {statusLabel}
-                              </span>
-                            </div>
-                            <div style={{
-                              color: mutedTextColor, display: 'flex', flexWrap: 'wrap', fontSize: 13, gap: 12,
-                            }}
-                            >
-                              {/* T-JOUEURS (17/11) : « 3 joueurs · 1 payé · 2 en
-                                  attente », lu dans le résumé du serveur ;
-                                  absent, les trois compteurs d'avant. */}
-                              {rosterSummary.membersSummary ? (
-                                <span>
-                                  {getTournamentMembersSummaryLine(
-                                    rosterSummary.membersSummary,
-                                    tournamentConfig,
-                                  )}
-                                </span>
-                              ) : (
-                                <>
-                                  <span>
-                                    {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
-                                      count: rosterSummary.totalCount,
-                                    })}
-                                  </span>
-                                  <span>
-                                    {t('tournamentManagement.rosterPresent', '{{count}} présents', {
-                                      count: rosterSummary.presentCount,
-                                    })}
-                                  </span>
-                                  <span>
-                                    {rosterSummary.pendingCount}
-                                    {' '}
-                                    {t('eventDetails.pendingLower', 'en attente')}
-                                  </span>
-                                </>
-                              )}
-                              {rosterSummary.invitedCount > 0 ? (
-                                <span>
-                                  {rosterSummary.invitedCount}
-                                  {' '}
-                                  {t(
-                                    'eventDetails.invitationS',
-                                    'invitations',
-                                    { count: rosterSummary.invitedCount },
-                                  )}
-                                </span>
-                              ) : null}
-                              {rosterSummary.requestedCount > 0 ? (
-                                <span>
-                                  {rosterSummary.requestedCount}
-                                  {' '}
-                                  {t(
-                                    'eventDetails.requestS',
-                                    'demandes',
-                                    { count: rosterSummary.requestedCount },
-                                  )}
-                                </span>
-                              ) : null}
-                              {hasRosterWarning ? (
-                                <span style={{ color: '#ffd54a' }}>
-                                  {t('tournamentManagement.rosterToReview', 'Effectif à revoir')}
-                                </span>
-                              ) : null}
-                            </div>
-                            {rosterSummary.membersSummary?.list.length > 0 ? (
-                              <div
-                                style={{
-                                  color: mutedTextColor, fontSize: 13, whiteSpace: 'pre-line',
-                                }}
-                              >
-                                {formatTournamentPlayersShortList(
-                                  rosterSummary.membersSummary,
-                                  tournamentConfig,
-                                )}
-                              </div>
-                            ) : null}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                              <button
-                                onClick={() => handleOpenTournamentTeam(team?.documentId)}
-                                style={{
-                                  background: 'transparent',
-                                  border: `1px solid ${borderColor}`,
-                                  borderRadius: 999,
-                                  color: textColor,
-                                  cursor: 'pointer',
-                                  padding: '9px 14px',
-                                }}
-                                type="button"
-                              >
-                                {t('eventDetails.openTheTeam', 'Ouvrir l équipe')}
-                              </button>
-                              {canEdit && status === 'pending' ? (
-                                <>
-                                  <button
-                                    onClick={() => handleReviewTournamentTeam(team?.documentId, 'accepted')}
-                                    style={{
-                                      ...primaryButtonStyle,
-                                      padding: '9px 14px',
-                                    }}
-                                    type="button"
-                                  >
-                                    {t('eventDetails.approve', 'Valider')}
-                                  </button>
-                                  <button
-                                    onClick={() => confirmerLeRefus(
-                                      t,
-                                      () => handleReviewTournamentTeam(team?.documentId, 'declined'),
-                                    )}
-                                    style={{
-                                      background: 'transparent',
-                                      border: '1px solid rgba(255, 107, 129, 0.38)',
-                                      borderRadius: 999,
-                                      color: '#ff6b81',
-                                      cursor: 'pointer',
-                                      padding: '9px 14px',
-                                    }}
-                                    type="button"
-                                  >
-                                    {t('eventDetails.decline', 'Refuser')}
-                                  </button>
-                                </>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              <div style={{
-                background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
-              }}
-              >
-                <h2 style={sectionTitleStyle}>
-                  {t('eventDetails.invitedTeams2', 'Équipes invitées')}
-                </h2>
-                {invitedTeams.length === 0 ? (
-                  <div style={{ color: mutedTextColor }}>
-                    {t('eventDetails.noInvitedTeam', 'Aucune équipe invitée.')}
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    {invitedTeams.map((team) => (
+                  <h2 style={sectionTitleStyle}>{t('eventDetails.quickInfo', 'Infos rapides')}</h2>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {[
+                      {
+                        label: 'Type',
+                        value: event?.type?.name || t('eventDetails.notSet', 'Non défini'),
+                      },
+                      // T-FICHE (14/11) : un tournoi autonome n'a pas d'équipe, seulement un club
+                      // (`event.club`) → « Organisateur » ; ni équipe ni club → ligne masquée.
+                      ...(event?.team ? [{
+                        label: t('eventDetails.teamFallback', 'Equipe'),
+                        value: event.team.name || t('eventDetails.notSetFeminine', 'Non définie'),
+                      }] : []),
+                      ...(quickInfoOrganizerName ? [{
+                        label: t('eventDetails.organizer', 'Organisateur'),
+                        value: quickInfoOrganizerName,
+                      }] : []),
+                      // T-FICHE-2 (14/11) : la section est celle de l'équipe ;
+                      // sans équipe, ligne masquée.
+                      ...(event?.team ? [{
+                        label: 'Section',
+                        value: event.team.section?.name
+                          || t('eventDetails.notSetFeminine', 'Non définie'),
+                      }] : []),
+                      // T-FINITIONS2 (16/11, M1294) : sur un tournoi, une case à 0 ne s'affiche pas
+                      // (« Capacité 0 ») ; « Non défini » reste (décision T-FICHE).
+                      ...(!isTournamentEvent || Number(event?.capacity ?? 1) !== 0 ? [{
+                        label: t('eventDetails.capacity', 'Capacité'),
+                        value: event?.capacity ?? t('eventDetails.open2', 'Libre'),
+                      }] : []),
+                      ...(!trainingOpenConfig.isOpenTraining
+                        && (!isTournamentEvent || Number(expectedPlayersCount ?? event?.totalPlayers ?? 1) !== 0)
+                        ? [{
+                          label: t('eventDetails.expectedPlayers', 'Joueurs attendus'),
+                          value: expectedPlayersCount ?? event?.totalPlayers ?? t('eventDetails.notSet', 'Non défini'),
+                        }]
+                        : []),
+                      {
+                        label: t('eventDetails.pricePerson', 'Prix / personne'),
+                        // T-PARCOURS-2 (point 7) : pour un tournoi, le montant encaissé (la règle
+                        // du téléphone, getTournamentEntryFeeLabel), jamais le prix saisi sur
+                        // l'événement.
+                        value: (isTournamentEvent ? getTournamentEntryFeeLabel(event) : null)
+                          || (!isTournamentEvent && event?.pricePerPerson != null
+                            ? `${event.pricePerPerson} EUR`
+                            : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini')),
+                      },
+                    ].map((item, index, rows) => (
                       <div
-                        key={getEntityDocumentId(team) || team?.name}
+                        key={item.label}
                         style={{
-                          background: softSurfaceColor, border: `1px solid ${borderColor}`, borderRadius: 16, padding: '12px 14px',
+                          borderBottom: index < rows.length - 1 ? `1px solid ${borderColor}` : 'none',
+                          display: 'grid',
+                          gap: 4,
+                          paddingBottom: index < rows.length - 1 ? 12 : 0,
                         }}
                       >
-                        <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{team?.name || t('eventDetails.teamFallback', 'Equipe')}</div>
-                        <div style={{ color: mutedTextColor, fontSize: 13 }}>{team?.club?.name || team?.section?.name || ''}</div>
+                        <span style={{
+                          color: mutedTextColor, fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase',
+                        }}
+                        >
+                          {item.label}
+                        </span>
+                        <span style={{ color: textColor, fontFamily: 'Montserrat-SemiBold, Montserrat-Bold, sans-serif', fontSize: 15 }}>
+                          {item.value}
+                        </span>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* T-PAGES-3 : réglages et équipes du tournoi, pour l organisateur ; le joueur les lit
+                  dans la colonne principale (« Les équipes »). */}
+              {vueJoueurDuTournoi ? null : blocDuTournoi}
+
+              {/* T-PAGES-3 : sur un tournoi, « Aucune équipe invitée » ne s'écrit plus au joueur. */}
+              {vueJoueurDuTournoi && invitedTeams.length === 0 ? null : (
+                <div style={{
+                  background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
+                }}
+                >
+                  <h2 style={sectionTitleStyle}>
+                    {t('eventDetails.invitedTeams2', 'Équipes invitées')}
+                  </h2>
+                  {invitedTeams.length === 0 ? (
+                    <div style={{ color: mutedTextColor }}>
+                      {t('eventDetails.noInvitedTeam', 'Aucune équipe invitée.')}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {invitedTeams.map((team) => (
+                        <div
+                          key={getEntityDocumentId(team) || team?.name}
+                          style={{
+                            background: softSurfaceColor, border: `1px solid ${borderColor}`, borderRadius: 16, padding: '12px 14px',
+                          }}
+                        >
+                          <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{team?.name || t('eventDetails.teamFallback', 'Equipe')}</div>
+                          <div style={{ color: mutedTextColor, fontSize: 13 }}>{team?.club?.name || team?.section?.name || ''}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* PARTWEB — « Absences / manques » a quitte la page : chaque absent
                   est desormais DANS son equipe (groupe « Absent·e·s » de la
