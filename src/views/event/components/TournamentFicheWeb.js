@@ -293,8 +293,8 @@ const maPlace = (team) => (Array.isArray(team?.payment?.members) ? team.payment.
 /**
  * La carte « Mon équipe » (écran (b), R4) : où en est l'équipe (TournamentTeamProgress) et le seul
  * geste du lecteur : payer sa place si elle est due, répondre à son invitation, suivre sa demande,
- * sinon « Voir mon équipe » ; le paiement s'ouvre dans le même onglet (R8, comme
- * TournamentMemberPlace). L'équipe se lit ici (une requête de plus sur la fiche) ; tant
+ * sinon « Voir mon équipe » ; le paiement s'ouvre dans le même onglet (R8, openUrlHere de la
+ * poussée 7). L'équipe se lit ici (une requête de plus sur la fiche) ; tant
  * qu'elle charge, ou si la lecture échoue, la carte garde le nom et « Voir mon équipe ».
  * @param {object} props - Les propriétés.
  * @param {any} props.team - L'équipe telle que la fiche la connaît (`tournamentTeams`).
@@ -328,7 +328,7 @@ export function TournamentMyTeamCard({
   } else if (payer) {
     principal = {
       libelle: t('tournamentTeamDetails.places.payMine', 'Payer ma place'),
-      onClick: () => LinksPlatform.openUrlInPlace(place.paymentUrl),
+      onClick: () => LinksPlatform.openUrlHere(place.paymentUrl),
     };
   }
   const montreVoir = principal.onClick !== ouvrir;

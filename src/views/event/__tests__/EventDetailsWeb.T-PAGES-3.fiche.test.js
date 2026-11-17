@@ -143,7 +143,7 @@ jest.mock('@/platform/links', () => ({
   __esModule: true,
   default: {
     openUrl: (/** @type {any} */ url) => mockOuvrirLien(url),
-    openUrlInPlace: (/** @type {any} */ url) => mockOuvrirLien(url),
+    openUrlHere: (/** @type {any} */ url) => mockOuvrirLien(url),
   },
 }));
 
