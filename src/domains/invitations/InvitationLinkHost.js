@@ -891,6 +891,7 @@ function InvitationLinkHost({ userId } = {}) {
 
   if (codedTournamentInvite) {
     const coded = describeCodedTournamentInvite({ isSignedIn, preview: tournamentPreview, t });
+    /** @type {() => (void | Promise<void>)} */
     let onPrimary = handleTournamentPrimary;
     if (coded.action === 'openTeam') onPrimary = openOwnTournamentTeam;
     if (coded.action === 'shareLink') onPrimary = shareOwnTournamentTeamLink;

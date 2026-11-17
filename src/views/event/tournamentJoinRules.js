@@ -79,18 +79,6 @@ export const getTournamentTeamPlayersLine = ({ maxRosterSize, playerCount }) => 
 };
 
 /**
- * D50 — qui voit « Rejoindre une équipe » sur la fiche d'un tournoi : un compte connecté, qui
- * n'est pas un compte Parent (il lit, il ne joue pas), assez âgé pour le tournoi (même règle que
- * T-FINITIONS-3 : âge connu sous `minAge` ⇒ pas de bouton), sans équipe ni invitation ni demande
- * dans ce tournoi, sur un tournoi non clôturé. Le serveur rejuge tout (`requestJoin`).
- * @param {object} params - Le contexte.
- * @param {string} [params.accountRoleKey] - Le rôle du compte (`useAuth`).
- * @param {any} params.event - Le tournoi.
- * @param {any[]} [params.teams] - Ses équipes.
- * @param {any} [params.user] - Le compte connecté.
- * @returns {boolean} Vrai si le bouton est montré.
- */
-/**
  * T-PAGES-6 (17/11/2026, question 5 de T-REJOINDRE, « C ») — le compte est-il l'organisateur de CE
  * tournoi (`event.organizer`, même lecture que `canManageEvent` de useAuth) ? Il ne rejoint pas une
  * équipe de son propre tournoi. Règle partagée : la fiche (T-PAGES-3 et 4) l'appelle.
@@ -103,6 +91,18 @@ export const isTournamentOrganizer = (event, user) => {
   return Boolean(organizerId) && organizerId === String(user?.documentId || '').trim();
 };
 
+/**
+ * D50 — qui voit « Rejoindre une équipe » sur la fiche d'un tournoi : un compte connecté, qui
+ * n'est pas un compte Parent (il lit, il ne joue pas), assez âgé pour le tournoi (même règle que
+ * T-FINITIONS-3 : âge connu sous `minAge` ⇒ pas de bouton), sans équipe ni invitation ni demande
+ * dans ce tournoi, sur un tournoi non clôturé. Le serveur rejuge tout (`requestJoin`).
+ * @param {object} params - Le contexte.
+ * @param {string} [params.accountRoleKey] - Le rôle du compte (`useAuth`).
+ * @param {any} params.event - Le tournoi.
+ * @param {any[]} [params.teams] - Ses équipes.
+ * @param {any} [params.user] - Le compte connecté.
+ * @returns {boolean} Vrai si le bouton est montré.
+ */
 export const canAskToJoinTournamentTeam = ({
   accountRoleKey, event, teams, user,
 }) => {
