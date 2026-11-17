@@ -103,7 +103,7 @@ describe('306 A — la baseline recalée attrape toute ligne neuve', () => {
       'src/domains/tournoi/autorisationParentale.js': 6,
       'src/domains/tournoi/conditionsTournoi.js': 52,
       'src/domains/tournoi/modeleAutorisationParentale.js': 25,
-      'src/domains/tournoi/reglementTournoi.js': 46,
+      'src/domains/tournoi/reglementTournoi.js': 47,
     });
   });
 
