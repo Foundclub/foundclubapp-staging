@@ -159,9 +159,7 @@ import ClubAudienceResponses from './components/ClubAudienceResponses';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { eventMapTarget, formatEventPlaceLine, formatEventWhenLine } from './eventInfoLines';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
-import {
-  isPaidTournament, openTournamentTerms,
-} from './components/tournamentTerms';
+import { isPaidTournament, openTournamentTerms } from './components/tournamentTerms';
 import { findParentTeamId } from './matchEncartLines';
 import {
   buildMatchHeaderScoreSummary,

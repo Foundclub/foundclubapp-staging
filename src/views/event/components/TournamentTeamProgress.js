@@ -69,6 +69,7 @@ export const getTournamentTeamProgress = ({
   const missingPayments = isPaid ? Math.max(0, neededPaid - paid) : 0;
   const needed = isPaid ? neededPaid : minPlayers;
   const done = isPaid ? paid : actifs.length;
+  /** @type {any[]} */
   const places = Array.isArray(payment?.members) ? payment.members : [];
 
   /** @type {TodoItem[]} */
@@ -210,12 +211,14 @@ export const getMissingLine = ({ missingPayments, missingPlayers }) => {
  * @param {string} [props.teamStatus] - `team.status`.
  * @param {any} [props.tournamentConfig] - `team.event.tournamentConfig`.
  * @param {boolean} [props.showTodo] - Affiche « Il te reste à faire » (carte de la fiche, (b)).
+ * @param {boolean} [props.viewerIsMember] - Le lecteur est dans l'équipe (ou la gère) : faux pour
+ *   un visiteur ou un parent, la carte ne lui dit ni « Ton équipe » ni ce qu'il manque.
  * @param {import('react').ReactNode} [props.footer] - Un pied (le bouton « Voir mon équipe »).
  * @returns {import('react').ReactElement} La carte.
  */
 function TournamentTeamProgress({
   footer = null, members = [], payment = null, showTodo = false, teamStatus = '',
-  tournamentConfig = {},
+  tournamentConfig = {}, viewerIsMember = true,
 }) {
   const { t } = useTranslation();
   const {
@@ -228,11 +231,12 @@ function TournamentTeamProgress({
     members, payment, teamStatus, tournamentConfig,
   });
   const tone = progress.isValidated ? Colors.success500 : Colors.warning500;
-  const missing = progress.isValidated ? null : getMissingLine(progress);
+  const missing = progress.isValidated || !viewerIsMember ? null : getMissingLine(progress);
   let regle = null;
   if (progress.isPaid) {
-    const cle = progress.isValidated
+    let cle = progress.isValidated
       ? 'tournamentTeamProgress.ruleValidated' : 'tournamentTeamProgress.rule';
+    if (!viewerIsMember) cle = 'tournamentTeamProgress.ruleNeutral';
     regle = t(cle, {
       count: progress.done, needed: progress.needed, ...SANS_ECHAPPEMENT,
     });
@@ -256,20 +260,25 @@ function TournamentTeamProgress({
           textStyle={{ color: tone }}
         />
       </View>
-      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-        <Text style={[Fonts.h2, Fonts.neutral00]} testID="tournament-team-progress-count">
-          {`${progress.done} / ${progress.needed}`}
-        </Text>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {progress.isPaid
-            ? t('tournamentTeamProgress.paidPlaces', { count: progress.done })
-            : t('tournamentTeamProgress.players', { count: progress.done })}
-        </Text>
-      </View>
-      <TrainingProgressBar
-        color={progress.isValidated ? Colors.success500 : Colors.primary500}
-        ratio={progress.ratio}
-      />
+      {/* Rien à atteindre (tournoi gratuit sans effectif minimum) : ni « 2 / 0 », ni barre. */}
+      {progress.needed > 0 ? (
+        <>
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+            <Text style={[Fonts.h2, Fonts.neutral00]} testID="tournament-team-progress-count">
+              {`${progress.done} / ${progress.needed}`}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {progress.isPaid
+                ? t('tournamentTeamProgress.paidPlaces', { count: progress.done })
+                : t('tournamentTeamProgress.players', { count: progress.done })}
+            </Text>
+          </View>
+          <TrainingProgressBar
+            color={progress.isValidated ? Colors.success500 : Colors.primary500}
+            ratio={progress.ratio}
+          />
+        </>
+      ) : null}
       {regle ? <Text style={[Fonts.p3, Fonts.neutral100]}>{regle}</Text> : null}
       {missing ? <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{missing}</Text> : null}
       {showTodo && progress.todo.length > 0 ? (

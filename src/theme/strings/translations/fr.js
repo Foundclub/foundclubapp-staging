@@ -27153,6 +27153,7 @@ export default {
     activeMembersMakeUpThe: "Les membres actifs composent l'équipe tournoi. Cette composition ne modifie jamais l'équipe club permanente.",
     activeRoster: 'Roster actif',
     askToJoin: 'Demander à rejoindre',
+    back: 'Retour au tournoi',
     backToTheTournament: 'Revenir au tournoi',
     cancel: 'Annuler',
     cancelTheInvitation: "Annuler l'invitation",
@@ -27169,6 +27170,8 @@ export default {
     discussionMinorOutside: 'La discussion de l’équipe ne t’est pas ouverte : il faut que ton parent ait un compte relié au tien, ou qu’un encadrant de ton club puisse la rejoindre. Tu restes dans l’équipe et tu paies ta place normalement.',
     discussionReadOnly: 'La discussion est fermée : tu peux la relire.',
     exceptionalAddition: 'Ajout exceptionnel',
+    eyebrow: 'Équipe du tournoi',
+    eyebrowCaptain: 'Équipe du tournoi · Tu es capitaine',
     foundclubProfile: 'Profil FoundClub',
     // eslint-disable-next-line max-len
     incomingRequestsAreDisabledOnly: 'Les demandes entrantes sont désactivées. Seules tes invitations manuelles sont possibles.',
@@ -27187,6 +27190,10 @@ export default {
       hint: "Envoie ce lien à tes joueurs : ils rejoignent l'équipe puis paient leur place.",
       title: 'Inviter des joueurs par lien',
     },
+    joinBlocked: {
+      // eslint-disable-next-line max-len
+      alreadyInTeam: 'Tu es déjà dans une équipe de ce tournoi : tu ne peux pas en rejoindre une autre.',
+    },
     joinRequest: 'Demande de rejoindre',
     joinRequests: 'Demandes de rejoindre',
     joinThisTeam: 'Rejoindre cette équipe',
@@ -27197,6 +27204,15 @@ export default {
     maximumSquadSizeExceeded: 'Effectif maximum dépassé : {{totalCount}}/{{maxRosterSize}}',
     me: 'Moi',
     member: 'Membre',
+    memberPending: 'N’a pas encore répondu présent',
+    menu: {
+      open: 'Actions pour {{name}}',
+      removeFromTeam: 'Retirer de l’équipe',
+    },
+    myPlace: {
+      jersey: 'Tu choisis ta taille de maillot en payant.',
+      title: 'Ta place',
+    },
     myTournamentAnswer: 'Ma réponse tournoi',
     noActiveMemberInThe: 'Aucun membre actif dans l’effectif pour le moment.',
     noImage: 'Pas d’image',
@@ -27217,6 +27233,7 @@ export default {
       due: 'Place à payer',
       paid: 'Place payée',
       payMine: 'Payer ma place',
+      sizeAtPayment: 'Taille : au paiement',
       summary: 'Places payées : {{paid}}/{{needed}} pour valider l’équipe ({{amount}} par joueur).',
     },
     // eslint-disable-next-line max-len
@@ -27227,6 +27244,15 @@ export default {
     requestReceived: 'Demande reçue',
     requestsClosed: 'Demandes fermées',
     requestSent: 'Demande envoyée',
+    roster: {
+      captainYou: 'Capitaine · toi',
+      count_one: '{{count}} joueur sur {{max}}',
+      count_other: '{{count}} joueurs sur {{max}}',
+      freeSlot: 'Place {{index}} libre',
+      freeSlotHint: 'Invite un joueur pour la remplir',
+      title: 'Effectif',
+      you: 'toi',
+    },
     searchForAClubPlayer: 'Rechercher un joueur du club',
     searchForAFoundclubPlayer: 'Rechercher un joueur FoundClub',
     // eslint-disable-next-line max-len
@@ -27253,6 +27279,16 @@ export default {
     thisTeamStaysAcceptedBut: 'Cette équipe reste acceptée, mais une alerte d’effectif est maintenant visible pour l’organisateur.',
     // eslint-disable-next-line max-len
     thisTemporaryTeamIsArchived: 'Cette équipe éphémère est archivée. L’effectif reste lisible mais n’est plus modifiable.',
+    todo: {
+      searchPlayer: 'Chercher un joueur',
+      shareLink: 'Partager le lien d’invitation',
+      title: 'À faire maintenant',
+    },
+    tournamentCard: {
+      seeTournament: 'Fiche du tournoi',
+      terms: 'Conditions d’inscription',
+      title: 'Le tournoi',
+    },
     tournamentClosed: 'Tournoi clôturé',
     tournamentInvitation: 'Invitation tournoi',
     tournamentTeam: 'Équipe tournoi',
@@ -27265,6 +27301,12 @@ export default {
     unableToTransferTheCaptaincy: 'Impossible de transférer le capitanat.',
     unableToUpdateThisOption: 'Impossible de mettre à jour cette option.',
     unableToUpdateYourAnswer: 'Impossible de mettre à jour ta réponse.',
+    withdraw: {
+      button: 'Écrire à l’Assistance FoundClub',
+      error: 'La conversation ne s’est pas ouverte. Réessaie dans un instant.',
+      // eslint-disable-next-line max-len
+      text: 'Pour te retirer ou céder ta place, écris-nous : l’équipe FoundClub s’en occupe, selon les conditions d’inscription.',
+    },
     // eslint-disable-next-line max-len
     youLlOnlyBeRemoved: 'Tu seras retiré uniquement de cette équipe de tournoi. Ton équipe club restera intacte.',
     // eslint-disable-next-line max-len
@@ -27286,6 +27328,10 @@ export default {
     rule_one: 'Pas encore validée : {{count}} place payée sur {{needed}}. Ton équipe est validée dès la {{needed}}ᵉ place payée.',
     // eslint-disable-next-line max-len
     rule_other: 'Pas encore validée : {{count}} places payées sur {{needed}}. Ton équipe est validée dès la {{needed}}ᵉ place payée.',
+    // eslint-disable-next-line max-len
+    ruleNeutral_one: '{{count}} place payée sur {{needed}} ; l’équipe est validée dès la {{needed}}ᵉ place payée.',
+    // eslint-disable-next-line max-len
+    ruleNeutral_other: '{{count}} places payées sur {{needed}} ; l’équipe est validée dès la {{needed}}ᵉ place payée.',
     ruleValidated_one: 'Ton équipe est validée : {{count}} place payée sur {{needed}}.',
     ruleValidated_other: 'Ton équipe est validée : {{count}} places payées sur {{needed}}.',
     sizeChosen: 'Taille choisie : {{size}}',
@@ -27293,6 +27339,7 @@ export default {
     todo: {
       consents_one: '{{count}} autorisation parentale',
       consents_other: '{{count}} autorisations parentales',
+      // eslint-disable-next-line max-len
       consentsDetail: '{{names}} : le parent la remplit sur la page de paiement, juste avant de payer.',
       jerseys_one: 'Tailles de maillot : {{chosen}} choisie sur {{total}}',
       jerseys_other: 'Tailles de maillot : {{chosen}} choisies sur {{total}}',

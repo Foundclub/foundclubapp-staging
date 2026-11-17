@@ -133,6 +133,8 @@ describe('PARENT-TOURNOI-LECTURE-2 — le détail d une équipe, sans lien avec 
     GESTES_DE_GESTION.forEach((interdit) => expect(gestes).not.toContain(interdit));
     expect(texte(arbre)).toContain('Les Aigles');
     expect(texte(arbre)).toContain('Participant');
-    expect(gestes).toEqual(['Revenir au tournoi']);
+    // T-PAGES-2 (17/11, maquette c) : le retour au tournoi passe en haut (« Retour au tournoi ») et la carte
+    // « Le tournoi » ajoute deux liens de LECTURE (conditions, fiche). Toujours aucun geste de gestion.
+    expect(gestes).toEqual(['Retour au tournoi', 'Conditions d’inscription', 'Fiche du tournoi']);
   });
 });
