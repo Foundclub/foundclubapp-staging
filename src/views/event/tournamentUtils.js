@@ -407,6 +407,22 @@ export const isTournamentTeamOpenToJoinRequests = (team) => {
   return !['archived', 'declined'].includes(normalizeTournamentText(team?.status));
 };
 
+// T-PARCOURS-2, point 1 (17/11) : le prix d un tournoi payant, par joueur, au format de la carte
+// d equipe (TournamentMemberPlace : « 20 € par joueur ») ; `null` sur un tournoi gratuit.
+/**
+ * Le prix par joueur d un tournoi payant, ou `null`.
+ * @param {any} event - le tournoi.
+ * @returns {string | null}
+ */
+export const getTournamentEntryFeeLabel = (event) => {
+  const fee = Math.round(Number(event?.tournamentConfig?.entryFeeCents));
+  if (!Number.isFinite(fee) || fee <= 0) return null;
+  return i18next.t('tournamentUtils.entryFeePerPlayer', {
+    amount: `${(fee / 100).toLocaleString('fr-FR')} €`,
+    defaultValue: '{{amount}} par joueur',
+  });
+};
+
 // T-FINITIONS-3, ajout du chef (17/11, recette 41) — le serveur (tournament-payment.js
 // `recountTeam`) valide une equipe `pending` d un tournoi PAYANT (`entryFeeCents` > 0) quand ses
 // places payees atteignent `paidMembersToValidate` (5 par defaut), quel que soit

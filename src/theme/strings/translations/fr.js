@@ -27189,6 +27189,7 @@ export default {
     competitionPublished: 'Compétition publiée',
     declined: 'Refusée',
     draft: 'Brouillon',
+    entryFeePerPlayer: '{{amount}} par joueur',
     forfeit: 'Forfait',
     fromAge: 'À partir de {{minAge}} ans',
     groupsFinal: 'Poules + finale',

@@ -41,7 +41,7 @@ import {
   formatEventWhenLine,
   getStageLastDay,
 } from '../eventInfoLines';
-import { getTournamentCategoryLabel } from '../tournamentUtils';
+import { getTournamentCategoryLabel, getTournamentEntryFeeLabel } from '../tournamentUtils';
 import MatchScoreEncart from './MatchScoreEncart';
 /* eslint-enable perfectionist/sort-imports */
 
@@ -352,6 +352,13 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
             )}
           </View>
         )}
+
+        {/* T-PARCOURS-2, point 1 : le prix d'un tournoi payant (« Prix / personne » du site). */}
+        {isTournamentEvent && getTournamentEntryFeeLabel(event) ? (
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="event-header-entry-fee">
+            {getTournamentEntryFeeLabel(event)}
+          </Text>
+        ) : null}
 
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>

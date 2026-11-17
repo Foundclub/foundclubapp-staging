@@ -26018,6 +26018,7 @@ export default {
     competitionPublished: 'Competition published',
     declined: 'Declined',
     draft: 'Draft',
+    entryFeePerPlayer: '{{amount}} per player',
     forfeit: 'Forfeit',
     fromAge: 'From {{minAge}} years old',
     groupsFinal: 'Groups + final',

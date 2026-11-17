@@ -124,3 +124,19 @@ describe('INVIT2 — le code du lien est range avec l invitation', () => {
     expect(JSON.parse(rangee).code).toBeUndefined();
   });
 });
+
+// T-PARCOURS-2, point 4 : le compte qui détient l'invitation (son identifiant technique, jamais un
+// nom ni un numéro) survit au redémarrage, pour la vider à SA déconnexion.
+describe('T-PARCOURS-2 — le compte qui détient l invitation est rangé avec elle', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('range ET relit ownerId', () => {
+    savePendingInvite({ id: 't-1', ownerId: 'compte-777', subject: 'team' });
+    const [, rangee] = mockStorage.set.mock.calls[0];
+    expect(JSON.parse(rangee).ownerId).toBe('compte-777');
+    mockStorage.getString.mockReturnValue(rangee);
+    expect(readPendingInvite()).toEqual(expect.objectContaining({ ownerId: 'compte-777' }));
+  });
+});

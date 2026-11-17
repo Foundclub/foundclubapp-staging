@@ -432,6 +432,29 @@ function InvitationLinkHost({ userId } = {}) {
     setPendingInvite((current) => current || readPendingInvite());
   }, [isSignedIn]);
 
+  // T-PARCOURS-2, point 4 (P2-5b, planche « App 3 ») : l'invitation appartient au premier compte
+  // connecté pendant qu'elle attend (ouverte sans compte : celui qui se connecte ensuite). Sa
+  // déconnexion ou un changement de compte la vide, en mémoire et dans le magasin : le compte
+  // suivant ne se la voit plus proposer.
+  const previousUserIdRef = useRef(String(userId || ''));
+  useEffect(() => {
+    const previous = previousUserIdRef.current;
+    previousUserIdRef.current = String(userId || '');
+    if (!previous || previous === previousUserIdRef.current) return;
+    if (String(readPendingInvite()?.ownerId || '') === previous) clearPendingInvite();
+    setPendingInvite((/** @type {any} */ current) => {
+      if (String(current?.ownerId || '') !== previous) return current;
+      clearPendingInvite();
+      return null;
+    });
+  }, [userId]);
+  useEffect(() => {
+    if (!isSignedIn || !pendingInvite || pendingInvite.ownerId) return;
+    const owned = { ...pendingInvite, ownerId: String(userId) };
+    savePendingInvite(owned);
+    setPendingInvite(owned);
+  }, [isSignedIn, pendingInvite, userId]);
+
   // INVIT2 — un lien d'equipe AVEC code : l'apercu (public) nomme l'invitant et
   // l'equipe ; connecte, `claim` dit ce que la personne peut faire.
   useEffect(() => {
