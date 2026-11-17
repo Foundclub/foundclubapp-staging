@@ -6,6 +6,7 @@ import {
   getTournamentRosterSummary,
   isTooYoungForTournament,
   isTournamentActiveMemberStatus,
+  isTournamentPendingMembershipStatus,
   isTournamentTeamOpenToJoinRequests,
   normalizeTournamentText,
 } from './tournamentUtils';
@@ -95,12 +96,17 @@ export const canAskToJoinTournamentTeam = ({
   if (getTournamentClosure(event).isClosed || event?.isActive === false) return false;
   if (isTooYoungForTournament(event, user)) return false;
   const equipes = Array.isArray(teams) ? teams : [];
+  // Personne n'a `tournament-team-member.find` : la fiche reçoit `members` vide. Le lecteur se
+  // reconnaît donc par le capitaine, les admins de l'équipe, et par la marque du serveur
+  // `viewerMembership` (T-PARCOURS-2, son statut à lui seul, par équipe) quand elle est là.
   const dejaDansUneEquipe = equipes.some((team) => (
     team?.captainUser?.documentId === userId
     || (team?.adminUsers || []).some((/** @type {any} */ admin) => admin?.documentId === userId)
     || (team?.members || []).some((/** @type {any} */ member) => (
       member?.user?.documentId === userId && isTournamentActiveMemberStatus(member?.responseStatus)
     ))
+    || isTournamentActiveMemberStatus(team?.viewerMembership?.responseStatus)
+    || isTournamentPendingMembershipStatus(team?.viewerMembership?.responseStatus)
   ));
   return !dejaDansUneEquipe && !getTournamentPendingMembershipForUser(equipes, userId);
 };

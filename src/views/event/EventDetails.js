@@ -5947,6 +5947,7 @@ function EventDetails({ navigation, route }) {
     return [];
   }, [
     acceptedPeopleCount,
+    estVisiteurDuTournoi,
     isDetectionEvent,
     isMatchEvent,
     isStageDayEvent,

@@ -108,6 +108,14 @@ describe('T-REJOINDRE — qui voit « Rejoindre une équipe » (D50)', () => {
     expect(voit({ teams: avec('declined') })).toBe(true);
   });
 
+  it('membres non rendus par le serveur : la marque `viewerMembership` (T-PARCOURS-2) suffit à le reconnaître', () => {
+    const marque = (/** @type {string} */ responseStatus) => [equipe({ viewerMembership: { responseStatus } })];
+    expect(voit({ teams: marque('pending') })).toBe(false);
+    expect(voit({ teams: marque('requested') })).toBe(false);
+    expect(voit({ teams: marque('invited') })).toBe(false);
+    expect(voit({ teams: marque('declined') })).toBe(true);
+  });
+
   it("pas sur un tournoi clôturé, ni sur un événement qui n'est pas un tournoi", () => {
     expect(voit({
       event: { ...TOURNOI, tournamentConfig: { ...TOURNOI.tournamentConfig, closedAt: '2026-12-20T00:00:00.000Z' } },
