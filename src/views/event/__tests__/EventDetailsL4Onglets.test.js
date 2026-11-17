@@ -595,6 +595,40 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
     expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Équipes · 0', 'Personnes · 0']);
   });
 
+  // T-REJOINDRE (17/11, Clément D49, registre D210) — le visiteur sans compte ne reçoit pas les
+  // équipes : son onglet disait « Équipes · 0 » sur un tournoi qui en avait 5. Il lit le résumé
+  // public (`tournamentTeamsSummary`), avec le seuil des 30 %.
+  test('🔴 T-REJ — VISITEUR sans compte : plus de « Équipes · 0 », le seuil des 30 %', () => {
+    const visiteur = { ...authPour('personne'), userData: null };
+    const tournoiPublic = (/** @type {number} */ registeredCount) => buildEvent({
+      tournamentConfig: { maxTeams: 24 },
+      tournamentTeams: undefined,
+      tournamentTeamsSummary: { expectedCount: 24, registeredCount },
+      type: { name: 'Tournoi' },
+    });
+
+    const sousLeSeuil = monter({ auth: visiteur, event: tournoiPublic(5) });
+    expect(libellesDesOnglets(sousLeSeuil)[1]).toBe('Équipes');
+    expect(contient(sousLeSeuil, '24 équipes attendues')).toBe(true);
+    expect(contient(sousLeSeuil, 'équipes inscrites sur')).toBe(false);
+
+    const auSeuil = monter({ auth: visiteur, event: tournoiPublic(8) });
+    expect(contient(auSeuil, '8 équipes inscrites sur 24')).toBe(true);
+  });
+
+  // T-REJOINDRE (D50) — « Rejoindre une équipe » : un compte connecté sans équipe le voit,
+  // pas le visiteur.
+  test('🔴 T-REJ — « Rejoindre une équipe » : joueur connecté sans équipe, pas le visiteur', () => {
+    const tournoi = buildEvent({ tournamentTeams: [], type: { name: 'Tournoi' } });
+
+    const joueur = monter({ auth: authPour('joueur-seul'), event: tournoi });
+    expect(parTestID(joueur, 'tournament-join-team-panel').length).toBeGreaterThan(0);
+    expect(contient(joueur, 'Rejoindre une équipe')).toBe(true);
+
+    const visiteur = monter({ auth: { ...authPour('personne'), userData: null }, event: tournoi });
+    expect(parTestID(visiteur, 'tournament-join-team-panel')).toHaveLength(0);
+  });
+
   test('un ENTRAINEMENT, lui, n en a toujours AUCUN', () => {
     // ⛔ La matrice ne ratisse pas tout : quatre types seulement en ont assez
     // pour deborder d'une colonne. L'entrainement garde la sienne, entiere.
