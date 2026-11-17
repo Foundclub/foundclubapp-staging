@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TextInput, View } from 'react-native';
 
+import { formatEuros } from '@/domains/complexe/complexeTerrain';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -24,7 +25,11 @@ const MIN_TOUCH_TARGET = 44;
 /**
  * La feuille d'équipe du tournoi.
  * @param {object} props - Les propriétés du composant.
+ * @param {number} [props.entryFeeCents] - T-PARCOURS-1 (R10) : le prix d'une place, en
+ *   centimes (0 = gratuit).
  * @param {boolean} [props.isPending] - Une création ou une inscription est-elle en cours.
+ * @param {number | null} [props.maxRosterSize] - T-PARCOURS-1 (R10) : le nombre de joueurs
+ *   d'une équipe.
  * @param {'name' | 'choose' | null} props.mode - Ce que demande la feuille ; `null` la ferme.
  * @param {() => void} props.onClose - Fermer sans rien faire.
  * @param {(equipe: any) => void} props.onChoose - Inscrire cette équipe.
@@ -33,7 +38,8 @@ const MIN_TOUCH_TARGET = 44;
  * @returns {import('react').ReactElement | null} - La feuille.
  */
 function TournamentTeamSheet({
-  isPending = false, mode, onChoose, onClose, onCreate, teams = [],
+  entryFeeCents = 0, isPending = false, maxRosterSize = null, mode, onChoose, onClose, onCreate,
+  teams = [],
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
@@ -47,6 +53,17 @@ function TournamentTeamSheet({
   }, [mode]);
 
   if (!mode) return null;
+
+  // T-PARCOURS-1 (17/11, R10) — ce qui attend le capitaine, lu sur le tournoi : rien pour un
+  // tournoi gratuit.
+  const prix = Number(entryFeeCents) > 0 ? formatEuros(Number(entryFeeCents) / 100) : '';
+  const coequipiers = Number(maxRosterSize) - 1;
+  let ensuite = '';
+  if (prix) {
+    ensuite = coequipiers > 0
+      ? t('eventDetails.createMyTeamNext', { count: coequipiers, prix })
+      : t('eventDetails.createMyTeamNextAnyPlayers', { prix });
+  }
 
   const creer = () => {
     const nomPropre = nom.trim();
@@ -96,6 +113,11 @@ function TournamentTeamSheet({
                 'eventDetails.thisTeamWillOnlyExist',
                 'Cette équipe n’existera que pour ce tournoi. Tu en deviendras automatiquement le capitaine.',
               )}
+            </Text>
+          ) : null}
+          {mode === 'name' && ensuite ? (
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="tournament-team-sheet-next">
+              {ensuite}
             </Text>
           ) : null}
         </View>

@@ -2,6 +2,10 @@ import { Linking } from 'react-native';
 
 export const openUrl = async (url) => Linking.openURL(url);
 
+// T-PARCOURS-1 (17/11/2026, R8) — au téléphone, « dans cet onglet » n'a pas de sens :
+// la même ouverture.
+export const openUrlHere = openUrl;
+
 export const buildDeepLink = (routeName, params = {}) => {
   const query = new URLSearchParams(
     Object.entries(params).reduce((acc, [key, value]) => {
@@ -21,4 +25,5 @@ export const buildDeepLink = (routeName, params = {}) => {
 export default {
   buildDeepLink,
   openUrl,
+  openUrlHere,
 };

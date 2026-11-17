@@ -10889,6 +10889,10 @@ export default {
     createATeamForThe: 'Créer une équipe pour le tournoi',
     createATeamForThis: 'Créer une équipe pour ce tournoi',
     createMyTeam: 'Créer mon équipe',
+    // T-PARCOURS-1 (17/11, R10) — la ligne « Ensuite » de la feuille « Créer une équipe ».
+    createMyTeamNext_one: 'Ensuite : invite {{count}} joueur, chacun paie {{prix}}.',
+    createMyTeamNext_other: 'Ensuite : invite {{count}} joueurs, chacun paie {{prix}}.',
+    createMyTeamNextAnyPlayers: 'Ensuite : invite tes joueurs, chacun paie {{prix}}.',
     // eslint-disable-next-line max-len
     createSeveralTeamsByHand: 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.',
     decline: 'Refuser',
@@ -19901,12 +19905,14 @@ export default {
       // eslint-disable-next-line max-len
       confirmingDescription: 'Stripe nous prévient en quelques secondes : cette page se met à jour toute seule.',
       confirmingTitle: 'Paiement en cours de confirmation',
-      heroTitle: 'Inscription au tournoi',
+      heroTitle: 'Ta place au tournoi',
       // eslint-disable-next-line max-len
       noWithdrawal: 'Activité de loisir à date fixe : pas de droit de rétractation (art. L221-28 12° du Code de la consommation).',
       openTournament: 'Voir la fiche du tournoi',
       paidDescription: 'Merci ! Cette place est réglée pour l’équipe {{teamName}}.',
       paidTitle: 'Place payée',
+      // T-PARCOURS-1 (17/11, R8) — le bouton dit le prix et le moyen.
+      payByCard: 'Payer {{prix}} par carte',
       // eslint-disable-next-line max-len
       payForOthers: 'Paiement sécurisé par Stripe. Tu peux aussi payer la place d’un autre joueur en ouvrant son lien.',
       payStripe: 'Payer ma place',

@@ -4094,7 +4094,9 @@ function EventDetails({ navigation, route }) {
         ) : null}
       </div>
       <TournamentTeamSheet
+        entryFeeCents={Number(tournamentConfig?.entryFeeCents) || 0}
         isPending={createTournamentTeamMutation.isPending || registerTournamentTeamMutation.isPending}
+        maxRosterSize={Number(tournamentConfig?.maxRosterSize) || null}
         mode={feuilleEquipeTournoi}
         onChoose={inscrireLEquipeDuClub}
         onClose={() => setFeuilleEquipeTournoi(null)}
