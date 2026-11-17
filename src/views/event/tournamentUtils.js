@@ -215,15 +215,36 @@ export const getTournamentStatusCounters = (teams = [], tournamentConfig = {}) =
   warning: 0,
 });
 
+/**
+ * T-PARCOURS-2 (17/11, point 3) — LA LIGNE DU LECTEUR dans une équipe de tournoi. Personne n'a
+ * `tournament-team-member.find` : le serveur retire `members` de la fiche et rend, par équipe, le
+ * statut du lecteur seul (`viewerMembership`). Sans elle, la fiche proposait « Créer une équipe »
+ * à qui en avait déjà une. Une charge qui porte encore `members` reste lue comme avant.
+ * @param {any} team - L'équipe du tournoi.
+ * @param {string} [userDocumentId] - Le compte connecté.
+ * @param {(status: any) => boolean} [matchesStatus] - Le statut attendu (tous, par défaut).
+ * @returns {any} Sa ligne (`responseStatus`), ou null.
+ */
+export const getTournamentViewerMember = (
+  team,
+  userDocumentId = '',
+  matchesStatus = () => true,
+) => {
+  if (!userDocumentId) return null;
+  const members = Array.isArray(team?.members) ? team.members : [];
+  const row = members.find((/** @type {any} */ member) => (
+    member?.user?.documentId === userDocumentId && matchesStatus(member?.responseStatus)
+  ));
+  if (row) return row;
+  const viewer = team?.viewerMembership;
+  return viewer?.responseStatus && matchesStatus(viewer.responseStatus) ? viewer : null;
+};
+
 export const getTournamentPendingMembershipForUser = (teams = [], userDocumentId = '') => {
   if (!userDocumentId) return null;
 
   return (Array.isArray(teams) ? teams : []).find((team) => (
-    Array.isArray(team?.members)
-    && team.members.some((member) => (
-      member?.user?.documentId === userDocumentId
-      && isTournamentPendingMembershipStatus(member?.responseStatus)
-    ))
+    getTournamentViewerMember(team, userDocumentId, isTournamentPendingMembershipStatus)
   )) || null;
 };
 

@@ -87,7 +87,9 @@ describe('EVT-AUTRE-PLANNING — la liste compacte demande le nom d un « Autre 
 
     const base = ['documentId', 'name', 'date', 'startTime', 'endTime'];
     expect(fields).toEqual(expect.arrayContaining(base));
-    const autres = (fields || []).filter((field) => field !== 'customName');
+    // T-PARCOURS-2 (point 8) : `tournamentConfig` s'y ajoute, rien d'autre.
+    const autres = (fields || [])
+      .filter((field) => !['customName', 'tournamentConfig'].includes(field));
     expect(autres).toHaveLength(26);
   });
 
@@ -95,5 +97,21 @@ describe('EVT-AUTRE-PLANNING — la liste compacte demande le nom d un « Autre 
     const fields = await readFields({ compact: false, viewerDocumentId: 'user-doc-1' });
 
     expect(fields).toBeUndefined();
+  });
+});
+
+// T-PARCOURS-2 (17/11, point 8, recette 42 r42-04) — la carte du Planning (/events/mine) disait
+// encore « Sénior (+18 ans) » pour un tournoi ouvert à partir de 16 ans : `EventCardNew` applique
+// bien la règle (getTournamentCategoryLabel), mais la liste COMPACTE ne demandait pas
+// `tournamentConfig` au serveur (`?fields` = seules ces colonnes reviennent) : pas d'âge minimum.
+describe('T-PARCOURS-2 point 8 — la liste compacte demande la configuration du tournoi', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('🔴 les champs compacts contiennent tournamentConfig', async () => {
+    const fields = await readFields({ compact: true, viewerDocumentId: 'user-doc-1' });
+
+    expect(fields).toContain('tournamentConfig');
   });
 });

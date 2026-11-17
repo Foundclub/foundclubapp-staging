@@ -282,3 +282,26 @@ describe('T3-TOURNOI-PRIVE — le lien et les invités', () => {
     expect(doubles(arbre, '../TournamentInvitationRequest')).toHaveLength(0);
   });
 });
+
+// T-PARCOURS-2 (17/11, point 11, recette 42 r42-app-05a) — « Voir le tournoi », vue d'ensemble : la
+// ligne « Validation des équipes » suit la règle de la fiche (getTournamentPaidValidationLabel).
+describe('T-PARCOURS-2 point 11 — la validation des équipes d un tournoi payant', () => {
+  const config = (/** @type {any} */ sur = {}) => ({
+    competitionState: 'draft', formatMode: 'groups_only', registrationMode: 'manual', ...sur,
+  });
+
+  test('🔴 payant en « manual » : « Équipe validée au 5ᵉ joueur payé »', async () => {
+    const arbre = await monter(tableau({ config: config({ entryFeeCents: 2000 }) }));
+    expect(texte(arbre)).toContain('Équipe validée au 5ᵉ joueur payé');
+    expect(texte(arbre)).not.toContain('Manuelle');
+  });
+
+  test('caractérisant — gratuit : « Manuelle » ; « auto » : « Automatique »', async () => {
+    expect(texte(await monter(tableau({ config: config() })))).toContain('Manuelle');
+    const auto = await monter(tableau({
+      config: config({ entryFeeCents: 2000, registrationMode: 'auto' }),
+    }));
+    expect(texte(auto)).toContain('Automatique');
+    expect(texte(auto)).not.toContain('joueur payé');
+  });
+});
