@@ -177,6 +177,11 @@ jest.mock(
 );
 /* eslint-enable global-require */
 
+// T-PAGES-3 (17/11) : la carte « Mon équipe » de la fiche lit l'équipe (une requête de plus).
+jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
+  useGetTournamentTeam: () => ({ data: null, isError: false, isLoading: false }),
+}));
+
 // eslint-disable-next-line import/first
 import EventDetailsWeb from '../EventDetails.web';
 
@@ -285,6 +290,17 @@ const boutonsMonStatut = (arbre) => {
 };
 
 const blocTournoi = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
+// T-PAGES-3 (17/11, maquette (a) et (b)) : sur un tournoi, le joueur ne lit plus « Mon statut » ; ses
+// gestes sont dans la colonne des cartes (« Ton inscription » ou « Mon équipe »). Les réglages, la
+// pastille de validation et « Infos rapides » restent à l'organisateur (témoin EventDetailsWeb.T-PAGES-3).
+const carteDuJoueur = (/** @type {any} */ arbre) => arbre.root
+  .findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-side' && n.type === 'div')[0];
+const boutonsDeLaCarte = (/** @type {any} */ arbre) => carteDuJoueur(arbre)
+  .findAll((/** @type {any} */ n) => n.type === 'button')
+  .map((/** @type {any} */ b) => [texte(b), b.props.style?.background === 'transparent' ? 'contour' : 'plein']);
+const L_ORGANISATEUR = {
+  ...JOUEUR, canEditClub: () => true, canEditEvent: () => true, canManageEvent: () => true,
+};
 const boutonsDe = (/** @type {any} */ noeud) => noeud.findAll((/** @type {any} */ n) => n.type === 'button').map(texte);
 const tousLesBoutons = (/** @type {any} */ arbre) => boutonsDe(arbre.root);
 const blocParticipants = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.id === 'event.participants').length;
@@ -296,8 +312,8 @@ const TOURNOI_19_12 = (/** @type {Record<string, any>} */ sur = {}) => tournoiAu
 
 // --- (a) ni « Participer » ni « Participants » sur un tournoi --------------------------------------------
 
-test('🔴 T-F3 (a) — tournoi : « Mon statut » n offre plus « Participer », seulement « Inscrire mon équipe »', () => {
-  expect(boutonsMonStatut(monter(tournoiAutonome()))).toEqual([['Inscrire mon équipe', 'plein']]);
+test('🔴 T-F3 (a) — tournoi : plus de « Participer », seulement « Créer mon équipe » (T-PAGES-3 : carte « Ton inscription »)', () => {
+  expect(boutonsDeLaCarte(monter(tournoiAutonome()))).toEqual([['Créer mon équipe', 'plein']]);
 });
 
 test('🔴 T-F3 (a) — tournoi : le bloc « Participants » (Présent / Absent / Sans réponse) n est pas rendu', () => {
@@ -314,9 +330,10 @@ test('T-F3 (a) caractérisant — un match d équipe garde « Participer » et s
 
 test('🔴 T-F3 (b) — 15 ans au jour du tournoi : la phrase « ouvert à partir de 16 ans », aucun bouton d inscription', () => {
   const arbre = monter(TOURNOI_19_12(), compteNeLe('2011-06-01'));
-  expect(JSON.stringify(arbre.toJSON())).toContain('Ce tournoi est ouvert à partir de 16 ans.');
+  // T-PAGES-3 : le message est le titre de la carte (maquette (a), variante « moins de 16 ans »).
+  expect(JSON.stringify(arbre.toJSON())).toContain('Ce tournoi est ouvert à partir de 16 ans');
   const boutons = tousLesBoutons(arbre);
-  ['Inscrire mon équipe', 'Créer une équipe', 'Inscrire une équipe du club', 'Participer'].forEach((libelle) => {
+  ['Inscrire mon équipe', 'Créer une équipe', 'Créer mon équipe', 'Inscrire une équipe du club', 'Participer'].forEach((libelle) => {
     expect(boutons).not.toContain(libelle);
   });
 });
@@ -324,7 +341,7 @@ test('🔴 T-F3 (b) — 15 ans au jour du tournoi : la phrase « ouvert à parti
 test('T-F3 (b) caractérisant — âge inconnu, ou 18 ans : « Inscrire mon équipe » reste, sans la phrase', () => {
   [null, '2008-01-01'].forEach((birthdate) => {
     const arbre = monter(TOURNOI_19_12(), compteNeLe(birthdate));
-    expect(boutonsMonStatut(arbre)[0]).toEqual(['Inscrire mon équipe', 'plein']);
+    expect(boutonsDeLaCarte(arbre)[0]).toEqual(['Créer mon équipe', 'plein']);
     expect(JSON.stringify(arbre.toJSON())).not.toContain('Ce tournoi est ouvert à partir de');
     act(() => mounted.unmount());
     mounted = null;
@@ -336,13 +353,14 @@ test('T-F3 (b) caractérisant — âge inconnu, ou 18 ans : « Inscrire mon équ
 test('🔴 T-F3 (c) — « Créer une équipe » refusée par le serveur : sa phrase s affiche dans le bloc « Mode tournoi »', async () => {
   mockCreerEquipe.mockRejectedValue(new Error('Tu participes déjà à une autre équipe de ce tournoi.'));
   const arbre = monter(tournoiAutonome());
-  const creer = blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Créer une équipe')[0];
+  // T-PAGES-3 : le geste et sa phrase d'erreur sont dans la carte « Ton inscription », sous le bouton.
+  const creer = carteDuJoueur(arbre).findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Créer mon équipe')[0];
   act(() => { creer.props.onClick(); });
   await act(async () => { await mockFeuille.props.onCreate('Les Seuls'); });
   expect(mockCreerEquipe).toHaveBeenCalled();
-  expect(texte(blocTournoi(arbre))).toContain('Tu participes déjà à une autre équipe de ce tournoi.');
-  // Caractérisant : « Mon statut » la montre aussi, comme avant.
-  expect(texte(blocMonStatut(arbre))).toContain('Tu participes déjà à une autre équipe de ce tournoi.');
+  expect(texte(carteDuJoueur(arbre))).toContain('Tu participes déjà à une autre équipe de ce tournoi.');
+  // Une seule fois (la carte ne la répète pas).
+  expect(texte(arbre.root).split('Tu participes déjà à une autre équipe de ce tournoi.')).toHaveLength(2);
 });
 
 // --- Ajout 1 du chef du tournoi : le parcours « joueur seul » --------------------------------------------
@@ -388,21 +406,23 @@ test('T-F3 joueur seul caractérisant — sans équipe, il ouvre l équipe ouver
 const ligneValidation = (/** @type {any} */ arbre) => texte(blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'span'
   && texte(n).startsWith('Validation des'))[0]);
 const tournoiRegle = (/** @type {any} */ tournamentConfig) => tournoiAutonome({ tournamentConfig });
+// T-PAGES-3 point 4 : la ligne « Validation des équipes » est un réglage, lu par l'organisateur.
+const monterRegle = (/** @type {any} */ tournamentConfig) => monter(tournoiRegle(tournamentConfig), L_ORGANISATEUR);
 
 test('🔴 T-F3 validation — payant en « manual » : « Équipe validée au 5ᵉ joueur payé » (seuil lu, sinon 5)', () => {
-  expect(ligneValidation(monter(tournoiRegle({ entryFeeCents: 2000, registrationMode: 'manual' }))))
+  expect(ligneValidation(monterRegle({ entryFeeCents: 2000, registrationMode: 'manual' })))
     .toContain('Équipe validée au 5ᵉ joueur payé');
   act(() => mounted.unmount());
   mounted = null;
-  expect(ligneValidation(monter(tournoiRegle({ entryFeeCents: 2000, paidMembersToValidate: 6, registrationMode: 'manual' }))))
+  expect(ligneValidation(monterRegle({ entryFeeCents: 2000, paidMembersToValidate: 6, registrationMode: 'manual' })))
     .toContain('Équipe validée au 6ᵉ joueur payé');
 });
 
 test('T-F3 validation caractérisant — gratuit en « manual » : « Manuelle » ; « auto », même payant : « Automatique »', () => {
-  expect(ligneValidation(monter(tournoiRegle({ registrationMode: 'manual' })))).toContain('Manuelle');
+  expect(ligneValidation(monterRegle({ registrationMode: 'manual' }))).toContain('Manuelle');
   act(() => mounted.unmount());
   mounted = null;
-  expect(ligneValidation(monter(tournoiRegle({ entryFeeCents: 2000, registrationMode: 'auto' })))).toContain('Automatique');
+  expect(ligneValidation(monterRegle({ entryFeeCents: 2000, registrationMode: 'auto' }))).toContain('Automatique');
 });
 
 // ==========================================================================
@@ -414,7 +434,8 @@ const pastilles = (/** @type {any} */ arbre) => arbre.root
 const PAYANT = { entryFeeCents: 2000, registrationMode: 'manual' };
 
 test('🔴 T-PARCOURS2 (9) — tournoi payant : la pastille dit la règle du 5ᵉ joueur payé', () => {
-  const arbre = monter(tournoiAutonome({ tournamentConfig: PAYANT, validationMode: 'manual' }));
+  // T-PAGES-3 point 4 (M1316) : sur un tournoi, la pastille reste à l'organisateur.
+  const arbre = monter(tournoiAutonome({ tournamentConfig: PAYANT, validationMode: 'manual' }), L_ORGANISATEUR);
   expect(pastilles(arbre)).toContain('Équipe validée au 5ᵉ joueur payé');
   expect(pastilles(arbre)).not.toContain('Validation manuelle');
 });
@@ -422,7 +443,7 @@ test('🔴 T-PARCOURS2 (9) — tournoi payant : la pastille dit la règle du 5�
 test('T-PARCOURS2 (9) caractérisant — tournoi gratuit, ou match : « Validation manuelle »', () => {
   const gratuit = monter(tournoiAutonome({
     tournamentConfig: { registrationMode: 'manual' }, validationMode: 'manual',
-  }));
+  }), L_ORGANISATEUR);
   expect(pastilles(gratuit)).toContain('Validation manuelle');
   act(() => mounted.unmount());
   mounted = null;
@@ -433,7 +454,8 @@ test('T-PARCOURS2 (9) caractérisant — tournoi gratuit, ou match : « Validati
 // T-PARCOURS-2 (point 7) — « Prix / personne » d'un TOURNOI : le montant encaissé
 // (tournamentConfig.entryFeeCents, la règle du téléphone), jamais event.pricePerPerson.
 test('🔴 T-PARCOURS2 (7) — tournoi payant : « 20 € par joueur », pas le prix saisi', () => {
-  const arbre = monter(tournoiAutonome({ pricePerPerson: 35, tournamentConfig: PAYANT }));
+  // T-PAGES-3 point 4 : « Infos rapides » reste à l'organisateur sur un tournoi.
+  const arbre = monter(tournoiAutonome({ pricePerPerson: 35, tournamentConfig: PAYANT }), L_ORGANISATEUR);
   expect(texte(arbre.root)).toContain('20 € par joueur');
   expect(texte(arbre.root)).not.toContain('35 EUR');
 });
@@ -441,7 +463,7 @@ test('🔴 T-PARCOURS2 (7) — tournoi payant : « 20 € par joueur », pas le 
 test('🔴 T-PARCOURS2 (7) — tournoi sans prix encaissé : « Gratuit ou non défini »', () => {
   const arbre = monter(tournoiAutonome({
     pricePerPerson: 35, tournamentConfig: { registrationMode: 'manual' },
-  }));
+  }), L_ORGANISATEUR);
   expect(texte(arbre.root)).toContain('Gratuit ou non défini');
   expect(texte(arbre.root)).not.toContain('35 EUR');
 });
@@ -468,10 +490,12 @@ const ORGANISATEUR = {
   ...JOUEUR, canEditClub: () => true, canEditEvent: () => true, canManageEvent: () => true,
 };
 
-test('🔴 T-PARCOURS2 (10) — joueur sur un tournoi : la colonne vide n est pas affichée', () => {
+// T-PAGES-3 (17/11) : la colonne n'est plus jamais vide pour le joueur : elle porte l'essentiel du
+// tournoi, « Comment ça marche » et « Avant de t'inscrire » (maquette (a)). Elle s'affiche donc.
+test('🔴 T-PARCOURS2 (10) — joueur sur un tournoi : plus de carte vide, la colonne porte l essentiel (T-PAGES-3)', () => {
   const colonne = colonnePrincipale(monter(tournoiAutonome()).toJSON());
-  expect(colonne.children).toBeNull();
-  expect(colonne.props.style.display).toBe('none');
+  expect(colonne.children).not.toBeNull();
+  expect(colonne.props.style.display).toBe('grid');
 });
 
 test('T-PARCOURS2 (10) caractérisant — un bloc rendu : la colonne reste affichée', () => {
@@ -515,7 +539,8 @@ test('T-PARCOURS2 (3) site — déjà membre : « Voir mon équipe »', () => {
 
 test('T-PARCOURS2 (3) site caractérisant — sans ligne du lecteur : « Inscrire mon équipe »', () => {
   const boutons = tousLesBoutons(monter(equipeDuLecteur(null)));
-  expect(boutons).toContain('Inscrire mon équipe');
+  // T-PAGES-3 : « Inscrire mon équipe » devient « Créer mon équipe » (carte « Ton inscription »).
+  expect(boutons).toContain('Créer mon équipe');
   expect(boutons).not.toContain('Voir mon équipe');
 });
 
@@ -535,9 +560,10 @@ test('🔴 T-REJ visiteur — 5 inscrites sur 24 (sous 30 %) : « 24 équipes at
   const arbre = monter(tournoiPublic({ expectedCount: 24, registeredCount: 5 }), VISITEUR);
   expect(ligneVisiteur(arbre)).toEqual(['24 équipes attendues']);
   expect(texte(blocTournoi(arbre))).not.toContain('encore inscrite');
+  // T-PAGES-3 point 3 : les compteurs ne sont plus cachés par le style, ils ne sont plus rendus.
   const compteurs = blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'div'
-    && n.props.style?.flexWrap === 'wrap' && texte(n).includes('en attente'))[0];
-  expect(compteurs.props.style.display).toBe('none');
+    && n.props.style?.flexWrap === 'wrap' && texte(n).includes('en attente'));
+  expect(compteurs).toHaveLength(0);
 });
 
 test('🔴 T-REJ visiteur — 8 inscrites sur 24 (30 %, arrondi au supérieur) : « 8 équipes inscrites sur 24 » ; sans capacité : aucune ligne', () => {
@@ -550,16 +576,24 @@ test('🔴 T-REJ visiteur — 8 inscrites sur 24 (30 %, arrondi au supérieur) :
   expect(texte(blocTournoi(sansCapacite))).not.toContain('encore inscrite');
 });
 
-test('T-REJ visiteur caractérisant — un compte connecté garde ses compteurs et « Aucune équipe n est encore inscrite »', () => {
-  const arbre = monter(TOURNOI_19_12({ tournamentTeamsSummary: { expectedCount: 24, registeredCount: 0 } }), compteNeLe('2008-01-01'));
-  expect(ligneVisiteur(arbre)).toEqual([]);
-  expect(texte(blocTournoi(arbre))).toContain('encore inscrite');
+// T-PAGES-3 point 3 (décision d'Adel « 4- A », 17/11) : le seuil des 30 % vaut aussi pour le compte
+// connecté ; seul l'organisateur garde le vrai nombre (et « Aucune équipe n'est encore inscrite »).
+test('🔴 T-PAGES-3 (3) — un compte connecté lit lui aussi « 24 équipes attendues », sans compteurs ; l organisateur garde les siens', () => {
+  const arbre = monter(TOURNOI_19_12({ tournamentConfig: { maxTeams: 24, minAge: 16 }, tournamentTeamsSummary: { expectedCount: 24, registeredCount: 0 } }), compteNeLe('2008-01-01'));
+  expect(ligneVisiteur(arbre)).toEqual(['24 équipes attendues']);
+  expect(texte(blocTournoi(arbre))).not.toContain('encore inscrite');
+  act(() => mounted.unmount());
+  mounted = null;
+  const organisateur = monter(TOURNOI_19_12({ tournamentTeamsSummary: { expectedCount: 24, registeredCount: 0 } }), L_ORGANISATEUR);
+  expect(ligneVisiteur(organisateur)).toEqual([]);
+  expect(texte(blocTournoi(organisateur))).toContain('encore inscrite');
 });
 
 test('🔴 T-REJ joueur seul — « Rejoindre une équipe » pour un compte de 18 ans sans équipe ; ni pour le visiteur, ni pour le compte de 15 ans', () => {
   const arbre = monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), compteNeLe('2008-01-01'));
   expect(panneauRejoindre(arbre)).toBe(1);
-  expect(texte(blocMonStatut(arbre))).toContain('Rejoindre une équipe');
+  // T-PAGES-3 : le panneau est posé dans la carte « Ton inscription ».
+  expect(texte(carteDuJoueur(arbre))).toContain('Rejoindre une équipe');
   act(() => mounted.unmount());
   mounted = null;
   expect(panneauRejoindre(monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), VISITEUR))).toBe(0);

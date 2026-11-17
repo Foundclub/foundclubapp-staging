@@ -173,6 +173,11 @@ jest.mock(
 );
 /* eslint-enable global-require */
 
+// T-PAGES-3 (17/11) : la carte « Mon équipe » de la fiche lit l'équipe (une requête de plus).
+jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
+  useGetTournamentTeam: () => ({ data: null, isError: false, isLoading: false }),
+}));
+
 // eslint-disable-next-line import/first
 import EventDetailsWeb from '../EventDetails.web';
 
@@ -279,6 +284,21 @@ const boutonsMonStatut = (arbre) => {
     .map((/** @type {any} */ b) => [texte(b), b.props.style?.background === 'transparent' ? 'contour' : 'plein']);
 };
 
+// T-PAGES-3 (17/11, maquette (a) et (b)) : sur un tournoi, le joueur ne lit plus « Mon statut » ;
+// ses gestes sont dans la colonne des cartes (« Ton inscription » ou « Mon équipe »).
+const boutonsDeLaCarte = (/** @type {any} */ arbre) => arbre.root
+  .findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-side' && n.type === 'div')[0]
+  .findAll((/** @type {any} */ n) => n.type === 'button')
+  .map((/** @type {any} */ b) => [texte(b), b.props.style?.background === 'transparent' ? 'contour' : 'plein']);
+const cliquerCarte = (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
+  const bouton = arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-side' && n.type === 'div')[0]
+    .findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === libelle)[0];
+  act(() => { bouton.props.onClick(); });
+};
+const ORGANISATEUR = {
+  ...JOUEUR, canEditClub: () => true, canEditEvent: () => true, canManageEvent: () => true,
+};
+
 const cliquer = (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
   const bouton = blocMonStatut(arbre).findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === libelle)[0];
   act(() => { bouton.props.onClick(); });
@@ -298,21 +318,22 @@ const lignesInfosRapides = (arbre) => {
 
 // T-FINITIONS-3 (16/11, règle (a) du chef d'orchestre) remplace « Participer en contour » (14/11) : sur un tournoi,
 // plus de demande de participation d'événement (le serveur la refuse). Voir EventDetailsWeb.T-FINITIONS3.tournoi.
-test('tournoi à équipes libres : « Inscrire mon équipe » plein en tête, et plus de « Participer » (T-FINITIONS-3)', () => {
+test('tournoi à équipes libres : « Créer mon équipe » plein, seul, et plus de « Participer » (T-FINITIONS-3 ; T-PAGES-3 : carte « Ton inscription »)', () => {
   const arbre = monter(tournoiAutonome());
-  expect(boutonsMonStatut(arbre)).toEqual([
-    ['Inscrire mon équipe', 'plein'],
+  expect(boutonsDeLaCarte(arbre)).toEqual([
+    ['Créer mon équipe', 'plein'],
   ]);
 });
 
-test('« Inscrire mon équipe » lance la même action que « Créer une équipe » (la feuille du nom)', () => {
+test('« Créer mon équipe » lance la même action que « Créer une équipe » (la feuille du nom)', () => {
   const arbre = monter(tournoiAutonome());
   mockFeuilleEquipe.mockClear();
-  cliquer(arbre, 'Inscrire mon équipe');
+  cliquerCarte(arbre, 'Créer mon équipe');
   expect(mockFeuilleEquipe).toHaveBeenLastCalledWith('name');
-  // « Créer une équipe » reste à sa place, dans le bloc « Mode tournoi ».
+  // T-PAGES-3 : les deux boutons du même geste n'en font plus qu'un (un seul bouton principal) ;
+  // « Créer une équipe » du bloc « Mode tournoi » reste à l'organisateur.
   const creer = arbre.root.findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Créer une équipe');
-  expect(creer).toHaveLength(1);
+  expect(creer).toHaveLength(0);
 });
 
 test('compte déjà capitaine : « Voir mon équipe » ouvre son équipe ; plus de « Inscrire mon équipe »', () => {
@@ -325,10 +346,10 @@ test('compte déjà capitaine : « Voir mon équipe » ouvre son équipe ; plus 
       status: 'pending',
     }],
   }));
-  const boutons = boutonsMonStatut(arbre);
+  const boutons = boutonsDeLaCarte(arbre);
   expect(boutons[0]).toEqual(['Voir mon équipe', 'plein']);
-  expect(boutons.map(([libelle]) => libelle)).not.toContain('Inscrire mon équipe');
-  cliquer(arbre, 'Voir mon équipe');
+  expect(boutons.map(([libelle]) => libelle)).not.toContain('Créer mon équipe');
+  cliquerCarte(arbre, 'Voir mon équipe');
   expect(mockNavigate).toHaveBeenCalledWith(expect.any(String), { eventId: 'event-1', teamId: 'equipe-hugo' });
 });
 
@@ -342,14 +363,14 @@ test('membre actif (pas capitaine) : « Voir mon équipe » ouvre son équipe', 
       status: 'accepted',
     }],
   }));
-  expect(boutonsMonStatut(arbre)[0]).toEqual(['Voir mon équipe', 'plein']);
-  cliquer(arbre, 'Voir mon équipe');
+  expect(boutonsDeLaCarte(arbre)[0]).toEqual(['Voir mon équipe', 'plein']);
+  cliquerCarte(arbre, 'Voir mon équipe');
   expect(mockNavigate).toHaveBeenCalledWith(expect.any(String), { eventId: 'event-1', teamId: 'equipe-amis' });
 });
 
 test('tournoi SANS équipes libres : aucun bouton dans « Mon statut » (plus de « Participer », T-FINITIONS-3)', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCustomTeams: false } }));
-  expect(boutonsMonStatut(arbre)).toEqual([]);
+  expect(boutonsDeLaCarte(arbre)).toEqual([]);
 });
 
 test('match d équipe : rien ne change, « Participer » seul et plein', () => {
@@ -357,7 +378,8 @@ test('match d équipe : rien ne change, « Participer » seul et plein', () => {
 });
 
 test('« Infos rapides » sans équipe : plus de ligne « Section » ; « Joueurs attendus » reste', () => {
-  expect(lignesInfosRapides(monter(tournoiAutonome()))).toEqual(['Type', 'Organisateur', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+  // T-PAGES-3 point 4 : sur un tournoi, « Infos rapides » reste à l'organisateur.
+  expect(lignesInfosRapides(monter(tournoiAutonome(), ORGANISATEUR))).toEqual(['Type', 'Organisateur', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
 });
 
 test('« Infos rapides » d un match d équipe : la ligne « Section » reste, avec sa valeur', () => {
@@ -376,15 +398,16 @@ test('« Infos rapides » d un match d équipe : la ligne « Section » reste, a
 // ==========================================================================
 const VISITEUR_ANONYME = { ...JOUEUR, userData: null };
 
-test('visiteur, tournoi à équipes libres : « Inscrire mon équipe » plein, seul (T-FINITIONS-3)', () => {
-  expect(boutonsMonStatut(monter(tournoiAutonome(), VISITEUR_ANONYME))).toEqual([
-    ['Inscrire mon équipe', 'plein'],
+test('visiteur, tournoi à équipes libres : « Créer mon équipe » plein, seul, « J ai déjà un compte » dessous (T-FINITIONS-3 ; T-PAGES-3, R7)', () => {
+  expect(boutonsDeLaCarte(monter(tournoiAutonome(), VISITEUR_ANONYME))).toEqual([
+    ['Créer mon équipe', 'plein'],
+    ['J’ai déjà un compte', 'contour'],
   ]);
 });
 
 test('visiteur : « Inscrire mon équipe » ouvre la connexion (tunnel de Participer) et demande le retour sur la fiche', () => {
   const arbre = monter(tournoiAutonome(), VISITEUR_ANONYME);
-  cliquer(arbre, 'Inscrire mon équipe');
+  cliquerCarte(arbre, 'Créer mon équipe');
   expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {
     params: expect.objectContaining({ origin: 'EventDetails', retourApresConnexion: true }),
     screen: 'Login',
@@ -395,7 +418,8 @@ test('visiteur : « Inscrire mon équipe » ouvre la connexion (tunnel de Partic
 
 test('visiteur, tournoi SANS équipes libres : aucun bouton (plus de « Se connecter pour participer », T-FINITIONS-3)', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCustomTeams: false } }), VISITEUR_ANONYME);
-  expect(boutonsMonStatut(arbre)).toEqual([]);
+  // T-PAGES-3 (R7) : la connexion reste offerte ; aucun bouton d'inscription.
+  expect(boutonsDeLaCarte(arbre)).toEqual([['J’ai déjà un compte', 'contour']]);
 });
 
 test('visiteur, match d équipe : rien ne change', () => {
@@ -408,10 +432,12 @@ test('« Mode tournoi » : l équipe du club s inscrit par « Inscrire une équi
     userData: { ...JOUEUR.userData, trainedTeams: [{ documentId: 'team-u13', name: 'U13' }] },
   };
   const arbre = monter(tournoiAutonome(), entraineur);
-  const blocTournoi = arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
+  // T-PAGES-3 : le bouton est dans la carte « Ton inscription », en contour sous « Créer mon équipe ».
+  const blocTournoi = arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-side' && n.type === 'div')[0];
   const libelles = blocTournoi.findAll((/** @type {any} */ n) => n.type === 'button').map(texte);
   expect(libelles).toContain('Inscrire une équipe du club');
   expect(libelles).not.toContain('Inscrire mon équipe');
+  expect(boutonsDeLaCarte(arbre)).toEqual([['Créer mon équipe', 'plein'], ['Inscrire une équipe du club', 'contour']]);
   const bouton = blocTournoi.findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Inscrire une équipe du club')[0];
   act(() => { bouton.props.onClick(); });
   expect(mockFeuilleEquipe).toHaveBeenLastCalledWith('choose');
@@ -459,7 +485,8 @@ test('🔴 T-FINITIONS2 — le grand titre porte le nom donné (T-NOM)', () => {
 });
 
 test('🔴 T-FINITIONS2 — « Mix clubs » : « Autorisé », avec son accent', () => {
-  const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCrossClubPlayers: true } }));
+  // T-PAGES-3 point 4 : « Mix clubs » est un réglage de l'organisateur, retiré de la vue joueur.
+  const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCrossClubPlayers: true } }), ORGANISATEUR);
   expect(JSON.stringify(arbre.toJSON())).toContain('Autorisé');
 });
 

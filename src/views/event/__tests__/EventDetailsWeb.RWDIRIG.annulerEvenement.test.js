@@ -672,8 +672,10 @@ describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
     });
     const BlocDesEnfants = jest.requireMock('@/views/event/components/EventChildRegistration').default;
 
+    // T-PAGES-3 (17/11) : sur un tournoi, le bloc est dans la colonne des cartes (une grille, plus
+    // la rangée flexible de « Mon statut ») ; toute la largeur se lit par `width`.
     expect(root.findByType(BlocDesEnfants).parent?.props.style)
-      .toEqual(expect.objectContaining({ flexBasis: '100%', minWidth: 0 }));
+      .toEqual(expect.objectContaining({ minWidth: 0, width: '100%' }));
   });
 
   // REPRISE-EVENEMENTS 131 — la fiche d'un tournoi clôturé proposait encore « Modifier les
