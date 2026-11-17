@@ -1,13 +1,18 @@
+/* eslint-disable max-len -- phrases de l écran recopiées mot pour mot : une coupure les rendrait illisibles */
 /**
- * T-PAGES-6 (17/11/2026, point 4, R9 + « 4c A ») — « L'essentiel en 6 lignes » en tête des conditions
- * d'inscription. Le texte français est celui APPROUVÉ par Adel (« 10- ok », 17/11), copié tel quel depuis
- * design/PARCOURS-INSCRIPTION/RESUME-CONDITIONS-A-RELIRE.md ; il passe par fr.js / en.js (décision du chef,
- * 17/11 : le résumé n'est pas un texte légal). Il suit conditionsTournoi.js : l'heure « fin au plus tard à
+ * T-PAGES-6 (17/11/2026, point 4, R9 + « 4c A ») — « L'essentiel en 6 lignes » en tête des
+ * conditions
+ * d'inscription. Le texte français est celui APPROUVÉ par Adel (« 10- ok », 17/11), copié tel quel
+ * depuis
+ * design/PARCOURS-INSCRIPTION/RESUME-CONDITIONS-A-RELIRE.md ; il passe par fr.js / en.js (décision
+ * du chef,
+ * 17/11 : le résumé n'est pas un texte légal). Il suit conditionsTournoi.js : l'heure « fin au plus
+ * tard à
  * 1 h » (décision d'Adel « 3- B ») est celle des conditions, jamais « 23 h ».
  */
+import { PARAGRAPHES_DES_CONDITIONS } from '../../../../domains/tournoi/conditionsTournoi';
 import en from '../en';
 import fr from '../fr';
-import { PARAGRAPHES_DES_CONDITIONS } from '../../../../domains/tournoi/conditionsTournoi';
 
 const LIGNES_APPROUVEES = [
   'Samedi 19 décembre 2026, à AR Soccer, Montpellier. Accueil à 19 h, premier match à 19 h 30, fin au plus tard à 1 h.',

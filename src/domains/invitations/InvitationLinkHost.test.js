@@ -37,7 +37,8 @@ const mockRefuseInvitation = jest.fn(() => Promise.resolve({}));
 const mockCreateRequest = jest.fn(() => Promise.resolve({}));
 const mockAlert = jest.fn();
 
-// T-PAGES-6 : le bouton « Conditions d'inscription » de la fenêtre (doublures, react-native est simulé ici).
+// T-PAGES-6 : le bouton « Conditions d'inscription » de la fenêtre (doublures, react-native est
+// simulé ici).
 jest.mock('@/components/atoms/button/Button', () => () => null);
 jest.mock('@/views/event/components/tournamentTerms', () => ({ openTournamentTerms: jest.fn() }));
 jest.mock('react-native', () => ({
@@ -751,7 +752,8 @@ describe('T-FINITIONS-3 — la fenêtre d arrivée d un lien d équipe de tourno
     ...(viewer ? { viewer } : {}),
   });
 
-  // T-PAGES-6 (R5, planche 4) : le refus connu d'avance est un message seul, sans bouton « Rejoindre ».
+  // T-PAGES-6 (R5, planche 4) : le refus connu d'avance est un message seul, sans bouton «
+  // Rejoindre ».
   test('🔴 déjà dans une autre équipe : plus de « Rejoindre », phrase du serveur à la place', () => {
     const coded = describeCodedTournamentInvite({
       isSignedIn: true,

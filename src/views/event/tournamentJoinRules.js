@@ -116,7 +116,8 @@ export const canAskToJoinTournamentTeam = ({
 
 /**
  * T-PAGES-6 (17/11/2026, point 3, fait F22) — la raison de refus connue AVANT la déclaration et les
- * cases, montrée dès le premier écran du panneau. L'âge connu sous le minimum, une équipe déjà prise
+ * cases, montrée dès le premier écran du panneau. L'âge connu sous le minimum, une équipe déjà
+ * prise
  * et une demande en cours cachent déjà le bouton (`canAskToJoinTournamentTeam`) ; reste le compte
  * sans date de naissance, que le serveur refuse à l'envoi (même phrase,
  * `assertTargetUserAgeAllowed`).

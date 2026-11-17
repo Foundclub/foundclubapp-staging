@@ -305,7 +305,8 @@ const describeTournamentAgeNotice = (preview, t) => {
   return minAge < 18
     ? t(
       'invitationLink.tournamentTeam.ageNoticeMinor',
-      "À partir de {{minAge}} ans. Pour les {{minAge}}-17 ans, un parent remplit l'autorisation au moment de payer.",
+      "À partir de {{minAge}} ans. Pour les {{minAge}}-17 ans, un parent remplit l'autorisation "
+        + 'au moment de payer.',
       { minAge },
     )
     : t('invitationLink.tournamentTeam.ageNotice', 'À partir de {{minAge}} ans.', { minAge });
@@ -351,7 +352,8 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       title,
     };
   }
-  // T-PAGES-6 (décision « 4a A ») : qui invite, en prénom et initiale (le serveur ne rend rien de plus).
+  // T-PAGES-6 (décision « 4a A ») : qui invite, en prénom et initiale (le serveur ne rend rien de
+  // plus).
   const captainName = String(preview?.captainName || '').trim();
   // T-PAGES-6 : sous le texte, l'âge, et le lien des conditions pour un tournoi payant.
   const notes = {
@@ -887,10 +889,9 @@ function InvitationLinkHost({ userId } = {}) {
 
   if (codedTournamentInvite) {
     const coded = describeCodedTournamentInvite({ isSignedIn, preview: tournamentPreview, t });
-    const onPrimary = {
-      openTeam: openOwnTournamentTeam,
-      shareLink: shareOwnTournamentTeamLink,
-    }[coded.action] || handleTournamentPrimary;
+    let onPrimary = handleTournamentPrimary;
+    if (coded.action === 'openTeam') onPrimary = openOwnTournamentTeam;
+    if (coded.action === 'shareLink') onPrimary = shareOwnTournamentTeamLink;
     return (
       <GlobalPromptModal
         body={coded.body}
@@ -912,7 +913,6 @@ function InvitationLinkHost({ userId } = {}) {
         {coded.showTerms ? (
           <Button
             onPress={openTournamentTerms}
-            testID="invitation-tournament-terms"
             title={t('invitationLink.tournamentTeam.terms', "Conditions d'inscription")}
             variant="SecondaryLight"
           />

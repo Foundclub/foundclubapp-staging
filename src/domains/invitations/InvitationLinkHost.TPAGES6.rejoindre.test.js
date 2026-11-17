@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- phrases de l écran recopiées mot pour mot : une coupure les rendrait illisibles */
 /**
  * T-PAGES-6 (17/11/2026, points 1 et 2, R5 + décisions « 4a A » / « 4b A », D214) — REJOINDRE EN UN
  * SEUL ÉCRAN, dans l'app : la fenêtre du lien d'équipe dit qui invite (prénom et initiale), le
@@ -64,7 +65,9 @@ const t = (/** @type {string} */ cle, /** @type {any} */ parDefaut, /** @type {a
 const apercu = (/** @type {any} */ sur = {}) => ({
   captainName: 'Dorian D.',
   entryFeeCents: 2000,
-  event: { date: '2026-12-19T18:00:00.000Z', documentId: 'tournoi-1912', name: 'FoundClub x AR Soccer', place: 'AR Soccer' },
+  event: {
+    date: '2026-12-19T18:00:00.000Z', documentId: 'tournoi-1912', name: 'FoundClub x AR Soccer', place: 'AR Soccer',
+  },
   maxRosterSize: 5,
   minAge: 16,
   rosterCount: 3,
@@ -96,7 +99,9 @@ test('caractérisant : sans capitaine dans l aperçu (serveur d avant), la phras
 });
 
 test('🔴 le capitaine ouvre son propre lien : « C est ton équipe », envoyer le lien, voir mon équipe', () => {
-  const coded = connecte({ alreadyMember: true, canJoin: true, isCaptain: true, reason: null });
+  const coded = connecte({
+    alreadyMember: true, canJoin: true, isCaptain: true, reason: null,
+  });
   expect(coded.title).toBe("C'est ton équipe");
   expect(coded.body).toBe('Ce lien sert à inviter tes joueurs. Envoie-le-leur.');
   expect([coded.action, coded.primary]).toEqual(['shareLink', 'Envoyer le lien']);

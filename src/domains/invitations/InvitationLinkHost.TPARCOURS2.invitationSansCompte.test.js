@@ -20,7 +20,8 @@ const DATE = '2026-12-19T18:00:00.000Z';
 const mockNavigate = jest.fn(() => true);
 const mockApercu = jest.fn();
 
-// T-PAGES-6 : le bouton « Conditions d'inscription » de la fenêtre (doublures, react-native est simulé ici).
+// T-PAGES-6 : le bouton « Conditions d'inscription » de la fenêtre (doublures, react-native est
+// simulé ici).
 jest.mock('@/components/atoms/button/Button', () => () => null);
 jest.mock('@/views/event/components/tournamentTerms', () => ({ openTournamentTerms: jest.fn() }));
 jest.mock('react-native', () => ({

@@ -188,8 +188,8 @@ const total = (comptes) => Object.values(comptes).reduce((somme, n) => somme + n
 // D210, Clément (a la main en l'absence d'Adel), 17/11 : textes légaux du tournoi en français
 // seulement. « 368 A » élargie, même mécanisme : conditions 51 -> 52 (constante
 // ADRESSE_DU_COMPLEXE), règlement (46) et modèle d'autorisation parentale (25), T-JOUEURS / D48 A.
-// GO Adel « plafond A » 17/11 12:30 (D218) : règlement 46 -> 47, pour la règle de secours des 10 min
-// (T-D55, T-PAGES-6 point 7) et pour elle seule.
+// GO Adel « plafond A » 17/11 12:30 (D218) : règlement 46 -> 47, pour la règle de secours
+// des 10 min (T-D55, T-PAGES-6 point 7) et pour elle seule.
 const EXCEPTIONS_D78 = Object.freeze({
   'src/domains/tournoi/autorisationParentale.js': 6,
   'src/domains/tournoi/conditionsTournoi.js': 52,

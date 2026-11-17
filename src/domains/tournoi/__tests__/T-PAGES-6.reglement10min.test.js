@@ -1,5 +1,8 @@
-// T-PAGES-6 (17/11/2026, point 7) : la règle de secours des 10 minutes (Adel « 8a oui », T-D55), dans la
-// MÊME phrase que la durée des matchs : le fichier est exempté de la porte « français en dur » avec un
+/* eslint-disable max-len -- phrases de l écran recopiées mot pour mot : une coupure les rendrait illisibles */
+// T-PAGES-6 (17/11/2026, point 7) : la règle de secours des 10 minutes (Adel « 8a oui », T-D55),
+// dans la
+// MÊME phrase que la durée des matchs : le fichier est exempté de la porte « français en dur » avec
+// un
 // plafond de lignes (D210), une ligne de source neuve le ferait remonter.
 import fs from 'fs';
 import path from 'path';
