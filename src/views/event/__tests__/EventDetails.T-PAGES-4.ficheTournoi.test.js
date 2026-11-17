@@ -40,14 +40,10 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   }),
 }));
 
-jest.mock('react-i18next', () => ({
-  ...jest.requireActual('react-i18next'),
-  useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
-    ),
-  }),
-}));
+// Les textes de fr.js (jetons, pluriel français) : la doublure partagée.
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 jest.mock('@/theme/themeContext', () => {
   const generateColors = jest.requireActual('@/theme/colors').default;
@@ -570,11 +566,7 @@ const releve = (lecteur) => {
   };
 };
 
-// ============================================================================================
-// POINT 0 — L'ÉTAT D'AVANT (base a671bf518 : récolte eea820221 + T-PARCOURS-2 + T-REJOINDRE +
-// T-PAGES-A), relevé lecteur par lecteur. Chaque ligne qui change ensuite est une décision du lot.
-// ============================================================================================
-const AVANT = {
+const RELEVE_DU_LECTEUR = {
   capitaine: {
     barreDuBas: 'Gérer mon équipe inscrite',
     brouillon: 1,
@@ -590,7 +582,7 @@ const AVANT = {
       conditions: 2,
       creerUneEquipe: 2,
       resume: [
-        '{{accepted}} validée(s) · {{pending}} en attente',
+        '1 validée · 1 en attente',
       ],
     },
     onglets: [
@@ -619,7 +611,7 @@ const AVANT = {
       conditions: 2,
       creerUneEquipe: 0,
       resume: [
-        '{{accepted}} validée(s) · {{pending}} en attente',
+        '1 validée · 1 en attente',
       ],
     },
     onglets: [
@@ -648,7 +640,7 @@ const AVANT = {
       conditions: 2,
       creerUneEquipe: 0,
       resume: [
-        '{{accepted}} validée(s) · {{pending}} en attente',
+        '1 validée · 1 en attente',
       ],
     },
     onglets: [
@@ -677,7 +669,7 @@ const AVANT = {
       conditions: 2,
       creerUneEquipe: 2,
       resume: [
-        '{{accepted}} validée(s) · {{pending}} en attente',
+        '1 validée · 1 en attente',
       ],
     },
     onglets: [
@@ -706,7 +698,7 @@ const AVANT = {
       conditions: 2,
       creerUneEquipe: 2,
       resume: [
-        '{{accepted}} validée(s) · {{pending}} en attente',
+        '1 validée · 1 en attente',
       ],
     },
     onglets: [
@@ -735,7 +727,7 @@ const AVANT = {
       conditions: 2,
       creerUneEquipe: 0,
       resume: [
-        '{{accepted}} validée(s) · {{pending}} en attente',
+        '1 validée · 1 en attente',
       ],
     },
     onglets: [
@@ -780,11 +772,11 @@ const AVANT = {
   },
 };
 
-describe('T-PAGES-4 · point 0 — ce que chaque lecteur voit (caractérisant)', () => {
-  Object.keys(AVANT).forEach((nom) => {
-    test(`${nom}`, () => {
+describe('T-PAGES-4 · point 0 — ce que chaque lecteur voit (caractérisant, état d avant a671bf518)', () => {
+  Object.keys(RELEVE_DU_LECTEUR).forEach((lecteur) => {
+    test(`${lecteur}`, () => {
       // @ts-ignore: clé du relevé
-      expect(releve(LECTEURS[nom]())).toEqual(AVANT[nom]);
+      expect(releve(LECTEURS[lecteur]())).toEqual(RELEVE_DU_LECTEUR[lecteur]);
     });
   });
 });
