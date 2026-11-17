@@ -332,9 +332,10 @@ function TournamentTeamDetails({ navigation, route }) {
   const requestJoinMutation = useMutation({
     mutationFn: ({ acceptRiskDeclaration }) => requestJoinTournamentTeam(teamId, { acceptRiskDeclaration }),
     onError: (mutationError) => {
+      // T-REJOINDRE (17/11, fait de recette) : sans phrase du serveur, dire quoi faire.
       setJoinRequestError(mutationError?.message || t(
-        'tournamentTeamDetails.unableToSendThisRequest',
-        "Impossible d'envoyer cette demande.",
+        'tournamentJoin.sendError',
+        'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
       ));
     },
     onSuccess: async () => {
@@ -990,7 +991,7 @@ function TournamentTeamDetails({ navigation, route }) {
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {team?.isOpenToJoinRequests === true
-                      ? t('tournamentTeamDetails.playersCanSendARequest', 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.')
+                      ? t('tournamentTeamDetails.playersCanSendARequest', 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe.')
                       : t('tournamentTeamDetails.incomingRequestsAreDisabledOnly', 'Les demandes entrantes sont désactivées. Seules tes invitations manuelles sont possibles.')}
                   </Text>
                   <Button
@@ -1116,8 +1117,8 @@ function TournamentTeamDetails({ navigation, route }) {
               });
             } catch (mutationError) {
               setJoinRequestError(mutationError?.message || t(
-                'tournamentTeamDetails.unableToSendThisRequest',
-                "Impossible d'envoyer cette demande.",
+                'tournamentJoin.sendError',
+                'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
               ));
             }
           }}

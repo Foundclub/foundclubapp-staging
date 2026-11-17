@@ -27145,7 +27145,7 @@ export default {
       summary: 'Places payées : {{paid}}/{{needed}} pour valider l’équipe ({{amount}} par joueur).',
     },
     // eslint-disable-next-line max-len
-    playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe custom.',
+    playersCanSendARequest: 'Les joueurs peuvent envoyer une demande pour rejoindre cette équipe.',
     present: 'Présent',
     remove: 'Retirer',
     removeThisMember: 'Retirer ce membre',

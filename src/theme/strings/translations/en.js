@@ -25983,7 +25983,7 @@ export default {
       payMine: 'Pay for my spot',
       summary: 'Paid spots: {{paid}}/{{needed}} to confirm the team ({{amount}} per player).',
     },
-    playersCanSendARequest: 'Players can send a request to join this custom team.',
+    playersCanSendARequest: 'Players can send a request to join this team.',
     present: 'Present',
     remove: 'Remove',
     removeThisMember: 'Remove this member',
