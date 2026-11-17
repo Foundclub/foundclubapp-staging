@@ -49,7 +49,8 @@ const resolveTone = (tone, Colors) => {
  *  headerContent?: import('react').ReactNode;
  *  children?: import('react').ReactNode;
  *  inlineOnAndroid?: boolean;
- *  primaryAction?: { label: string; onPress: () => void; variant?: 'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' };
+ *  primaryAction?: { disabled?: boolean; label: string; onPress: () => void; variant?: 'Primary' |
+ * 'PrimaryLight' | 'Secondary' | 'SecondaryLight' };
  *  secondaryAction?: { label: string; onPress: () => void; variant?: 'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' };
  *  onRequestClose?: () => void;
  * }} props
@@ -128,6 +129,9 @@ function GlobalPromptModal({
         <View style={[Spaces.gap[16], Spaces.marginTop[16]]}>
           {primaryAction ? (
             <Button
+              // T-FINITIONS-3 : facultatif ; la fenêtre d'un lien d'équipe désactive « Rejoindre »
+              // d'avance.
+              disabled={primaryAction.disabled === true}
               onPress={primaryAction.onPress}
               title={primaryAction.label}
               variant={primaryAction.variant || 'Primary'}

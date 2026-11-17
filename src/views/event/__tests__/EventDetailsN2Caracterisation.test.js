@@ -1507,3 +1507,77 @@ describe('T-FINITIONS2 — la fiche du tournoi pour qui n organise pas', () => {
     expect(contient(root, 'OÙ EN EST LE TOURNOI')).toBe(true);
   });
 });
+
+// ==========================================================================
+// T-FINITIONS-3 (16/11, tournoi du 19/12) — la fiche du tournoi au TÉLÉPHONE.
+// (b) un compte plus jeune que `tournamentConfig.minAge` lit « Ce tournoi est ouvert à partir de
+// {minAge} ans. »
+//     et n'a aucun bouton d'inscription ; âge inconnu ou assez grand : rien ne change.
+// « À partir de {minAge} ans » remplace l'âge de la catégorie (« Sénior (+18 ans) ») ; sans minAge
+// elle reste.
+// ==========================================================================
+describe('T-FINITIONS-3 — âge minimum et catégorie du tournoi', () => {
+  const joueurNeLe = (/** @type {string | null} */ birthdate) => ({
+    ...authPour('joueur-seul', false),
+    userData: { birthdate, documentId: 'joueur-seul', role: { name: 'Joueur' } },
+  });
+  const tournoi1912 = (/** @type {any} */ config = { minAge: 16 }) => buildTournoi({
+    date: '2026-12-19T17:15:00.000Z',
+    tournamentCategory: { name: 'Sénior (+18 ans)' },
+    tournamentConfig: {
+      competitionState: 'draft',
+      formatMode: 'groups_only',
+      registrationMode: 'manual',
+      ...config,
+    },
+  });
+
+  test('🔴 15 ans au jour du tournoi : « ouvert à partir de 16 ans », aucun bouton', () => {
+    const root = monter({ auth: joueurNeLe('2011-06-01'), event: tournoi1912() });
+    expect(contient(root, 'Ce tournoi est ouvert à partir de 16 ans.')).toBe(true);
+    expect(contient(root, 'Créer une équipe pour ce tournoi')).toBe(false);
+    expect(contient(root, 'Inscrire une équipe du club')).toBe(false);
+  });
+
+  test('caractérisant — 18 ans, ou âge inconnu : « Créer une équipe… » reste', () => {
+    ['2008-01-01', null].forEach((birthdate) => {
+      const root = monter({ auth: joueurNeLe(birthdate), event: tournoi1912() });
+      expect(contient(root, 'Créer une équipe pour ce tournoi')).toBe(true);
+      expect(contient(root, 'Ce tournoi est ouvert à partir de')).toBe(false);
+    });
+  });
+
+  test('🔴 minAge posé : « À partir de 16 ans » remplace « Sénior (+18 ans) »', () => {
+    const root = monter({ auth: joueurNeLe('2008-01-01'), event: tournoi1912() });
+    expect(contient(root, 'À partir de 16 ans')).toBe(true);
+    expect(contient(root, 'Sénior (+18 ans)')).toBe(false);
+  });
+
+  test('caractérisant — sans minAge, la catégorie reste « Sénior (+18 ans) »', () => {
+    const root = monter({ auth: joueurNeLe('2008-01-01'), event: tournoi1912({}) });
+    expect(contient(root, 'Sénior (+18 ans)')).toBe(true);
+    expect(contient(root, 'À partir de')).toBe(false);
+  });
+});
+
+// Ajout du chef (17/11, recette 41) : la case « Validation » dit la vraie règle (témoin du site).
+describe('T-FINITIONS-3 — la case « Validation » du tournoi', () => {
+  const tournoiConfig = (/** @type {any} */ config) => buildTournoi({
+    tournamentConfig: { competitionState: 'draft', formatMode: 'groups_only', ...config },
+  });
+
+  const PAYANT = 2000;
+  test('🔴 payant en « manual » : « Équipe validée au 5ᵉ joueur payé », sans « Manuelle »', () => {
+    const root = monter({ event: tournoiConfig({ entryFeeCents: PAYANT, registrationMode: 'manual' }) });
+    expect(contient(root, 'Équipe validée au 5ᵉ joueur payé')).toBe(true);
+    expect(contient(root, 'Manuelle')).toBe(false);
+  });
+
+  test('caractérisant — gratuit en « manual » : « Manuelle » ; « auto » payant : « Auto »', () => {
+    const gratuit = monter({ event: tournoiConfig({ registrationMode: 'manual' }) });
+    expect(contient(gratuit, 'Manuelle')).toBe(true);
+    const auto = monter({ event: tournoiConfig({ entryFeeCents: PAYANT, registrationMode: 'auto' }) });
+    expect(contient(auto, 'Auto')).toBe(true);
+    expect(contient(auto, 'joueur payé')).toBe(false);
+  });
+});

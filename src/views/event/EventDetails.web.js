@@ -58,12 +58,16 @@ import TrainingReviewsCard, {
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   canRegisterSourceTeamToTournament,
+  getTournamentAgeNotice,
   getTournamentClosure,
+  getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
+  isTooYoungForTournament,
   isTournamentActiveMemberStatus,
   isTournamentTeamNonCompliant,
+  isTournamentTeamOpenToJoinRequests,
   normalizeTournamentText,
 } from '@/views/event/tournamentUtils';
 import {
@@ -556,7 +560,17 @@ function EventDetails({ navigation, route }) {
     && !rienARepondre
     && !peutPasserPresentApresCoup
     && !reponsesFermeesAuMembre;
+  // T-FINITIONS-3 (16/11, règle (a) du chef) : sur un tournoi, on entre par une équipe ; la demande
+  // de participation
+  // d'événement est refusée par le serveur (event-participation `create`). Témoin :
+  // EventDetailsWeb.T-FINITIONS3.
+  // T-FINITIONS-3 (b) : un compte plus jeune que `tournamentConfig.minAge` (âge connu) n'a aucun
+  // bouton d'inscription.
+  const tropJeunePourLeTournoi = isTournamentEvent
+    && isSignedIn
+    && isTooYoungForTournament(event, userData);
   const afficherParticiper = !canEdit
+    && !isTournamentEvent
     && !repondPresentAbsent
     && !rienARepondre
     && !peutPasserPresentApresCoup
@@ -617,6 +631,7 @@ function EventDetails({ navigation, route }) {
     isTournamentEvent
     && !tournoiClos
     && !offreAuxEnfants
+    && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
     && !currentUserTournamentTeam
@@ -648,6 +663,7 @@ function EventDetails({ navigation, route }) {
     isTournamentEvent
     && !tournoiClos
     && !offreAuxEnfants
+    && !tropJeunePourLeTournoi
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
     && availableTournamentSourceTeams.length > 0,
@@ -1798,8 +1814,13 @@ function EventDetails({ navigation, route }) {
   const [feuilleEquipeTournoi, setFeuilleEquipeTournoi] = useState(
     /** @type {'name' | 'choose' | null} */ (null),
   );
+  // T-FINITIONS-3 (c) : la feuille se ferme sur un refus ; la phrase du serveur s'écrivait
+  // seulement dans « Mon statut »,
+  // loin de « Créer une équipe » (bloc « Mode tournoi »). Elle s'écrit aussi sous ces boutons.
+  const [erreurEquipeTournoi, setErreurEquipeTournoi] = useState('');
   const handleCreateTournamentTeam = useCallback(() => {
     setActionError('');
+    setErreurEquipeTournoi('');
     setFeuilleEquipeTournoi('name');
   }, []);
   const creerLEquipeDuTournoi = useCallback(async (/** @type {string} */ nom) => {
@@ -1808,16 +1829,19 @@ function EventDetails({ navigation, route }) {
       setFeuilleEquipeTournoi(null);
     } catch (mutationError) {
       setFeuilleEquipeTournoi(null);
-      setActionError(mutationError?.message || t(
+      const message = mutationError?.message || t(
         'eventDetails.unableToCreateThisTournament3',
         'Impossible de créer cette équipe tournoi.',
-      ));
+      );
+      setActionError(message);
+      setErreurEquipeTournoi(message);
     }
   }, [createTournamentTeamMutation, t]);
 
   const handleRegisterTournamentTeam = useCallback(() => {
     if (availableTournamentSourceTeams.length === 0) return;
     setActionError('');
+    setErreurEquipeTournoi('');
     setFeuilleEquipeTournoi('choose');
   }, [availableTournamentSourceTeams]);
   const inscrireLEquipeDuClub = useCallback(async (/** @type {any} */ sourceTeam) => {
@@ -1827,10 +1851,12 @@ function EventDetails({ navigation, route }) {
       setFeuilleEquipeTournoi(null);
     } catch (mutationError) {
       setFeuilleEquipeTournoi(null);
-      setActionError(mutationError?.message || t(
+      const message = mutationError?.message || t(
         'eventDetails.unableToRegisterThisTeam2',
         'Impossible d inscrire cette équipe.',
-      ));
+      );
+      setActionError(message);
+      setErreurEquipeTournoi(message);
     }
   }, [registerTournamentTeamMutation, t]);
 
@@ -2098,6 +2124,8 @@ function EventDetails({ navigation, route }) {
   );
 
   const renderParticipantsSection = () => {
+    // T-FINITIONS-3 (a) : un tournoi n'a pas de listes Présent / Absent / Sans réponse.
+    if (isTournamentEvent) return null;
     // EVT-CLUB-ECRANS (14/11, ecran 5b) — « tout le club » ET dirigeant (Q1 A / Q10 B) : le tableau
     // unique du club remplace les listes par equipe. Un evenement ordinaire ne passe jamais ici.
     if (canSeeClubAudience(event, userData, USER_ROLES)) {
@@ -2588,6 +2616,11 @@ function EventDetails({ navigation, route }) {
                     </div>
                   </>
                 )}
+                {tropJeunePourLeTournoi ? (
+                  <div role="alert" style={{ color: textColor, fontSize: 14, lineHeight: 1.5 }}>
+                    {getTournamentAgeNotice(event)}
+                  </div>
+                ) : null}
                 <div style={{ display: isCancelled ? 'none' : 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {peutPasserPresentApresCoup ? (
                     <div style={{ display: 'grid', gap: 8 }}>
@@ -3297,12 +3330,18 @@ function EventDetails({ navigation, route }) {
                   GUIDE-BULLE-RELANCE (« 318 B ») : un entraînement n'a pas de « Relancer » sur le
                   site ; l'ancre `event.relance.telephone` y montre la bulle de repli du guide
                   (« depuis ton téléphone » + « Passer ce bonus »). Équipe vide : b1-vide (S29). */}
-              <TourTarget id="event.participants">
-                {relanceAuTelephone ? (
-                  <TourTarget id="event.relance.telephone">{titreParticipants}</TourTarget>
-                ) : titreParticipants}
-              </TourTarget>
-              <TourReponsesExemple equipeVide={equipeSansPersonne} />
+              {/* T-FINITIONS-3 (a) : sur un tournoi, pas de bloc « Participants » (Présent /
+                  Absent / Sans réponse) : les équipes du bloc « Mode tournoi » disent qui joue. */}
+              {isTournamentEvent ? null : (
+                <>
+                  <TourTarget id="event.participants">
+                    {relanceAuTelephone ? (
+                      <TourTarget id="event.relance.telephone">{titreParticipants}</TourTarget>
+                    ) : titreParticipants}
+                  </TourTarget>
+                  <TourReponsesExemple equipeVide={equipeSansPersonne} />
+                </>
+              )}
               {/* 👥 ST-VUES3-ORDI · point 6 (écran 21 sur ordinateur, planche « Avis des joueurs —
                   ordinateur ») — LA SÉANCE À GAUCHE : la carte « Participants » et ses trois
                   tuiles, puis la « Description ». Les avis sont à droite (ST-RETOURS2). Mêmes
@@ -3642,9 +3681,11 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {t('eventDetails.teamApproval', 'Validation des equipes:')}
                       {' '}
-                      {event?.tournamentConfig?.registrationMode === 'auto'
-                        ? t('eventDetails.automatic', 'Automatique')
-                        : t('eventDetails.manual', 'Manuelle')}
+                      {/* T-FINITIONS-3 : un tournoi payant valide l'équipe au seuil payé. */}
+                      {getTournamentPaidValidationLabel(event)
+                        || (event?.tournamentConfig?.registrationMode === 'auto'
+                          ? t('eventDetails.automatic', 'Automatique')
+                          : t('eventDetails.manual', 'Manuelle'))}
                     </span>
                     <span>
                       {t('eventDetails.maxTeams', 'Max equipes:')}
@@ -3834,6 +3875,11 @@ function EventDetails({ navigation, route }) {
                       </button>
                     ) : null}
                   </div>
+                  {erreurEquipeTournoi ? (
+                    <div role="alert" style={{ color: '#ffb0ba', fontSize: 13, lineHeight: 1.5 }}>
+                      {erreurEquipeTournoi}
+                    </div>
+                  ) : null}
                   {tournamentTeams.length === 0 ? (
                     <div style={{ color: mutedTextColor, fontSize: 14 }}>
                       {t(
@@ -3878,6 +3924,11 @@ function EventDetails({ navigation, route }) {
                                     })
                                     : t('eventDetails.temporaryTeam', 'Équipe éphémère')}
                                 </span>
+                                {isTournamentTeamOpenToJoinRequests(team) ? (
+                                  <span style={{ color: textColor, fontSize: 13 }}>
+                                    {t('tournamentUtils.openToRequests', 'Ouverte aux demandes')}
+                                  </span>
+                                ) : null}
                               </div>
                               <span style={{ color: accentColor, fontSize: 13 }}>
                                 {statusLabel}

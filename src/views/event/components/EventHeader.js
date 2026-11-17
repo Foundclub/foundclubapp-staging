@@ -41,6 +41,7 @@ import {
   formatEventWhenLine,
   getStageLastDay,
 } from '../eventInfoLines';
+import { getTournamentCategoryLabel } from '../tournamentUtils';
 import MatchScoreEncart from './MatchScoreEncart';
 /* eslint-enable perfectionist/sort-imports */
 
@@ -129,7 +130,14 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
   const eventTitle = matchDisplay.title;
   const isTournamentEvent = normalizedTypeName.includes('tournoi');
   const sectionName = toDisplayText(event?.team?.section?.name || event?.tournamentSection?.name);
-  const categoryName = toDisplayText(event?.team?.category?.name || event?.tournamentCategory?.name);
+  // T-FINITIONS-3 (16/11) : sur un tournoi à âge minimum, « À partir de {minAge} ans » remplace
+  // l'âge de la catégorie.
+  const nomDeCategorie = toDisplayText(
+    event?.team?.category?.name || event?.tournamentCategory?.name,
+  );
+  const categoryName = isTournamentEvent
+    ? getTournamentCategoryLabel(event, nomDeCategorie)
+    : nomDeCategorie;
   const levelName = toDisplayText(event?.team?.level?.name);
   const activityName = toDisplayText(event?.team?.activities?.[0]?.name || event?.tournamentActivity?.name);
   const eventClub = event?.team?.club || event?.club;

@@ -693,3 +693,47 @@ describe('INVIT2R — tant que le serveur n a pas repondu, le lien code ne fait 
     expect(mockClearPendingInvite).not.toHaveBeenCalled();
   });
 });
+
+// T-FINITIONS-3 (16/11, chef d'orchestre) — « Rejoindre l'équipe » est désactivé quand l'action est
+// impossible.
+// Le serveur le dit d'avance dans l'aperçu (`viewer`, envoyé seulement à un compte connecté) : sa
+// phrase remplace
+// l'invitation. Sans `viewer` (serveur d'avant, ou sans compte), rien ne change : le serveur
+// tranche à l'appui.
+describe('T-FINITIONS-3 — la fenêtre d arrivée d un lien d équipe de tournoi', () => {
+  // eslint-disable-next-line global-require -- meme motif que l import de l hote plus haut
+  const { describeCodedTournamentInvite } = require('./InvitationLinkHost');
+  const t = (_key, fallback, options = {}) => String(fallback || _key)
+    .replace(/{{(\w+)}}/g, (_tout, nom) => String(options[nom] ?? ''));
+  const apercu = (viewer) => ({
+    event: { name: 'FoundClub x AR Soccer' },
+    status: 'active',
+    team: { documentId: 'equipe-a', name: 'Les Seuls' },
+    ...(viewer ? { viewer } : {}),
+  });
+
+  test('🔴 déjà dans une autre équipe : « Rejoindre » désactivé, phrase du serveur à la place', () => {
+    const coded = describeCodedTournamentInvite({
+      isSignedIn: true,
+      preview: apercu({
+        alreadyMember: false,
+        canJoin: false,
+        reason: 'Tu participes déjà à une autre équipe de ce tournoi.',
+      }),
+      t,
+    });
+    expect(coded.primary).toBe('Rejoindre l\'équipe');
+    expect(coded.primaryDisabled).toBe(true);
+    expect(coded.body).toBe('Tu participes déjà à une autre équipe de ce tournoi.');
+  });
+
+  test('caractérisant — sans verdict, ou favorable : bouton actif, invitation d avant', () => {
+    [undefined, { alreadyMember: false, canJoin: true, reason: null }].forEach((viewer) => {
+      const coded = describeCodedTournamentInvite({ isSignedIn: true, preview: apercu(viewer), t });
+      expect(coded.primaryDisabled).toBeFalsy();
+      expect(coded.body).toBe(
+        "Tu es invité·e à rejoindre l'équipe Les Seuls pour le tournoi FoundClub x AR Soccer.",
+      );
+    });
+  });
+});

@@ -387,3 +387,30 @@ describe('EventCardNew — déclinaison par type (handoff 3b)', () => {
     expect(textsOf(tree)).toContain('2 / 14');
   });
 });
+
+// T-FINITIONS-3 (16/11, tournoi du 19/12) — sur la carte d'un tournoi (listes, recherche, site), «
+// À partir de
+// {minAge} ans » remplace l'âge de la catégorie quand `tournamentConfig.minAge` est posé ; le sport
+// et la section restent.
+describe('EventCardNew — T-FINITIONS-3, âge minimum du tournoi', () => {
+  const tournoi = (/** @type {any} */ config) => ({
+    ...baseEvent,
+    tournamentActivity: { name: 'Football' },
+    tournamentCategory: { name: 'Sénior (+18 ans)' },
+    tournamentConfig: { maxTeams: 16, ...config },
+    tournamentSection: { name: 'Masculine' },
+    tournamentTeams: [],
+    type: { name: 'Tournoi' },
+  });
+
+  it('🔴 minAge posé : « À partir de 16 ans » remplace « Sénior (+18 ans) »', () => {
+    const texts = textsOf(renderCard({ item: tournoi({ minAge: 16 }) }));
+    expect(texts).toContain('Football • Masculine • À partir de 16 ans');
+    expect(texts).not.toContain('Sénior (+18 ans)');
+  });
+
+  it('caractérisant — sans minAge, la catégorie reste', () => {
+    expect(textsOf(renderCard({ item: tournoi({}) })))
+      .toContain('Football • Masculine • Sénior (+18 ans)');
+  });
+});

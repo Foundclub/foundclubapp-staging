@@ -232,13 +232,18 @@ import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
   canRegisterSourceTeamToTournament,
+  getTournamentAgeNotice,
+  getTournamentCategoryLabel,
   getTournamentClosure,
   getTournamentMemberBuckets,
+  getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
+  isTooYoungForTournament,
   isTournamentActiveMemberStatus,
   isTournamentTeamNonCompliant,
+  isTournamentTeamOpenToJoinRequests,
   normalizeTournamentText,
 } from './tournamentUtils';
 
@@ -1217,10 +1222,18 @@ function EventDetails({ navigation, route }) {
       .filter((team) => canRegisterSourceTeamToTournament(event, team)),
     [event, registeredTournamentSourceTeamIds, userData?.trainedTeams],
   );
+  // T-FINITIONS-3 (16/11, règle (b) du chef) : un compte plus jeune que `tournamentConfig.minAge`
+  // (âge connu) lit
+  // « Ce tournoi est ouvert à partir de {minAge} ans. » et n'a aucun bouton d'inscription (le site
+  // fait de même).
+  const tropJeunePourLeTournoi = isTournamentEvent
+    && Boolean(userData?.documentId)
+    && isTooYoungForTournament(event, userData);
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
     && !isStageDayEvent
+    && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
     && !currentUserTournamentTeam
@@ -1230,20 +1243,15 @@ function EventDetails({ navigation, route }) {
     isTournamentEvent
     && !tournoiClos
     && !isStageDayEvent
+    && !tropJeunePourLeTournoi
     && !currentUserTournamentTeam
     && !currentUserPendingTournamentTeam
     && availableTournamentSourceTeams.length > 0,
   );
+  // T-FINITIONS-3 : la règle vit dans tournamentUtils (le site montre les mêmes équipes « Ouverte
+  // aux demandes »).
   const joinableTournamentTeams = useMemo(
-    () => tournamentTeams.filter((team) => {
-      const normalizedSourceType = normalizeTournamentText(team?.sourceType);
-      const normalizedStatus = normalizeTournamentText(team?.status);
-      if (!team?.documentId) return false;
-      if (normalizedSourceType !== 'custom_team') return false;
-      if (team?.isOpenToJoinRequests !== true) return false;
-      if (normalizedStatus === 'declined' || normalizedStatus === 'archived') return false;
-      return true;
-    }),
+    () => tournamentTeams.filter(isTournamentTeamOpenToJoinRequests),
     [tournamentTeams],
   );
   // 🔄 CHANGER D EVENEMENT REMET L ONGLET SUR L APERÇU. Cet effet existait deja,
@@ -7233,6 +7241,15 @@ function EventDetails({ navigation, route }) {
 
   const renderTournamentActionsPanel = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
+    if (tropJeunePourLeTournoi) {
+      return (
+        <View style={tournamentDs.styles.panelCard}>
+          <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.neutral00]}>
+            {getTournamentAgeNotice(event)}
+          </Text>
+        </View>
+      );
+    }
     // 🎯 N2 — LES QUATRE ACTIONS PRIMAIRES ONT QUITTE CE PANNEAU pour la barre
     // du bas (`getTournamentPrimaryAction`). Elles etaient en HAUT de la page :
     // hors de portee du pouce, et invisibles des qu'on avait defile.
@@ -7494,7 +7511,9 @@ function EventDetails({ navigation, route }) {
       tournamentScopeLabel,
       event?.tournamentActivity?.name,
       event?.tournamentSection?.name,
-      event?.tournamentCategory?.name,
+      // T-FINITIONS-3 : « À partir de {minAge} ans » remplace l'âge de la catégorie quand le
+      // tournoi en a un.
+      getTournamentCategoryLabel(event, event?.tournamentCategory?.name),
     ].filter(Boolean);
     let playerTournamentStatusLabel = t('eventDetails.answerExpected', 'Réponse attendue');
     let playerTournamentStatusTone = Colors.warning500;
@@ -7563,10 +7582,12 @@ function EventDetails({ navigation, route }) {
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
               <Text style={[Fonts.p4, Fonts.neutral300]}>Validation</Text>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : t(
-                  'eventDetails.manual',
-                  'Manuelle',
-                )}
+                {/* T-FINITIONS-3 : un tournoi payant valide l'équipe au seuil de places payées. */}
+                {getTournamentPaidValidationLabel(event)
+                  || (event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : t(
+                    'eventDetails.manual',
+                    'Manuelle',
+                  ))}
               </Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>

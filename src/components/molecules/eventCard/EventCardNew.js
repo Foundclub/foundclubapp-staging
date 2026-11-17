@@ -34,6 +34,7 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureCardTag from '@/components/molecules/facilityClosure/FacilityClosureCardTag';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
+import { getTournamentCategoryLabel } from '@/views/event/tournamentUtils';
 
 import {
   resolveExternalMatchDisplay,
@@ -561,7 +562,9 @@ function EventCardNew({
   const tournamentMetaName = [
     getDisplayLabel(item?.tournamentActivity),
     getDisplayLabel(item?.tournamentSection),
-    getDisplayLabel(item?.tournamentCategory),
+    // T-FINITIONS-3 (16/11) : « À partir de {minAge} ans » remplace l'âge de la catégorie d'un
+    // tournoi à âge minimum.
+    getTournamentCategoryLabel(item, getDisplayLabel(item?.tournamentCategory)),
   ].filter(Boolean).join(' • ');
   const teamName = item?.team?.name
     || (isTournamentEvent && item?.tournamentScopeMode === 'autonomous' ? 'Tournoi autonome' : '');
@@ -580,9 +583,12 @@ function EventCardNew({
     item?.team?.section || item?.tournamentSection || item?.section,
   );
   const teamLevel = getDisplayLabel(item?.team?.level || item?.level);
-  const teamCategory = getDisplayLabel(
+  const nomDeCategorie = getDisplayLabel(
     item?.team?.category || item?.tournamentCategory || item?.category,
   );
+  const teamCategory = isTournamentEvent
+    ? getTournamentCategoryLabel(item, nomDeCategorie)
+    : nomDeCategorie;
   const defaultTeamMetaLine = [teamCategory, teamSection, teamLevel]
     .filter((value) => !!value)
     .join(' • ');
