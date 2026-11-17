@@ -60,6 +60,7 @@ import {
   canRegisterSourceTeamToTournament,
   getTournamentAgeNotice,
   getTournamentClosure,
+  getTournamentEntryFeeLabel,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -3635,9 +3636,12 @@ function EventDetails({ navigation, route }) {
                       : []),
                     {
                       label: t('eventDetails.pricePerson', 'Prix / personne'),
-                      value: event?.pricePerPerson != null
-                        ? `${event.pricePerPerson} EUR`
-                        : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini'),
+                      // T-PARCOURS-2 (point 7) : pour un tournoi, le montant encaissé (la règle
+                      // du téléphone, getTournamentEntryFeeLabel), jamais le prix saisi sur l'événement.
+                      value: (isTournamentEvent ? getTournamentEntryFeeLabel(event) : null)
+                        || (!isTournamentEvent && event?.pricePerPerson != null
+                          ? `${event.pricePerPerson} EUR`
+                          : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini')),
                     },
                   ].map((item, index, rows) => (
                     <div

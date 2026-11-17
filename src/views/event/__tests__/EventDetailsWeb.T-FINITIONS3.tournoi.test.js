@@ -425,3 +425,21 @@ test('T-PARCOURS2 (9) caractérisant — tournoi gratuit en « manual », ou mat
   mounted = null;
   expect(pastilles(monter({ ...MATCH_EQUIPE, validationMode: 'manual' }))).toContain('Validation manuelle');
 });
+
+// T-PARCOURS-2 (point 7) — « Prix / personne » d'un TOURNOI : le montant encaissé
+// (tournamentConfig.entryFeeCents, la règle du téléphone), jamais event.pricePerPerson.
+test('🔴 T-PARCOURS2 (7) — tournoi payant : « 20 € par joueur », pas le prix saisi sur l événement', () => {
+  const arbre = monter(tournoiAutonome({ pricePerPerson: 35, tournamentConfig: PAYANT }));
+  expect(texte(arbre.root)).toContain('20 € par joueur');
+  expect(texte(arbre.root)).not.toContain('35 EUR');
+});
+
+test('🔴 T-PARCOURS2 (7) — tournoi sans prix encaissé : « Gratuit ou non défini », même avec un prix saisi', () => {
+  const arbre = monter(tournoiAutonome({ pricePerPerson: 35, tournamentConfig: { registrationMode: 'manual' } }));
+  expect(texte(arbre.root)).toContain('Gratuit ou non défini');
+  expect(texte(arbre.root)).not.toContain('35 EUR');
+});
+
+test('T-PARCOURS2 (7) caractérisant — un événement ordinaire garde son prix par personne', () => {
+  expect(texte(monter({ ...MATCH_EQUIPE, pricePerPerson: 12 }).root)).toContain('12 EUR');
+});
