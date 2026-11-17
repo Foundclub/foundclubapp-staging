@@ -22,7 +22,8 @@ export const PENDING_INVITE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 /**
  * L'invitation rangee : le sujet, son identifiant, la date de rangement et —
  * INVIT2 — le code opaque du lien, quand il y en a un (jamais un nom, jamais un numero).
- * @typedef {{ code?: string, createdAt: number, id: string, subject: string }} PendingInvite
+ * @typedef {{ code?: string, createdAt: number, id: string, ownerId?: string, subject: string }}
+ *   PendingInvite
  */
 
 /**
@@ -44,9 +45,11 @@ const parsePendingInvite = (rawValue) => {
     if (Date.now() - createdAt > PENDING_INVITE_MAX_AGE_MS) return null;
 
     const code = normalizeInviteCode(parsed?.code);
-    return code ? {
-      code, createdAt, id, subject,
-    } : { createdAt, id, subject };
+    // T-PARCOURS-2, point 4 : le compte qui la détient (identifiant technique), s'il y en a un.
+    const ownerId = String(parsed?.ownerId || '').trim();
+    return {
+      ...(code ? { code } : {}), createdAt, id, ...(ownerId ? { ownerId } : {}), subject,
+    };
   } catch (_error) {
     return null;
   }
@@ -63,6 +66,7 @@ export const savePendingInvite = (invite) => {
   if (!id || !INVITE_SUBJECTS.includes(subject)) return;
 
   const code = normalizeInviteCode(invite?.code);
+  const ownerId = String(/** @type {any} */ (invite)?.ownerId ?? '').trim();
   storage.set(PENDING_INVITE_STORAGE_KEY, JSON.stringify({
     createdAt: Date.now(),
     id,
@@ -70,6 +74,9 @@ export const savePendingInvite = (invite) => {
     // INVIT2 — le code du lien survit a la fermeture de l'app ET a la connexion :
     // c'est lui qui fait reconnaitre l'invitation apres coup.
     ...(code ? { code } : {}),
+    // T-PARCOURS-2, point 4 : le premier compte connecté pendant qu'elle attend la détient ;
+    // sa déconnexion la vide (InvitationLinkHost).
+    ...(ownerId ? { ownerId } : {}),
   }));
 };
 
