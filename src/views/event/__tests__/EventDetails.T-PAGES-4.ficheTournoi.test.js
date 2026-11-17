@@ -1126,7 +1126,7 @@ describe('T-PAGES-4 · chef 1 — « Mon équipe » : payer sa place, discussion
   test('🔴 membre dont la place est due : « Payer ma place » ouvre la page de paiement', () => {
     // eslint-disable-next-line global-require
     const liens = require('@/platform/links').default;
-    const ouvrir = jest.spyOn(liens, 'openUrl').mockImplementation(() => Promise.resolve());
+    const ouvrir = jest.spyOn(liens, 'openUrlHere').mockImplementation(() => Promise.resolve());
     mockTeamQuery.data = {
       ...EQUIPE_DETAILLEE,
       payment: {
