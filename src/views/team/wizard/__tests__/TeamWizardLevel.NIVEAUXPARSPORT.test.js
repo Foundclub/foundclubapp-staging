@@ -7,6 +7,7 @@ import TeamWizardLevel from '../TeamWizardLevel';
 // du sport choisi a l'etape « Sport », s'il en a ; sinon, les niveaux « tous sports ».
 
 const mockEtat = { current: /** @type {any} */ ({ activities: '', level: '' }) };
+const mockDispatch = jest.fn();
 
 // Forme rendue par le serveur, rangee comme getLevels la rend (compareLevels).
 const mockNiveaux = [
@@ -50,7 +51,7 @@ jest.mock('@/services/level/levelQueries', () => {
   };
 });
 jest.mock('@/views/team/wizard/TeamWizardContext', () => ({
-  useTeamWizard: () => ({ dispatch: jest.fn(), state: mockEtat.current }),
+  useTeamWizard: () => ({ dispatch: mockDispatch, state: mockEtat.current }),
 }));
 jest.mock('@/views/team/wizard/useTeamWizardExit', () => () => jest.fn());
 jest.mock('@/components/atoms/button/Button', () => function BoutonMock() { return null; });
@@ -69,10 +70,11 @@ jest.mock(
 /**
  * Monte l'etape et rend les titres des cartes proposees.
  * @param {string} sport - Le documentId du sport choisi a l'etape precedente.
+ * @param {string} [niveau] - Le niveau deja dans l'etat de l'assistant.
  * @returns {string[]} Les titres, dans l'ordre.
  */
-const niveauxProposes = (sport) => {
-  mockEtat.current = { activities: sport, level: '' };
+const niveauxProposes = (sport, niveau = '') => {
+  mockEtat.current = { activities: sport, level: niveau };
   /** @type {any} */
   let arbre;
   act(() => {
@@ -91,5 +93,17 @@ describe('NIVEAUX-PAR-SPORT · TeamWizardLevel', () => {
 
   it('Football : les niveaux de competition, sans les 4', () => {
     expect(niveauxProposes('sport-foot')).toEqual(['Départemental', 'Régional', 'National']);
+  });
+
+  it('un niveau deja choisi qui n est plus propose (sport change) est retire de l equipe', () => {
+    mockDispatch.mockClear();
+    niveauxProposes('sport-foot', 'n-3');
+    expect(mockDispatch).toHaveBeenCalledWith({ payload: '', type: 'SET_LEVEL' });
+  });
+
+  it('un niveau choisi et toujours propose est garde', () => {
+    mockDispatch.mockClear();
+    niveauxProposes('sport-speleo', 'n-3');
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 });
