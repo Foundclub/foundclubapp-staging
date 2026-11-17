@@ -114,6 +114,7 @@ import {
 
 import { hasRouteInNavigationTree } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
+import { retenirLeRetourAuTournoi } from '@/navigation/retourAuTournoi';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
@@ -240,6 +241,7 @@ import {
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
+  getTournamentViewerMember,
   isTooYoungForTournament,
   isTournamentActiveMemberStatus,
   isTournamentTeamNonCompliant,
@@ -1168,24 +1170,18 @@ function EventDetails({ navigation, route }) {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return null;
 
+    // T-PARCOURS-2 (point 3) : `members`, ou la ligne du lecteur rendue par le serveur.
     return tournamentTeams.find((team) => (
-      Array.isArray(team?.members)
-      // @ts-ignore: FIXME: Baseline TS regression
-      && team.members.some((member) => (
-        member?.user?.documentId === currentUserId
-        && isTournamentActiveMemberStatus(member?.responseStatus)
-      ))
+      getTournamentViewerMember(team, currentUserId, isTournamentActiveMemberStatus)
     )) || null;
   }, [tournamentTeams, userData?.documentId]);
   const currentUserTournamentMember = useMemo(() => {
     const currentUserId = userData?.documentId;
-    if (!currentUserId || !currentUserTournamentTeam?.members) return null;
+    if (!currentUserId || !currentUserTournamentTeam) return null;
 
-    // @ts-ignore: FIXME: Baseline TS regression
-    return currentUserTournamentTeam.members.find((member) => (
-      member?.user?.documentId === currentUserId
-      && isTournamentActiveMemberStatus(member?.responseStatus)
-    )) || null;
+    return getTournamentViewerMember(
+      currentUserTournamentTeam, currentUserId, isTournamentActiveMemberStatus,
+    );
   }, [currentUserTournamentTeam, userData?.documentId]);
   const currentUserTournamentStatus = normalizeTournamentText(currentUserTournamentMember?.responseStatus);
   const currentUserPendingTournamentTeam = useMemo(
@@ -7193,6 +7189,22 @@ function EventDetails({ navigation, route }) {
   const getTournamentPrimaryAction = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
 
+    // T-PARCOURS-2 (17/11, point 2, R12) : le visiteur n'avait aucun chemin pour s'inscrire
+    // (« Voir le tournoi » ne changeait rien à son écran). Ce bouton range le tournoi où revenir,
+    // puis ouvre la connexion ; la fiche se rouvre une fois le compte prêt (useLiensEnAttente).
+    if (!userData?.documentId && !tournoiClos) {
+      return {
+        onPress: () => {
+          retenirLeRetourAuTournoi(eventId);
+          openPublicAuthFlow(navigation, {
+            origin: RouteNames.EventDetails,
+            source: 'event-details-tournament-register',
+          });
+        },
+        title: t('eventDetails.signInToRegister', "Se connecter pour s'inscrire"),
+      };
+    }
+
     if (canEdit) {
       return {
         onPress: handleOpenTournamentManagement,
@@ -7215,12 +7227,9 @@ function EventDetails({ navigation, route }) {
     }
 
     if (currentUserPendingTournamentTeam?.documentId) {
-      const pendingStatus = normalizeTournamentText(
-        currentUserPendingTournamentTeam?.members?.find(
-          // @ts-ignore: FIXME: Baseline TS regression
-          (member) => member?.user?.documentId === userData?.documentId,
-        )?.responseStatus,
-      );
+      const pendingStatus = normalizeTournamentText(getTournamentViewerMember(
+        currentUserPendingTournamentTeam, userData?.documentId,
+      )?.responseStatus);
       return {
         onPress: () => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId),
         title: pendingStatus === 'invited' ? t(

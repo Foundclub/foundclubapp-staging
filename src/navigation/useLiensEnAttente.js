@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 
 import { retourAuLienEnAttente } from '@/domains/collectivite/lienDeLaVille';
 
+import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { envoyerLeLienEnAttente } from '@/navigation/lienDeLancement';
 import { navigate, navigationRef } from '@/navigation/navigationService';
+import { prendreLeRetourAuTournoi } from '@/navigation/retourAuTournoi';
 import { RouteNames } from '@/navigation/routeNames';
 
 const ESSAIS = 6;
@@ -18,6 +20,9 @@ const PAUSE_MS = 250;
  * 2. sinon, le lien de la Ville ouvert SANS compte (lienDeLaVille.js, repère posé par sa page
  *    avant la connexion) : la page du lien se rouvre ; ouverte avec un compte, elle efface le
  *    repère (on n'y revient qu'une fois).
+ * 3. T-PARCOURS-2 (17/11, R12) : le tournoi dont le visiteur a touché « Se connecter pour
+ *    s'inscrire » (retourAuTournoi.js) : sa fiche se rouvre, une seule fois. Le lien qui a lancé
+ *    l'app passe devant, et le repère est alors jeté (jamais rejoué plus tard).
  * Même attente que l'invitation League en attente (PrivateNavigator) : la pile peut ne pas être
  * prête au premier essai.
  * Témoins : src/navigation/__tests__/LIENSAPP.lienDeLancementUneFois.test.js,
@@ -38,7 +43,15 @@ const useLiensEnAttente = (pret) => {
         if (essais < ESSAIS) minuterie = setTimeout(reprendre, PAUSE_MS);
         return;
       }
+      const tournoi = prendreLeRetourAuTournoi();
       if (envoyerLeLienEnAttente()) return;
+      const fiche = tournoi ? imbriquerDepuisLaRacine({
+        params: { eventId: tournoi }, route: RouteNames.EventDetails,
+      }) : null;
+      if (fiche?.route) {
+        navigate(fiche.route, fiche.params);
+        return;
+      }
 
       const token = retourAuLienEnAttente();
       if (!token || navigationRef.getCurrentRoute()?.name === RouteNames.CollectiviteJoin) return;

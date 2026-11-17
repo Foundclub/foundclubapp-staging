@@ -1581,3 +1581,102 @@ describe('T-FINITIONS-3 — la case « Validation » du tournoi', () => {
     expect(contient(auto, 'joueur payé')).toBe(false);
   });
 });
+
+// ==========================================================================
+// T-PARCOURS-2 (17/11, tournoi du 19/12) — la fiche du tournoi au TÉLÉPHONE.
+// Point 3 : personne n'a `tournament-team-member.find`, le serveur retire donc `members` de la
+// fiche et l'app proposait « Créer une équipe pour ce tournoi » à qui en avait déjà une (le refus
+// n'arrivait qu'après le nom, la déclaration et les 2 cases). Le serveur rend maintenant la ligne
+// du LECTEUR par équipe (`viewerMembership: { responseStatus }`) : la fiche la lit.
+// Point 2 : le visiteur a un bouton « Se connecter pour s'inscrire », qui range le tournoi où
+// revenir (navigation/retourAuTournoi.js) puis ouvre la connexion.
+// ==========================================================================
+describe('T-PARCOURS-2 — « Voir mon équipe » et le bouton du visiteur', () => {
+  const libelleDeLaBarre = (/** @type {any} */ root) => parTestID(
+    root,
+    'tournament-bottom-bar',
+  )[0]
+    .findAllByType(Text)
+    .map((/** @type {any} */ node) => textOf(node))
+    .join(' ');
+  // Les équipes comme le serveur les rend : sans `members`.
+  const tournoiDuServeur = (/** @type {any} */ viewerMembership = null) => buildTournoi({
+    tournamentTeams: [
+      {
+        documentId: 'equipe-a',
+        name: 'Les Aigles',
+        sourceType: 'custom',
+        status: 'accepted',
+        viewerMembership,
+      },
+      {
+        documentId: 'equipe-b',
+        name: 'Les Lions',
+        sourceType: 'custom',
+        status: 'pending',
+        viewerMembership: null,
+      },
+    ],
+  });
+  const CREER = 'Créer une équipe pour ce tournoi';
+
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
+
+  test('3 caractérisant — sans équipe : « Créer une équipe », barre « Voir le tournoi »', () => {
+    const root = monter({ auth: authPour('u-777', false), event: tournoiDuServeur() });
+    expect(contient(root, CREER)).toBe(true);
+    expect(libelleDeLaBarre(root)).toContain('Voir le tournoi');
+  });
+
+  test('🔴 3 — déjà membre (ligne du lecteur) : « Voir mon équipe inscrite »', () => {
+    const root = monter({
+      auth: authPour('u-777', false),
+      event: tournoiDuServeur({ responseStatus: 'pending' }),
+    });
+    expect(contient(root, CREER)).toBe(false);
+    expect(libelleDeLaBarre(root)).toContain('Voir mon équipe inscrite');
+    appuyerSur(root, 'Voir mon équipe inscrite');
+    expect(mockNavigate).toHaveBeenCalledWith('TournamentTeamDetails', {
+      eventId: 'event-1', teamId: 'equipe-a',
+    });
+  });
+
+  test('🔴 3 — invité en attente : « Répondre à mon invitation », plus de « Créer »', () => {
+    const root = monter({
+      auth: authPour('u-777', false),
+      event: tournoiDuServeur({ responseStatus: 'invited' }),
+    });
+    expect(contient(root, CREER)).toBe(false);
+    expect(libelleDeLaBarre(root)).toContain('Répondre à mon invitation');
+  });
+
+  test('🔴 2 — visiteur : le bouton de connexion range le tournoi et ouvre la connexion', () => {
+    // eslint-disable-next-line global-require
+    const { prendreLeRetourAuTournoi } = require('@/navigation/retourAuTournoi');
+    prendreLeRetourAuTournoi();
+    const root = monter({
+      auth: { ...authPour('', false), userData: null },
+      event: tournoiDuServeur(),
+    });
+    expect(libelleDeLaBarre(root)).toContain("Se connecter pour s'inscrire");
+    appuyerSur(root, "Se connecter pour s'inscrire");
+    expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {
+      params: { origin: 'EventDetails', source: 'event-details-tournament-register' },
+      screen: 'Login',
+    });
+    expect(prendreLeRetourAuTournoi()).toBe('event-1');
+  });
+
+  test('2 caractérisant — visiteur sur un tournoi clôturé : « Voir le tournoi »', () => {
+    const root = monter({
+      auth: { ...authPour('', false), userData: null },
+      event: buildTournoi({
+        tournamentConfig: { closedAt: '2026-11-01T10:00:00.000Z', registrationMode: 'manual' },
+        tournamentTeams: [],
+      }),
+    });
+    expect(libelleDeLaBarre(root)).toContain('Voir le tournoi');
+  });
+});

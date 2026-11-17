@@ -64,6 +64,7 @@ import {
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
+  getTournamentViewerMember,
   isTooYoungForTournament,
   isTournamentActiveMemberStatus,
   isTournamentTeamNonCompliant,
@@ -589,10 +590,10 @@ function EventDetails({ navigation, route }) {
   const currentUserTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return null;
-    return tournamentTeams.find((team) => Array.isArray(team?.members) && team.members.some((member) => (
-      member?.user?.documentId === currentUserId
-      && isTournamentActiveMemberStatus(member?.responseStatus)
-    ))) || null;
+    // T-PARCOURS-2 (point 3) : `members`, ou la ligne du lecteur rendue par le serveur.
+    return tournamentTeams.find((team) => (
+      getTournamentViewerMember(team, currentUserId, isTournamentActiveMemberStatus)
+    )) || null;
   }, [tournamentTeams, userData?.documentId]);
   const currentUserPendingTournamentTeam = useMemo(
     () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
@@ -3827,11 +3828,9 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        {normalizeTournamentText(
-                          currentUserPendingTournamentTeam?.members?.find(
-                            (member) => member?.user?.documentId === userData?.documentId,
-                          )?.responseStatus,
-                        ) === 'invited'
+                        {normalizeTournamentText(getTournamentViewerMember(
+                          currentUserPendingTournamentTeam, userData?.documentId,
+                        )?.responseStatus) === 'invited'
                           ? t('eventDetails.answerMyInvitation', 'Répondre à mon invitation')
                           : t('eventDetails.followMyRequest', 'Suivre ma demande')}
                       </button>

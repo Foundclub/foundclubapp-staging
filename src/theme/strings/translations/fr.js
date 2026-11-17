@@ -11474,6 +11474,7 @@ export default {
     share: 'Partager',
     sharing: 'Partage...',
     signInToAnswerThis: 'Connecte-toi pour répondre à cet événement.',
+    signInToRegister: "Se connecter pour s'inscrire",
     signInToSee: 'Connecte-toi pour voir cet événement',
     signInToSeeHint: 'Il est peut-être réservé aux membres de son équipe.',
     signInToTakePart: 'Se connecter pour participer',
