@@ -283,9 +283,9 @@ const contient = (/** @type {any} */ arbre, /** @type {string} */ bout) => arbre
   .findAll((/** @type {any} */ n) => typeof n.type === 'string' && texte(n).includes(bout)).length > 0;
 
 // Récolte du train 12, « P7 prix C » (chef, 17/11) : mêmes attentes, au format du téléphone
-// (getTournamentEntryFeeLabel, « … € par joueur ») ; vues par l'organisateur, seul à lire
-// « Infos rapides » depuis T-PAGES-3.
+// (getTournamentEntryFeeLabel, « … € par joueur »).
 test('5. tournoi payant : « Prix / personne » lit entryFeeCents (20 € par joueur), pas pricePerPerson', () => {
+  // T-PAGES-3 point 4 : « Infos rapides » reste à l'organisateur sur un tournoi.
   const arbre = monter(tournoiAutonome({ pricePerPerson: 0, tournamentConfig: { entryFeeCents: 2000 } }), ORGANISATEUR);
   expect(contient(arbre, '20 € par joueur')).toBe(true);
   expect(contient(arbre, '0 € par joueur') && !contient(arbre, '20 € par joueur')).toBe(false);

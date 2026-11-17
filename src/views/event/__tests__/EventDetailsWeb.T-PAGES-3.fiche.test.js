@@ -139,7 +139,13 @@ jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
   useGetTournamentTeam: () => ({ data: mockEquipeLue.data, isError: false, isLoading: false }),
 }));
 const mockOuvrirLien = jest.fn();
-jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: (/** @type {any} */ url) => mockOuvrirLien(url) } }));
+jest.mock('@/platform/links', () => ({
+  __esModule: true,
+  default: {
+    openUrl: (/** @type {any} */ url) => mockOuvrirLien(url),
+    openUrlHere: (/** @type {any} */ url) => mockOuvrirLien(url),
+  },
+}));
 
 // FINITIONS11 · point 1 — le drapeau « Signaler » du site tire le service de signalement :
 // doublure, comme les autres services (le client HTTP refuse de se charger sans `.env`).
@@ -153,10 +159,11 @@ jest.mock('@/services/eventParticipation/eventParticipationService', () => ({
 }));
 
 const mockCreerEquipe = jest.fn();
+const mockValiderEquipe = jest.fn();
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
   createCustomTournamentTeam: (/** @type {any[]} */ ...args) => mockCreerEquipe(...args),
   registerClubTeamToTournament: jest.fn(),
-  reviewTournamentTeamRegistration: jest.fn(),
+  reviewTournamentTeamRegistration: (/** @type {any[]} */ ...args) => mockValiderEquipe(...args),
 }));
 
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: jest.fn() }));
@@ -262,6 +269,7 @@ const texte = (noeud) => (typeof noeud === 'string'
 const boutonsDe = (/** @type {any} */ noeud) => noeud.findAll((/** @type {any} */ n) => n.type === 'button').map(texte);
 const tousLesBoutons = (/** @type {any} */ arbre) => boutonsDe(arbre.root);
 const blocParticipants = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.id === 'event.participants').length;
+const blocTournoi = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
 // 15 ans le 19/12/2026 ; 18 ans ; le tournoi du samedi 19/12/2026 ouvert dès 16 ans.
 const compteNeLe = (/** @type {string | null} */ birthdate) => ({ ...JOUEUR, userData: { ...JOUEUR.userData, birthdate } });
 const TOURNOI_19_12 = (/** @type {Record<string, any>} */ sur = {}) => tournoiAutonome({
@@ -279,7 +287,7 @@ const CONFIG = {
   allowCrossClubPlayers: true, entryFeeCents: 2000, maxRosterSize: 8, maxTeams: 24, minAge: 16, minRosterSize: 5, paidMembersToValidate: 5, registrationMode: 'manual',
 };
 const EQUIPE_OUVERTE = {
-  captainUser: { documentId: 'capitaine' }, documentId: 'equipe-ouverte', isOpenToJoinRequests: true, members: [], membersSummary: { count: 3, list: [] }, name: 'On te trouve une place', sourceType: 'custom', status: 'pending',
+  captainUser: { documentId: 'capitaine' }, documentId: 'equipe-ouverte-t-pages-3', isOpenToJoinRequests: true, members: [], membersSummary: { count: 3, list: [] }, name: 'On te trouve une place', sourceType: 'custom_team', status: 'pending',
 };
 const equipeDuLecteur = (/** @type {any} */ sur) => ({
   captainUser: { documentId: 'capitaine' }, documentId: 'equipe-lecteur', members: [], name: 'Recette Site 333', sourceType: 'custom', status: 'pending', ...sur,
@@ -323,6 +331,7 @@ const inventaire = (arbre) => {
 // Ce que chaque lecteur voyait AVANT T-PAGES-3 (base eea820221 + T-PARCOURS2 + T-REJOINDRE + T-PAGES-A).
 // L'organisateur garde ce relevé à l'identique (« il garde ce qu'il a aujourd'hui ») ; les autres
 // lecteurs suivent la maquette (relevé APRÈS plus bas).
+/** @type {Record<string, any>} */
 const AVANT = {
   capitaine: {
     boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Voir la compétition', 'Gérer mon équipe', "Conditions d'inscription", 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
@@ -374,6 +383,7 @@ test.each(LECTEURS.filter(([nom]) => nom === 'organisateur'))('T-PAGES-3 (0) car
 
 // Ce que chaque lecteur voit APRÈS T-PAGES-3 (maquette (a) et (b)) ; diff gardé / déplacé / retiré :
 // .local/bancs/T-PAGES-3-1711/INVENTAIRE.md.
+/** @type {Record<string, any>} */
 const APRES = {
   capitaine: {
     boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
@@ -539,7 +549,8 @@ test('🔴 T-PAGES-3 (4) non-organisateur — ni Infos rapides, ni réglages Mod
   LECTEURS.filter(([nom]) => nom !== 'organisateur').forEach(([, compte, ev]) => {
     const arbre = monter(ev(), compte);
     const tout = texte(arbre.root);
-    ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Validation des', 'Aucun participant confirm'].forEach((mot) => expect(tout).not.toContain(mot));
+    // Recette 44 (testeur, via le chef) : ni « Mon statut » ni « Aucune réponse » sur un tournoi.
+    ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Validation des', 'Aucun participant confirm', 'Mon statut', 'Aucune réponse'].forEach((mot) => expect(tout).not.toContain(mot));
     expect(inventaire(arbre).pastilles).toEqual(['Terrain A']);
     expect(tousLesBoutons(arbre)).not.toContain('Participer');
     act(() => mounted.unmount());
@@ -571,4 +582,50 @@ test('T-PAGES-3 (6) R11 — « Créer » jamais à qui a une équipe ; Présent�
     act(() => mounted.unmount());
     mounted = null;
   });
+});
+
+// --- M1310 (chef, 17/11) : « Valider » refusé par le serveur (effectif minimum), rien à l'écran -----
+// Le message partait dans « Mon statut », en haut de la fiche, loin du bouton (bas de la colonne).
+const ligneDEquipe = (/** @type {any} */ arbre, /** @type {string} */ nom) => blocTournoi(arbre)
+  .findAll((/** @type {any} */ n) => n.type === 'div' && texte(n).includes(nom)
+    && n.findAll((/** @type {any} */ b) => b.type === 'button' && texte(b) === 'Valider').length === 1)
+  .slice(-1)[0];
+
+test('🔴 T-PAGES-3 M1310 — organisateur : « Valider » refusé (effectif minimum), le message du serveur s affiche sous l équipe', async () => {
+  mockValiderEquipe.mockRejectedValue(new Error('Effectif minimum non atteint : 5 joueurs.'));
+  const arbre = monter(fiche([EQUIPE_OUVERTE]), ORGANISATEUR);
+  const valider = ligneDEquipe(arbre, 'On te trouve une place')
+    .findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Valider')[0];
+  await act(async () => { await valider.props.onClick(); });
+  expect(mockValiderEquipe).toHaveBeenCalledWith('equipe-ouverte-t-pages-3', 'accepted');
+  const alerte = ligneDEquipe(arbre, 'On te trouve une place')
+    .findAll((/** @type {any} */ n) => n.props?.role === 'alert' && typeof n.type === 'string');
+  expect(alerte.map(texte)).toEqual(['Effectif minimum non atteint : 5 joueurs.']);
+});
+
+// --- Précision du chef (17/11) : sous le seuil des 30 %, le nombre d'équipes ne se lit NULLE PART ----
+// La liste ne montre que l'équipe du lecteur et celles qui cherchent un joueur ; un compteur de
+// personnes à 0 disparaît ; à partir du seuil, la liste complète revient ; l'organisateur voit tout.
+const EQUIPE_COMPLETE = {
+  captainUser: { documentId: 'capitaine-2' }, documentId: 'equipe-complete', isOpenToJoinRequests: false, members: [], membersSummary: { count: 0, list: [] }, name: 'Les Complets', sourceType: 'custom', status: 'pending',
+};
+const nomsListes = (/** @type {any} */ arbre) => blocTournoi(arbre)
+  .findAll((/** @type {any} */ n) => n.type === 'span' && n.props?.style?.fontSize === 14
+    && ['Les Complets', 'On te trouve une place', 'Recette Site 333'].includes(texte(n)))
+  .map(texte);
+
+test('🔴 T-PAGES-3 (3) seuil — sous 30 % : le joueur ne voit que les équipes qui cherchent un joueur (et la sienne), sans compteur à 0', () => {
+  let arbre = monter(fiche([EQUIPE_OUVERTE, EQUIPE_COMPLETE]), SEUL_18_ANS);
+  expect(nomsListes(arbre)).toEqual(['On te trouve une place']);
+  expect(texte(blocTournoi(arbre))).not.toMatch(/(^|\D)0 (joueur|payé|en attente|présent)/);
+  act(() => mounted.unmount());
+  arbre = monter(fiche([EQUIPE_OUVERTE, EQUIPE_COMPLETE, CAPITAINE_EQUIPE]), SEUL_18_ANS);
+  expect(nomsListes(arbre).sort()).toEqual(['On te trouve une place', 'Recette Site 333']);
+});
+
+test('T-PAGES-3 (3) seuil caractérisant — à partir de 30 %, la liste complète ; l organisateur voit toujours tout', () => {
+  const huit = fiche([EQUIPE_OUVERTE, EQUIPE_COMPLETE], { tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 } });
+  expect(nomsListes(monter(huit, SEUL_18_ANS)).sort()).toEqual(['Les Complets', 'On te trouve une place']);
+  act(() => mounted.unmount());
+  expect(nomsListes(monter(fiche([EQUIPE_OUVERTE, EQUIPE_COMPLETE]), ORGANISATEUR)).sort()).toEqual(['Les Complets', 'On te trouve une place']);
 });

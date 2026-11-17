@@ -386,7 +386,13 @@ const carteEquipe = (/** @type {any} */ arbre, /** @type {string} */ nom) => blo
   .slice(-1)[0];
 
 test('🔴 T-F3 joueur seul — une équipe ouverte aux demandes le dit sur sa carte ; une équipe fermée non', () => {
-  const arbre = monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_FERMEE, EQUIPE_OUVERTE] }), compteNeLe('2008-01-01'));
+  // T-PAGES-3 (précision du chef, 17/11) : sous le seuil des 30 %, la liste ne montre que les équipes
+  // qui cherchent un joueur ; la carte fermée se lit à partir du seuil (8 inscrites sur 24).
+  const arbre = monter(TOURNOI_19_12({
+    tournamentConfig: { maxTeams: 24, minAge: 16 },
+    tournamentTeams: [EQUIPE_FERMEE, EQUIPE_OUVERTE],
+    tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 },
+  }), compteNeLe('2008-01-01'));
   expect(texte(carteEquipe(arbre, 'On te trouve une place'))).toContain('Ouverte aux demandes');
   expect(texte(carteEquipe(arbre, 'Complets'))).not.toContain('Ouverte aux demandes');
 });
