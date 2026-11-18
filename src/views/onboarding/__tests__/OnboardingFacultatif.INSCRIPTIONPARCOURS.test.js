@@ -16,7 +16,9 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
       const valeur = String(cle).split('.').reduce(
-        (/** @type {any} */ n, /** @type {string} */ s) => (n && typeof n === 'object' ? n[s] : undefined),
+        (/** @type {any} */ n, /** @type {string} */ s) => (
+          n && typeof n === 'object' ? n[s] : undefined
+        ),
         jest.requireActual('@/theme/strings/translations/fr').default,
       );
       return typeof valeur === 'string' ? valeur : repli;
@@ -39,7 +41,10 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 const DOSSIER = path.join(__dirname, '..');
-const lire = (/** @type {string} */ ecran) => fs.readFileSync(path.join(DOSSIER, `${ecran}.js`), 'utf8');
+const lire = (/** @type {string} */ ecran) => fs.readFileSync(
+  path.join(DOSSIER, `${ecran}.js`),
+  'utf8',
+);
 
 /** Étape facultative → le saut qu'elle donne déjà au lien du bas. */
 const FACULTATIVES = {
@@ -56,7 +61,9 @@ const FACULTATIVES = {
   UserSportHistory: 'handleSkip',
   UserTrainedTeams: 'goToNextStep',
 };
-const OBLIGATOIRES = ['UserName', 'UserParentalDeclaration', 'UserParentAccountRequired', 'UserRole', 'Welcome'];
+const OBLIGATOIRES = [
+  'UserName', 'UserParentalDeclaration', 'UserParentAccountRequired', 'UserRole', 'Welcome',
+];
 
 describe('INSCRIPTION-PARCOURS A3 — les étapes facultatives le disent, en haut', () => {
   it('la liste est complète : toute étape qui monte le lien du bas est dans FACULTATIVES', () => {
@@ -67,7 +74,10 @@ describe('INSCRIPTION-PARCOURS A3 — les étapes facultatives le disent, en hau
     expect(avecLien.filter((ecran) => !FACULTATIVES[ecran])).toEqual([]);
   });
 
-  it.each(Object.entries(FACULTATIVES))('%s : le bandeau, au-dessus du titre, même saut (%s)', (ecran, saut) => {
+  it.each(Object.entries(FACULTATIVES))('%s : bandeau au-dessus du titre, même saut (%s)', (
+    ecran,
+    saut,
+  ) => {
     const source = lire(ecran);
     const bandeau = source.indexOf(`<OnboardingFacultatif onPress={${saut}} />`);
     const titre = source.indexOf('Fonts.h2Black');

@@ -467,9 +467,9 @@ function PlayerCardScreen({ navigation, route }) {
     ville: 'Lyon 69007',
   };
   const showExample = isCelebration && !hasSeenExample && !parcours;
-  // INSCRIPTION-PARCOURS A4 (D245) : la carte arrive AU MILIEU de l'inscription ; « Plus tard,
-  // continuer » était sous la jauge et les deux boutons de partage, il fallait défiler pour sortir.
-  // Il quitte la zone qui défile : posé sous elle, il se voit sur la carte modèle comme sur la sienne.
+  // INSCRIPTION-PARCOURS A4 (D245) : la carte arrive AU MILIEU de l'inscription ;
+  // « Plus tard, continuer » était sous la jauge et le partage : il fallait défiler.
+  // Posé SOUS la zone qui défile, il se voit sur la carte modèle comme sur la sienne.
   const piedPlusTard = isCelebration ? (
     <View style={[Spaces.paddingVertical[8]]}>
       <Button
