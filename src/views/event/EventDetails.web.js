@@ -67,6 +67,7 @@ import {
   getTournamentClosure,
   getTournamentEntryFeeLabel,
   getTournamentMembersSummaryLine,
+  getTournamentMinAge,
   getTournamentPaidValidationLabel,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
@@ -2297,6 +2298,31 @@ function EventDetails({ navigation, route }) {
     retourApresConnexion: true,
     source: 'event-details-register-team',
   });
+  // T-PAGES-3b (point 3, R7) : « Créer mon équipe » du visiteur ouvre la création du compte.
+  const ouvrirLInscriptionDuTournoi = () => openPublicAuthFlow(navigation, {
+    origin: RouteNames.EventDetails,
+    retourApresConnexion: true,
+    source: 'event-details-register-team',
+  }, RouteNames.Register);
+  // T-PAGES-3b (point 4) : les conditions savent de quel tournoi l'on vient (« Revenir au
+  // tournoi », `?tournoi=<id>` de PublicConditionsTournoiPage). Le paramètre arrive avec T-PAGES-6.
+  // ponytail: le type de `openTournamentTerms` ne le connaît pas encore ; retirer le transtypage à
+  // la récolte de T-PAGES-6.
+  const ouvrirLesConditionsDuTournoi = () => /** @type {(eventId?: string) => any} */ (
+    openTournamentTerms
+  )(event?.documentId);
+  // T-PAGES-3b (point 1) : les étiquettes de l'en-tête (maquette a et b). Sans valeur, pas d'étiquette.
+  const equipeInscriteDuLecteur = Boolean(equipeDuLecteur) && ['captain', 'member'].includes(roleDuLecteur);
+  const inscriptionsOuvertes = !tournoiClos && !isCancelled && event?.isActive !== false;
+  const ageMinimumDuTournoi = getTournamentMinAge(event);
+  const etiquettesDuTournoi = vueJoueurDuTournoi ? [
+    equipeInscriteDuLecteur ? { ok: true, texte: t('tournamentFicheWeb.tags.teamRegistered') } : null,
+    !equipeInscriteDuLecteur && inscriptionsOuvertes
+      ? { ok: true, texte: t('tournamentFicheWeb.tags.registrationOpen') } : null,
+    String(event?.tournamentSection?.name || '').trim()
+      ? { ok: false, texte: String(event.tournamentSection.name).trim() } : null,
+    ageMinimumDuTournoi ? { ok: false, texte: t('tournamentUtils.fromAge', { minAge: ageMinimumDuTournoi }) } : null,
+  ].filter(Boolean) : [];
   const erreurDeLaCarte = erreurEquipeTournoi || actionError;
   const carteDuTournoi = vueJoueurDuTournoi ? (
     <div data-testid="event-tournament-side" style={{ display: 'grid', gap: 16, minWidth: 0 }}>
@@ -2316,7 +2342,7 @@ function EventDetails({ navigation, route }) {
           event={event}
           isPending={createTournamentTeamMutation.isPending || registerTournamentTeamMutation.isPending}
           isVisitor={!isSignedIn}
-          onCreate={isSignedIn ? handleCreateTournamentTeam : ouvrirLaConnexionDuTournoi}
+          onCreate={isSignedIn ? handleCreateTournamentTeam : ouvrirLInscriptionDuTournoi}
           onLogin={ouvrirLaConnexionDuTournoi}
           onRegisterClubTeam={handleRegisterTournamentTeam}
           tooYoung={tropJeunePourLeTournoi}
@@ -2624,7 +2650,7 @@ function EventDetails({ navigation, route }) {
         {!vueJoueurDuTournoi && isPaidTournament(event) ? (
           <button
             data-testid="event-tournament-terms-link"
-            onClick={openTournamentTerms}
+            onClick={ouvrirLesConditionsDuTournoi}
             style={{
               background: 'transparent',
               border: `1px solid ${borderColor}`,
@@ -3173,6 +3199,26 @@ function EventDetails({ navigation, route }) {
                         {t('tournamentFicheWeb.organizedBy', { name: quickInfoOrganizerName, ...SANS_ECHAPPEMENT })}
                       </span>
                     ) : null}
+                    {etiquettesDuTournoi.length ? (
+                      <div data-testid="event-tournament-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {etiquettesDuTournoi.map((etiquette) => (
+                          <span
+                            key={etiquette.texte}
+                            style={{
+                              background: pillSurfaceColor,
+                              border: `1px solid ${borderColor}`,
+                              borderRadius: 999,
+                              color: etiquette.ok ? Colors?.success200 : textColor,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              padding: '5px 10px',
+                            }}
+                          >
+                            {etiquette.texte}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                     {eventInfoLine ? (
                       <div style={{
                         color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
@@ -3561,13 +3607,15 @@ function EventDetails({ navigation, route }) {
             >
               {vueJoueurDuTournoi ? (
                 <>
+                  {/* T-PAGES-3b (point 2) : au téléphone, « Mon équipe » passe AVANT l'essentiel
+                      (maquette b) ; la carte d'inscription le suit (maquette a). */}
+                  {!isDesktop && equipeDuLecteur ? carteDuTournoi : null}
                   <TournamentEssentials items={essentielDuTournoi} />
-                  {/* Au téléphone, la carte d'inscription suit l'essentiel (ordre de la maquette). */}
-                  {isDesktop ? null : carteDuTournoi}
+                  {!isDesktop && !equipeDuLecteur ? carteDuTournoi : null}
                   {equipeDuLecteur ? null : <TournamentHowItWorks event={event} ui={uiDeLaFiche} />}
                   <TournamentBeforeSignUp
                     event={event}
-                    onOpenTerms={openTournamentTerms}
+                    onOpenTerms={ouvrirLesConditionsDuTournoi}
                     title={equipeDuLecteur ? t('tournamentFicheWeb.before.beforeMatch') : undefined}
                     ui={uiDeLaFiche}
                   />

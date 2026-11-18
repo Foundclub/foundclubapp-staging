@@ -405,12 +405,14 @@ test('visiteur, tournoi à équipes libres : « Créer mon équipe » plein, seu
   ]);
 });
 
-test('visiteur : « Inscrire mon équipe » ouvre la connexion (tunnel de Participer) et demande le retour sur la fiche', () => {
+// T-PAGES-3b (18/11, point 3, R7) : « Créer mon équipe » ouvre la CRÉATION du compte (avant : la
+// connexion) ; le retour sur la fiche reste demandé. « J'ai déjà un compte » garde la connexion.
+test('visiteur : « Créer mon équipe » ouvre l inscription (tunnel public) et demande le retour sur la fiche', () => {
   const arbre = monter(tournoiAutonome(), VISITEUR_ANONYME);
   cliquerCarte(arbre, 'Créer mon équipe');
   expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {
     params: expect.objectContaining({ origin: 'EventDetails', retourApresConnexion: true }),
-    screen: 'Login',
+    screen: 'Register',
   });
   // Aucune équipe créée sans compte.
   expect(mockFeuilleEquipe).not.toHaveBeenCalledWith('name');

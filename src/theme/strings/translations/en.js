@@ -25765,6 +25765,10 @@ export default {
       tooYoungText: 'You can sign up for a future tournament open to your age.',
       tooYoungTitle: 'This tournament is open from {{minAge}} years old',
     },
+    tags: {
+      registrationOpen: 'Registration open',
+      teamRegistered: 'Your team is registered',
+    },
     teams: 'Teams',
   },
   tournamentInvitation: {
