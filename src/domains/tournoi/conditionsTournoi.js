@@ -11,7 +11,7 @@
  */
 
 /** La ligne de version, affichée sous le titre. */
-export const VERSION_DES_CONDITIONS = 'Version du 16 novembre 2026';
+export const VERSION_DES_CONDITIONS = 'Version du 18 novembre 2026';
 
 /**
  * D48 (17/11/2026) — L'ADRESSE DU COMPLEXE, en UN seul endroit du code : lue par les conditions (§ 1), le

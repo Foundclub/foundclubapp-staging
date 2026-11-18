@@ -2,8 +2,8 @@
 // T-SANS-PLAFOND (18/11/2026, décision d'Adel D247 « 2- A ») — plus de limite de joueurs par équipe :
 // le règlement et les conditions d'inscription ne disent plus « 8 joueurs au maximum » ni « 5 à 8 joueurs ».
 // Mots exacts transmis par le chef d'orchestre. ROUGE sur l'ancien texte, vert après.
-import { PARAGRAPHES_DES_CONDITIONS } from '../conditionsTournoi';
-import { SECTIONS_DU_REGLEMENT } from '../reglementTournoi';
+import { PARAGRAPHES_DES_CONDITIONS, VERSION_DES_CONDITIONS } from '../conditionsTournoi';
+import { EN_TETE_DU_REGLEMENT, SECTIONS_DU_REGLEMENT } from '../reglementTournoi';
 
 const REGLEMENT = SECTIONS_DU_REGLEMENT.flatMap((section) => section.paragraphes);
 
@@ -17,4 +17,9 @@ test('🔴 D247 : les conditions disent « (5 joueurs ou plus) », plus « (5 à
   expect(phrase.startsWith('On s\'inscrit avec son équipe (5 joueurs ou plus), seul, ou à 2, 3 ou 4. Chaque joueur reçoit son propre lien de paiement ;')).toBe(true);
   expect(phrase.endsWith('donc à celui qui a payé.')).toBe(true);
   expect(PARAGRAPHES_DES_CONDITIONS.join('\n')).not.toContain('5 à 8 joueurs');
+});
+
+test('🔴 D247 : les deux textes changés portent la date du 18/11 (« version oui » du chef)', () => {
+  expect(VERSION_DES_CONDITIONS).toBe('Version du 18 novembre 2026');
+  expect(EN_TETE_DU_REGLEMENT.endsWith('(v4, 18/11)')).toBe(true);
 });
