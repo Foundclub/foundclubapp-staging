@@ -198,6 +198,9 @@ jest.mock(
 /* eslint-enable global-require */
 
 // eslint-disable-next-line import/first
+import { RouteNames } from '@/navigation/routeNames';
+
+// eslint-disable-next-line import/first
 import EventDetailsWeb from '../EventDetails.web';
 
 jest.setTimeout(30000);
@@ -274,10 +277,6 @@ const texte = (noeud) => (typeof noeud === 'string'
   ? noeud
   : (noeud.children || []).map(texte).join(''));
 
-const boutonsDe = (/** @type {any} */ noeud) => noeud.findAll((/** @type {any} */ n) => n.type === 'button').map(texte);
-const tousLesBoutons = (/** @type {any} */ arbre) => boutonsDe(arbre.root);
-const blocParticipants = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.id === 'event.participants').length;
-const blocTournoi = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
 // 15 ans le 19/12/2026 ; 18 ans ; le tournoi du samedi 19/12/2026 ouvert dès 16 ans.
 const compteNeLe = (/** @type {string | null} */ birthdate) => ({ ...JOUEUR, userData: { ...JOUEUR.userData, birthdate } });
 const TOURNOI_19_12 = (/** @type {Record<string, any>} */ sur = {}) => tournoiAutonome({
@@ -290,7 +289,6 @@ const ORGANISATEUR = {
   ...JOUEUR, canEditClub: () => true, canEditEvent: () => true, canManageEvent: () => true,
 };
 const SEUL_18_ANS = compteNeLe('2008-01-01');
-const TROP_JEUNE = compteNeLe('2011-06-01');
 const CONFIG = {
   allowCrossClubPlayers: true, entryFeeCents: 2000, maxRosterSize: 8, maxTeams: 24, minAge: 16, minRosterSize: 5, paidMembersToValidate: 5, registrationMode: 'manual',
 };
@@ -311,34 +309,6 @@ const fiche = (/** @type {any[]} */ equipes = [EQUIPE_OUVERTE], /** @type {Recor
 const CAPITAINE_EQUIPE = equipeDuLecteur({ captainUser: { documentId: 'joueur-1' }, viewerMembership: { responseStatus: 'present' } });
 const MEMBRE_EQUIPE = equipeDuLecteur({ viewerMembership: { responseStatus: 'present' } });
 const INVITE_EQUIPE = equipeDuLecteur({ viewerMembership: { responseStatus: 'invited' } });
-const LECTEURS = /** @type {[string, any, any][]} */ ([
-  ['visiteur', VISITEUR, () => fiche([EQUIPE_OUVERTE], { tournamentTeams: undefined })],
-  ['joueur sans équipe', SEUL_18_ANS, () => fiche()],
-  ['trop jeune', TROP_JEUNE, () => fiche()],
-  ['capitaine', SEUL_18_ANS, () => fiche([EQUIPE_OUVERTE, CAPITAINE_EQUIPE])],
-  ['membre', SEUL_18_ANS, () => fiche([EQUIPE_OUVERTE, MEMBRE_EQUIPE])],
-  ['invité', SEUL_18_ANS, () => fiche([EQUIPE_OUVERTE, INVITE_EQUIPE])],
-  ['organisateur', ORGANISATEUR, () => fiche([EQUIPE_OUVERTE, CAPITAINE_EQUIPE])],
-]);
-const MOTS = ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Validation manuelle', 'Équipe validée au 5ᵉ joueur payé', 'Participants', 'Présent·e·s', 'Aucune équipe n', 'équipes attendues', 'inscrites sur', 'Mon statut', 'Rejoindre cet événement', 'Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire', 'Mon équipe', 'Rejoindre une équipe'];
-/**
- * Ce qu'un lecteur voit : les boutons, les titres, les pastilles, les mots repères.
- * @param {any} arbre
- * @returns {{ boutons: string[], titres: string[], pastilles: string[], mots: string[] }}
- */
-const inventaire = (arbre) => {
-  const tout = texte(arbre.root);
-  return {
-    boutons: tousLesBoutons(arbre),
-    mots: MOTS.filter((mot) => tout.includes(mot)),
-    pastilles: arbre.root.findAll((/** @type {any} */ n) => n.type === 'span' && n.props?.style?.borderRadius === 999).map(texte),
-    titres: arbre.root.findAll((/** @type {any} */ n) => ['h1', 'h2', 'h3'].includes(n.type)).map(texte),
-  };
-};
-
-
-// eslint-disable-next-line import/first
-import { RouteNames } from '@/navigation/routeNames';
 
 const MIXTE = { tournamentSection: { documentId: 'section-mixte', name: 'Mixte' } };
 const etiquettes = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-tags').map(texte);
