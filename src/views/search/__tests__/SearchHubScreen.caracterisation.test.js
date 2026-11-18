@@ -706,7 +706,7 @@ describe('IMPL-4 page 7 — le champ pleine largeur, posé par la recherche', ()
 
   test('📌 l annuaire du site ne l allume pas', async () => {
     await monter({ annuaire: true, types: 'clubs,events' });
-    expect(mockPanneaux.clubs.props?.champDeRecherchePlein ?? mockPanneaux.events.props?.champDeRecherchePlein)
-      .toBe(false);
+    const panneau = mockPanneaux.clubs.props || mockPanneaux.events.props;
+    expect(panneau.champDeRecherchePlein).toBe(false);
   });
 });

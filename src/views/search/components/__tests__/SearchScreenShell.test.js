@@ -372,7 +372,8 @@ describe('IMPL-4 page 7 — sous l en-tete de la pile, un seul en-tete', () => {
   it('garde les onglets separes, puis le contenu, dans cet ordre (Adel 18/11)', () => {
     const affiches = textesVisibles(rendreSousEnTete());
     expect(affiches.indexOf('temoin-chips:events')).toBeGreaterThanOrEqual(0);
-    expect(affiches.indexOf('temoin-chips:events')).toBeLessThan(affiches.indexOf('temoin-contenu'));
+    const rang = (/** @type {string} */ temoin) => affiches.indexOf(temoin);
+    expect(rang('temoin-chips:events')).toBeLessThan(rang('temoin-contenu'));
   });
 
   it('garde les onglets avec le tour guide actif', () => {
@@ -391,6 +392,10 @@ describe('IMPL-4 page 7 — sous l en-tete de la pile, un seul en-tete', () => {
     const { ScrollView } = jest.requireActual('react-native');
     // eslint-disable-next-line global-require
     const { useEnTeteDeRecherche } = require('../enTeteDeRecherche');
+    /**
+     * Une liste qui pose l'en-tête de la recherche dans ce qu'elle fait défiler.
+     * @returns {any} La liste rendue.
+     */
     function ListePorteuse() {
       const enTete = useEnTeteDeRecherche();
       return createElement(ScrollView, { testID: 'ce-qui-defile' }, enTete);

@@ -152,7 +152,11 @@ function SearchScreenShell({
   );
 
   const enTete = useMemo(() => (
-    <View style={sousEnTeteDeLaPile ? [Spaces.paddingTop[8], Spaces.paddingBottom[16]] : Spaces.paddingBottom[4]}>
+    <View
+      style={sousEnTeteDeLaPile
+        ? [Spaces.paddingTop[8], Spaces.paddingBottom[16]]
+        : Spaces.paddingBottom[4]}
+    >
       {sousEnTeteDeLaPile ? null : (
         <View style={[
           Spaces.marginTop[16],

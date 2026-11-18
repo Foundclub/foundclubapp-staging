@@ -1,6 +1,7 @@
 // Le VRAI i18next : les libellés viennent de `fr.js` / `en.js`, pas d'un repli.
 import '@/theme/strings';
 
+import { createElement } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
@@ -37,14 +38,12 @@ const monter = (/** @type {Record<string, any>} */ props = {}) => {
   const ouvrir = jest.fn();
   const chercher = jest.fn();
   act(() => {
-    arbre = renderer.create(
-      <SearchComponent
-        handleSearchField={chercher}
-        openFilters={ouvrir}
-        placeholder="Rechercher un événement"
-        {...props}
-      />,
-    );
+    arbre = renderer.create(createElement(SearchComponent, {
+      handleSearchField: chercher,
+      openFilters: ouvrir,
+      placeholder: 'Rechercher un événement',
+      ...props,
+    }));
   });
   return { chercher, ouvrir };
 };
@@ -73,7 +72,8 @@ describe('IMPL-4 page 7 — le champ de recherche pleine largeur, filtres dedans
     expect(style.minHeight).toBeGreaterThanOrEqual(48);
     expect(caseDuChamp.findAllByType(TextInput)).toHaveLength(1);
     const filtres = caseDuChamp.findAll(
-      (/** @type {any} */ n) => n.props?.onPress === ouvrir && n.props?.accessibilityRole === 'button',
+      (/** @type {any} */ n) => n.props?.onPress === ouvrir
+        && n.props?.accessibilityRole === 'button',
     );
     expect(filtres.length).toBeGreaterThan(0);
   });

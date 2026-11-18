@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, Text, TouchableOpacity, View,
+  Image, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -33,9 +33,9 @@ const normalizeSearchValue = (value) => {
  */
 function SearchComponent({
   filterNumber = undefined,
+  filtresDansLeChamp = false,
   handleSearchField,
   inputDensity = 'compact',
-  filtresDansLeChamp = false,
   inputStyle,
   openFilters,
   placeholder,
@@ -176,7 +176,7 @@ function SearchComponent({
             accessibilityLabel={t('implAccueil.rechercheEffacer', 'Effacer la recherche')}
             accessibilityRole="button"
             onPress={() => setSearch('')}
-            style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44, minWidth: 44 }]}
+            style={[Alignments.alignCenter, Alignments.justifyCenter, styles.cible44]}
           >
             <Image
               source={Images.close}
@@ -191,7 +191,7 @@ function SearchComponent({
             accessibilityLabel={libelleFiltres}
             accessibilityRole="button"
             onPress={openFilters}
-            style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44, minWidth: 44 }]}
+            style={[Alignments.alignCenter, Alignments.justifyCenter, styles.cible44]}
           >
             {pastilleFiltres}
             <Image
@@ -244,5 +244,13 @@ function SearchComponent({
     </View>
   );
 }
+
+// IMPL-4-ACCUEIL : la cible tactile du thème (44 px) des deux gestes dans le champ.
+const styles = StyleSheet.create({
+  cible44: {
+    minHeight: 44,
+    minWidth: 44,
+  },
+});
 
 export default SearchComponent;
