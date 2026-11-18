@@ -20,25 +20,22 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { createTeamInviteLink } from '@/services/teamInvite/teamInviteService';
 
-import { resolveShareEnvironment } from '@/utils/shareLinks';
+import { resolveAppSiteOrigin } from '@/utils/shareLinks';
 
 import SharePlatform from '@/platform/share';
 import { isDesktopWeb } from '@/responsive/isDesktopWeb';
 
-const PRODUCTION_INVITE_ORIGIN = 'https://foundclub.app';
-const STAGING_INVITE_ORIGIN = 'https://staging.foundclub.app';
-
 /**
- * Le site qui porte les liens : la production pour une build de production, la
- * recette sinon — le code n'existe que dans la base qui l'a créé.
+ * Le site qui porte les liens : le code n'existe que dans la base qui l'a créé.
+ * T-SUITES-TOURNOI (18/11, chef « 1- B ») : la règle partagée des liens vers le site
+ * (`resolveAppSiteOrigin`) — `WEB_APP_URL` d'abord, puis la production pour une build de
+ * production et la recette sinon. La build iOS de recette écrit `APP_ENV=production` : sans
+ * `WEB_APP_URL`, ses invitations partaient sur la production.
+ * Témoin : __tests__/teamInviteShare.TSUITES2.origineDuSite.test.js.
  * @param {string} [appEnv] - l'environnement de la build.
  * @returns {string} l'origine.
  */
-export const resolveInviteLinkOrigin = (appEnv) => (
-  resolveShareEnvironment(appEnv) === 'production'
-    ? PRODUCTION_INVITE_ORIGIN
-    : STAGING_INVITE_ORIGIN
-);
+export const resolveInviteLinkOrigin = (appEnv) => resolveAppSiteOrigin({ appEnv });
 
 /**
  * Le lien d'invitation d'une équipe.
@@ -268,7 +265,7 @@ export const buildTournamentTeamInviteMessage = ({ eventName, teamName, url }) =
  * @returns {Promise<{ envoi?: '' | 'copie' | 'echec', url: string | null }>} Ce qui est parti.
  */
 export const shareTournamentTeamInviteLink = async ({
-  eventId, eventName, teamId, teamName,
+  eventId, eventName, lienSeul = false, teamId, teamName,
 }) => {
   // ponytail: chargé à la demande, comme le partage de l'équipe dans la fiche : un service réseau
   // importé en tête
@@ -286,6 +283,12 @@ export const shareTournamentTeamInviteLink = async ({
     subject: 'tournament',
   });
   if (!url || !link?.code) return { url: null };
+  // T-SUITES-TOURNOI (18/11, point 13) : « Copier le lien » (site) copie l'adresse SEULE, sans le
+  // message ; le partage, lui, garde le message.
+  if (lienSeul) {
+    const copie = await SharePlatform.copier(url);
+    return { envoi: copie ? 'copie' : 'echec', url };
+  }
   const { envoi } = await envoyerLeLien({
     message: buildTournamentTeamInviteMessage({ eventName, teamName, url }),
     title: String(teamName || ''),

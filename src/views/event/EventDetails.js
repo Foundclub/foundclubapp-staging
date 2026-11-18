@@ -245,6 +245,7 @@ import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import { getTournamentTeamsSeekingPlayers } from './tournamentJoinRules';
 import {
+  getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
   getTournamentTeamsLine,
   isTournamentTeamsCountShown,
@@ -1381,8 +1382,10 @@ function EventDetails({ navigation, route }) {
   } else if (!tournoiClos && tournamentConfig?.competitionState !== 'published') {
     statutDuBandeau = t('eventDetails.header.registrationOpen');
   }
+  // T-SUITES-TOURNOI (18/11, point 9) : la pastille du terrain, pour l'organisateur seul (le
+  // joueur lit le lieu réel dans « L'essentiel »).
   const bandeauDuTournoi = isTournamentEvent && !isStageDayEvent
-    ? { statusLabel: statutDuBandeau }
+    ? { statusLabel: statutDuBandeau, ...(canEdit ? { showFacility: true } : {}) }
     : null;
   // T-PAGES-4 (17/11, chef, dans l'esprit de « 4- A » + « 2 ok ») — sous le seuil des 30 %, un
   // non-organisateur ne lit le nombre d'équipes nulle part : l'onglet Équipes ne liste que les
@@ -2763,6 +2766,13 @@ function EventDetails({ navigation, route }) {
     // ⛔ Ce garde-fou est place AVANT le prechargement : c'est lui qui rend les
     // deux lectures inutiles, pas l'inverse.
     const editSupport = getEventEditSupport(event);
+    // T-SUITES-TOURNOI (18/11, chef « 4- B ») — un TOURNOI a sa porte : « Modifier » ouvre
+    // « Modifier les paramètres » (comme le site), au lieu de la nommer dans une alerte.
+    // Témoin : __tests__/EventDetailsEvedit1BoutonModifier.test.js (D3 — un TOURNOI).
+    if (editSupport.reasonKey === 'tournament' && eventId) {
+      navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId });
+      return;
+    }
     if (!editSupport.isSupported) {
       Alert.alert(
         t('eventDetails.editUnsupported.title', 'Modification limitée'),
@@ -5998,9 +6008,11 @@ function EventDetails({ navigation, route }) {
       return [
         overviewTab,
         {
+          // T-SUITES-TOURNOI (18/11, point 11) : en attente + validées, comme le pilotage
+          // (TournamentManagement), sans les refusées ni les archivées.
           label: withTabCount(
             t('eventDetails.tabs.teams', 'Équipes'),
-            canEdit ? tournamentTeams.length : NaN,
+            canEdit ? Number(getTournamentRegisteredTeamsCount({ tournamentTeams })) : NaN,
           ),
           value: 'tournamentTeams',
         },
@@ -6026,7 +6038,7 @@ function EventDetails({ navigation, route }) {
     stageChildDays.length,
     t,
     tournamentPeopleCount,
-    tournamentTeams.length,
+    tournamentTeams,
   ]);
 
   // 🚪 LE DRAPEAU QUI OUVRE TOUT : y a-t-il des onglets sur cette page ?
@@ -7860,7 +7872,9 @@ function EventDetails({ navigation, route }) {
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
               <Text style={[Fonts.p4, Fonts.neutral300]}>{t('eventDetails.teams', 'Équipes')}</Text>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                {estVisiteurDuTournoi ? (ligneEquipesDuVisiteur || '-') : tournamentTeams.length}
+                {estVisiteurDuTournoi
+                  ? (ligneEquipesDuVisiteur || '-')
+                  : getTournamentRegisteredTeamsCount({ tournamentTeams })}
               </Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>

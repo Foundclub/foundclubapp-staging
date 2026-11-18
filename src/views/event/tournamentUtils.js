@@ -192,9 +192,12 @@ export const getTournamentStatusCounters = (teams = [], tournamentConfig = {}) =
   const status = normalizeTournamentText(team?.status);
   const nextSummary = { ...summary };
 
-  if (status === 'accepted') nextSummary.accepted += 1;
+  // T-SUITES-TOURNOI (18/11, chef « 2- A ») : `archivedAt` range l'équipe dans les archivées, quel
+  // que soit son statut (même règle que getTournamentRegisteredTeamsCount, tournamentTeamsCount.js).
+  // Témoin : tournamentUtils.test.js (T-SUITES).
+  if (team?.archivedAt || status === 'archived') nextSummary.archived += 1;
+  else if (status === 'accepted') nextSummary.accepted += 1;
   else if (status === 'declined') nextSummary.declined += 1;
-  else if (status === 'archived') nextSummary.archived += 1;
   else nextSummary.pending += 1;
 
   if (isTournamentTeamNonCompliant(team, tournamentConfig)) {

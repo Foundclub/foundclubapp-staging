@@ -30,6 +30,10 @@ jest.mock('@/services/teamInvite/teamInviteService', () => ({
   createTeamInviteLink: (...args) => mockCreateLink(...args),
 }));
 jest.mock('@/utils/shareLinks', () => ({
+  // T-SUITES-TOURNOI (18/11) : l'origine des invitations vient de la règle partagée.
+  resolveAppSiteOrigin: ({ appEnv } = {}) => (
+    String(appEnv || 'staging') === 'production' ? 'https://foundclub.app' : 'https://staging.foundclub.app'
+  ),
   resolveShareEnvironment: (appEnv) => (
     String(appEnv || 'staging') === 'production' ? 'production' : 'staging'
   ),

@@ -61,6 +61,7 @@ import {
   getTournamentTeamsSeekingPlayers,
   getTournamentVisitorTeamsLine,
 } from '@/views/event/tournamentJoinRules';
+import { getTournamentRegisteredTeamsCount } from '@/views/event/tournamentTeamsCount';
 import {
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
@@ -694,6 +695,8 @@ function EventDetails({ navigation, route }) {
     () => getTournamentStatusCounters(tournamentTeams, tournamentConfig),
     [tournamentConfig, tournamentTeams],
   );
+  // T-SUITES-TOURNOI (18/11, point 11) : le total de la ligne de l'organisateur, règle du pilotage.
+  const equipesInscrites = Number(getTournamentRegisteredTeamsCount({ tournamentTeams }));
   // T-REJOINDRE (17/11, Clément D49, registre D210) — le visiteur sans compte ne reçoit pas les
   // équipes (le rôle Public n'a pas ce droit) : la fiche disait « 0 équipe / Aucune équipe n'est
   // encore inscrite » sur un tournoi qui en avait 5. Il lit la ligne du résumé public, avec le
@@ -2508,10 +2511,12 @@ function EventDetails({ navigation, route }) {
           gap: 12,
         }}
         >
+          {/* T-SUITES-TOURNOI (18/11, point 11) : en attente + validées, comme le pilotage,
+              sans les refusées ni les archivées. */}
           <span>
-            {tournamentTeams.length}
+            {equipesInscrites}
             {' '}
-            {t('eventDetails.teamS', 'équipes', { count: tournamentTeams.length })}
+            {t('eventDetails.teamS', 'équipes', { count: equipesInscrites })}
           </span>
           <span>
             {tournamentTeamCounters.pending}

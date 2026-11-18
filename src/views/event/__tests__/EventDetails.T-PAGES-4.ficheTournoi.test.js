@@ -1270,12 +1270,19 @@ describe('T-PAGES-4b · 2 — l en-tête passe en bandeau, avec l étiquette du 
     });
   });
 
-  test('🔴 sans équipe, invité, visiteur, organisateur : « Inscriptions ouvertes » avant la publication', () => {
+  test('🔴 sans équipe, invité, visiteur : « Inscriptions ouvertes » avant la publication', () => {
     mockTeamQuery.data = null;
-    ['sansEquipe', 'invite', 'visiteur', 'organisateur', 'tropJeune'].forEach((qui) => {
+    ['sansEquipe', 'invite', 'visiteur', 'tropJeune'].forEach((qui) => {
       expect(proprietesDeLEnTete(monter(LECTEURS[qui]())).tournamentHero)
         .toEqual({ statusLabel: 'Inscriptions ouvertes' });
     });
+  });
+
+  // T-SUITES-TOURNOI (18/11, point 9) : l'organisateur seul garde la pastille du terrain.
+  test('🔴 organisateur : « Inscriptions ouvertes », et la pastille du terrain (showFacility)', () => {
+    mockTeamQuery.data = null;
+    expect(proprietesDeLEnTete(monter(LECTEURS.organisateur())).tournamentHero)
+      .toEqual({ showFacility: true, statusLabel: 'Inscriptions ouvertes' });
   });
 
   test('🔴 compétition publiée : plus d étiquette de statut', () => {
@@ -1388,5 +1395,30 @@ describe('T-PAGES-4b · 5 — le visiteur sans compte : « Créer mon équipe »
     const root = monter(publie);
     expect(barreDe(root)).toEqual(["Se connecter pour s'inscrire"]);
     expect(parTestID(root, 'tournament-registration-card')).toHaveLength(0);
+  });
+});
+
+// T-SUITES-TOURNOI (18/11, point 11 ; recapture Android, recette 46, organisateur 222) : l'onglet
+// disait « Équipes · 7 » quand la liste montrait 1 validée et 5 en attente, et le pilotage 6 : la fiche
+// comptait l'équipe REFUSÉE. Même règle que le pilotage (getTournamentRegisteredTeamsCount) : en
+// attente + validées, sans les archivées ni les refusées.
+describe('T-SUITES (11) — le compteur d équipes de la fiche suit la règle du pilotage', () => {
+  test('🔴 organisateur : 1 validée, 5 en attente, 1 refusée, 1 archivée => « Équipes · 6 »', () => {
+    const equipe = (/** @type {number} */ n, /** @type {string} */ status, extra = {}) => ({
+      documentId: `eq-${n}`, members: [], name: `Équipe ${n}`, status, ...extra,
+    });
+    const root = monter({
+      auth: compte('orga-1', { peutGerer: true }),
+      event: TOURNOI({
+        organizer: { documentId: 'orga-1' },
+        tournamentTeams: [
+          equipe(1, 'accepted'), equipe(2, 'pending'), equipe(3, 'pending'), equipe(4, 'pending'),
+          equipe(5, 'pending'), equipe(6, 'pending'), equipe(7, 'declined'),
+          equipe(8, 'pending', { archivedAt: '2026-11-10T10:00:00.000Z' }),
+        ],
+      }),
+    });
+    const onglet = ongletsDe(root).find((libelle) => libelle.startsWith('Équipes'));
+    expect(onglet).toMatch(/^Équipes\D*6$/);
   });
 });

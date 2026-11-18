@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -172,6 +173,12 @@ function TournamentTeamDetails({ navigation, route }) {
   const columnsYRef = useRef(/** @type {number | null} */ (null));
   const requestsYRef = useRef(/** @type {number | null} */ (null));
   const focusDoneForRef = useRef(/** @type {any} */ (null));
+  // T-SUITES-TOURNOI (18/11, points 7 et 8) : la carte « Inviter un joueur » (colonne de côté).
+  const sideYRef = useRef(/** @type {number | null} */ (null));
+  const inviteYRef = useRef(/** @type {number | null} */ (null));
+  // Chef « A » (18/11) : défiler PUIS donner le focus au champ « Rechercher un joueur ».
+  const searchInputRef = useRef(/** @type {any} */ (null));
+  const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const scrollToFocusedSection = () => {
     if (focusSection !== 'requests' || focusDoneForRef.current === route?.params) return;
     if (columnsYRef.current === null || requestsYRef.current === null) return;
@@ -193,6 +200,10 @@ function TournamentTeamDetails({ navigation, route }) {
     Spaces,
   });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  // Le champ n'existe qu'une fois la recherche ouverte : le focus part après ce rendu.
+  useEffect(() => {
+    if (searchFocusRequest > 0 && isInviteOpen) searchInputRef.current?.focus?.();
+  }, [isInviteOpen, searchFocusRequest]);
   // T-INVITE (15/11) : « Inviter des joueurs » par lien ; sur un ordinateur le lien est copié,
   // l'écran le dit. États : '' | 'pending' | 'copie' | 'echec'.
   const [inviteLinkState, setInviteLinkState] = useState('');
@@ -817,7 +828,7 @@ function TournamentTeamDetails({ navigation, route }) {
     'tournamentTeamDetails.inviteLink.hint',
     "Envoie ce lien à tes joueurs : ils rejoignent l'équipe puis paient leur place.",
   );
-  const shareInviteLink = async () => {
+  const shareInviteLink = async (/** @type {{ lienSeul?: boolean }} */ options = {}) => {
     setInviteLinkState('pending');
     try {
       // Chargé à la demande (comme teamInviteShare) : les suites de la fiche
@@ -827,6 +838,7 @@ function TournamentTeamDetails({ navigation, route }) {
       const { envoi, url } = await shareTournamentTeamInviteLink({
         eventId,
         eventName: team?.event?.name,
+        lienSeul: options?.lienSeul === true,
         teamId: team?.documentId || teamId,
         teamName: team?.name,
       });
@@ -846,7 +858,20 @@ function TournamentTeamDetails({ navigation, route }) {
   const todoItems = canManageRoster && !progress.isValidated ? progress.todo : [];
   const essentials = getTournamentEssentials(team?.event);
   const entryFeeLabel = getTournamentEntryFeeLabel(team?.event);
-  const openInviteSearch = () => setIsInviteOpen(true);
+  // T-SUITES-TOURNOI (18/11, points 7 et 8) — « Chercher un joueur » et « Inviter » d'une place
+  // libre ouvrent la recherche de la carte « Inviter un joueur » (comme son propre « Inviter »).
+  // Au téléphone, cette carte est dans la colonne de côté, rendue SOUS l'effectif : sans
+  // défilement, rien ne bougeait à l'écran. La page défile donc jusqu'à elle.
+  // Témoin : __tests__/T-PAGES-2.pageEquipe.test.js (T-SUITES).
+  const openInviteSearch = () => {
+    setIsInviteOpen(true);
+    setSearchFocusRequest((demande) => demande + 1);
+    const colonnes = columnsYRef.current;
+    const cote = sideYRef.current;
+    const carte = inviteYRef.current;
+    if (colonnes === null || cote === null || carte === null) return;
+    scrollRef.current?.scrollTo?.({ animated: true, y: colonnes + cote + carte });
+  };
 
   const renderTodoActions = (/** @type {any} */ item) => {
     if (item.kind === 'players') {
@@ -854,7 +879,7 @@ function TournamentTeamDetails({ navigation, route }) {
         <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
           <Button
             isLoading={inviteLinkState === 'pending'}
-            onPress={shareInviteLink}
+            onPress={() => shareInviteLink()}
             size="sm"
             title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien d’invitation')}
             variant="Primary"
@@ -922,14 +947,25 @@ function TournamentTeamDetails({ navigation, route }) {
           {t('tournamentTeamDetails.inviteLink.title', 'Inviter des joueurs par lien')}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>{inviteLinkHint}</Text>
-        <Button
-          isLoading={inviteLinkState === 'pending'}
-          onPress={shareInviteLink}
-          size="sm"
-          style={{ alignSelf: 'flex-start' }}
-          title={t('tournamentTeamDetails.inviteLink.button', 'Partager le lien')}
-          variant="Secondary"
-        />
+        <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+          <Button
+            isLoading={inviteLinkState === 'pending'}
+            onPress={() => shareInviteLink()}
+            size="sm"
+            title={t('tournamentTeamDetails.inviteLink.button', 'Partager le lien')}
+            variant="Secondary"
+          />
+          {/* T-SUITES-TOURNOI (18/11, point 13) : sur le site, le lien SEUL dans le presse-papiers
+              (le partage envoie le lien et le message). Clé existante, pas de texte neuf. */}
+          {Platform.OS === 'web' ? (
+            <Button
+              onPress={() => shareInviteLink({ lienSeul: true })}
+              size="sm"
+              title={t('reserverTerrain.lien.copier', 'Copier le lien')}
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
       </View>
 
       {normalizeTournamentText(team?.sourceType) === 'custom_team' ? (
@@ -959,6 +995,7 @@ function TournamentTeamDetails({ navigation, route }) {
             onChangeText={setMemberSearchQuery}
             placeholder={addMemberPlaceholder}
             placeholderTextColor={Colors.neutral500}
+            ref={searchInputRef}
             style={tournamentDs.styles.input}
             value={memberSearchQuery}
           />
@@ -1339,9 +1376,20 @@ function TournamentTeamDetails({ navigation, route }) {
   );
 
   const sideColumn = (
-    <View style={[Spaces.gap[16], isWide ? { width: 340 } : null]}>
+    <View
+      onLayout={(event) => { sideYRef.current = event?.nativeEvent?.layout?.y ?? null; }}
+      style={[Spaces.gap[16], isWide ? { width: 340 } : null]}
+      testID="tournament-team-side"
+    >
       {tournamentCard}
-      {inviteCard}
+      {inviteCard ? (
+        <View
+          onLayout={(event) => { inviteYRef.current = event?.nativeEvent?.layout?.y ?? null; }}
+          testID="tournament-team-invite"
+        >
+          {inviteCard}
+        </View>
+      ) : null}
       {discussionCard}
       {withdrawCard}
       {leaveLink}

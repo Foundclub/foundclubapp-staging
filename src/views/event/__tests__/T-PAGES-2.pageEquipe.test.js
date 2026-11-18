@@ -1,5 +1,5 @@
 /* eslint-disable max-len, no-unused-vars -- les témoins se lisent en entier ; harnais repris tel quel du témoin caractérisant. */
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -745,5 +745,92 @@ describe('T-REGLES-EQUIPE — arrivée par la notification : la page défile jus
     await poser(arbre, 'tournament-team-columns', 300);
     await poser(arbre, 'tournament-team-requests', 900);
     expect(defiler).not.toHaveBeenCalled();
+  });
+});
+
+// T-SUITES-TOURNOI (18/11, points 7 et 8 ; testeur, iPhone 2.6.910, recette 46, capitaine 1/5) —
+// « Chercher un joueur » (À faire maintenant) et « Inviter » d'une « Place libre » ne faisaient
+// rien à l'œil : ils ouvraient la recherche dans la carte « Inviter un joueur », mais au téléphone
+// cette carte est dans la colonne de côté, rendue SOUS l'effectif, hors de l'écran. Ils ouvrent la
+// même recherche que l'« Inviter » de la carte, et la page défile jusqu'à elle.
+describe('T-SUITES — « Chercher un joueur » et « Inviter » d une place libre mènent à la recherche', () => {
+  const poser = async (/** @type {any} */ arbre, /** @type {string} */ testID, /** @type {number} */ y) => {
+    const vue = arbre.root.find((/** @type {any} */ n) => n.props?.testID === testID && typeof n.props?.onLayout === 'function');
+    await act(async () => {
+      vue.props.onLayout({
+        nativeEvent: {
+          layout: {
+            height: 100, width: 390, x: 0, y,
+          },
+        },
+      });
+    });
+  };
+  const poserLaPage = async (/** @type {any} */ arbre) => {
+    await poser(arbre, 'tournament-team-columns', 300);
+    await poser(arbre, 'tournament-team-side', 1400);
+    await poser(arbre, 'tournament-team-invite', 220);
+  };
+  const champsDeRecherche = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => /^Rechercher un joueur/.test(String(n.props?.placeholder || '')));
+  const cartesLibres = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-free-slot' && typeof n.type === 'string');
+  const boutonDans = (/** @type {any} */ noeud, /** @type {string} */ libelle) => noeud.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === libelle && typeof n.props?.onPress === 'function' && n.type !== 'View')[0];
+
+  // Point 7 : « Chercher un joueur » (À faire maintenant).
+  test('🔴 7 « Chercher un joueur » : la recherche s ouvre, la page défile jusqu à elle, le champ prend le focus', async () => {
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    const defiler = jest.spyOn(arbre.root.findByType(ScrollView).instance, 'scrollTo');
+    const focus = jest.spyOn(TextInput.prototype, 'focus').mockImplementation(() => {});
+    await poserLaPage(arbre);
+    expect(champsDeRecherche(arbre)).toHaveLength(0);
+    const bouton = boutonDans(arbre.root, 'Chercher un joueur');
+    await act(async () => { bouton.props.onPress(); });
+    expect(champsDeRecherche(arbre).length).toBeGreaterThan(0);
+    expect(defiler).toHaveBeenCalledWith({ animated: true, y: 1920 });
+    // Chef « A » (18/11) : défiler PUIS donner le focus au champ de recherche.
+    expect(focus).toHaveBeenCalled();
+    focus.mockRestore();
+  });
+
+  // Point 8 (précision du testeur, 444 à 1/5) : les 4 « Inviter » des places libres, à la suite,
+  // ouvraient la recherche hors de vue ; celui du bas (la carte « Inviter un joueur ») marchait.
+  test.each([0, 1, 2, 3])('🔴 8 « Inviter » de la place libre n° %i : même recherche, défilement et focus', async (rang) => {
+    const capitaineSeul = { ...payante('capitaine'), members: [equipe().members[0]] };
+    const arbre = await monter(capitaineSeul, 'u-cap');
+    const defiler = jest.spyOn(arbre.root.findByType(ScrollView).instance, 'scrollTo');
+    const focus = jest.spyOn(TextInput.prototype, 'focus').mockImplementation(() => {});
+    await poserLaPage(arbre);
+    expect(cartesLibres(arbre)).toHaveLength(4);
+    const bouton = boutonDans(cartesLibres(arbre)[rang], 'Inviter');
+    await act(async () => { bouton.props.onPress(); });
+    expect(champsDeRecherche(arbre).length).toBeGreaterThan(0);
+    expect(defiler).toHaveBeenCalledWith({ animated: true, y: 1920 });
+    expect(focus).toHaveBeenCalled();
+    focus.mockRestore();
+  });
+});
+
+// T-SUITES-TOURNOI (18/11, point 13 ; testeur M1319) : sur le site, le partage du lien envoie le lien
+// ET le message. Un geste « Copier le lien » copie le lien SEUL ; le partage reste à côté.
+describe('T-SUITES (13) — « Copier le lien » sur le site', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const avant = Platform.OS;
+  afterEach(() => { Platform.OS = avant; });
+  const copier = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Copier le lien' && typeof n.props?.onPress === 'function' && n.type !== 'View')[0];
+
+  test('🔴 site : « Copier le lien » à côté de « Partager le lien », copie le lien seul et dit « Lien copié »', async () => {
+    Platform.OS = 'web';
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    expect(combien(arbre, ['Partager le lien'])).toBeGreaterThan(0);
+    const bouton = copier(arbre);
+    expect(bouton).toBeDefined();
+    await act(async () => { bouton.props.onPress(); });
+    expect(partageLien.shareTournamentTeamInviteLink).toHaveBeenCalledWith(expect.objectContaining({ lienSeul: true }));
+    expect(texte(arbre)).toContain('Lien copié');
+  });
+
+  test('téléphone : pas de « Copier le lien » (la feuille de partage du téléphone le propose déjà)', async () => {
+    Platform.OS = 'ios';
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    expect(copier(arbre)).toBeUndefined();
   });
 });

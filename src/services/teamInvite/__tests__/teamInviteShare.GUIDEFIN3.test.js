@@ -36,7 +36,9 @@ jest.mock('@/platform/share', () => ({
 jest.mock('@/services/teamInvite/teamInviteService', () => ({
   createTeamInviteLink: () => Promise.resolve({ code: 'ABC123' }),
 }));
-jest.mock('@/utils/shareLinks', () => ({ resolveShareEnvironment: () => 'staging' }));
+jest.mock('@/utils/shareLinks', () => ({
+  resolveAppSiteOrigin: () => 'https://staging.foundclub.app', resolveShareEnvironment: () => 'staging',
+}));
 
 const { shareTeamInviteLink } = require('../teamInviteShare');
 
