@@ -99,7 +99,7 @@ const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ even
  *     value: string;
  *     verdict?: 'win' | 'draw' | 'loss' | null;
  *   } | null;
- *   tournamentHero?: { statusLabel?: string | null } | null;
+ *   tournamentHero?: { showFacility?: boolean, statusLabel?: string | null } | null;
  * }} props
  */
 function EventHeader({
@@ -483,7 +483,9 @@ function EventHeader({
                 ))}
               </View>
             ) : null}
-            {facilityName ? (
+            {/* T-SUITES-TOURNOI (18/11, point 9) : dans le bandeau d'un tournoi, la pastille du
+                terrain n'est que pour l'organisateur (`tournamentHero.showFacility`). */}
+            {facilityName && !(enBandeau && !tournamentHero?.showFacility) ? (
               <View
                 style={[
                   ApplicationStyle.borderRadius100,

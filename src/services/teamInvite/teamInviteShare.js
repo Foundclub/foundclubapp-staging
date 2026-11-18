@@ -20,25 +20,22 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { createTeamInviteLink } from '@/services/teamInvite/teamInviteService';
 
-import { resolveShareEnvironment } from '@/utils/shareLinks';
+import { resolveAppSiteOrigin } from '@/utils/shareLinks';
 
 import SharePlatform from '@/platform/share';
 import { isDesktopWeb } from '@/responsive/isDesktopWeb';
 
-const PRODUCTION_INVITE_ORIGIN = 'https://foundclub.app';
-const STAGING_INVITE_ORIGIN = 'https://staging.foundclub.app';
-
 /**
- * Le site qui porte les liens : la production pour une build de production, la
- * recette sinon — le code n'existe que dans la base qui l'a créé.
+ * Le site qui porte les liens : le code n'existe que dans la base qui l'a créé.
+ * T-SUITES-TOURNOI (18/11, chef « 1- B ») : la règle partagée des liens vers le site
+ * (`resolveAppSiteOrigin`) — `WEB_APP_URL` d'abord, puis la production pour une build de
+ * production et la recette sinon. La build iOS de recette écrit `APP_ENV=production` : sans
+ * `WEB_APP_URL`, ses invitations partaient sur la production.
+ * Témoin : __tests__/teamInviteShare.TSUITES2.origineDuSite.test.js.
  * @param {string} [appEnv] - l'environnement de la build.
  * @returns {string} l'origine.
  */
-export const resolveInviteLinkOrigin = (appEnv) => (
-  resolveShareEnvironment(appEnv) === 'production'
-    ? PRODUCTION_INVITE_ORIGIN
-    : STAGING_INVITE_ORIGIN
-);
+export const resolveInviteLinkOrigin = (appEnv) => resolveAppSiteOrigin({ appEnv });
 
 /**
  * Le lien d'invitation d'une équipe.

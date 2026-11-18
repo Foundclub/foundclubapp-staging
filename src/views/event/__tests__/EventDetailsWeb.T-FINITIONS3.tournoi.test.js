@@ -630,3 +630,22 @@ test('🔴 T-REJ joueur seul — « Rejoindre une équipe » pour un compte de 1
   mounted = null;
   expect(panneauRejoindre(monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), compteNeLe('2011-06-01')))).toBe(0);
 });
+
+// T-SUITES-TOURNOI (18/11, point 11) : la ligne de l'organisateur disait « 7 équipes » à côté de
+// « 5 en attente · 1 validée » : elle comptait l'équipe refusée. Règle du pilotage
+// (getTournamentRegisteredTeamsCount) : en attente + validées, sans les refusées ni les archivées.
+test('🔴 T-SUITES (11) — organisateur : 1 validée, 5 en attente, 1 refusée, 1 archivée => « 6 équipes »', () => {
+  const equipe = (/** @type {number} */ n, /** @type {string} */ status, extra = {}) => ({
+    ...EQUIPE_OUVERTE, documentId: `eq-${n}`, name: `Équipe ${n}`, status, ...extra,
+  });
+  const arbre = monter(TOURNOI_19_12({
+    tournamentTeams: [
+      equipe(1, 'accepted'), equipe(2, 'pending'), equipe(3, 'pending'), equipe(4, 'pending'),
+      equipe(5, 'pending'), equipe(6, 'pending'), equipe(7, 'rejected'),
+      equipe(8, 'pending', { archivedAt: '2026-11-10T10:00:00.000Z' }),
+    ],
+  }), L_ORGANISATEUR);
+  const [compteurs] = blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'div'
+    && n.props.style?.flexWrap === 'wrap' && texte(n).includes('en attente'));
+  expect(texte(compteurs)).toMatch(/^6 équipes/);
+});

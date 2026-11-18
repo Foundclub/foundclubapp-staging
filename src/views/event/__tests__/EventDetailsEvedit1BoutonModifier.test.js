@@ -567,14 +567,17 @@ describe('D3 — un STAGE n ouvre plus un formulaire mort', () => {
   });
 });
 
-describe('D3 — un TOURNOI se comporte pareil', () => {
-  test('le bouton reste, il explique, et il n ouvre rien', () => {
+// T-SUITES-TOURNOI (18/11, chef « 4- B ») : la porte d'un tournoi existe (« Modifier les
+// paramètres ») ; « Modifier » l'ouvre directement au lieu de la nommer dans une alerte, comme le
+// site (EventDetails.web.js, `ouvrirModifier`). Le stage, lui, garde son refus (ci-dessus).
+describe('D3 — un TOURNOI ouvre « Modifier les paramètres »', () => {
+  test('🔴 « Modifier » ouvre TournamentSettingsEdit, sans alerte ni préchargement', () => {
     toucherModifier(TOURNOI());
 
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('TournamentSettingsEdit', { eventId: 'event-1' });
+    expect(mockNavigate).not.toHaveBeenCalledWith('EventStack', expect.anything());
     expect(mockPrefetch).not.toHaveBeenCalled();
-    const dits = alerte.mock.calls.map((/** @type {any} */ a) => a.join(' ')).join(' | ');
-    expect(dits).toMatch(/tournoi/i);
+    expect(alerte).not.toHaveBeenCalled();
   });
 });
 

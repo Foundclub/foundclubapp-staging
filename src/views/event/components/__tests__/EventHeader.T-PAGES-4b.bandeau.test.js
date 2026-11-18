@@ -96,3 +96,39 @@ describe('T-PAGES-4b — le bandeau du tournoi au téléphone (maquette b)', () 
     expect(tous.some((ligne) => ligne.includes('Rauze'))).toBe(true);
   });
 });
+
+// T-SUITES-TOURNOI (18/11, point 9 ; testeur, iPhone 2.6.910) : la pastille « Terrain A »
+// du bandeau n'apprend rien au joueur (le lieu réel est dans « L'essentiel ») ;
+// l'organisateur la garde
+// (`tournamentHero.showFacility`, posé par la fiche pour lui seul).
+describe('T-SUITES (9) — la pastille du terrain dans le bandeau', () => {
+  const monterAvecTerrain = (/** @type {any} */ tournamentHero) => {
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(
+        <EventHeader
+          event={{ ...TOURNOI, facility: { name: 'Terrain A' } }}
+          tournamentHero={tournamentHero}
+        />,
+      );
+    });
+    const tous = arbre.root.findAllByType(Text)
+      .map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
+    act(() => arbre.unmount());
+    return tous;
+  };
+
+  test('🔴 joueur ou visiteur (bandeau sans showFacility) : pas de « Terrain A »', () => {
+    expect(monterAvecTerrain({ statusLabel: 'Inscriptions ouvertes' })).not.toContain('Terrain A');
+  });
+
+  test('organisateur (showFacility) : la pastille reste', () => {
+    expect(monterAvecTerrain({ showFacility: true, statusLabel: 'Inscriptions ouvertes' }))
+      .toContain('Terrain A');
+  });
+
+  test('sans bandeau (autres événements) : la pastille reste, comme avant', () => {
+    expect(monterAvecTerrain(undefined)).toContain('Terrain A');
+  });
+});
