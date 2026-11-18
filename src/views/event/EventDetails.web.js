@@ -2316,9 +2316,9 @@ function EventDetails({ navigation, route }) {
   const inscriptionsOuvertes = !tournoiClos && !isCancelled && event?.isActive !== false;
   const ageMinimumDuTournoi = getTournamentMinAge(event);
   const etiquettesDuTournoi = vueJoueurDuTournoi ? [
-    equipeInscriteDuLecteur ? { ok: true, texte: t('tournamentFicheWeb.tags.teamRegistered') } : null,
+    equipeInscriteDuLecteur ? { ok: true, texte: t('eventDetails.header.teamRegistered') } : null,
     !equipeInscriteDuLecteur && inscriptionsOuvertes
-      ? { ok: true, texte: t('tournamentFicheWeb.tags.registrationOpen') } : null,
+      ? { ok: true, texte: t('eventDetails.header.registrationOpen') } : null,
     String(event?.tournamentSection?.name || '').trim()
       ? { ok: false, texte: String(event.tournamentSection.name).trim() } : null,
     ageMinimumDuTournoi ? { ok: false, texte: t('tournamentUtils.fromAge', { minAge: ageMinimumDuTournoi }) } : null,

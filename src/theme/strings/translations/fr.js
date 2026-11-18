@@ -26907,10 +26907,6 @@ export default {
       tooYoungText: 'Tu pourras t’inscrire à un prochain tournoi ouvert à ton âge.',
       tooYoungTitle: 'Ce tournoi est ouvert à partir de {{minAge}} ans',
     },
-    tags: {
-      registrationOpen: 'Inscriptions ouvertes',
-      teamRegistered: 'Ton équipe est inscrite',
-    },
     teams: 'Les équipes',
   },
   tournamentInvitation: {
