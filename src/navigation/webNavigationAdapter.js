@@ -164,7 +164,9 @@ const etatDeNavigation = (routeName, params, currentPath) => {
   const etat = carryParams(routeName, params);
   const cible = resolveTarget(routeName, params);
   const demandeLeRetour = cible.params?.retourApresConnexion === true;
-  if (cible.routeName !== RouteNames.Login || !demandeLeRetour) return etat;
+  // T-PAGES-3b (18/11/2026) : l'inscription du visiteur porte le même retour que la connexion.
+  const versLeTunnel = [RouteNames.Login, RouteNames.Register].includes(cible.routeName);
+  if (!versLeTunnel || !demandeLeRetour) return etat;
   return { ...(etat || {}), from: currentPath };
 };
 

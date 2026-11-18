@@ -384,41 +384,43 @@ test.each(LECTEURS.filter(([nom]) => nom === 'organisateur'))('T-PAGES-3 (0) car
 // Ce que chaque lecteur voit APRÈS T-PAGES-3 (maquette (a) et (b)) ; diff gardé / déplacé / retiré :
 // .local/bancs/T-PAGES-3-1711/INVENTAIRE.md.
 /** @type {Record<string, any>} */
+// T-PAGES-3b (18/11) : les étiquettes de l'en-tête (« Inscriptions ouvertes » / « Ton équipe est
+// inscrite », « À partir de 16 ans ») sont des pastilles de plus.
 const APRES = {
   capitaine: {
     boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
     mots: ['équipes attendues', 'Mon équipe'],
-    pastilles: ['Terrain A'],
+    pastilles: ['Ton équipe est inscrite', 'À partir de 16 ans', 'Terrain A'],
     titres: ['Tournoi Montpellier', 'Recette Site 333', 'Avant le match', 'Les équipes'],
   },
   invité: {
     boutons: ['Planning', 'Partager', '', 'Répondre à mon invitation', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
     mots: ['équipes attendues', 'Mon équipe'],
-    pastilles: ['Terrain A'],
+    pastilles: ['Inscriptions ouvertes', 'À partir de 16 ans', 'Terrain A'],
     titres: ['Tournoi Montpellier', 'Recette Site 333', 'Avant le match', 'Les équipes'],
   },
   'joueur sans équipe': {
     boutons: ['Planning', 'Partager', '', 'Créer mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe'],
     mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire', 'Rejoindre une équipe'],
-    pastilles: ['Terrain A'],
+    pastilles: ['Inscriptions ouvertes', 'À partir de 16 ans', 'Terrain A'],
     titres: ['Tournoi Montpellier', 'Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
   },
   membre: {
     boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe', 'Ouvrir l’équipe'],
     mots: ['équipes attendues', 'Mon équipe'],
-    pastilles: ['Terrain A'],
+    pastilles: ['Ton équipe est inscrite', 'À partir de 16 ans', 'Terrain A'],
     titres: ['Tournoi Montpellier', 'Recette Site 333', 'Avant le match', 'Les équipes'],
   },
   'trop jeune': {
     boutons: ['Planning', 'Partager', '', 'Lire les conditions d’inscription', 'Voir la compétition', 'Ouvrir l’équipe'],
     mots: ['équipes attendues', 'Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire'],
-    pastilles: ['Terrain A'],
+    pastilles: ['Inscriptions ouvertes', 'À partir de 16 ans', 'Terrain A'],
     titres: ['Tournoi Montpellier', 'Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
   },
   visiteur: {
     boutons: ['Retour', 'Partager', 'Créer mon équipe', 'J’ai déjà un compte', 'Lire les conditions d’inscription', 'Voir la compétition'],
     mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire'],
-    pastilles: ['Terrain A'],
+    pastilles: ['Inscriptions ouvertes', 'À partir de 16 ans', 'Terrain A'],
     titres: ['Tournoi Montpellier', 'Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
   },
 };
@@ -551,7 +553,9 @@ test('🔴 T-PAGES-3 (4) non-organisateur — ni Infos rapides, ni réglages Mod
     const tout = texte(arbre.root);
     // Recette 44 (testeur, via le chef) : ni « Mon statut » ni « Aucune réponse » sur un tournoi.
     ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Validation des', 'Aucun participant confirm', 'Mon statut', 'Aucune réponse'].forEach((mot) => expect(tout).not.toContain(mot));
-    expect(inventaire(arbre).pastilles).toEqual(['Terrain A']);
+    // T-PAGES-3b : les étiquettes de l'en-tête mises à part, seule « Terrain A » reste.
+    const ETIQUETTES = ['Inscriptions ouvertes', 'Ton équipe est inscrite', 'À partir de 16 ans'];
+    expect(inventaire(arbre).pastilles.filter((/** @type {string} */ p) => !ETIQUETTES.includes(p))).toEqual(['Terrain A']);
     expect(tousLesBoutons(arbre)).not.toContain('Participer');
     act(() => mounted.unmount());
     mounted = null;
