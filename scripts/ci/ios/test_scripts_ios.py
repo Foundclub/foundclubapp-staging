@@ -101,6 +101,10 @@ class TestPreparerBuild(DepotJetable):
         # éteintes pour la prod (ci-dessus) ; FC_COMMUNAUTES_V1 posée dans Codemagic l'emporte.
         lignes = (self.dossier / ".env.production").read_bytes().decode("utf-8").splitlines()
         self.assertIn("FC_COMMUNAUTES_V1=1", lignes)
+        # T-SUITES-TOURNOI (18/11, point 4) : une build de recette ouvre le site de la recette (liens de
+        # paiement, de partage, conditions du tournoi : src/utils/shareLinks.js lit WEB_APP_URL d'abord).
+        self.assertIn("WEB_APP_URL=https://staging.foundclub.app", lignes)
+        self.assertNotIn("WEB_APP_URL=https://foundclub.app", lignes)
         lancer(PREPARER, ["env"], self.dossier, dict(cles, API_ENV="staging", FC_COMMUNAUTES_V1="0"))
         lignes = (self.dossier / ".env.production").read_bytes().decode("utf-8").splitlines()
         self.assertIn("FC_COMMUNAUTES_V1=0", lignes)

@@ -60,6 +60,15 @@ API_TARGETS = {
     "staging": ("https://api-staging.foundclubpro.com/api", "https://api-staging.foundclubpro.com"),
     "production": ("https://api.foundclubpro.com/api", "https://api.foundclubpro.com"),
 }
+# T-SUITES-TOURNOI (18/11, point 4) : le SITE de la cible. Une build de recette ecrivait
+# WEB_APP_URL=https://foundclub.app : ses liens de paiement, de partage et les conditions du
+# tournoi ouvraient la production (src/utils/shareLinks.js lit WEB_APP_URL d'abord), ou le
+# jeton de la recette n'existe pas. Meme valeur que la build Android de recette
+# (.github/workflows/android-staging-distribution.yml).
+WEB_TARGETS = {
+    "staging": "https://staging.foundclub.app",
+    "production": "https://foundclub.app",
+}
 
 
 def fail(message):
@@ -110,7 +119,7 @@ def cmd_env(args):
         "APP_ENV=production",
         "API_URL=" + api_url,
         "SOCKET_URL=" + socket_url,
-        "WEB_APP_URL=https://foundclub.app",
+        "WEB_APP_URL=" + WEB_TARGETS[api_env()],
         "SENTRY_DSN=" + env("SENTRY_DSN"),
         "FC_ENABLE_PUSH_NOTIFICATIONS=1",
         "FC_ENABLE_SMART_NOTIFICATIONS=1",
