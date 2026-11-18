@@ -339,7 +339,8 @@ export const isTournamentInviteTeamFull = (preview) => {
  * @param {boolean} params.isSignedIn - la personne est-elle connectee ?
  * @param {any} [params.preview] - l'apercu public (tournoi, equipe, statut).
  * @param {any} params.t - la traduction (react-i18next ou une doublure).
- * @returns {{ action: 'join' | 'none' | 'openTeam' | 'openTournament' | 'shareLink' | 'signIn',
+ * @returns {{ action: 'join' | 'none' | 'openEventDetails' | 'openTeam' | 'openTournament'
+ *   | 'shareLink' | 'signIn',
  *   ageNotice: string, body: string, closed: boolean, primary: string | null,
  *   primaryDisabled?: boolean, secondary: string, secondaryAction: 'dismiss' | 'openTeam',
  *   showTerms: boolean, title: string }} la fenetre (`primaryDisabled` : T-FINITIONS-3 ;
@@ -401,7 +402,8 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
   if (isTournamentInviteTeamFull(preview)) {
     return {
       ...notes,
-      action: 'openTournament',
+      // Décision 2 A du chef (18/11) : la FICHE du tournoi, où l'on rejoint une autre équipe.
+      action: 'openEventDetails',
       body: t(
         'invitationLink.tournamentTeam.fullBody',
         "L'équipe {{team}} est complète ({{count}} joueurs sur {{max}}). Trouve une autre équipe "
@@ -857,6 +859,18 @@ function InvitationLinkHost({ userId } = {}) {
     });
   }, [closeWindow, codedTournamentInvite?.id, goTo, tournamentPreview]);
 
+  // T-PAGES-6b (décision 2 A du chef) : l'équipe complète renvoie à la fiche du tournoi.
+  const openTournamentFiche = useCallback(() => {
+    clearPendingInvite();
+    closeWindow();
+    goTo({
+      params: {
+        eventId: String(tournamentPreview?.event?.documentId || codedTournamentInvite?.id || ''),
+      },
+      route: RouteNames.EventDetails,
+    });
+  }, [closeWindow, codedTournamentInvite?.id, goTo, tournamentPreview]);
+
   const shareOwnTournamentTeamLink = useCallback(async () => {
     // eslint-disable-next-line global-require -- chargé à l'appui, comme le partage de la fiche
     const { shareTournamentTeamInviteLink } = require('@/services/teamInvite/teamInviteShare');
@@ -945,6 +959,7 @@ function InvitationLinkHost({ userId } = {}) {
     let onPrimary = handleTournamentPrimary;
     if (coded.action === 'openTeam') onPrimary = openOwnTournamentTeam;
     if (coded.action === 'shareLink') onPrimary = shareOwnTournamentTeamLink;
+    if (coded.action === 'openEventDetails') onPrimary = openTournamentFiche;
     return (
       <GlobalPromptModal
         body={coded.body}

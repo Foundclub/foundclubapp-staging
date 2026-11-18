@@ -80,7 +80,7 @@ test('🔴 visiteur, équipe pleine : aucun bouton pour rejoindre, la fiche du t
   const coded = describeCodedTournamentInvite({ isSignedIn: false, preview: plein, t });
   expect(coded.title).toBe('Équipe complète');
   expect(coded.body).toBe(COMPLETE);
-  expect([coded.action, coded.primary]).toEqual(['openTournament', 'Voir le tournoi']);
+  expect([coded.action, coded.primary]).toEqual(['openEventDetails', 'Voir le tournoi']);
 });
 
 test('🔴 compte connecté hors de l équipe, équipe pleine : la même variante', () => {
@@ -88,7 +88,7 @@ test('🔴 compte connecté hors de l équipe, équipe pleine : la même variant
     isSignedIn: true, preview: { ...plein, viewer: { alreadyMember: false, canJoin: false, reason: 'Équipe pleine.' } }, t,
   });
   expect(coded.body).toBe(COMPLETE);
-  expect(coded.action).toBe('openTournament');
+  expect(coded.action).toBe('openEventDetails');
 });
 
 test('caractérisant : le capitaine et le membre d une équipe pleine gardent leur variante', () => {

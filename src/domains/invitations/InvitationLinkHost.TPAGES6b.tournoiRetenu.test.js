@@ -12,6 +12,7 @@ const DATE = '2026-12-19T18:00:00.000Z';
 
 const mockNavigate = jest.fn(() => true);
 const mockApercu = jest.fn();
+const mockRejoindre = jest.fn();
 
 // T-PAGES-6 : le bouton « Conditions d'inscription » de la fenêtre (doublures, react-native est
 // simulé ici).
@@ -50,6 +51,7 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   refuseTeamInvitation: jest.fn(),
 }));
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
+  joinTournamentTeamByInviteLink: (/** @type {any[]} */ ...args) => mockRejoindre(...args),
   previewTournamentTeamInviteLink: (/** @type {any[]} */ ...args) => mockApercu(...args),
 }));
 jest.mock('@/domains/invitations/pendingInvite', () => ({
@@ -138,4 +140,27 @@ test('caractérisant : un tournoi clos n est pas rangé', async () => {
   mockApercu.mockResolvedValue(apercu({ status: 'closed' }));
   await monter(undefined);
   expect(mockRetenir).not.toHaveBeenCalled();
+});
+
+// T-PAGES-6b, décision 2 A du chef (18/11) : « Voir le tournoi » de l'équipe complète ouvre la FICHE du
+// tournoi (EventDetails, où l'on rejoint une autre équipe), jamais « rejoindre » ni la connexion.
+// ROUGE avant : le bouton passait par l'action de « Rejoindre » (connexion du visiteur, demande pour un compte).
+describe('T-PAGES-6b -- equipe complete : la fiche du tournoi', () => {
+  const plein = () => apercu({ maxRosterSize: 5, rosterCount: 5 });
+
+  test('🔴 visiteur : la fiche du tournoi, pas la connexion', async () => {
+    mockApercu.mockResolvedValue(plein());
+    await monter(undefined);
+    await act(async () => { await lastModalProps.primaryAction.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith('EventDetails', { eventId: 'tournoi-1912' });
+    expect(mockNavigate).not.toHaveBeenCalledWith('PublicAuthStack', expect.anything());
+  });
+
+  test('🔴 compte connecté hors de l équipe : la fiche, et aucune demande pour rejoindre', async () => {
+    mockApercu.mockResolvedValue({ ...plein(), viewer: { alreadyMember: false, canJoin: false, reason: 'Équipe pleine.' } });
+    await monter('u-1');
+    await act(async () => { await lastModalProps.primaryAction.onPress(); });
+    expect(mockRejoindre).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('EventDetails', { eventId: 'tournoi-1912' });
+  });
 });

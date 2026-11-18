@@ -14762,6 +14762,12 @@ export default {
     decrement: 'Un de moins',
     increment: 'Un de plus',
   },
+  // T-PAGES-6b (18/11) — le rappel du tournoi dans la création du compte (BandeauTournoiEnCours).
+  inscriptionTournoi: {
+    // eslint-disable-next-line max-len
+    roleSansEffet: 'Le rôle que tu choisis ne change rien pour le tournoi : il sert seulement à savoir quel est ton rôle dans ta vie sportive de tous les jours.',
+    tuRejoins: 'Tu rejoins',
+  },
   invitationLink: {
     clipboard: {
       body: "Si tu viens d'installer FoundClub depuis une invitation, "
@@ -14826,6 +14832,9 @@ export default {
       captainBody: 'Ce lien sert à inviter tes joueurs. Envoie-le-leur.',
       captainTitle: "C'est ton équipe",
       closed: 'Les inscriptions de ce tournoi sont closes.',
+      // eslint-disable-next-line max-len
+      fullBody: "L'équipe {{team}} est complète ({{count}} joueurs sur {{max}}). Trouve une autre équipe sur la fiche du tournoi.",
+      fullTitle: 'Équipe complète',
       intro: "Tu es invité·e à rejoindre l'équipe {{team}} pour le tournoi {{event}}.",
       introCaptain: "{{captain}} t'invite dans son équipe {{team}}, pour le tournoi {{event}}.",
       introShort: 'Tu es invité·e à rejoindre une équipe de tournoi.',
@@ -20399,6 +20408,8 @@ export default {
     actions: {
       // CORR-INSCRIPTION p12 — page identique à « Connecte-toi », sauf ces deux libellés.
       haveAccount: 'Déjà inscrit ? Se connecter',
+      // T-PAGES-6b : seulement quand on vient d'un tournoi.
+      receiveCode: 'Recevoir mon code',
       register: 'Continuer',
       submit: 'Créer ton compte',
     },
