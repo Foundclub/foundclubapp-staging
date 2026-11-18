@@ -14762,7 +14762,7 @@ export default {
       message: 'Unable to open {{url}} from the app.',
       title: 'Page unavailable',
     },
-    pricesNotice: 'Prices include VAT. Automatic renewal, cancel anytime.',
+    pricesNotice: 'VAT not applicable, article 293 B of the French General Tax Code. Automatic renewal, cancel anytime.',
     privacy: 'Privacy',
     privacyHint: 'Opens the privacy policy in the browser.',
     restore: 'Restore my purchases',

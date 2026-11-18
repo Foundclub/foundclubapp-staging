@@ -15685,7 +15685,7 @@ export default {
       message: "Impossible d'ouvrir {{url}} depuis l'application.",
       title: 'Page indisponible',
     },
-    pricesNotice: 'Prix TTC. Renouvellement automatique, résiliable à tout moment.',
+    pricesNotice: 'TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment.',
     privacy: 'Confidentialité',
     privacyHint: 'Ouvre la politique de confidentialité dans le navigateur.',
     restore: 'Restaurer mes achats',
