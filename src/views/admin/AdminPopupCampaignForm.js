@@ -615,6 +615,8 @@ function AdminPopupCampaignForm() {
     );
   };
 
+  // IMPL-4-ACCUEIL : l'action du billet, lue telle que le serveur la rend (`eventId`).
+  const actionDuBillet = /** @type {any} */ (previewPrimaryAction);
   // La fenêtre ordinaire : l'aperçu d'avant, et le repli du billet.
   const apercuFenetre = (
     <GlobalPromptModal
@@ -841,13 +843,13 @@ function AdminPopupCampaignForm() {
       {estUnBillet(previewPayload, previewPrimaryAction) ? (
         <BilletTournoiModal
           body={previewPayload.body || ''}
-          eventId={String(previewPrimaryAction.eventId).trim()}
+          eventId={String(actionDuBillet.eventId).trim()}
           eyebrow={previewPayload.eyebrow || undefined}
           imageUrl={imageUrl}
           onRequestClose={() => setIsPreviewVisible(false)}
           primaryAction={{
-            label: previewPrimaryAction.label || 'Action',
-            onPress: () => pressPreviewAction(previewPrimaryAction),
+            label: actionDuBillet.label || 'Action',
+            onPress: () => pressPreviewAction(actionDuBillet),
           }}
           repli={apercuFenetre}
           secondaryAction={previewSecondaryAction ? {

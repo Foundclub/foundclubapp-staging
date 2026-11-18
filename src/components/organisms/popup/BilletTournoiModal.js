@@ -166,7 +166,7 @@ function CaseDuBillet({ nom, valeur }) {
  *  repli: import('react').ReactNode;
  *  inlineOnAndroid?: boolean;
  * }} props
- * @returns {import('react').ReactNode} La pop-up billet, la fenêtre d'avant, ou rien.
+ * @returns {import('react').ReactElement | null} La pop-up billet, la fenêtre d'avant, ou rien.
  */
 function BilletTournoiModal({
   body,
@@ -189,7 +189,7 @@ function BilletTournoiModal({
   if (!visible) return null;
   if (lecture.isLoading) return null;
   const zones = lecture.data ? zonesDuBillet(lecture.data, { eyebrow, title }) : null;
-  if (!zones) return repli;
+  if (!zones) return /** @type {import('react').ReactElement} */ (repli);
 
   const plusTard = secondaryAction || {
     label: t('implAccueil.billet.plusTard', 'Plus tard'),

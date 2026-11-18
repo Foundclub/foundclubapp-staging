@@ -348,12 +348,13 @@ function RemotePopupCampaignHost({
   );
 
   if (!estUnBillet(activeCampaign, primaryAction)) return fenetre;
+  const campagne = /** @type {any} */ (activeCampaign);
 
   return (
     <BilletTournoiModal
-      body={activeCampaign?.body || ''}
+      body={campagne.body || ''}
       eventId={String(primaryAction.eventId).trim()}
-      eyebrow={activeCampaign?.eyebrow || undefined}
+      eyebrow={campagne.eyebrow || undefined}
       imageUrl={imageUrl}
       inlineOnAndroid
       onRequestClose={handleDismiss}
@@ -366,7 +367,7 @@ function RemotePopupCampaignHost({
         label: secondaryAction.label,
         onPress: () => handleActionPress(secondaryAction),
       } : null}
-      title={activeCampaign?.title || activeCampaign?.internalName || undefined}
+      title={campagne.title || campagne.internalName || undefined}
       visible={isVisible}
     />
   );

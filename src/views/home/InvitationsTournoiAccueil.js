@@ -287,7 +287,7 @@ function CarteEquipeRejointe({ invitation, navigation }) {
   const prix = prixDeLaPlace(equipe);
   const maillot = equipe?.event?.tournamentConfig?.jerseySizeRequired === true;
   const places = Array.isArray(equipe?.payment?.members) ? equipe.payment.members : [];
-  const maPlace = places.find((place) => place?.isSelf);
+  const maPlace = places.find((/** @type {any} */ place) => place?.isSelf);
   const lienDePaiement = maPlace && maPlace.status !== 'paid' ? maPlace.paymentUrl : null;
   const seuil = Number(equipe?.payment?.paidMembersToValidate) || 5;
   const prenom = prenomDeLInvitant(invitation);
