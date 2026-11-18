@@ -244,7 +244,11 @@ import {
 } from './matchPageModel';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { getTournamentTeamsSeekingPlayers, getTournamentTeamsThreshold } from './tournamentJoinRules';
+import {
+  getTournamentTeamsSeekingPlayers,
+  getTournamentTeamsThreshold,
+  isTournamentRegistrationClosed,
+} from './tournamentJoinRules';
 import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
@@ -1253,9 +1257,12 @@ function EventDetails({ navigation, route }) {
   const tropJeunePourLeTournoi = isTournamentEvent
     && Boolean(userData?.documentId)
     && isTooYoungForTournament(event, userData);
+  // IMPL-1-FICHE × IMPL-3 : inscriptions fermées par l'organisateur.
+  const inscriptionsFermees = isTournamentEvent && isTournamentRegistrationClosed(event);
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !isStageDayEvent
     && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
@@ -1268,6 +1275,7 @@ function EventDetails({ navigation, route }) {
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !isStageDayEvent
     && !tropJeunePourLeTournoi
     && !currentUserTournamentTeam
@@ -1381,15 +1389,24 @@ function EventDetails({ navigation, route }) {
   // « Ton équipe est inscrite » (capitaine, membre), sinon « Inscriptions ouvertes » tant que la
   // compétition n'est pas publiée ni le tournoi clos.
   let statutDuBandeau = null;
+  let tonDuBandeau = null;
   if (managedTournamentTeam || currentUserTournamentTeam) {
     statutDuBandeau = t('eventDetails.header.teamRegistered');
+  } else if (inscriptionsFermees && !tournoiClos) {
+    // IMPL-1-FICHE × IMPL-3 : « Inscriptions fermées », en jaune.
+    statutDuBandeau = t('implFiche.registrationsClosed');
+    tonDuBandeau = 'warning';
   } else if (!tournoiClos && tournamentConfig?.competitionState !== 'published') {
     statutDuBandeau = t('eventDetails.header.registrationOpen');
   }
   // T-SUITES-TOURNOI (18/11, point 9) : la pastille du terrain, pour l'organisateur seul (le
   // joueur lit le lieu réel dans « L'essentiel »).
   const bandeauDuTournoi = isTournamentEvent && !isStageDayEvent
-    ? { statusLabel: statutDuBandeau, ...(canEdit ? { showFacility: true } : {}) }
+    ? {
+      statusLabel: statutDuBandeau,
+      ...(canEdit ? { showFacility: true } : {}),
+      ...(tonDuBandeau ? { statusTone: tonDuBandeau } : {}),
+    }
     : null;
   // T-PAGES-4 (17/11, chef, dans l'esprit de « 4- A » + « 2 ok ») — sous le seuil des 30 %, un
   // non-organisateur ne lit le nombre d'équipes nulle part : l'onglet Équipes ne liste que les
@@ -7301,6 +7318,7 @@ function EventDetails({ navigation, route }) {
     && !isStageDayEvent
     && !userData?.documentId
     && !tournoiClos
+    && !inscriptionsFermees
     && tournamentConfig?.allowCustomTeams !== false
     && tournamentConfig?.competitionState !== 'published',
   );
@@ -7328,7 +7346,7 @@ function EventDetails({ navigation, route }) {
     // T-PARCOURS-2 (17/11, point 2, R12) : le visiteur n'avait aucun chemin pour s'inscrire
     // (« Voir le tournoi » ne changeait rien à son écran). Ce bouton range le tournoi où revenir,
     // puis ouvre la connexion ; la fiche se rouvre une fois le compte prêt (useLiensEnAttente).
-    if (!userData?.documentId && !tournoiClos) {
+    if (!userData?.documentId && !tournoiClos && !inscriptionsFermees) {
       return {
         onPress: ouvrirLaConnexionDuTournoi,
         title: t('eventDetails.signInToRegister', "Se connecter pour s'inscrire"),

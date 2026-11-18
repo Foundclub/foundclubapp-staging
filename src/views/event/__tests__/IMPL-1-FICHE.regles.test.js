@@ -93,3 +93,36 @@ describe('IMPL-1 — les joueurs d une équipe vus de l extérieur (aperçu 8e)'
     expect(getTournamentTeamCaptainShort({ captainUser: null })).toBe('');
   });
 });
+
+// IMPL-1-FICHE × IMPL-5 (contrat du chef, 18/11) — ce que le serveur rend à un lecteur qui n'est ni
+// membre, ni capitaine, ni organisateur : `membersSummary.paidHidden: true`, `list[]` sans `paid`,
+// un mineur aux champs vides, `captainDisplayName` (« Yanis R. »).
+describe('IMPL-1 × IMPL-5 — le résumé masqué d une équipe', () => {
+  const { formatTournamentPlayersShortList } = jest.requireActual('../tournamentUtils');
+  const PAYANT = { entryFeeCents: 2000 };
+  const MASQUE = {
+    count: 2, list: [{ firstName: 'Yanis', lastInitial: 'R' }, { firstName: '', lastInitial: '' }], paidCount: 1, paidHidden: true, pendingCount: 0,
+  };
+
+  test('🔴 paidHidden : aucun état de paiement (« · en attente ») sur la liste courte', () => {
+    const liste = formatTournamentPlayersShortList(MASQUE, PAYANT);
+    expect(liste).not.toMatch(/en attente|payé/);
+    expect(liste.split('\n')[0]).toBe('Yanis R.');
+  });
+
+  test('🔴 paidHidden : un joueur aux champs vides est « Joueur (moins de 18 ans) »', () => {
+    expect(formatTournamentPlayersShortList(MASQUE, PAYANT).split('\n')[1]).toBe('Joueur (moins de 18 ans)');
+  });
+
+  test('sans paidHidden (membre, organisateur) : l état de paiement reste', () => {
+    expect(formatTournamentPlayersShortList({ list: [{ firstName: 'Yanis', lastInitial: 'R', paid: true }] }, PAYANT)).toBe('Yanis R. · payé');
+  });
+
+  test('🔴 l aperçu : le joueur aux champs vides d un résumé masqué est un mineur, sans prénom', () => {
+    expect(getTournamentTeamPublicPlayers({ membersSummary: MASQUE })).toEqual([{ label: 'Yanis R.', minor: false }, { label: null, minor: true }]);
+  });
+
+  test('🔴 le capitaine vient de captainDisplayName quand captainUser est réduit', () => {
+    expect(getTournamentTeamCaptainShort({ captainDisplayName: 'Yanis R.', captainUser: { documentId: 'c1' } })).toBe('Yanis R.');
+  });
+});

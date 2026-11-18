@@ -20,6 +20,16 @@ import {
 // Témoin : __tests__/tournamentJoinRules.TREJOINDRE.test.js.
 
 /**
+ * IMPL-1-FICHE × IMPL-3 (chef, 18/11) — l'organisateur a fermé les inscriptions
+ * (`tournamentConfig.registrationsClosed === true`) ; absent ou autre valeur : ouvertes.
+ * @param {any} event - Le tournoi.
+ * @returns {boolean} Vrai si les inscriptions sont fermées.
+ */
+export const isTournamentRegistrationClosed = (event) => (
+  event?.tournamentConfig?.registrationsClosed === true
+);
+
+/**
  * Le nombre de joueurs d'une équipe, tel que la fiche peut le connaître.
  * Personne d'autre que le SuperAdmin ne lit les membres d'une équipe : pour un joueur tiers,
  * `members` arrive vide. T-JOUEURS ajoute `membersSummary.count` (serveur). Sans l'un ni l'autre,
@@ -121,6 +131,8 @@ export const canAskToJoinTournamentTeam = ({
 }) => {
   const userId = user?.documentId;
   if (!userId || accountRoleKey === 'parent') return false;
+  // IMPL-1-FICHE × IMPL-3 : inscriptions fermées par l'organisateur, plus de demande.
+  if (isTournamentRegistrationClosed(event)) return false;
   if (!normalizeTournamentText(event?.type?.name).includes('tournoi')) return false;
   if (getTournamentClosure(event).isClosed || event?.isActive === false) return false;
   if (isTooYoungForTournament(event, user)) return false;
@@ -263,18 +275,23 @@ const prenomEtInitiale = (prenom, nom) => {
 export const getTournamentTeamPublicPlayers = (team) => (
   (Array.isArray(team?.membersSummary?.list) ? team.membersSummary.list : [])
     .map((/** @type {any} */ joueur) => {
-      const minor = joueur?.isMinor === true || joueur?.minor === true;
+      // Contrat d'IMPL-5 : dans un résumé masqué, un mineur arrive sans prénom ni initiale.
+      const videMasque = team?.membersSummary?.paidHidden === true
+        && !String(joueur?.firstName || '').trim() && !String(joueur?.lastInitial || '').trim();
+      const minor = joueur?.isMinor === true || joueur?.minor === true || videMasque;
       const label = prenomEtInitiale(joueur?.firstName, joueur?.lastInitial) || null;
       return { label: minor ? null : label, minor };
     })
 );
 
 /**
- * Le capitaine en « Prénom I. », ou '' quand le serveur ne le rend pas (tiers : `captainUser` nul).
+ * Le capitaine en « Prénom I. » : `captainDisplayName` du serveur (contrat d'IMPL-5), sinon tiré de
+ * `captainUser` ; '' quand le serveur ne le rend pas.
  * @param {any} team - L'équipe du tournoi.
  * @returns {string} Le libellé.
  */
-export const getTournamentTeamCaptainShort = (team) => prenomEtInitiale(
+export const getTournamentTeamCaptainShort = (team) => String(team?.captainDisplayName || '').trim()
+  || prenomEtInitiale(
   team?.captainUser?.firstname || team?.captainUser?.firstName,
   team?.captainUser?.lastname || team?.captainUser?.lastName || team?.captainUser?.lastInitial,
 );

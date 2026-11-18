@@ -61,6 +61,7 @@ import {
   getTournamentTeamsSeekingPlayers,
   getTournamentTeamsThreshold,
   getTournamentVisitorTeamsLine,
+  isTournamentRegistrationClosed,
 } from '@/views/event/tournamentJoinRules';
 import {
   getTournamentRegisteredTeamsCount,
@@ -656,9 +657,12 @@ function EventDetails({ navigation, route }) {
   );
   // CORR-EVENEMENTS 130 (décision A) : un parent ne joue pas le tournoi ; ces deux gestes de
   // capitaine ne lui sont plus montrés (`offreAuxEnfants` : la règle du téléphone).
+  // IMPL-1-FICHE × IMPL-3 : inscriptions fermées par l'organisateur.
+  const inscriptionsFermees = isTournamentEvent && isTournamentRegistrationClosed(event);
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !offreAuxEnfants
     && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
@@ -682,6 +686,7 @@ function EventDetails({ navigation, route }) {
     !isSignedIn
     && isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !offreAuxEnfants
     && event?.tournamentConfig?.allowCustomTeams !== false,
   );
@@ -691,6 +696,7 @@ function EventDetails({ navigation, route }) {
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !offreAuxEnfants
     && !tropJeunePourLeTournoi
     && !currentUserTournamentTeam
@@ -2350,9 +2356,15 @@ function EventDetails({ navigation, route }) {
   // que sur le téléphone (EventHeader) : l'image du tournoi, le nom, « Organisé par … · lieu
   // court », puis TOURNOI, l'état et l'âge sur une ligne. « Mixte » passe dans le format.
   let etatDuBandeau = null;
+  let tonDuBandeau = null;
   if (equipeInscriteDuLecteur) etatDuBandeau = t('eventDetails.header.teamRegistered');
-  else if (inscriptionsOuvertes) etatDuBandeau = t('eventDetails.header.registrationOpen');
-  const bandeauDuTournoi = vueJoueurDuTournoi ? { statusLabel: etatDuBandeau } : null;
+  else if (inscriptionsFermees && !tournoiClos) {
+    etatDuBandeau = t('implFiche.registrationsClosed');
+    tonDuBandeau = 'warning';
+  } else if (inscriptionsOuvertes) etatDuBandeau = t('eventDetails.header.registrationOpen');
+  const bandeauDuTournoi = vueJoueurDuTournoi ? {
+    statusLabel: etatDuBandeau, ...(tonDuBandeau ? { statusTone: tonDuBandeau } : {}),
+  } : null;
   const erreurDeLaCarte = erreurEquipeTournoi || actionError;
   const carteDuTournoi = vueJoueurDuTournoi ? (
     <div data-testid="event-tournament-side" style={{ display: 'grid', gap: 16, minWidth: 0 }}>
@@ -2365,7 +2377,8 @@ function EventDetails({ navigation, route }) {
           ui={uiDeLaFiche}
         />
       ) : null}
-      {!equipeDuLecteur && !tournoiClos && !offreAuxEnfants ? (
+      {/* IMPL-1 × IMPL-3 : inscriptions fermées, plus de carte « Ton inscription ». */}
+      {!equipeDuLecteur && !tournoiClos && !offreAuxEnfants && !inscriptionsFermees ? (
         <TournamentSignUpCard
           canCreate={isSignedIn ? canCreateCustomTournamentTeam : inscrireMonEquipeVisiteur}
           canRegisterClubTeam={canRegisterTournamentSourceTeam}

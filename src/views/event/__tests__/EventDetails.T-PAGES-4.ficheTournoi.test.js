@@ -1500,3 +1500,43 @@ describe('IMPL-1 · 8 — l onglet Équipes de la maquette', () => {
     expect(parTestID(root, 'tournament-teams-public')).toHaveLength(0);
   });
 });
+
+// IMPL-1-FICHE × IMPL-3 (chef, 18/11) — INSCRIPTIONS FERMÉES (`tournamentConfig.registrationsClosed`
+// === true ; absent = ouvertes) : la pastille « Inscriptions fermées » en jaune ; plus de « Créer
+// mon équipe » ni de « Rejoindre une équipe » pour un joueur sans équipe ; qui a une équipe garde
+// « Voir mon équipe » et ses gestes.
+describe('IMPL-1 × IMPL-3 — inscriptions fermées', () => {
+  const fermer = (/** @type {any} */ lecteur) => {
+    lecteur.event.tournamentConfig = { ...lecteur.event.tournamentConfig, registrationsClosed: true };
+    return lecteur;
+  };
+
+  test('🔴 sans équipe : « Inscriptions fermées » (jaune), ni inscription ni « Rejoindre », pas de « Créer mon équipe » en bas', () => {
+    mockTeamQuery.data = null;
+    const root = monter(fermer(LECTEURS.sansEquipe()));
+    expect(proprietesDeLEnTete(root).tournamentHero).toEqual({ statusLabel: 'Inscriptions fermées', statusTone: 'warning' });
+    expect(parTestID(root, 'tournament-registration-card')).toHaveLength(0);
+    expect(parTestID(root, 'tournament-join-team-panel')).toHaveLength(0);
+    expect((barreDe(root) || []).join(' | ')).not.toContain('Créer mon équipe');
+  });
+
+  test('🔴 visiteur : plus de « Créer mon équipe » ni de « Se connecter pour s inscrire »', () => {
+    const root = monter(fermer(LECTEURS.visiteur()));
+    const bas = (barreDe(root) || []).join(' | ');
+    expect(bas).not.toContain('Créer mon équipe');
+    expect(bas).not.toContain('Se connecter pour s');
+  });
+
+  test('🔴 capitaine : « Ton équipe est inscrite », sa carte et « Voir mon équipe » restent', () => {
+    mockTeamQuery.data = null;
+    const root = monter(fermer(LECTEURS.capitaine()));
+    expect(proprietesDeLEnTete(root).tournamentHero).toEqual({ statusLabel: 'Ton équipe est inscrite' });
+    expect(parTestID(root, 'tournament-fiche-my-team')).toHaveLength(1);
+    expect(barreDe(root)).toEqual(['Voir mon équipe']);
+  });
+
+  test('absent : ouvertes, comme avant', () => {
+    mockTeamQuery.data = null;
+    expect(proprietesDeLEnTete(monter(LECTEURS.sansEquipe())).tournamentHero).toEqual({ statusLabel: 'Inscriptions ouvertes' });
+  });
+});

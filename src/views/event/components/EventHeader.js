@@ -420,7 +420,12 @@ function EventHeader({
     const pastilles = [
       { cle: 'type', plein: true, texte: t('eventCardNew.tournament', 'TOURNOI') },
       tournamentHero?.statusLabel
-        ? { cle: 'etat', etat: true, texte: String(tournamentHero.statusLabel) }
+        ? {
+          attente: tournamentHero?.statusTone === 'warning',
+          cle: 'etat',
+          etat: true,
+          texte: String(tournamentHero.statusLabel),
+        }
         : null,
       pastilleAge,
     ].filter(Boolean);
@@ -465,12 +470,14 @@ function EventHeader({
           testID="event-header-tournament-tags"
         >
           {pastilles.map((/** @type {any} */ pastille) => {
+            // IMPL-1 × IMPL-3 : « Inscriptions fermées » en jaune (warning), le reste en bleu.
+            const teinte = pastille.attente ? Colors.warning400 : Colors.primary500;
             let fond = 'transparent';
             if (pastille.plein) fond = Colors.primary500;
-            else if (pastille.etat) fond = withAlpha(Colors.primary500, 0.16);
+            else if (pastille.etat) fond = withAlpha(teinte, 0.16);
             let encre = Colors.neutral00;
             if (pastille.plein) encre = Colors.primary900;
-            else if (pastille.etat) encre = Colors.primary500;
+            else if (pastille.etat) encre = teinte;
             return (
               <View
                 key={pastille.cle}

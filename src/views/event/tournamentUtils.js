@@ -114,12 +114,19 @@ export const getTournamentMembersSummaryLine = (membersSummary, tournamentConfig
  * « Samir B. · payé » / « Lina D. · en attente » (payant), « Samir B. » sinon ; masqué : « Joueur »
  * @param {any} item - Un joueur du résumé.
  * @param {any} [tournamentConfig] - Le réglage du tournoi.
+ * @param {{ paidHidden?: boolean }} [options] - Le résumé est masqué (lecteur hors de l'équipe).
  * @returns {string} La ligne du joueur.
  */
-export const formatTournamentPlayerShortLine = (item, tournamentConfig = {}) => {
+export const formatTournamentPlayerShortLine = (item, tournamentConfig = {}, options = {}) => {
   const initial = item?.lastInitial ? `${item.lastInitial}.` : '';
-  const name = [item?.firstName, initial].filter(Boolean).join(' ')
-    || i18next.t('tournamentManagement.playerAnonymous', 'Joueur');
+  const prenom = [item?.firstName, initial].filter(Boolean).join(' ');
+  // IMPL-1-FICHE × IMPL-5 (contrat du chef, 18/11) : résumé masqué (`paidHidden`, lecteur hors de
+  // l'équipe) : aucun état de paiement, et un joueur aux champs vides est un mineur.
+  // Témoin : __tests__/IMPL-1-FICHE.regles.test.js.
+  if (options?.paidHidden === true) {
+    return prenom || i18next.t('implFiche.minorPlayerLong', 'Joueur (moins de 18 ans)');
+  }
+  const name = prenom || i18next.t('tournamentManagement.playerAnonymous', 'Joueur');
   if (!isPaidTournament(tournamentConfig)) return name;
   const state = item?.paid === true
     ? i18next.t('tournamentManagement.playerPaid', 'payé')
@@ -135,7 +142,9 @@ export const formatTournamentPlayerShortLine = (item, tournamentConfig = {}) => 
  */
 export const formatTournamentPlayersShortList = (membersSummary, tournamentConfig = {}) => (
   (membersSummary?.list || [])
-    .map((/** @type {any} */ player) => formatTournamentPlayerShortLine(player, tournamentConfig))
+    .map((/** @type {any} */ player) => formatTournamentPlayerShortLine(player, tournamentConfig, {
+      paidHidden: membersSummary?.paidHidden === true,
+    }))
     .join('\n')
 );
 
