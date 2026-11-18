@@ -20,6 +20,8 @@ import { lisibles, pressable } from '@/testSupport/temoinComplexe';
 // sur la carte.
 
 const mockNavigate = jest.fn();
+let mockFocus = true;
+jest.mock('@react-navigation/native', () => ({ useIsFocused: () => mockFocus }));
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
   getMyTournamentInvitations: jest.fn(),
   respondToTournamentInvitation: jest.fn(),
@@ -73,21 +75,25 @@ const monter = async () => {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
+  const ecran = () => (
+    <QueryClientProvider client={client}>
+      <InvitationsTournoiAccueil navigation={{ navigate: mockNavigate }} />
+    </QueryClientProvider>
+  );
   /** @type {any} */
   let arbre;
-  await act(async () => {
-    arbre = renderer.create(
-      <QueryClientProvider client={client}>
-        <InvitationsTournoiAccueil navigation={{ navigate: mockNavigate }} />
-      </QueryClientProvider>,
-    );
-  });
+  await act(async () => { arbre = renderer.create(ecran()); });
   await vidanger();
+  arbre.redessiner = async () => {
+    await act(async () => { arbre.update(ecran()); });
+    await vidanger();
+  };
   return arbre;
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockFocus = true;
   getMyTournamentInvitations.mockResolvedValue([invitation('a')]);
   respondToTournamentInvitation.mockResolvedValue({ documentId: 'tt-a' });
 });
@@ -168,6 +174,18 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     expect(lisibles(arbre)).toContain(DEJA_PRIS);
     expect(lisibles(arbre)).toContain('Invitation en attente');
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('répondue ailleurs (page d’équipe) : au retour sur l’accueil, la carte s’en va', async () => {
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Invitation en attente');
+    mockFocus = false; // l'accueil part sous la page d'équipe, où l'invité répond
+    await arbre.redessiner();
+    getMyTournamentInvitations.mockResolvedValue([]);
+    mockFocus = true; // retour sur l'accueil
+    await arbre.redessiner();
+    expect(getMyTournamentInvitations).toHaveBeenCalledTimes(2);
+    expect(arbre.toJSON()).toBeNull();
   });
 
   it('sans nom d’invitant : « Un joueur t’invite… »', async () => {

@@ -1,3 +1,4 @@
+import { useIsFocused } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -180,7 +181,11 @@ function CarteInvitationTournoi({ invitation, navigation }) {
  * @returns {import('react').ReactElement | null} Les cartes, ou rien.
  */
 function InvitationsTournoiAccueil({ navigation }) {
-  const lecture = useMyTournamentInvitations(LECTURE_DISCRETE);
+  // L'onglet de l'accueil reste monté et l'app ne relit rien au retour (`refetchOnWindowFocus: false`) :
+  // la lecture suit le focus de l'écran (comme HomeHub.js), une invitation répondue sur la page
+  // d'équipe ou reçue entre-temps est à jour au retour sur l'accueil.
+  const isFocused = useIsFocused();
+  const lecture = useMyTournamentInvitations({ ...LECTURE_DISCRETE, enabled: isFocused });
   const invitations = (Array.isArray(lecture?.data) ? lecture.data : [])
     .filter((invitation) => invitation?.responseStatus === 'invited'
       && invitation?.team?.documentId && invitation?.event?.documentId);
