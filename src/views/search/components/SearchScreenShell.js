@@ -1,7 +1,5 @@
-import { HeaderHeightContext } from '@react-navigation/elements';
 import {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -22,6 +20,7 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SearchTypeSwitcher from '@/components/molecules/searchTypeSwitcher/SearchTypeSwitcher';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { EnTeteDeRechercheContext } from '@/views/search/components/enTeteDeRecherche';
+import useSousEnTeteDeLaPile from '@/views/search/components/sousEnTeteDeLaPile';
 import { getSearchHubGuidanceSignalKey } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -82,7 +81,7 @@ function SearchScreenShell({
   // logo + cloche + avatar ne se répète plus dessous. Même source que `ScreenContainer`. Le site
   // (pile sans en-tête) n'a aucune hauteur ici : il garde son bandeau. Logo, cloche et avatar
   // restent sur l'accueil, à une flèche.
-  const sousEnTeteDeLaPile = (useContext(HeaderHeightContext) || 0) > 0;
+  const sousEnTeteDeLaPile = useSousEnTeteDeLaPile();
   const switcherTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   // CORR-RECHERCHE point 2 — combien de listes posent l'en-tête dans ce qu'elles font défiler.
   const [porteurs, setPorteurs] = useState(0);
