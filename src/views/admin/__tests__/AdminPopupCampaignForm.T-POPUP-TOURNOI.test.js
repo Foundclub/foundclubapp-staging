@@ -282,3 +282,34 @@ test('R2 — dans l aperçu, « Voir le tournoi » ouvre la fiche de CE tournoi'
     screen: 'EventDetails',
   });
 });
+
+// T-POPUP-ZONE (18/11, décision d'Adel D236) — n'annoncer le tournoi qu'aux comptes de sa zone.
+test('ZONE-R1 — « Départements ciblés » part dans targetDepartments, et vide = toute la France', async () => {
+  const arbre = monter();
+  const aide = arbre.root.findAllByType(Text)
+    .map((t) => [].concat(t.props.children).join(''))
+    .find((texte) => /Vide = toute la France/.test(texte));
+  expect(aide).toBeTruthy();
+
+  await enregistrer(arbre, 'Créer le brouillon');
+  expect(/** @type {any} */ (mockCreer.mock.calls[0])[0].data.targetDepartments).toEqual([]);
+
+  act(() => { champ(arbre, '34, 30').props.onChangeText('34, 30'); });
+  await enregistrer(arbre, 'Créer le brouillon');
+  expect(/** @type {any} */ (mockCreer.mock.calls[1])[0].data.targetDepartments).toEqual(['34', '30']);
+});
+
+test('ZONE-R2 — un brouillon relu garde ses départements', async () => {
+  brouillon({
+    actions: [],
+    audience: { targetDepartments: ['34'] },
+    documentId: 'camp-1',
+    status: 'draft',
+    title: 'Le tournoi',
+  });
+  const arbre = monter();
+
+  expect(champ(arbre, '34, 30').props.value).toBe('34');
+  await enregistrer(arbre, 'Enregistrer le brouillon');
+  expect(/** @type {any} */ (mockMaj.mock.calls[0])[0].data.targetDepartments).toEqual(['34']);
+});
