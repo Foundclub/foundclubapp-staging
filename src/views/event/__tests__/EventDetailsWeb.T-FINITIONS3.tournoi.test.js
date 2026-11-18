@@ -397,6 +397,26 @@ test('🔴 T-F3 joueur seul — une équipe ouverte aux demandes le dit sur sa c
   expect(texte(carteEquipe(arbre, 'Complets'))).not.toContain('Ouverte aux demandes');
 });
 
+// T-SUITES-TOURNOI (18/11, point 3) : une équipe ouverte mais PLEINE (effectif lu >= maximum du
+// tournoi, règle de la page d'équipe, getTournamentTeamPlayerCount) dit « Équipe complète ».
+test('🔴 T-SUITES (3) — une équipe ouverte et pleine (5 sur 5) dit « Équipe complète », plus « Ouverte aux demandes » ; à 4 sur 5, ouverte', () => {
+  const pleine = {
+    ...EQUIPE_OUVERTE, documentId: 'equipe-pleine', membersSummary: { count: 5, list: [] }, name: 'Pleine à craquer',
+  };
+  const presque = {
+    ...EQUIPE_OUVERTE, documentId: 'equipe-presque', membersSummary: { count: 4, list: [] }, name: 'Encore une place',
+  };
+  const arbre = monter(TOURNOI_19_12({
+    tournamentConfig: { maxRosterSize: 5, maxTeams: 24, minAge: 16 },
+    tournamentTeams: [pleine, presque],
+    tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 },
+  }), compteNeLe('2008-01-01'));
+  expect(texte(carteEquipe(arbre, 'Pleine à craquer'))).toContain('Équipe complète');
+  expect(texte(carteEquipe(arbre, 'Pleine à craquer'))).not.toContain('Ouverte aux demandes');
+  expect(texte(carteEquipe(arbre, 'Encore une place'))).toContain('Ouverte aux demandes');
+  expect(texte(carteEquipe(arbre, 'Encore une place'))).not.toContain('Équipe complète');
+});
+
 test('T-F3 joueur seul caractérisant — sans équipe, il ouvre l équipe ouverte (là où il demande à la rejoindre)', () => {
   const arbre = monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), compteNeLe('2008-01-01'));
   const ouvrir = carteEquipe(arbre, 'On te trouve une place')

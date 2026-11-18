@@ -501,3 +501,26 @@ test('🔴 T-FINITIONS2 — tournoi sans valeur : ni « Capacité » ni « Joueu
 test('T-FINITIONS2 caractérisant — un match garde « Capacité »', () => {
   expect(ligneInfo(monter(MATCH_EQUIPE), 'Capacité')).toBe(1);
 });
+
+// T-SUITES-TOURNOI (18/11, point 5 ; testeur, recette 46, compte 222 organisateur ET capitaine) :
+// dans la colonne de droite (une grille sans `alignContent`), quand « Mon statut » est masqué, la
+// rangée des boutons était la seule ligne de la grille : elle s'étirait sur toute la hauteur de
+// l'en-tête, et « Voir mon équipe » avec elle (un grand ovale bleu). La rangée garde sa hauteur
+// (`alignSelf: 'start'`) et le bouton une cible de 44 px. Témoin de style : jsdom ne mesure rien
+// (le rendu réel reste à voir sur la recette).
+test('🔴 T-SUITES (5) — organisateur et capitaine : « Voir mon équipe » garde la taille d un bouton (rangée non étirée, 44 px)', () => {
+  const arbre = monter(tournoiAutonome({
+    tournamentTeams: [{
+      captainUser: { documentId: 'joueur-1' },
+      documentId: 'equipe-222',
+      members: [{ responseStatus: 'present', user: { documentId: 'joueur-1' } }],
+      name: 'Recette Site 222',
+      status: 'pending',
+    }],
+  }), ORGANISATEUR);
+  const bouton = arbre.root.findAll((/** @type {any} */ n) => n.type === 'button' && n.props?.['data-testid'] === 'event-status-tournament-team')[0];
+  expect(texte(bouton)).toBe('Voir mon équipe');
+  expect(bouton.props.style.minHeight).toBe(44);
+  expect(bouton.parent.type).toBe('div');
+  expect(bouton.parent.props.style.alignSelf).toBe('start');
+});
