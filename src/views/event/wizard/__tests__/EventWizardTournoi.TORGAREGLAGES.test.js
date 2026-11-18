@@ -93,12 +93,14 @@ describe('T-ORGA-REGLAGES — les règles payantes dans l’assistant', () => {
     }));
   });
 
-  test('🔴 un seuil au-dessus de l’effectif max est dit et bloque « Suivant »', () => {
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus d'effectif maximum, donc plus de « seuil au-dessus du max ».
+  test('🔴 D239 : un seuil de 7 avec un ancien effectif max 6 ne bloque plus « Suivant », le champ max a disparu', () => {
     const arbre = monter({ team: CLUB, tournamentMaxRosterSize: 6 });
     saisir(arbre, 'tournoi-regles-prix', '20');
     saisir(arbre, 'tournoi-regles-seuil', '7');
-    expect(mockGabarit.props.isNextDisabled).toBe(true);
-    expect(texte(arbre)).toContain('Ce nombre ne peut pas dépasser l’effectif maximum');
+    expect(mockGabarit.props.isNextDisabled).toBe(false);
+    expect(texte(arbre)).not.toContain('Ce nombre ne peut pas dépasser l’effectif maximum');
+    expect(texte(arbre)).not.toContain('Effectif max');
   });
 
   test('🔴 un tournoi payant sans club porteur : l’assistant le dit avant l’enregistrement', () => {

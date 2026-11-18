@@ -81,7 +81,8 @@ test('🔴 connecté : un seul écran, capitaine, tournoi, date, lieu, places et
   expect(coded.body.split('\n')).toEqual([
     "Dorian D. t'invite dans son équipe Recette Site 333, pour le tournoi FoundClub x AR Soccer.",
     expect.stringMatching(/^Sam\. 19 déc\.? · 19:00 · AR Soccer$/),
-    '3 joueurs sur 5 · 20 € par joueur',
+    // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum, donc plus de « sur 5 ».
+    '3 joueurs · 20 € par joueur',
   ]);
   expect(coded.primary).toBe("Rejoindre l'équipe");
   expect(coded.action).toBe('join');

@@ -28,8 +28,8 @@ const MIN_TOUCH_TARGET = 44;
  * @param {number} [props.entryFeeCents] - T-PARCOURS-1 (R10) : le prix d'une place, en
  *   centimes (0 = gratuit).
  * @param {boolean} [props.isPending] - Une création ou une inscription est-elle en cours.
- * @param {number | null} [props.maxRosterSize] - T-PARCOURS-1 (R10) : le nombre de joueurs
- *   d'une équipe.
+ * @param {number | null} [props.paidMembersToValidate] - T-SANS-PLAFOND (D239) : le seuil de places
+ *   payées qui valide l'équipe (5 par défaut) ; il n'y a plus de nombre maximum de joueurs.
  * @param {'name' | 'choose' | null} props.mode - Ce que demande la feuille ; `null` la ferme.
  * @param {() => void} props.onClose - Fermer sans rien faire.
  * @param {(equipe: any) => void} props.onChoose - Inscrire cette équipe.
@@ -38,7 +38,8 @@ const MIN_TOUCH_TARGET = 44;
  * @returns {import('react').ReactElement | null} - La feuille.
  */
 function TournamentTeamSheet({
-  entryFeeCents = 0, isPending = false, maxRosterSize = null, mode, onChoose, onClose, onCreate,
+  entryFeeCents = 0, isPending = false, mode, onChoose, onClose, onCreate,
+  paidMembersToValidate = null,
   teams = [],
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
@@ -57,7 +58,7 @@ function TournamentTeamSheet({
   // T-PARCOURS-1 (17/11, R10) — ce qui attend le capitaine, lu sur le tournoi : rien pour un
   // tournoi gratuit.
   const prix = Number(entryFeeCents) > 0 ? formatEuros(Number(entryFeeCents) / 100) : '';
-  const coequipiers = Number(maxRosterSize) - 1;
+  const coequipiers = (Number(paidMembersToValidate) > 0 ? Number(paidMembersToValidate) : 5) - 1;
   let ensuite = '';
   if (prix) {
     ensuite = coequipiers > 0

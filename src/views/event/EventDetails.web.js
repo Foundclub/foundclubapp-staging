@@ -946,6 +946,14 @@ function EventDetails({ navigation, route }) {
   const openOpponentEdit = useCallback(() => {
     navigation.navigate(RouteNames.EventEdit, { eventId });
   }, [eventId, navigation]);
+  // T-SUITES-TOURNOI (18/11, point 6) — « Modifier » d'un TOURNOI ouvre « Modifier les
+  // paramètres » : la modification ordinaire refuse un tournoi (getEventEditSupport, « Modification
+  // limitée… ») et s'arrêtait sur « Aucune équipe disponible… ». Les autres types ne changent pas.
+  // Témoin : __tests__/EventDetailsWeb.RWDIRIG.annulerEvenement.test.js (T-SUITES (6)).
+  const ouvrirModifier = useCallback(() => {
+    const ecran = isTournamentEvent ? RouteNames.TournamentSettingsEdit : RouteNames.EventEdit;
+    navigation.navigate(ecran, { eventId });
+  }, [eventId, isTournamentEvent, navigation]);
   // COLL-R-DEPLACER (14/10, COL-013) — « Changer l'heure ou le lieu » et « Choisir une autre
   // place » ouvrent « Déplacer la séance » (la modification en mode « deplacer » ; un serveur
   // d'avant y retrouve la modification).
@@ -1581,7 +1589,7 @@ function EventDetails({ navigation, route }) {
       icon: 'edit',
       key: 'edit',
       label: t('eventDetails.managePanel.edit', 'Modifier'),
-      onPress: () => navigation.navigate(RouteNames.EventEdit, { eventId }),
+      onPress: ouvrirModifier,
     }] : []),
     ...(canEdit && supportsEventComposition ? [{
       disabled: isStaffCompositionFetching,
@@ -2458,7 +2466,8 @@ function EventDetails({ navigation, route }) {
             {' '}
             -
             {' '}
-            {event?.tournamentConfig?.maxRosterSize ?? t('eventDetails.open2', 'Libre')}
+            {/* T-SANS-PLAFOND (D239) : plus de nombre maximum de joueurs par équipe. */}
+            {t('eventDetails.open2', 'Libre')}
           </span>
           <span>
             {t('eventDetails.temporaryTeams', 'Equipes ephemeres:')}
@@ -2690,6 +2699,9 @@ function EventDetails({ navigation, route }) {
             const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
             const status = normalizeTournamentText(team?.status);
             const statusLabel = getTournamentTeamStatusLabel(status);
+            // T-SANS-PLAFOND (18/11, Adel D239) : plus d'« Équipe complète » (T-SUITES-TOURNOI 3
+            // retourné) : une équipe ouverte aux demandes le reste, quel que soit son effectif.
+            // Témoin : __tests__/EventDetailsWeb.T-FINITIONS3.tournoi.test.js (T-SUITES (3)).
 
             return (
               <div
@@ -3165,7 +3177,7 @@ function EventDetails({ navigation, route }) {
                         FIN-EVENEMENTS p131 : ni sur un tournoi clôturé. */}
                     {canEdit && !showManageMenu && !isCancelled && !tournoiClos ? (
                       <button
-                        onClick={() => navigation.navigate(RouteNames.EventEdit, { eventId })}
+                        onClick={ouvrirModifier}
                         style={primaryButtonStyle}
                         type="button"
                       >
@@ -3327,7 +3339,16 @@ function EventDetails({ navigation, route }) {
                     {getTournamentAgeNotice(event)}
                   </div>
                 ) : null}
-                <div style={{ display: isCancelled ? 'none' : 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {/* T-SUITES-TOURNOI (18/11, point 5) : la colonne est une grille sans
+                    `alignContent` ; « Mon statut » masqué, cette rangée y restait seule et
+                    s'étirait sur toute la hauteur de l'en-tête, ses boutons avec elle. */}
+                <div style={{
+                  alignSelf: 'start',
+                  display: isCancelled ? 'none' : 'flex',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                }}
+                >
                   {peutPasserPresentApresCoup ? (
                     <div style={{ display: 'grid', gap: 8 }}>
                       <span style={{ color: mutedTextColor, fontSize: 14 }}>
@@ -3425,7 +3446,7 @@ function EventDetails({ navigation, route }) {
                           });
                         }
                       }}
-                      style={{ ...primaryButtonStyle, padding: '12px 16px' }}
+                      style={{ ...primaryButtonStyle, minHeight: 44, padding: '12px 16px' }}
                       type="button"
                     >
                       {voirMonEquipeEnTete
@@ -4444,11 +4465,11 @@ function EventDetails({ navigation, route }) {
       <TournamentTeamSheet
         entryFeeCents={Number(tournamentConfig?.entryFeeCents) || 0}
         isPending={createTournamentTeamMutation.isPending || registerTournamentTeamMutation.isPending}
-        maxRosterSize={Number(tournamentConfig?.maxRosterSize) || null}
         mode={feuilleEquipeTournoi}
         onChoose={inscrireLEquipeDuClub}
         onClose={() => setFeuilleEquipeTournoi(null)}
         onCreate={creerLEquipeDuTournoi}
+        paidMembersToValidate={Number(tournamentConfig?.paidMembersToValidate) || null}
         teams={availableTournamentSourceTeams}
       />
       <CancelSeriesSheet

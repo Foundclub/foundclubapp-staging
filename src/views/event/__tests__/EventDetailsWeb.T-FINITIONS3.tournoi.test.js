@@ -397,6 +397,27 @@ test('🔴 T-F3 joueur seul — une équipe ouverte aux demandes le dit sur sa c
   expect(texte(carteEquipe(arbre, 'Complets'))).not.toContain('Ouverte aux demandes');
 });
 
+// T-SUITES-TOURNOI (18/11, point 3) : une équipe ouverte mais PLEINE disait « Équipe complète ».
+// RETOURNÉ par T-SANS-PLAFOND (18/11, décision d'Adel D239 « pas de limite de joueurs ») : à 5 et à 7 sur un
+// plafond 5 en base, une équipe ouverte reste « Ouverte aux demandes ».
+test('🔴 T-SUITES (3) / D239 — une équipe ouverte à 5 ou 7 sur un plafond 5 dit « Ouverte aux demandes », jamais « Équipe complète »', () => {
+  const pleine = {
+    ...EQUIPE_OUVERTE, documentId: 'equipe-pleine', membersSummary: { count: 5, list: [] }, name: 'Pleine à craquer',
+  };
+  const presque = {
+    ...EQUIPE_OUVERTE, documentId: 'equipe-presque', membersSummary: { count: 7, list: [] }, name: 'Avec deux remplaçants',
+  };
+  const arbre = monter(TOURNOI_19_12({
+    tournamentConfig: { maxRosterSize: 5, maxTeams: 24, minAge: 16 },
+    tournamentTeams: [pleine, presque],
+    tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 },
+  }), compteNeLe('2008-01-01'));
+  expect(texte(carteEquipe(arbre, 'Pleine à craquer'))).not.toContain('Équipe complète');
+  expect(texte(carteEquipe(arbre, 'Pleine à craquer'))).toContain('Ouverte aux demandes');
+  expect(texte(carteEquipe(arbre, 'Avec deux remplaçants'))).toContain('Ouverte aux demandes');
+  expect(texte(carteEquipe(arbre, 'Avec deux remplaçants'))).not.toContain('Équipe complète');
+});
+
 test('T-F3 joueur seul caractérisant — sans équipe, il ouvre l équipe ouverte (là où il demande à la rejoindre)', () => {
   const arbre = monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), compteNeLe('2008-01-01'));
   const ouvrir = carteEquipe(arbre, 'On te trouve une place')

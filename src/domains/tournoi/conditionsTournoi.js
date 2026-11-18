@@ -11,7 +11,7 @@
  */
 
 /** La ligne de version, affichée sous le titre. */
-export const VERSION_DES_CONDITIONS = 'Version du 16 novembre 2026';
+export const VERSION_DES_CONDITIONS = 'Version du 18 novembre 2026';
 
 /**
  * D48 (17/11/2026) — L'ADRESSE DU COMPLEXE, en UN seul endroit du code : lue par les conditions (§ 1), le
@@ -35,7 +35,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   '20 € TTC par joueur, pour la participation au tournoi : 4 matchs de ligue, et jusqu\'à 3 matchs de phase finale, l\'arbitrage et les récompenses. Le prix ne comprend pas le déplacement ni l\'assurance personnelle du joueur (§ 6).',
   'Le maillot du tournoi est offert, en bonus, que le joueur garde, dans la limite des tailles et des stocks disponibles le jour du tournoi. Il ne fait pas partie du prix : un maillot absent, livré en retard ou d\'une autre taille que celle demandée ne donne lieu à aucun remboursement ni à aucune réduction.',
   '3. Inscription, paiement et validation de l\'équipe',
-  'On s\'inscrit avec son équipe (5 à 8 joueurs), seul, ou à 2, 3 ou 4. Chaque joueur reçoit son propre lien de paiement ; sa place peut être payée par lui-même ou par un tiers (un parent, le capitaine, un coéquipier). Le paiement est encaissé par Found Club ; un reçu est envoyé à celui qui paie. Payer pour un autre ne change rien à ses droits : la place reste celle du joueur, et un remboursement éventuel revient sur le moyen de paiement utilisé, donc à celui qui a payé.',
+  'On s\'inscrit avec son équipe (5 joueurs ou plus), seul, ou à 2, 3 ou 4. Chaque joueur reçoit son propre lien de paiement ; sa place peut être payée par lui-même ou par un tiers (un parent, le capitaine, un coéquipier). Le paiement est encaissé par Found Club ; un reçu est envoyé à celui qui paie. Payer pour un autre ne change rien à ses droits : la place reste celle du joueur, et un remboursement éventuel revient sur le moyen de paiement utilisé, donc à celui qui a payé.',
   'Une équipe est validée quand 5 de ses joueurs ont payé. Les équipes sont validées dans l\'ordre où elles atteignent 5 joueurs payés, dans la limite de 24 équipes. Le tournoi se joue à un nombre pair d\'équipes (règlement § 4).',
   'Joueurs seuls ou à 2-4 : Found Club forme des équipes avec les joueurs en attente, dans l\'ordre d\'inscription, par niveau déclaré, dès que 5 joueurs payés peuvent être réunis, en gardant ensemble ceux qui se sont inscrits ensemble.',
   'Condition : l\'inscription d\'un joueur ne vaut que si son équipe compte 5 joueurs payés le 10 décembre 2026 à 23 h 59. À défaut, son inscription est annulée et il est remboursé intégralement, sans frais, sous 14 jours.',

@@ -41,7 +41,8 @@ const membres = (/** @type {number} */ n) => Array.from({ length: n }, (_v, inde
 }));
 
 describe('T-REJOINDRE — les équipes qui cherchent un joueur (D50)', () => {
-  it('garde les équipes ouvertes aux demandes ET pas complètes, écarte les autres', () => {
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum ; « pleine » (5 sur un plafond 5) reste.
+  it('garde les équipes ouvertes aux demandes (même à 5 sur un plafond 5, D239), écarte les autres', () => {
     const liste = getTournamentTeamsSeekingPlayers([
       equipe({ documentId: 'ouverte-3', members: membres(3) }),
       equipe({ documentId: 'pleine', members: membres(5) }),
@@ -50,8 +51,8 @@ describe('T-REJOINDRE — les équipes qui cherchent un joueur (D50)', () => {
       equipe({ documentId: 'refusee', members: membres(2), status: 'declined' }),
     ], TOURNOI.tournamentConfig);
 
-    expect(liste.map(({ team }) => team.documentId)).toEqual(['ouverte-3']);
-    expect(getTournamentTeamPlayersLine(liste[0])).toBe('3 joueurs sur 5');
+    expect(liste.map(({ team }) => team.documentId)).toEqual(['ouverte-3', 'pleine']);
+    expect(liste.map(getTournamentTeamPlayersLine)).toEqual(['3 joueurs', '5 joueurs']);
   });
 
   it('lit le résumé du serveur (T-JOUEURS) quand les membres ne sont pas rendus', () => {
@@ -59,11 +60,11 @@ describe('T-REJOINDRE — les équipes qui cherchent un joueur (D50)', () => {
       [equipe({ membersSummary: { count: 1 } })],
       TOURNOI.tournamentConfig,
     );
-    expect(getTournamentTeamPlayersLine(pasPleine)).toBe('1 joueur sur 5');
+    expect(getTournamentTeamPlayersLine(pasPleine)).toBe('1 joueur');
     expect(getTournamentTeamsSeekingPlayers(
       [equipe({ membersSummary: { count: 5 } })],
       TOURNOI.tournamentConfig,
-    )).toEqual([]);
+    )).toHaveLength(1);
   });
 
   it("n'écrit pas « 0 joueur » quand le nombre n'est pas connu : l'équipe reste proposée, sans nombre", () => {

@@ -136,7 +136,8 @@ describe('T-ORGA-REGLAGES — les règles payantes dans « Modifier les paramèt
     expect(envoye()).toEqual(expect.objectContaining({ entryFeeCents: 0, minAge: null }));
   });
 
-  test('🔴 un prix illisible ou un seuil au-dessus de l effectif max bloquent l enregistrement', async () => {
+  // T-SANS-PLAFOND (18/11, Adel D239) : le seuil au-dessus d'un ancien effectif max ne bloque plus.
+  test('🔴 un prix illisible bloque l enregistrement ; D239 : un seuil de 9 avec un ancien max 8 s enregistre', async () => {
     let arbre = await monter(PAYANT);
     await saisir(arbre, 'tournoi-regles-prix', '-3');
     expect(JSON.stringify(arbre.toJSON())).toContain('Saisis un prix en euros, par exemple 20 ou 19,50.');
@@ -145,9 +146,10 @@ describe('T-ORGA-REGLAGES — les règles payantes dans « Modifier les paramèt
 
     arbre = await monter(PAYANT);
     await saisir(arbre, 'tournoi-regles-seuil', '9');
-    expect(JSON.stringify(arbre.toJSON())).toContain('Ce nombre ne peut pas dépasser l’effectif maximum');
+    expect(JSON.stringify(arbre.toJSON())).not.toContain('Ce nombre ne peut pas dépasser');
+    expect(JSON.stringify(arbre.toJSON())).not.toContain('Effectif max');
     await enregistrer(arbre);
-    expect(mockUpdateEvent).not.toHaveBeenCalled();
+    expect(mockUpdateEvent).toHaveBeenCalled();
   });
 
   test('un tournoi sans réglage payant part gratuit, sans âge, au seuil de 5', async () => {
@@ -173,5 +175,21 @@ describe('T-ORGA-REGLAGES — les règles payantes dans « Modifier les paramèt
     expect(JSON.stringify(arbre.toJSON())).not.toContain('Ce nombre ne peut pas dépasser');
     await enregistrer(arbre);
     expect(mockUpdateEvent).toHaveBeenCalledTimes(1);
+  });
+
+  // T-SUITES-TOURNOI (18/11, point 1) : le serveur refuse un prix changé après une place payée, ou
+  // sous 0,50 € ; l'écran affiche sa phrase telle quelle (le client rejette `data.error`,
+  // services/client.native.js). Caractérisant : vert avant le lot, il fige l'affichage.
+  test('le refus du serveur (prix figé, minimum 0,50 €) s affiche tel quel', async () => {
+    const { Alert } = jest.requireActual('react-native');
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const phrase = 'Le prix ne peut plus changer : au moins un joueur a déjà payé sa place. Garde le prix actuel.';
+    const arbre = await monter(PAYANT);
+    mockUpdateEvent.mockImplementationOnce(() => Promise.reject({ message: phrase, name: 'ValidationError', status: 400 }));
+    await saisir(arbre, 'tournoi-regles-prix', '15');
+    await enregistrer(arbre);
+    expect(envoye().entryFeeCents).toBe(1500);
+    expect(alerte).toHaveBeenCalledWith('Erreur', phrase);
+    alerte.mockRestore();
   });
 });

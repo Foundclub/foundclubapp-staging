@@ -83,7 +83,8 @@ describe('getTournamentTeamProgress — le calcul', () => {
     expect(p.ratio).toBeCloseTo(0.2);
     expect(p.todo).toEqual([
       {
-        count: 3, kind: 'players', max: 8, missing: 2,
+        // T-SANS-PLAFOND (D239) : la ligne vise le minimum (5), plus l'ancien maximum (8).
+        count: 3, kind: 'players', max: 5, missing: 2,
       },
       { count: 2, kind: 'payments', names: ['Ado', 'Michel'] },
       { count: 1, kind: 'consents', names: ['Ado'] },

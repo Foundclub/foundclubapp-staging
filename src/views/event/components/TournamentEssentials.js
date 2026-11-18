@@ -96,14 +96,12 @@ const casePrix = (event) => {
 const caseFormat = (event) => {
   const config = event?.tournamentConfig || {};
   const min = Math.round(Number(config.minRosterSize));
-  const max = Math.round(Number(config.maxRosterSize));
   const equipes = Math.round(Number(config.maxTeams));
   const minAge = getTournamentMinAge(event);
   let value = null;
-  if (min > 0 && max > min) value = i18next.t('tournamentEssentials.playersRange', { max, min });
-  else if (min > 0 || max > 0) {
-    value = i18next.t('tournamentEssentials.players', { count: min > 0 ? min : max });
-  }
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum ; « 5 joueurs par équipe »
+  // (le minimum).
+  if (min > 0) value = i18next.t('tournamentEssentials.players', { count: min });
   const note = [
     minAge ? i18next.t('tournamentUtils.fromAge', { minAge }) : null,
     equipes > 0 ? i18next.t('tournamentEssentials.maxTeams', { count: equipes }) : null,

@@ -780,3 +780,30 @@ describe('FIN-CHEMINS 94 · annuler la séance qu on vient de créer', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });
+
+// T-SUITES-TOURNOI (18/11, point 6 ; testeur, recette 46) — « Gérer l'événement › Modifier » d'un
+// TOURNOI ouvrait /events/<id>/edit, une impasse (« Modification limitée… », puis « Aucune équipe
+// disponible… ») : il ouvre « Modifier les paramètres » (TournamentSettingsEdit), comme « Gérer le
+// tournoi › paramètres ». Les autres types gardent la modification ordinaire.
+describe('T-SUITES (6) · « Modifier » d un tournoi', () => {
+  const modifier = (/** @type {any} */ items) => {
+    const item = items.find((/** @type {any} */ candidat) => textOf(candidat) === 'Modifier');
+    if (!item) throw new Error(`menu : ${JSON.stringify(items.map(textOf))}`);
+    return item;
+  };
+
+  test('🔴 tournoi : « Modifier » ouvre « Modifier les paramètres »', () => {
+    const root = mountScreen({ event: buildEvent({ name: 'Tournoi de printemps', type: { name: 'Tournoi' } }) });
+    const item = modifier(ouvrirMenu(root));
+    act(() => item.props.onClick());
+    expect(mockNavigate).toHaveBeenCalledWith('TournamentSettingsEdit', { eventId: 'event-1' });
+    expect(mockNavigate).not.toHaveBeenCalledWith('EventEdit', expect.anything());
+  });
+
+  test.each([['Entrainement'], ['Match']])('%s caractérisant : « Modifier » ouvre la modification ordinaire', (typeName) => {
+    const root = mountScreen({ event: buildEvent({ type: { name: typeName } }) });
+    const item = modifier(ouvrirMenu(root));
+    act(() => item.props.onClick());
+    expect(mockNavigate).toHaveBeenCalledWith('EventEdit', { eventId: 'event-1' });
+  });
+});

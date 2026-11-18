@@ -60,15 +60,13 @@ const lireEntier = (texte) => {
  * @property {string} [minAgeText] L'âge minimum.
  * @property {string} [paidText] Le seuil de joueurs payés.
  * @property {boolean} [jerseyRequired] Le maillot obligatoire.
- * @property {number | null} [maxRosterSize] L'effectif maximum.
  */
 
 /**
  * @typedef {object} LectureDesReglesPayantes
  * @property {{ entryFeeCents: number, minAge: number | null, paidMembersToValidate: number | null,
  *   jerseySizeRequired: boolean }} config Ce qui part au serveur.
- * @property {{ fee: boolean, minAge: boolean, paid: boolean,
- *   paidTooHigh: boolean }} errors Les erreurs.
+ * @property {{ fee: boolean, minAge: boolean, paid: boolean }} errors Les erreurs.
  * @property {boolean} hasError Une erreur au moins.
  */
 
@@ -78,7 +76,7 @@ const lireEntier = (texte) => {
  * @returns {LectureDesReglesPayantes} La lecture.
  */
 export const lireReglesPayantes = ({
-  feeText, jerseyRequired, maxRosterSize, minAgeText, paidText,
+  feeText, jerseyRequired, minAgeText, paidText,
 }) => {
   const entryFeeCents = lireEurosEnCentimes(feeText);
   const minAge = lireEntier(minAgeText);
@@ -86,10 +84,9 @@ export const lireReglesPayantes = ({
   const errors = {
     fee: Number.isNaN(entryFeeCents),
     minAge: minAge !== null && (Number.isNaN(minAge) || minAge < 1 || minAge > 99),
+    // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum, donc plus de « seuil >
+    // effectif max ».
     paid: paid !== null && (Number.isNaN(paid) || paid < 1),
-    // Seulement pour un tournoi payant : un tournoi gratuit de 4 joueurs garde le seuil par défaut.
-    paidTooHigh: entryFeeCents > 0 && Number.isInteger(paid) && Number(paid) > 0
-      && Number(maxRosterSize) > 0 && Number(paid) > Number(maxRosterSize),
   };
   return {
     config: {
@@ -124,20 +121,19 @@ export const textesDesReglesPayantes = (config) => ({
  * @param {{ feeText: string, minAgeText: string, paidText: string,
  *   jerseyRequired: boolean }} props.values Les saisies.
  * @param {(patch: object) => void} props.onChange Une saisie change.
- * @param {number | null} [props.maxRosterSize] L'effectif maximum.
  * @param {boolean} [props.showClubWarning] Aucun club porteur connu.
  * @param {any} props.cardStyle Le style de la carte.
  * @param {any} props.inputStyle Le style des champs.
  * @returns {import('react').ReactElement} La carte des règles payantes.
  */
 function TournamentPaidRulesFields({
-  cardStyle, inputStyle, maxRosterSize = null, onChange, showClubWarning = false, values,
+  cardStyle, inputStyle, onChange, showClubWarning = false, values,
 }) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
-  const { config, errors } = lireReglesPayantes({ ...values, maxRosterSize });
+  const { config, errors } = lireReglesPayantes(values);
 
   /**
    * Un champ numérique, son titre et son aide (ou son erreur).
@@ -169,16 +165,9 @@ function TournamentPaidRulesFields({
     </View>
   );
 
-  let paidError = null;
-  if (errors.paidTooHigh) {
-    paidError = t(
-      'tournamentPaidRules.paidTooHigh',
-      'Ce nombre ne peut pas dépasser l’effectif maximum ({{max}}).',
-      { max: maxRosterSize },
-    );
-  } else if (errors.paid) {
-    paidError = t('tournamentPaidRules.paidInvalid', 'Saisis au moins 1 joueur.');
-  }
+  const paidError = errors.paid
+    ? t('tournamentPaidRules.paidInvalid', 'Saisis au moins 1 joueur.')
+    : null;
 
   return (
     <View style={cardStyle}>

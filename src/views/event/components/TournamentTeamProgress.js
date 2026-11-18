@@ -43,7 +43,7 @@ const memberName = (member) => [member?.user?.firstname, member?.user?.lastname]
  * @param {any} [params.tournamentConfig] - `team.event.tournamentConfig`.
  * @returns {{ isValidated: boolean, isPaid: boolean, done: number, needed: number,
  *   ratio: number, playersCount: number, missingPlayers: number, missingPayments: number,
- *   todo: TodoItem[] }} L'état de l'équipe.
+ *   substitutes: number, todo: TodoItem[] }} L'état de l'équipe.
  */
 export const getTournamentTeamProgress = ({
   members = [], payment = null, teamStatus = '', tournamentConfig = {},
@@ -57,7 +57,6 @@ export const getTournamentTeamProgress = ({
   const isValidated = normalizeTournamentText(teamStatus) === 'accepted';
   const isPaid = Boolean(payment);
   const minRoster = Number(tournamentConfig?.minRosterSize);
-  const maxRoster = Number(tournamentConfig?.maxRosterSize);
   const neededPaid = Number(payment?.paidMembersToValidate) > 0
     ? Number(payment.paidMembersToValidate) : 5;
   // Le compteur du serveur fait foi (il ne compte pas l'ado sans autorisation).
@@ -68,7 +67,12 @@ export const getTournamentTeamProgress = ({
   const missingPlayers = Math.max(0, minPlayers - actifs.length);
   const missingPayments = isPaid ? Math.max(0, neededPaid - paid) : 0;
   const needed = isPaid ? neededPaid : minPlayers;
-  const done = isPaid ? paid : actifs.length;
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum. Le compteur s'arrête au seuil
+  // (« 5 sur 5 », jamais « 7 sur 5 ») ; les joueurs actifs au-delà sont des remplaçants
+  // (payés ou non).
+  const brut = isPaid ? paid : actifs.length;
+  const done = needed > 0 ? Math.min(brut, needed) : brut;
+  const substitutes = needed > 0 ? Math.max(0, actifs.length - needed) : 0;
   /** @type {any[]} */
   const places = Array.isArray(payment?.members) ? payment.members : [];
 
@@ -79,7 +83,7 @@ export const getTournamentTeamProgress = ({
       todo.push({
         count: actifs.length,
         kind: 'players',
-        max: maxRoster > 0 ? maxRoster : (minPlayers || null),
+        max: minPlayers || null,
         missing: missingPlayers,
       });
     }
@@ -125,6 +129,7 @@ export const getTournamentTeamProgress = ({
     needed,
     playersCount: actifs.length,
     ratio,
+    substitutes,
     todo,
   };
 };
@@ -280,6 +285,11 @@ function TournamentTeamProgress({
         </>
       ) : null}
       {regle ? <Text style={[Fonts.p3, Fonts.neutral100]}>{regle}</Text> : null}
+      {progress.substitutes > 0 ? (
+        <Text style={[Fonts.p3, Fonts.neutral100]} testID="tournament-team-progress-substitutes">
+          {t('tournamentTeamProgress.substitutes', { count: progress.substitutes })}
+        </Text>
+      ) : null}
       {missing ? <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{missing}</Text> : null}
       {showTodo && progress.todo.length > 0 ? (
         <View style={Spaces.gap[8]} testID="tournament-team-progress-todo">

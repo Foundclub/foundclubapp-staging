@@ -49,7 +49,7 @@ describe('getTournamentEssentials', () => {
     expect(date.note).toBe('19:00 – 23:00');
     expect(lieu).toMatchObject({ note: '119 rue de la Rauze basse, 34070 Montpellier', value: 'AR Soccer' });
     expect(prix).toMatchObject({ note: 'Maillot offert en bonus, taille choisie au paiement', value: '20 € par joueur' });
-    expect(format).toMatchObject({ note: 'À partir de 16 ans · 8 équipes au plus', value: '5 à 8 joueurs par équipe' });
+    expect(format).toMatchObject({ note: 'À partir de 16 ans · 8 équipes au plus', value: '5 joueurs par équipe' }); // T-SANS-PLAFOND (D239) : plus de maximum
   });
 
   test('une case absente si la donnée manque : gratuit, sans lieu, sans date', () => {

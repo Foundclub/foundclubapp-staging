@@ -5,6 +5,10 @@
  * rejoindre) : la variante « équipe complète » n'a AUCUN bouton pour rejoindre, et renvoie à la
  * fiche du tournoi pour trouver une autre équipe. Lue dans l'aperçu (rosterCount, maxRosterSize).
  * ROUGE avant le lot : l'équipe pleine proposait de rejoindre.
+ *
+ * T-SANS-PLAFOND (18/11/2026, décision d'Adel D239 « pas de limite de joueurs ») : RETOURNÉ. Plus
+ * aucune variante « équipe complète » : à 5 sur 5 (et au-delà), le lien propose de rejoindre, même
+ * si un ancien serveur envoie encore `maxRosterSize`. ROUGE avant T-SANS-PLAFOND.
  */
 const mockNavigate = jest.fn(() => true);
 const mockApercu = jest.fn();
@@ -74,21 +78,22 @@ const apercu = (/** @type {any} */ sur = {}) => ({
   ...sur,
 });
 const plein = apercu({ rosterCount: 5 });
-const COMPLETE = "L'équipe Recette Site 333 est complète (5 joueurs sur 5). Trouve une autre équipe sur la fiche du tournoi.";
+const COMPLETE = /complète/;
 
-test('🔴 visiteur, équipe pleine : aucun bouton pour rejoindre, la fiche du tournoi', () => {
+test('🔴 D239 : visiteur, 5 joueurs sur un maximum 5 : « Continuer » pour rejoindre, jamais « complète »', () => {
   const coded = describeCodedTournamentInvite({ isSignedIn: false, preview: plein, t });
-  expect(coded.title).toBe('Équipe complète');
-  expect(coded.body).toBe(COMPLETE);
-  expect([coded.action, coded.primary]).toEqual(['openEventDetails', 'Voir le tournoi']);
+  expect(coded.title).not.toMatch(COMPLETE);
+  expect(coded.body).not.toMatch(COMPLETE);
+  expect(coded.body).not.toMatch(/sur 5/);
+  expect([coded.action, coded.primary]).toEqual(['signIn', 'Continuer']);
 });
 
-test('🔴 compte connecté hors de l équipe, équipe pleine : la même variante', () => {
+test('🔴 D239 : compte connecté hors de l équipe, 7 joueurs : il peut rejoindre', () => {
   const coded = describeCodedTournamentInvite({
-    isSignedIn: true, preview: { ...plein, viewer: { alreadyMember: false, canJoin: false, reason: 'Équipe pleine.' } }, t,
+    isSignedIn: true, preview: { ...plein, rosterCount: 7, viewer: { alreadyMember: false, canJoin: true, reason: null } }, t,
   });
-  expect(coded.body).toBe(COMPLETE);
-  expect(coded.action).toBe('openEventDetails');
+  expect(coded.body).not.toMatch(COMPLETE);
+  expect(coded.action).not.toBe('openEventDetails');
 });
 
 test('caractérisant : le capitaine et le membre d une équipe pleine gardent leur variante', () => {

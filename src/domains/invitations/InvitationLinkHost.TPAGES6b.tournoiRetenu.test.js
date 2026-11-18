@@ -142,25 +142,25 @@ test('caractérisant : un tournoi clos n est pas rangé', async () => {
   expect(mockRetenir).not.toHaveBeenCalled();
 });
 
-// T-PAGES-6b, décision 2 A du chef (18/11) : « Voir le tournoi » de l'équipe complète ouvre la FICHE du
-// tournoi (EventDetails, où l'on rejoint une autre équipe), jamais « rejoindre » ni la connexion.
-// ROUGE avant : le bouton passait par l'action de « Rejoindre » (connexion du visiteur, demande pour un compte).
-describe('T-PAGES-6b -- equipe complete : la fiche du tournoi', () => {
+// T-PAGES-6b, décision 2 A du chef (18/11) : « Voir le tournoi » de l'équipe complète ouvrait la FICHE du
+// tournoi. RETOURNÉ par T-SANS-PLAFOND (18/11, décision d'Adel D239 « pas de limite de joueurs ») : à 5 sur un
+// plafond 5 en base, le lien fait rejoindre (connexion du visiteur, qui garde le tournoi ; demande pour un compte).
+describe('T-SANS-PLAFOND (D239) -- 5 joueurs sur un plafond 5 en base : le lien fait rejoindre', () => {
   const plein = () => apercu({ maxRosterSize: 5, rosterCount: 5 });
 
-  test('🔴 visiteur : la fiche du tournoi, pas la connexion', async () => {
+  test('🔴 visiteur : le tournoi est retenu pour l inscription, et « Continuer » ne mène pas à la fiche', async () => {
     mockApercu.mockResolvedValue(plein());
     await monter(undefined);
+    expect(mockRetenir).toHaveBeenCalled();
     await act(async () => { await lastModalProps.primaryAction.onPress(); });
-    expect(mockNavigate).toHaveBeenCalledWith('EventDetails', { eventId: 'tournoi-1912' });
-    expect(mockNavigate).not.toHaveBeenCalledWith('PublicAuthStack', expect.anything());
+    expect(mockNavigate).not.toHaveBeenCalledWith('EventDetails', expect.anything());
   });
 
-  test('🔴 compte connecté hors de l équipe : la fiche, et aucune demande pour rejoindre', async () => {
-    mockApercu.mockResolvedValue({ ...plein(), viewer: { alreadyMember: false, canJoin: false, reason: 'Équipe pleine.' } });
+  test('🔴 compte connecté hors de l équipe (le serveur dit canJoin) : « Rejoindre l équipe » rejoint', async () => {
+    mockApercu.mockResolvedValue({ ...plein(), viewer: { alreadyMember: false, canJoin: true, reason: null } });
     await monter('u-1');
     await act(async () => { await lastModalProps.primaryAction.onPress(); });
-    expect(mockRejoindre).not.toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith('EventDetails', { eventId: 'tournoi-1912' });
+    expect(mockRejoindre).toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalledWith('EventDetails', expect.anything());
   });
 });
