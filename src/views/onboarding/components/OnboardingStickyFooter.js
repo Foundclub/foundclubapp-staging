@@ -50,10 +50,11 @@ function OnboardingStickyFooter({ children, contentWidth = 'form' }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
-  const isDesktop = width >= BREAKPOINTS.desktop;
   const horizontalPadding = resolveHorizontalPadding(width);
   const maxContentWidth = resolveContentWidth(contentWidth);
-  const shouldUseFixedFooter = isWeb && isDesktop;
+  // INSCRIPTION-PARCOURS (D245) : fixe sur TOUT le site, pas seulement à la largeur ordinateur.
+  // À 375 px, « Continuer » finissait au bas d'une page de 9 522 px (Sport) ; l'app ne change pas.
+  const shouldUseFixedFooter = isWeb;
   const fixedShellStyle = shouldUseFixedFooter
     ? {
       bottom: 0,
