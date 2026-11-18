@@ -94,6 +94,13 @@ const styles = {
 };
 
 /**
+ * Le composant d'un module chargé à la demande (ESM ou CommonJS).
+ * @param {any} module - Le module.
+ * @returns {any} Le composant.
+ */
+const parDefaut = (/** @type {any} */ module) => module?.default || module;
+
+/**
  * IMPL-2-EQUIPE — les deux fenêtres (« Inviter un joueur », « Ta place est payée »), chargées à la
  * demande, à leur ouverture.
  * ponytail: BottomModal tire @gorhom/bottom-sheet, que les suites de cette page ne simulent pas
@@ -102,9 +109,9 @@ const styles = {
  */
 const chargerLesFenetres = () => ({
   // eslint-disable-next-line global-require
-  BottomModal: require('@/components/molecules/bottomModal/BottomModal').default,
+  BottomModal: parDefaut(require('@/components/molecules/bottomModal/BottomModal')),
   // eslint-disable-next-line global-require
-  TournamentInviteSheet: require('./components/TournamentInviteSheet').default,
+  TournamentInviteSheet: parDefaut(require('./components/TournamentInviteSheet')),
 });
 
 const getMemberStatusMeta = (status, colors) => {

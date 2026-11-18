@@ -834,3 +834,54 @@ describe('T-SUITES (13), repris par IMPL-2-EQUIPE — « Copier le lien » dans 
     expect(copier(arbre)).toBeDefined();
   });
 });
+
+// IMPL-2-EQUIPE (18/11/2026, planches 10c et 10d ; CGV § 5) — quitter avec une place PAYÉE : pas de
+// retrait d'un geste, la fenêtre « Ta place est payée » dit la règle du jour, et mène à l'Assistance.
+// L'horloge est figée (seule `Date`) : la page lit la vraie date du jour.
+describe('IMPL-2-EQUIPE — quitter avec une place payée (10c, 10d)', () => {
+  const NE_PAS_FIGER = ['nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'performance', 'hrtime'];
+  const payee = () => {
+    const team = payante('joueur');
+    team.event = { ...team.event, date: '2026-12-19T18:00:00.000Z' };
+    team.payment.members[1] = {
+      ...team.payment.members[1], jerseySize: 'L', paymentUrl: null, status: 'paid',
+    };
+    return team;
+  };
+  afterEach(() => { jest.useRealTimers(); });
+
+  test('🔴 10c (le 18/11) : remboursé en entier jusqu’au 5 décembre, « Écrire à l’Assistance », aucun retrait', async () => {
+    jest.useFakeTimers({
+      doNotFake: NE_PAS_FIGER, now: new Date('2026-11-18T12:00:00.000Z'),
+    });
+    const arbre = await monter(payee(), 'u-2');
+    expect(texte(arbre)).toContain('Ta place est payée');
+    expect(texte(arbre)).toContain('20 € · maillot taille L');
+    await appuyer(arbre, ['Quitter l’équipe']);
+    expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, tu es remboursé en entier : 20 €, sous 14 jours.');
+    await appuyer(arbre, ['Écrire à l’Assistance']);
+    expect(mockOuvrirAssistance).toHaveBeenCalled();
+    expect(services.leaveTournamentTeam).not.toHaveBeenCalled();
+  });
+
+  test('🔴 10d (le 10/12) : plus remboursée depuis le 6 décembre, « Céder ma place » jusqu’au 17 décembre', async () => {
+    jest.useFakeTimers({
+      doNotFake: NE_PAS_FIGER, now: new Date('2026-12-10T12:00:00.000Z'),
+    });
+    const arbre = await monter(payee(), 'u-2');
+    await appuyer(arbre, ['Quitter l’équipe']);
+    const contenu = texte(arbre);
+    expect(contenu).toContain('Depuis le 6 décembre, ta place n’est plus remboursée.');
+    expect(contenu).toContain('Tu peux la céder à un autre joueur jusqu’au 17 décembre');
+    expect(combien(arbre, ['Céder ma place'])).toBe(1);
+    expect(services.leaveTournamentTeam).not.toHaveBeenCalled();
+  });
+
+  test('10b : sans paiement, la confirmation « Tu quittes l’équipe ? »', async () => {
+    const arbre = await monter(payante('joueur'), 'u-2');
+    await appuyer(arbre, ['Quitter l’équipe']);
+    const appel = alerte.mock.calls[alerte.mock.calls.length - 1];
+    expect(appel[0]).toBe('Tu quittes l’équipe ?');
+    expect(appel[2].map((/** @type {any} */ b) => b.text)).toEqual(['Rester dans l’équipe', 'Quitter l’équipe']);
+  });
+});

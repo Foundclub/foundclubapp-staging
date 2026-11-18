@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Platform, Text, TextInput, TouchableOpacity, View,
+  Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
+import BottomModalTextInput from '@/components/atoms/bottomModalTextInput/BottomModalTextInput';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -20,7 +21,7 @@ import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 // FoundClub.
 // La recherche, l'invitation et le lien restent ceux de la page d'équipe (TournamentTeamDetails) :
 // cette fenêtre ne fait aucun appel réseau, elle reçoit tout par ses propriétés.
-// Témoin : __tests__/TournamentInviteSheet.IMPL2.test.js.
+// Témoins : __tests__/T-PAGES-2.pageEquipe.test.js (T-SUITES repris) et T-PAGES-2.caracterisation.
 
 /**
  * @typedef {{ documentId: string, firstname?: string, lastname?: string, username?: string,
@@ -206,7 +207,8 @@ function TournamentInviteSheet({
 
   const recherche = (
     <View style={Spaces.gap[12]}>
-      <TextInput
+      {/* Android : le champ que la feuille suit au clavier (CLAVREGLE) ; ailleurs, TextInput. */}
+      <BottomModalTextInput
         accessibilityLabel={t('implEquipe.invite.searchTitle')}
         autoCorrect={false}
         // Chef « A » (18/11, T-SUITES) : le champ prend le focus dès que la recherche s'ouvre.
