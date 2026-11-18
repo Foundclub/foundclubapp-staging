@@ -52,9 +52,9 @@ const monter = (/** @type {any} */ props) => {
   /** @type {any} */
   let arbre;
   act(() => {
-    arbre = renderer.create(<EventHeader event={TOURNOI} {...props} />);
+    arbre = renderer.create(<EventHeader event={TOURNOI} tournamentHero={props.tournamentHero} />);
   });
-  const root = arbre.root;
+  const { root } = arbre;
   const texte = (/** @type {any} */ noeud) => [].concat(noeud.props.children).join('');
   const tous = root.findAllByType(Text).map(texte);
   const [rangee] = root.findAll(

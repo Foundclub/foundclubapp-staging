@@ -7276,21 +7276,42 @@ function EventDetails({ navigation, route }) {
    * pas publiée ; rien pour le trop jeune. Ensuite, « Voir le tournoi » reste la porte du déroulé.
    * @returns {{ note?: string | null, onPress: () => void, title: string } | null}
    */
+  // T-PAGES-4b (18/11, chef, maquette R7 et site) — le visiteur sans compte voit « Créer mon
+  // équipe » (et « J'ai déjà un compte » dans la carte) tant que l'équipe se crée encore : les deux
+  // rangent le tournoi où revenir, puis ouvrent la connexion (comme le site, un seul tunnel).
+  const visiteurPeutCreerSonEquipe = Boolean(
+    isTournamentEvent
+    && !isStageDayEvent
+    && !userData?.documentId
+    && !tournoiClos
+    && tournamentConfig?.allowCustomTeams !== false
+    && tournamentConfig?.competitionState !== 'published',
+  );
+  const ouvrirLaConnexionDuTournoi = () => {
+    retenirLeRetourAuTournoi(eventId);
+    openPublicAuthFlow(navigation, {
+      origin: RouteNames.EventDetails,
+      source: 'event-details-tournament-register',
+    });
+  };
+
   const getTournamentPrimaryAction = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
+
+    if (visiteurPeutCreerSonEquipe) {
+      return {
+        note: getTournamentEntryFeeLabel(event),
+        onPress: ouvrirLaConnexionDuTournoi,
+        title: t('eventDetails.createMyTeam', 'Créer mon équipe'),
+      };
+    }
 
     // T-PARCOURS-2 (17/11, point 2, R12) : le visiteur n'avait aucun chemin pour s'inscrire
     // (« Voir le tournoi » ne changeait rien à son écran). Ce bouton range le tournoi où revenir,
     // puis ouvre la connexion ; la fiche se rouvre une fois le compte prêt (useLiensEnAttente).
     if (!userData?.documentId && !tournoiClos) {
       return {
-        onPress: () => {
-          retenirLeRetourAuTournoi(eventId);
-          openPublicAuthFlow(navigation, {
-            origin: RouteNames.EventDetails,
-            source: 'event-details-tournament-register',
-          });
-        },
+        onPress: ouvrirLaConnexionDuTournoi,
         title: t('eventDetails.signInToRegister', "Se connecter pour s'inscrire"),
       };
     }
@@ -7461,7 +7482,11 @@ function EventDetails({ navigation, route }) {
     // du bas (`getTournamentPrimaryAction`). Elles etaient en HAUT de la page :
     // hors de portee du pouce, et invisibles des qu'on avait defile.
     // ⛔ Il ne reste ici que les deux gestes d'INSCRIPTION.
-    if (!canRegisterTournamentSourceTeam && !canCreateCustomTournamentTeam) return null;
+    if (
+      !canRegisterTournamentSourceTeam
+      && !canCreateCustomTournamentTeam
+      && !visiteurPeutCreerSonEquipe
+    ) return null;
     const prix = getTournamentEntryFeeLabel(event);
     const regle = isPaidTournament(event)
       ? t('tournamentFicheWeb.signUp.rule', { count: tournamentPaidThreshold(event) })
@@ -7480,12 +7505,22 @@ function EventDetails({ navigation, route }) {
         {/* Le seul bouton principal de la carte : « Créer mon équipe » (le même geste que le
             bouton du bas). L'équipe du club, pour l'entraîneur du club organisateur, reste
             secondaire (maquette (a), variante). */}
-        {canCreateCustomTournamentTeam ? (
+        {canCreateCustomTournamentTeam || visiteurPeutCreerSonEquipe ? (
           <Button
-            onPress={() => setIsTournamentCreateModalVisible(true)}
+            onPress={visiteurPeutCreerSonEquipe
+              ? ouvrirLaConnexionDuTournoi
+              : () => setIsTournamentCreateModalVisible(true)}
             style={{ minHeight: 44 }}
             title={t('tournamentFicheWeb.signUp.create')}
             variant="Primary"
+          />
+        ) : null}
+        {visiteurPeutCreerSonEquipe ? (
+          <Button
+            onPress={ouvrirLaConnexionDuTournoi}
+            style={{ minHeight: 44 }}
+            title={t('tournamentFicheWeb.signUp.haveAccount')}
+            variant="Secondary"
           />
         ) : null}
         {canRegisterTournamentSourceTeam ? (

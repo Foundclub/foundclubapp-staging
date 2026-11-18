@@ -754,7 +754,8 @@ const RELEVE_DU_LECTEUR = {
     validationManuelle: 0,
   },
   visiteur: {
-    barreDuBas: "Se connecter pour s'inscrire",
+    // T-PAGES-4b (18/11, chef, R7) : « Créer mon équipe », comme le site.
+    barreDuBas: '20 € par joueur | Créer mon équipe',
     brouillon: 0,
     carteMonEquipe: 0,
     carteTournoi: 1,
@@ -1293,7 +1294,7 @@ describe('T-PAGES-4b · 3 — en bas, un seul bouton, celui du lecteur', () => {
       membre: 'Voir mon équipe',
       organisateur: 'Gérer le tournoi',
       sansEquipe: 'Créer mon équipe',
-      visiteur: 'Se connecter pour s\'inscrire',
+      visiteur: 'Créer mon équipe',
     };
     Object.entries(attendus).forEach(([qui, titre]) => {
       const [barre] = parTestID(monter(LECTEURS[qui]()), 'tournament-bottom-bar');
@@ -1320,5 +1321,54 @@ describe('T-PAGES-4b · 4 — « Lire les conditions » passe l id du tournoi', 
     appuyer(monter(LECTEURS.organisateur()), 'event-tournament-terms-link');
     expect(ouvrir.mock.calls).toEqual([['event-1'], ['event-1']]);
     ouvrir.mockRestore();
+  });
+});
+
+describe('T-PAGES-4b · 5 — le visiteur sans compte : « Créer mon équipe », comme le site (R7)', () => {
+  const ATTENDU_CONNEXION = {
+    params: { origin: 'EventDetails', source: 'event-details-tournament-register' },
+    screen: 'Login',
+  };
+
+  test('🔴 la carte « Ton inscription » : « Créer mon équipe », puis « J’ai déjà un compte »', () => {
+    const [carte] = parTestID(monter(LECTEURS.visiteur()), 'tournament-registration-card');
+    expect(carte).toBeTruthy();
+    expect(textes(carte)).toEqual([
+      'Ton inscription',
+      'Inscris ton équipe',
+      '20 € par joueur',
+      'Ton équipe est validée dès la 5ᵉ place payée.',
+      'Créer mon équipe',
+      'J’ai déjà un compte',
+    ]);
+  });
+
+  test('🔴 chacun des deux range le tournoi et ouvre la connexion', () => {
+    // eslint-disable-next-line global-require
+    const { prendreLeRetourAuTournoi } = require('@/navigation/retourAuTournoi');
+    ['Créer mon équipe', 'J’ai déjà un compte'].forEach((titre) => {
+      prendreLeRetourAuTournoi();
+      mockNavigate.mockClear();
+      const [carte] = parTestID(monter(LECTEURS.visiteur()), 'tournament-registration-card');
+      const bouton = carte.findAllByType(TouchableOpacity)
+        .find((/** @type {any} */ node) => textOf(node) === titre);
+      act(() => {
+        bouton.props.onPress();
+      });
+      expect([titre, mockNavigate.mock.calls]).toEqual([titre, [['PublicAuthStack', ATTENDU_CONNEXION]]]);
+      expect(prendreLeRetourAuTournoi()).toBe('event-1');
+    });
+  });
+
+  test('🔴 la barre du bas : « 20 € par joueur », « Créer mon équipe »', () => {
+    expect(barreDe(monter(LECTEURS.visiteur()))).toEqual(['20 € par joueur', 'Créer mon équipe']);
+  });
+
+  test('tournoi publié ou clos : le visiteur garde « Se connecter pour s inscrire » / « Voir le tournoi »', () => {
+    const publie = LECTEURS.visiteur();
+    publie.event.tournamentConfig = { ...publie.event.tournamentConfig, competitionState: 'published' };
+    const root = monter(publie);
+    expect(barreDe(root)).toEqual(["Se connecter pour s'inscrire"]);
+    expect(parTestID(root, 'tournament-registration-card')).toHaveLength(0);
   });
 });
