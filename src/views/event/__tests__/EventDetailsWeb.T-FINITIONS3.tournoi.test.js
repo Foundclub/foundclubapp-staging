@@ -641,11 +641,13 @@ test('🔴 T-SUITES (11) — organisateur : 1 validée, 5 en attente, 1 refusée
   const arbre = monter(TOURNOI_19_12({
     tournamentTeams: [
       equipe(1, 'accepted'), equipe(2, 'pending'), equipe(3, 'pending'), equipe(4, 'pending'),
-      equipe(5, 'pending'), equipe(6, 'pending'), equipe(7, 'rejected'),
+      equipe(5, 'pending'), equipe(6, 'pending'), equipe(7, 'declined'),
       equipe(8, 'pending', { archivedAt: '2026-11-10T10:00:00.000Z' }),
     ],
   }), L_ORGANISATEUR);
   const [compteurs] = blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'div'
     && n.props.style?.flexWrap === 'wrap' && texte(n).includes('en attente'));
   expect(texte(compteurs)).toMatch(/^6 équipes/);
+  // Chef « 2- A » : l'équipe archivée n'est plus « en attente » non plus.
+  expect(texte(compteurs)).toContain('5 en attente');
 });

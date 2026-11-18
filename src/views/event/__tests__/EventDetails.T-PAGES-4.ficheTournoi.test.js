@@ -1413,7 +1413,7 @@ describe('T-SUITES (11) — le compteur d équipes de la fiche suit la règle du
         organizer: { documentId: 'orga-1' },
         tournamentTeams: [
           equipe(1, 'accepted'), equipe(2, 'pending'), equipe(3, 'pending'), equipe(4, 'pending'),
-          equipe(5, 'pending'), equipe(6, 'pending'), equipe(7, 'rejected'),
+          equipe(5, 'pending'), equipe(6, 'pending'), equipe(7, 'declined'),
           equipe(8, 'pending', { archivedAt: '2026-11-10T10:00:00.000Z' }),
         ],
       }),

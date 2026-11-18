@@ -91,6 +91,21 @@ describe('tournamentUtils', () => {
     });
   });
 
+  // T-SUITES-TOURNOI (18/11, chef « 2- A ») : une équipe archivée (`archivedAt`, même restée
+  // « pending ») ne compte plus dans « en attente » : même règle que getTournamentRegisteredTeamsCount.
+  test('🔴 T-SUITES : une équipe archivée (archivedAt) n est plus « en attente »', () => {
+    const teams = [
+      { members: [], status: 'accepted' },
+      { members: [], status: 'pending' },
+      { archivedAt: '2026-11-10T10:00:00.000Z', members: [], status: 'pending' },
+      { archivedAt: '2026-11-10T10:00:00.000Z', members: [], status: 'accepted' },
+      { members: [], status: 'declined' },
+    ];
+    expect(getTournamentStatusCounters(teams, {})).toEqual(expect.objectContaining({
+      accepted: 1, archived: 2, declined: 1, pending: 1,
+    }));
+  });
+
   test('finds the pending tournament membership for a user', () => {
     const teams = [
       {
