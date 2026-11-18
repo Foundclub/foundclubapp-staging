@@ -7412,6 +7412,8 @@ function EventDetails({ navigation, route }) {
     const lieu = getEventLocationText(event);
     return (
       <TournamentEssentials
+        // IMPL-1-FICHE (18/11, écran 6b) : une carte, une ligne par info ; l'activité et la section
+        // (« Foot à 5, Mixte ») ouvrent la ligne du format (elles quittent les pastilles du bandeau).
         actions={lieu ? {
           place: (
             <OuvrirDansLeGps
@@ -7420,7 +7422,10 @@ function EventDetails({ navigation, route }) {
             />
           ),
         } : undefined}
+        formatPrefix={[event?.tournamentActivity?.name, event?.tournamentSection?.name]
+          .map((nom) => String(nom || '').trim()).filter(Boolean).join(', ')}
         items={items}
+        variant="liste"
       />
     );
   };
@@ -8731,16 +8736,19 @@ function EventDetails({ navigation, route }) {
               ⛔ Ni `ScreenContainer` ni `Tag` ne bougent : ils sont partages, le
               defaut ne l est pas. Et surtout PAS de plafond de largeur ici, qui
               tronquerait « SEANCE D ESSAI ». */}
-          <View
-            style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}
-            testID="event-type-tag-row"
-          >
-            <Tag
-              style={{}}
-              text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
-              textStyle={Fonts.p2}
-            />
-            {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
+          {/* IMPL-1-FICHE (18/11, écran 6b) : sur la fiche d'un tournoi, TOURNOI passe dans les
+              pastilles du bandeau (EventHeader) ; la pastille de type ne le redit pas au-dessus. */}
+          {bandeauDuTournoi ? null : (
+            <View
+              style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}
+              testID="event-type-tag-row"
+            >
+              <Tag
+                style={{}}
+                text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
+                textStyle={Fonts.p2}
+              />
+              {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
                 RETIREE : l'adversaire vit desormais dans l'encart de la carte,
                 face au club (« Test FC — FC Bonneveine »). La garder ferait dire
                 trois fois la meme chose — encart, titre, et cette ligne.
@@ -8748,7 +8756,8 @@ function EventDetails({ navigation, route }) {
                 JAMAIS ete ajoutee (verifie — aucune occurrence dans
                 src/theme/strings/translations/). Elle ne vivait que comme repli
                 de t() ici meme ; elle part avec la ligne. */}
-          </View>
+            </View>
+          )}
           <WithDataWrapper
             error={error}
             errorMessage={eventLoadErrorMessage}

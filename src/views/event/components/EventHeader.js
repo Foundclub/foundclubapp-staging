@@ -42,7 +42,12 @@ import {
   formatEventWhenLine,
   getStageLastDay,
 } from '../eventInfoLines';
-import { getTournamentCategoryLabel, getTournamentEntryFeeLabel } from '../tournamentUtils';
+import { getTournamentShortPlace } from '../tournamentJoinRules';
+import {
+  getTournamentCategoryLabel,
+  getTournamentEntryFeeLabel,
+  getTournamentMinAge,
+} from '../tournamentUtils';
 import MatchScoreEncart from './MatchScoreEncart';
 /* eslint-enable perfectionist/sort-imports */
 
@@ -393,6 +398,117 @@ function EventHeader({
       </View>
     </>
   );
+
+  // IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écran 6b, remarque 1 d'Adel) — LE BANDEAU DU
+  // TOURNOI : l'image du tournoi (celle de sa carte dans les listes) en bandeau, le nom et
+  // « Organisé par … · lieu court » sur le voile, puis les pastilles sur UNE ligne : TOURNOI en
+  // bleu, l'état, l'âge. « Mixte » et l'activité passent dans le format (« L'essentiel »).
+  // ponytail: l'image est celle du TYPE (card-tournoi.png) : l'événement n'a aucun champ photo
+  // (schéma admin) ; la photo du complexe demande un champ ou les photos de l'installation.
+  if (enBandeau && !matchScoreSummary) {
+    const lieuCourt = getTournamentShortPlace(event);
+    const lieuSansClub = clubName && lieuCourt.startsWith(`${clubName} · `)
+      ? lieuCourt.slice(clubName.length + 3)
+      : lieuCourt;
+    const sousTitre = [
+      clubName ? t('tournamentFicheWeb.organizedBy', { name: clubName, ...SANS_ECHAPPEMENT }) : '',
+      clubName ? lieuSansClub : lieuCourt,
+    ].filter(Boolean).join(' · ');
+    const minAge = getTournamentMinAge(event);
+    let pastilleAge = categoryName ? { cle: 'age', texte: categoryName } : null;
+    if (minAge) pastilleAge = { cle: 'age', texte: t('implFiche.fromAge', { minAge }) };
+    const pastilles = [
+      { cle: 'type', plein: true, texte: t('eventCardNew.tournament', 'TOURNOI') },
+      tournamentHero?.statusLabel
+        ? { cle: 'etat', etat: true, texte: String(tournamentHero.statusLabel) }
+        : null,
+      pastilleAge,
+    ].filter(Boolean);
+    return (
+      <View style={Spaces.gap[12]} testID="event-header-tournament-banner">
+        <ImageBackground
+          imageStyle={{ borderRadius: 24 }}
+          resizeMode="cover"
+          source={/** @type {any} */ (BG_TOURNAMENT)}
+          style={[ApplicationStyle.borderRadius24, {
+            justifyContent: 'flex-end', minHeight: 184, overflow: 'hidden',
+          }]}
+        >
+          <View
+            pointerEvents="none"
+            style={{
+              backgroundColor: withAlpha(Colors.primary900, 0.35),
+              bottom: 0,
+              left: 0,
+              position: 'absolute',
+              right: 0,
+              top: 0,
+            }}
+          />
+          <View
+            style={[Spaces.gap[4], Spaces.padding[16], {
+              backgroundColor: withAlpha(Colors.primary900, 0.7),
+            }]}
+          >
+            <Text numberOfLines={2} style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {headerPrimaryTitle}
+            </Text>
+            {sousTitre ? (
+              <Text style={[Fonts.p2, Fonts.neutral200]}>{sousTitre}</Text>
+            ) : null}
+          </View>
+        </ImageBackground>
+        {/* Une ligne sur un téléphone ; sur un écran étroit, la rangée passe à la ligne plutôt que
+            de couper une pastille (site à 375 px, mesuré). */}
+        <View
+          style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, Spaces.gap[8]]}
+          testID="event-header-tournament-tags"
+        >
+          {pastilles.map((/** @type {any} */ pastille) => {
+            let fond = 'transparent';
+            if (pastille.plein) fond = Colors.primary500;
+            else if (pastille.etat) fond = withAlpha(Colors.primary500, 0.16);
+            let encre = Colors.neutral00;
+            if (pastille.plein) encre = Colors.primary900;
+            else if (pastille.etat) encre = Colors.primary500;
+            return (
+              <View
+                key={pastille.cle}
+                style={[ApplicationStyle.borderRadius100, Spaces.paddingHorizontal[12], {
+                  backgroundColor: fond,
+                  borderColor: pastille.plein || pastille.etat
+                    ? fond
+                    : withAlpha(Colors.neutral00, 0.24),
+                  borderWidth: 1,
+                  paddingVertical: 6,
+                }]}
+              >
+                <Text style={[pastille.plein ? Fonts.p4Bold : Fonts.p4, { color: encre }]}>
+                  {pastille.texte}
+                </Text>
+              </View>
+            );
+          })}
+          {facilityName && tournamentHero?.showFacility ? (
+            <View
+              style={[ApplicationStyle.borderRadius100, Spaces.paddingHorizontal[12], {
+                backgroundColor: withAlpha(accentColor, 0.14), paddingVertical: 6,
+              }]}
+            >
+              <Text style={[Fonts.p4, Fonts.neutral00]}>{facilityName}</Text>
+            </View>
+          ) : null}
+        </View>
+        {invitedTeamNames.length > 0 ? (
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t('eventDetails.header.invitedTeams', 'Équipes invitées')}
+            {' : '}
+            {invitedTeamNames.join(' • ')}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
 
   return (
     <ImageBackground

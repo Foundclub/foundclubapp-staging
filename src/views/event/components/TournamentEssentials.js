@@ -1,6 +1,7 @@
 import i18next from 'i18next';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
@@ -132,16 +133,73 @@ export const getTournamentEssentials = (event) => (
  * @param {EssentialItem[]} props.items - Les cases (`getTournamentEssentials(event)`).
  * @param {Partial<Record<EssentialItem['key'], import('react').ReactNode>>} [props.actions] - Un
  *   lien sous une case (l'itinéraire sous le lieu).
+ * @param {'cases' | 'liste'} [props.variant] - « liste » : une carte, une ligne par info avec son
+ *   icône (fiche du tournoi, IMPL-1-FICHE) ; « cases » (défaut) : la grille d'avant.
+ * @param {string} [props.formatPrefix] - En tête de la ligne Format (« Foot à 5, Mixte »).
  * @returns {import('react').ReactElement | null} Les cases, ou rien.
  */
-function TournamentEssentials({ actions = {}, items }) {
+function TournamentEssentials({
+  actions = {}, formatPrefix = '', items, variant = 'cases',
+}) {
   const {
-    ApplicationStyle, Colors, Fonts, Spaces,
+    ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const ds = createTournamentDesignSystem({
     ApplicationStyle, Colors, Fonts, Spaces,
   });
   if (!Array.isArray(items) || items.length === 0) return null;
+  // IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écran 6b, remarque 1 d'Adel) — les infos en UNE
+  // carte, une ligne par info avec son icône ; plus de grille de 4 cases. Même `testID` que les
+  // cases. Témoin : __tests__/TournamentEssentials.IMPL-1.liste.test.js.
+  if (variant === 'liste') {
+    const icones = {
+      date: Images.calendar, format: Images.users, place: Images.pin, price: Images.euroCircle,
+    };
+    /**
+     * La ligne d'une info, en une phrase.
+     * @param {EssentialItem} item - L'info.
+     * @returns {string} La phrase.
+     */
+    const phrase = (item) => {
+      if (item.key === 'place') return [item.value, item.note].filter(Boolean).join(', ');
+      if (item.key === 'format') {
+        return [formatPrefix, item.value, item.note].filter(Boolean).join(' · ');
+      }
+      return [item.value, item.note].filter(Boolean).join(' · ');
+    };
+    return (
+      <View style={[...ds.styles.compactPanelCard, { gap: 0 }]} testID="tournament-essentials">
+        {items.map((item, index) => (
+          <View
+            key={item.key}
+            style={[Spaces.gap[4], {
+              borderTopColor: withAlpha(Colors.neutral00, 0.08),
+              borderTopWidth: index === 0 ? 0 : 1,
+              paddingVertical: 12,
+            }]}
+            testID={`tournament-essentials-${item.key}`}
+          >
+            <View style={{ alignItems: 'flex-start', flexDirection: 'row', gap: 12 }}>
+              <Image
+                accessibilityIgnoresInvertColors
+                source={icones[item.key]}
+                style={{ height: 20, tintColor: Colors.primary500, width: 20 }}
+              />
+              <Text
+                accessibilityLabel={`${item.label} : ${phrase(item)}`}
+                style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}
+              >
+                {phrase(item)}
+              </Text>
+            </View>
+            {actions[item.key]
+              ? <View style={{ paddingLeft: 32 }}>{actions[item.key]}</View>
+              : null}
+          </View>
+        ))}
+      </View>
+    );
+  }
   return (
     <View
       style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}
