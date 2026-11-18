@@ -27,7 +27,7 @@ export const SECTIONS_DU_REGLEMENT = Object.freeze([
   },
   {
     paragraphes: [
-      '5 joueurs sur le terrain, gardien compris. Jusqu\'à 3 remplaçants : 8 joueurs au maximum par équipe.',
+      '5 joueurs sur le terrain, gardien compris. Pas de limite de remplaçants : chaque joueur de l\'équipe doit avoir payé sa place.',
       'Une équipe est validée quand 5 de ses joueurs ont payé leur place. On peut s\'inscrire avec son équipe complète, ou seul, ou à 2, 3 ou 4 : FoundClub complète l\'équipe avec d\'autres joueurs inscrits.',
       'Changements illimités et volants, à hauteur de son banc, sans arrêter le jeu (le gardien change à l\'arrêt de jeu).',
       'Il faut 4 joueurs au minimum pour commencer ou continuer un match.',
