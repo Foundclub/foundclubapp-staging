@@ -1,19 +1,42 @@
-import { buildPublicWebUrl } from '@/utils/shareLinks';
+import { Platform } from 'react-native';
 
-import { LEGAL_TOURNAMENT_TERMS_PATH, LEGAL_TOURNAMENT_TERMS_URL } from '@/config/legalUrls';
+import { resolveAppSiteOrigin, resolveWebAppOrigin } from '@/utils/shareLinks';
+
+import { LEGAL_TOURNAMENT_TERMS_PATH } from '@/config/legalUrls';
 import LinksPlatform from '@/platform/links';
 
-// T-FINITIONS (16/11, « 3- A ») — « Conditions d'inscription » : la même page publique du site
-// (`/conditions-tournoi`) sur la page de paiement d'une place ET sur la fiche d'un tournoi payant.
-export const TOURNAMENT_TERMS_URL = buildPublicWebUrl(
-  /** @type {any} */ ({ path: LEGAL_TOURNAMENT_TERMS_PATH }),
-) || LEGAL_TOURNAMENT_TERMS_URL;
+/**
+ * T-FINITIONS (16/11, « 3- A ») — « Conditions d'inscription » : la même page publique du site
+ * (`/conditions-tournoi`) sur la page de paiement d'une place ET sur la fiche d'un tournoi payant.
+ * T-PAGES-6b (18/11) : au téléphone, le site de l'environnement de l'app (l'app de recette ouvrait
+ * la production) ; sur le site, celui qui sert la page.
+ * Témoin : components/__tests__/tournamentTerms.TPAGES6b.environnement.test.js.
+ * @param {{ appEnv?: string, os?: string, webUrl?: string }} [params] - Pour les témoins.
+ * @returns {string} L'adresse des conditions.
+ */
+export const tournamentTermsUrl = ({ appEnv, os = Platform.OS, webUrl } = {}) => {
+  const origine = os === 'web'
+    ? resolveWebAppOrigin({ webUrl })
+    : resolveAppSiteOrigin({ appEnv, webUrl });
+  return `${origine}${LEGAL_TOURNAMENT_TERMS_PATH}`;
+};
+
+export const TOURNAMENT_TERMS_URL = tournamentTermsUrl();
 
 /**
- * Ouvre les conditions d'inscription.
+ * Ouvre les conditions d'inscription. T-PAGES-6b (18/11) : avec l'identifiant du tournoi, la
+ * page reçoit `?tournoi=<id>` et « Revenir au tournoi » ramène à sa fiche. Seul un texte ou un
+ * nombre est un identifiant : branchée telle quelle sur `onPress`, la fonction reçoit l'événement
+ * du toucher, et l'adresse reste celle d'avant.
+ * @param {unknown} [eventId] - L'identifiant du tournoi, facultatif.
  * @returns {any}
  */
-export const openTournamentTerms = () => LinksPlatform.openUrl(TOURNAMENT_TERMS_URL);
+export const openTournamentTerms = (eventId) => {
+  const estUnId = typeof eventId === 'string' || typeof eventId === 'number';
+  const id = estUnId ? String(eventId).trim() : '';
+  const adresse = tournamentTermsUrl();
+  return LinksPlatform.openUrl(id ? `${adresse}?tournoi=${encodeURIComponent(id)}` : adresse);
+};
 
 /**
  * Un tournoi est payant par son réglage seul (`tournamentConfig.entryFeeCents`, comme le serveur).

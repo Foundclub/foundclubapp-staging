@@ -13906,6 +13906,10 @@ export default {
     decrement: 'One less',
     increment: 'One more',
   },
+  inscriptionTournoi: {
+    roleSansEffet: "The role you choose changes nothing for the tournament: it's only there to know your role in your everyday sporting life.",
+    tuRejoins: "You're joining",
+  },
   invitationLink: {
     clipboard: {
       body: 'If you just installed FoundClub from an invitation, '
@@ -13968,6 +13972,8 @@ export default {
       captainBody: 'This link is for inviting your players. Send it to them.',
       captainTitle: "It's your team",
       closed: 'Registrations for this tournament are closed.',
+      fullBody: 'The {{team}} team is full ({{count}} players out of {{max}}). Find another team on the tournament page.',
+      fullTitle: 'Team full',
       intro: "You're invited to join the {{team}} team for the {{event}} tournament.",
       introCaptain: '{{captain}} invites you to their team {{team}}, for the {{event}} tournament.',
       introShort: "You're invited to join a tournament team.",
@@ -19589,6 +19595,7 @@ export default {
   register: {
     actions: {
       haveAccount: 'Already signed up? Log in',
+      receiveCode: 'Get my code',
       register: 'Continue',
       submit: 'Create your account',
     },

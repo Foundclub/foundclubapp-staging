@@ -398,3 +398,16 @@ test('🔴 (4) « Lire les conditions d inscription » passe l id du tournoi', (
   cliquer(arbre, 'Lire les conditions d’inscription');
   expect(mockConditions).toHaveBeenCalledWith('event-1');
 });
+
+// Récolte du train 13 (chef « A », 18/11) : « Créer mon équipe » du visiteur retient le tournoi,
+// comme la connexion (T-PAGES-6b) ; l'écran du rôle le lit et affiche son bandeau
+// (UserRole.TPAGES6b.bandeauTournoi.test.js prouve le rendu à partir de cette lecture).
+test('🔴 (3) visiteur — « Créer mon équipe » retient le tournoi pour l écran du rôle', () => {
+  // eslint-disable-next-line global-require
+  const { lireLInscriptionAuTournoi, oublierLInscriptionAuTournoi } = require('@/domains/tournoi/inscriptionEnCours');
+  oublierLInscriptionAuTournoi();
+  const arbre = monter(fiche([EQUIPE_OUVERTE], { tournamentTeams: undefined }), VISITEUR);
+  cliquer(arbre, 'Créer mon équipe');
+  expect(lireLInscriptionAuTournoi()).toEqual(expect.objectContaining({ eventId: 'event-1', nom: 'Tournoi Montpellier' }));
+  oublierLInscriptionAuTournoi();
+});

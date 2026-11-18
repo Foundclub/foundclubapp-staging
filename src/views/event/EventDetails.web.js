@@ -37,6 +37,7 @@ import {
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
+import { retenirLInscriptionAuTournoi } from '@/domains/tournoi/inscriptionEnCours';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -2293,24 +2294,28 @@ function EventDetails({ navigation, route }) {
       userData?.documentId,
     )?.responseStatus) === 'invited' ? 'invited' : 'requested';
   }
-  const ouvrirLaConnexionDuTournoi = () => openPublicAuthFlow(navigation, {
-    origin: RouteNames.EventDetails,
-    retourApresConnexion: true,
-    source: 'event-details-register-team',
-  });
-  // T-PAGES-3b (point 3, R7) : « Créer mon équipe » du visiteur ouvre la création du compte.
-  const ouvrirLInscriptionDuTournoi = () => openPublicAuthFlow(navigation, {
-    origin: RouteNames.EventDetails,
-    retourApresConnexion: true,
-    source: 'event-details-register-team',
-  }, RouteNames.Register);
+  // T-PAGES-6b : l'écran du numéro et celui du rôle rappelleront ce tournoi.
+  const ouvrirLaConnexionDuTournoi = () => {
+    retenirLInscriptionAuTournoi({ event });
+    openPublicAuthFlow(navigation, {
+      origin: RouteNames.EventDetails,
+      retourApresConnexion: true,
+      source: 'event-details-register-team',
+    });
+  };
+  // T-PAGES-3b (point 3, R7) : « Créer mon équipe » du visiteur ouvre la création du compte ;
+  // comme la connexion, il retient le tournoi pour l'écran du rôle (récolte, chef « A » 18/11).
+  const ouvrirLInscriptionDuTournoi = () => {
+    retenirLInscriptionAuTournoi({ event });
+    openPublicAuthFlow(navigation, {
+      origin: RouteNames.EventDetails,
+      retourApresConnexion: true,
+      source: 'event-details-register-team',
+    }, RouteNames.Register);
+  };
   // T-PAGES-3b (point 4) : les conditions savent de quel tournoi l'on vient (« Revenir au
-  // tournoi », `?tournoi=<id>` de PublicConditionsTournoiPage). Le paramètre arrive avec T-PAGES-6.
-  // ponytail: le type de `openTournamentTerms` ne le connaît pas encore ; retirer le transtypage à
-  // la récolte de T-PAGES-6.
-  const ouvrirLesConditionsDuTournoi = () => /** @type {(eventId?: string) => any} */ (
-    openTournamentTerms
-  )(event?.documentId);
+  // tournoi », `?tournoi=<id>` de PublicConditionsTournoiPage).
+  const ouvrirLesConditionsDuTournoi = () => openTournamentTerms(event?.documentId);
   // T-PAGES-3b (point 1) : les étiquettes de l'en-tête (maquette a et b). Sans valeur, pas d'étiquette.
   const equipeInscriteDuLecteur = Boolean(equipeDuLecteur) && ['captain', 'member'].includes(roleDuLecteur);
   const inscriptionsOuvertes = !tournoiClos && !isCancelled && event?.isActive !== false;
@@ -3411,6 +3416,7 @@ function EventDetails({ navigation, route }) {
                         } else if (isSignedIn) {
                           handleCreateTournamentTeam();
                         } else {
+                          retenirLInscriptionAuTournoi({ event });
                           openPublicAuthFlow(navigation, {
                             origin: RouteNames.EventDetails,
                             retourApresConnexion: true,

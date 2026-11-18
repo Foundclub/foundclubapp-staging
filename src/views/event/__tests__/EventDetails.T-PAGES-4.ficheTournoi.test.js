@@ -1360,6 +1360,24 @@ describe('T-PAGES-4b · 5 — le visiteur sans compte : « Créer mon équipe »
     });
   });
 
+  // Récolte du train 13 (chef « A », 18/11) : les deux boutons retiennent aussi l inscription
+  // (T-PAGES-6b), que l écran du numéro et celui du rôle rappellent.
+  test('🔴 chacun des deux retient l inscription au tournoi pour l écran du rôle', () => {
+    // eslint-disable-next-line global-require
+    const { lireLInscriptionAuTournoi, oublierLInscriptionAuTournoi } = require('@/domains/tournoi/inscriptionEnCours');
+    ['Créer mon équipe', 'J’ai déjà un compte'].forEach((titre) => {
+      oublierLInscriptionAuTournoi();
+      const [carte] = parTestID(monter(LECTEURS.visiteur()), 'tournament-registration-card');
+      const bouton = carte.findAllByType(TouchableOpacity)
+        .find((/** @type {any} */ node) => textOf(node) === titre);
+      act(() => {
+        bouton.props.onPress();
+      });
+      expect([titre, lireLInscriptionAuTournoi()?.eventId]).toEqual([titre, 'event-1']);
+    });
+    oublierLInscriptionAuTournoi();
+  });
+
   test('🔴 la barre du bas : « 20 € par joueur », « Créer mon équipe »', () => {
     expect(barreDe(monter(LECTEURS.visiteur()))).toEqual(['20 € par joueur', 'Créer mon équipe']);
   });

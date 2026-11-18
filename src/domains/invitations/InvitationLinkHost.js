@@ -35,6 +35,10 @@ import {
   readPendingInvite,
   savePendingInvite,
 } from '@/domains/invitations/pendingInvite';
+import {
+  oublierLInscriptionAuTournoi,
+  retenirLInscriptionAuTournoi,
+} from '@/domains/tournoi/inscriptionEnCours';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import Button from '@/components/atoms/button/Button';
@@ -314,6 +318,18 @@ const describeTournamentAgeNotice = (preview, t) => {
 };
 
 /**
+ * T-PAGES-6b (18/11/2026, recette 45) — l'équipe du lien est PLEINE : l'aperçu porte `rosterCount`
+ * sur `maxRosterSize` (même compte que le serveur). Le capitaine et les membres n'y sont pas
+ * concernés : ils gardent leur variante. Lu aussi par le site (InviteLandingPage).
+ * @param {any} preview - L'aperçu public du lien.
+ * @returns {boolean} Vrai si l'équipe est complète pour qui n'en est pas.
+ */
+export const isTournamentInviteTeamFull = (preview) => {
+  const max = Math.round(Number(preview?.maxRosterSize));
+  return max > 0 && Number(preview?.rosterCount) >= max && preview?.viewer?.alreadyMember !== true;
+};
+
+/**
  * T-INVITE (15/11/2026, Adel D37 « B ») — Decision PURE : la fenetre d'un lien d'EQUIPE DE TOURNOI
  * (`/i/tournament/<tournoi>?c=<code>`). Connecte : « Rejoindre l'equipe » (le serveur verifie club,
  * age,
@@ -323,7 +339,8 @@ const describeTournamentAgeNotice = (preview, t) => {
  * @param {boolean} params.isSignedIn - la personne est-elle connectee ?
  * @param {any} [params.preview] - l'apercu public (tournoi, equipe, statut).
  * @param {any} params.t - la traduction (react-i18next ou une doublure).
- * @returns {{ action: 'join' | 'none' | 'openTeam' | 'openTournament' | 'shareLink' | 'signIn',
+ * @returns {{ action: 'join' | 'none' | 'openEventDetails' | 'openTeam' | 'openTournament'
+ *   | 'shareLink' | 'signIn',
  *   ageNotice: string, body: string, closed: boolean, primary: string | null,
  *   primaryDisabled?: boolean, secondary: string, secondaryAction: 'dismiss' | 'openTeam',
  *   showTerms: boolean, title: string }} la fenetre (`primaryDisabled` : T-FINITIONS-3 ;
@@ -380,6 +397,31 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       },
     )
     : withTeam;
+  // T-PAGES-6b : une équipe pleine ne propose plus de la rejoindre (ni « Continuer » au visiteur) ;
+  // elle renvoie à la fiche du tournoi pour en trouver une autre.
+  if (isTournamentInviteTeamFull(preview)) {
+    return {
+      ...notes,
+      // Décision 2 A du chef (18/11) : la FICHE du tournoi, où l'on rejoint une autre équipe.
+      action: 'openEventDetails',
+      body: t(
+        'invitationLink.tournamentTeam.fullBody',
+        "L'équipe {{team}} est complète ({{count}} joueurs sur {{max}}). Trouve une autre équipe "
+          + 'sur la fiche du tournoi.',
+        {
+          ...SANS_ECHAPPEMENT,
+          count: Number(preview?.rosterCount),
+          max: Math.round(Number(preview?.maxRosterSize)),
+          team: teamName,
+        },
+      ),
+      closed: false,
+      primary: t('invitationLink.tournament.primary', 'Voir le tournoi'),
+      secondary: t('invitationLink.later', 'Plus tard'),
+      secondaryAction: 'dismiss',
+      title: t('invitationLink.tournamentTeam.fullTitle', 'Équipe complète'),
+    };
+  }
   if (!isSignedIn) {
     // T-PARCOURS-2 (point 5) : sans compte, la fenêtre dit à quoi on est invité (une ligne par
     // information) ; tant que l'aperçu n'est pas arrivé, la phrase d'avant, sur une ligne.
@@ -617,10 +659,20 @@ function InvitationLinkHost({ userId } = {}) {
     const code = String(codedTournamentInvite?.code || '');
     setTournamentPreview(null);
     if (!code) return undefined;
+    // T-PAGES-6b (18/11) : avec un compte, l'invitation rouverte est le retour au tournoi ; sans
+    // compte, l'aperçu reçu range le tournoi et l'équipe pour le tunnel (Register, UserRole).
+    if (isSignedIn) oublierLInscriptionAuTournoi();
     let isCurrent = true;
     // eslint-disable-next-line global-require
     require('@/services/tournamentTeam/tournamentTeamService').previewTournamentTeamInviteLink(code)
-      .then((preview) => { if (isCurrent) setTournamentPreview(preview); })
+      .then((preview) => {
+        if (!isCurrent) return;
+        setTournamentPreview(preview);
+        if (!isSignedIn && preview?.event && preview?.status !== 'closed'
+          && !isTournamentInviteTeamFull(preview)) {
+          retenirLInscriptionAuTournoi({ equipe: preview?.team?.name, event: preview.event });
+        }
+      })
       .catch(() => undefined);
     return () => {
       isCurrent = false;
@@ -807,6 +859,18 @@ function InvitationLinkHost({ userId } = {}) {
     });
   }, [closeWindow, codedTournamentInvite?.id, goTo, tournamentPreview]);
 
+  // T-PAGES-6b (décision 2 A du chef) : l'équipe complète renvoie à la fiche du tournoi.
+  const openTournamentFiche = useCallback(() => {
+    clearPendingInvite();
+    closeWindow();
+    goTo({
+      params: {
+        eventId: String(tournamentPreview?.event?.documentId || codedTournamentInvite?.id || ''),
+      },
+      route: RouteNames.EventDetails,
+    });
+  }, [closeWindow, codedTournamentInvite?.id, goTo, tournamentPreview]);
+
   const shareOwnTournamentTeamLink = useCallback(async () => {
     // eslint-disable-next-line global-require -- chargé à l'appui, comme le partage de la fiche
     const { shareTournamentTeamInviteLink } = require('@/services/teamInvite/teamInviteShare');
@@ -895,6 +959,7 @@ function InvitationLinkHost({ userId } = {}) {
     let onPrimary = handleTournamentPrimary;
     if (coded.action === 'openTeam') onPrimary = openOwnTournamentTeam;
     if (coded.action === 'shareLink') onPrimary = shareOwnTournamentTeamLink;
+    if (coded.action === 'openEventDetails') onPrimary = openTournamentFiche;
     return (
       <GlobalPromptModal
         body={coded.body}
@@ -915,7 +980,7 @@ function InvitationLinkHost({ userId } = {}) {
       >
         {coded.showTerms ? (
           <Button
-            onPress={openTournamentTerms}
+            onPress={() => openTournamentTerms(tournamentPreview?.event?.documentId)}
             title={t('invitationLink.tournamentTeam.terms', "Conditions d'inscription")}
             variant="SecondaryLight"
           />

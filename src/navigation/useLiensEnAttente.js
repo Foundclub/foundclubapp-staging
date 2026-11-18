@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { retourAuLienEnAttente } from '@/domains/collectivite/lienDeLaVille';
+import { oublierLInscriptionAuTournoi } from '@/domains/tournoi/inscriptionEnCours';
 
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { envoyerLeLienEnAttente } from '@/navigation/lienDeLancement';
@@ -44,6 +45,8 @@ const useLiensEnAttente = (pret) => {
         return;
       }
       const tournoi = prendreLeRetourAuTournoi();
+      // T-PAGES-6b (18/11) : le tunnel est fini, son rappel du tournoi n'a plus d'objet.
+      oublierLInscriptionAuTournoi();
       if (envoyerLeLienEnAttente()) return;
       const fiche = tournoi ? imbriquerDepuisLaRacine({
         params: { eventId: tournoi }, route: RouteNames.EventDetails,
