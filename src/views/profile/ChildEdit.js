@@ -12,6 +12,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import { annoncer } from '@/views/profile/parent/annonceDeLaFiche';
 
@@ -374,6 +375,8 @@ function ChildEdit() {
       keyboardScroll
     >
       <View style={[Spaces.gap[24], Spaces.paddingTop[20]]}>
+        {/* INSCRIPTION-PARCOURS A3 : étape facultative du parent, « Plus tard » est en bas. */}
+        {estUneEtapeDInscription ? <OnboardingFacultatif onPress={continuerLInscription} /> : null}
         <View style={[Spaces.gap[8]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {estUneModification

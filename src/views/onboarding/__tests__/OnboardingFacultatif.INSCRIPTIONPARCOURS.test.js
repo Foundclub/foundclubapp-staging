@@ -85,6 +85,17 @@ describe('INSCRIPTION-PARCOURS A3 — les étapes facultatives le disent, en hau
     expect(bandeau).toBeLessThan(titre);
   });
 
+  // L'étape « Ton enfant » du parent est `ChildEdit` (profil), monté sous le nom `UserChild` : le
+  // bandeau n'y vient qu'en inscription, sur le même saut que son « Plus tard ».
+  it('ChildEdit (« Ton enfant » du parent) : bandeau en inscription, au-dessus du titre', () => {
+    const source = fs.readFileSync(path.join(DOSSIER, '..', 'profile', 'ChildEdit.js'), 'utf8');
+    const bandeau = source.indexOf(
+      '{estUneEtapeDInscription ? <OnboardingFacultatif onPress={continuerLInscription} /> : null}',
+    );
+    expect(bandeau).toBeGreaterThan(-1);
+    expect(bandeau).toBeLessThan(source.indexOf('Fonts.h3Bold'));
+  });
+
   it.each(OBLIGATOIRES)('%s (obligatoire) : pas de bandeau', (ecran) => {
     expect(lire(ecran)).not.toContain('OnboardingFacultatif');
   });
