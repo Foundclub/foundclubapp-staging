@@ -181,6 +181,10 @@ export function TournamentPublicTeamCard({
             text={t('implFiche.lookingFor', { count: cherche })}
           />
         ) : null}
+        {/* D239 (pas de limite de joueurs) : une équipe ouverte qui a déjà ses 5 le dit. */}
+        {ouverte && cherche === 0 ? (
+          <Pastille color={Colors.primary500} text={t('implFiche.openToRequests')} />
+        ) : null}
         {effectif !== null ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {t('implFiche.players', { count: effectif })}
@@ -346,7 +350,8 @@ function TournamentTeamsPublic({
           tournamentConfig={config}
         />
       ))}
-      {apercu ? (
+      {/* Un témoin du site peut doubler la feuille d'équipe sans son export nommé. */}
+      {apercu && TournamentTeamPreviewSheet ? (
         <TournamentTeamPreviewSheet
           onAsk={viewerTeam ? null : demander}
           onClose={() => setApercu(null)}

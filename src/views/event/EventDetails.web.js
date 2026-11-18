@@ -3311,7 +3311,9 @@ function EventDetails({ navigation, route }) {
                   )}
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                    {event?.facility?.name ? (
+                    {/* IMPL-1-FICHE (6b) : « Terrain A » n'est plus montré au joueur (l'organisateur le
+                        garde) ; le lieu réel est dans le bandeau et « L'essentiel ». */}
+                    {event?.facility?.name && !vueJoueurDuTournoi ? (
                       <span style={{
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}

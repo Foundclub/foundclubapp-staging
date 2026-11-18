@@ -311,7 +311,10 @@ const MEMBRE_EQUIPE = equipeDuLecteur({ viewerMembership: { responseStatus: 'pre
 const INVITE_EQUIPE = equipeDuLecteur({ viewerMembership: { responseStatus: 'invited' } });
 
 const MIXTE = { tournamentSection: { documentId: 'section-mixte', name: 'Mixte' } };
-const etiquettes = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-tags').map(texte);
+// IMPL-1-FICHE (18/11, 6b) : le joueur lit le bandeau commun (EventHeader) ; ses pastilles sont
+// TOURNOI, l'état, « Dès 16 ans » (« Mixte » passe dans le format de « L'essentiel »).
+const etiquettes = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+  && (n.props?.testID === 'event-header-tournament-tags' || n.props?.['data-testid'] === 'event-tournament-tags')).map(texte);
 /**
  * L'ordre, dans la colonne principale, de l'essentiel et de la carte d'inscription.
  * @param {any} arbre
@@ -330,18 +333,18 @@ const cliquer = (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
 
 test('🔴 (1) joueur sans équipe — l en-tête porte « Inscriptions ouvertes », « Mixte », « À partir de 16 ans »', () => {
   const arbre = monter(fiche([EQUIPE_OUVERTE], MIXTE), SEUL_18_ANS);
-  expect(etiquettes(arbre)).toEqual(['Inscriptions ouvertesMixteÀ partir de 16 ans']);
+  expect(etiquettes(arbre)).toEqual(['TOURNOIInscriptions ouvertesDès 16 ans']);
 });
 
 test('🔴 (1) visiteur — les mêmes étiquettes', () => {
   const arbre = monter(fiche([EQUIPE_OUVERTE], { ...MIXTE, tournamentTeams: undefined }), VISITEUR);
-  expect(etiquettes(arbre)).toEqual(['Inscriptions ouvertesMixteÀ partir de 16 ans']);
+  expect(etiquettes(arbre)).toEqual(['TOURNOIInscriptions ouvertesDès 16 ans']);
 });
 
 test('🔴 (1) capitaine et membre — « Ton équipe est inscrite » à la place de « Inscriptions ouvertes »', () => {
   [CAPITAINE_EQUIPE, MEMBRE_EQUIPE].forEach((equipe) => {
     const arbre = monter(fiche([EQUIPE_OUVERTE, equipe], MIXTE), SEUL_18_ANS);
-    expect(etiquettes(arbre)).toEqual(['Ton équipe est inscriteMixteÀ partir de 16 ans']);
+    expect(etiquettes(arbre)).toEqual(['TOURNOITon équipe est inscriteDès 16 ans']);
     act(() => arbre.unmount());
     mounted = null;
   });
@@ -349,10 +352,10 @@ test('🔴 (1) capitaine et membre — « Ton équipe est inscrite » à la plac
 
 test('🔴 (1) tournoi clôturé ou sans section ni âge — ni « Inscriptions ouvertes », ni étiquette vide', () => {
   const clos = monter(fiche([EQUIPE_OUVERTE], { ...MIXTE, tournamentConfig: { ...CONFIG, closedAt: '2026-12-20T10:00:00.000Z' } }), SEUL_18_ANS);
-  expect(etiquettes(clos)).toEqual(['MixteÀ partir de 16 ans']);
+  expect(etiquettes(clos)).toEqual(['TOURNOIDès 16 ans']);
   act(() => clos.unmount());
   const nu = monter(fiche([EQUIPE_OUVERTE], { tournamentConfig: { ...CONFIG, closedAt: '2026-12-20T10:00:00.000Z', minAge: 0 } }), SEUL_18_ANS);
-  expect(etiquettes(nu)).toEqual([]);
+  expect(etiquettes(nu)).toEqual(['TOURNOI']);
 });
 
 test('🔒 (1) organisateur — son en-tête ne change pas : aucune étiquette', () => {

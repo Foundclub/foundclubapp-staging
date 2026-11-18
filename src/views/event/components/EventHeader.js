@@ -455,7 +455,11 @@ function EventHeader({
               backgroundColor: withAlpha(Colors.primary900, 0.7),
             }]}
           >
-            <Text numberOfLines={2} style={[Fonts.h3Bold, Fonts.neutral00]}>
+            <Text
+              accessibilityRole="header"
+              numberOfLines={2}
+              style={[Fonts.h3Bold, Fonts.neutral00]}
+            >
               {headerPrimaryTitle}
             </Text>
             {sousTitre ? (
