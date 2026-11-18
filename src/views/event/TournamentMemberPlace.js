@@ -65,9 +65,15 @@ export function TournamentPlacesSummary({ payment }) {
  * @param {object} props - Les propriétés.
  * @param {MemberPlace | undefined} props.place - La place du membre (`team.payment.members`).
  * @param {boolean} [props.showSelfPay] - Montre « Payer ma place » sur la place du lecteur.
+ * @param {boolean} [props.compact] - IMPL-2 (planches 3a, 4a) : la pastille courte « Payé » /
+ *   « À payer »
+ *   d'une ligne de l'effectif.
+ * @param {string} [props.payLabel] - IMPL-2 (9a) : le libellé du bouton, avec le prix.
  * @returns {import('react').ReactElement | null} La ligne, ou rien.
  */
-export function TournamentMemberPlace({ place, showSelfPay = true }) {
+export function TournamentMemberPlace({
+  compact = false, payLabel = '', place, showSelfPay = true,
+}) {
   const { t } = useTranslation();
   const { Colors, Spaces } = useTheme();
   const paymentUrl = place?.paymentUrl || '';
@@ -87,7 +93,8 @@ export function TournamentMemberPlace({ place, showSelfPay = true }) {
 
   if (!place) return null;
   const isPaid = place.status === 'paid';
-  const statusTone = isPaid ? Colors.success500 : Colors.warning500;
+  // IMPL-2 (Adel 18/11, « plus aucun vert ») : « payée » en bleu primaire.
+  const statusTone = isPaid ? Colors.primary500 : Colors.warning500;
   const hasSize = Object.prototype.hasOwnProperty.call(place, 'jerseySize');
   let sizeLabel = null;
   if (hasSize && place.jerseySize) {
@@ -102,9 +109,12 @@ export function TournamentMemberPlace({ place, showSelfPay = true }) {
       <View style={[Spaces.gap[8], { flexDirection: 'row', flexWrap: 'wrap' }]}>
         <Tag
           style={tagStyle(statusTone)}
-          text={isPaid
-            ? t('tournamentTeamDetails.places.paid', 'Place payée')
-            : t('tournamentTeamDetails.places.due', 'Place à payer')}
+          text={(() => {
+            if (compact) return isPaid ? t('implEquipe.roster.paid') : t('implEquipe.roster.due');
+            return isPaid
+              ? t('tournamentTeamDetails.places.paid', 'Place payée')
+              : t('tournamentTeamDetails.places.due', 'Place à payer');
+          })()}
           textColor="neutral00"
           textStyle={{ color: statusTone }}
         />
@@ -122,7 +132,7 @@ export function TournamentMemberPlace({ place, showSelfPay = true }) {
           onPress={payMine}
           size="sm"
           style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
-          title={t('tournamentTeamDetails.places.payMine', 'Payer ma place')}
+          title={payLabel || t('tournamentTeamDetails.places.payMine', 'Payer ma place')}
           variant="Primary"
         />
       ) : null}
