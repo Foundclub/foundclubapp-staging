@@ -78,6 +78,13 @@ jest.mock('@/services/tournamentCompetition/tournamentCompetitionService', () =>
   publishTournamentCompetition: jest.fn(() => Promise.resolve({})),
   setupTournamentCompetition: jest.fn(() => Promise.resolve({})),
 }));
+// IMPL-3-ORGA (18/11) : le tableau de bord de l organisateur lit sa route à lui ; ici, aucun résumé.
+jest.mock('@/services/tournamentTeam/tournamentOrganizerService', () => ({
+  tournamentOrganizerSummaryKey: (/** @type {string} */ id) => ['tournament-organizer', id],
+  useTournamentOrganizerSummary: () => ({ data: null, refetch: jest.fn() }),
+}));
+jest.mock('@/services/chat/chatService', () => ({ createChatMessage: jest.fn(), createWhisperChat: jest.fn() }));
+jest.mock('@/components/organisms/shareEventModal/ShareEventModal', () => function PartageDouble() { return null; });
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
   closeTournament: jest.fn(() => Promise.resolve({})),
   reviewTournamentTeamRegistration: jest.fn(() => Promise.resolve({})),
@@ -135,7 +142,8 @@ describe('existant — un tournoi ouvert garde ses gestes', () => {
 
     expect(texte(arbre)).toContain('Compétition en brouillon');
     expect(boutons(arbre)).toEqual(expect.arrayContaining([
-      'Tirer les poules', 'Générer les matchs', 'Modifier les paramètres', 'Clôturer le tournoi',
+      // IMPL-3-ORGA (planche 1c) : « Modifier les paramètres » est devenu la ligne « Réglages ».
+      'Tirer les poules', 'Générer les matchs', 'Réglages', 'Clôturer le tournoi',
     ]));
   });
 });
@@ -193,13 +201,15 @@ describe('REPRISE-EVENEMENTS 130 — le titre du lecteur', () => {
 
     expect(texte(arbre)).toContain('Tournoi de Noël');
     expect(texte(arbre)).not.toContain('Pilotage du tournoi');
+    expect(texte(arbre)).not.toContain('Gérer le tournoi');
     expect(texte(arbre)).not.toContain('Tire les poules');
   });
 
+  // IMPL-3-ORGA (planche 1a) : « Pilotage du tournoi » est devenu « Gérer le tournoi ».
   test('l organisateur garde son titre de pilotage', async () => {
     const arbre = await monter(tableau());
 
-    expect(texte(arbre)).toContain('Pilotage du tournoi');
+    expect(texte(arbre)).toContain('Gérer le tournoi');
   });
 });
 
@@ -257,6 +267,7 @@ describe('FIN-TEXTES 130 — la barre fine du site', () => {
 
     expect(lirePageDuSite().titre).toBe('Compétition');
     expect(texte(arbre)).not.toContain('Pilotage du tournoi');
+    expect(texte(arbre)).not.toContain('Gérer le tournoi');
   });
 
   test('l organisateur garde la barre de pilotage du registre', async () => {
@@ -310,11 +321,11 @@ describe('T-PARCOURS-2 point 11 — la validation des équipes d un tournoi paya
 // du cockpit comptait l'équipe refusée (6 pour « 1 validée · 4 en attente »). Même compte que le
 // serveur (`maxTeams`, point 3) et la fiche (tournamentTeamsCount.js) : en attente + validées.
 describe('T-REGLES-EQUIPE point 8 — le compteur « Équipes » du cockpit', () => {
-  const valeurSous = (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
-    const cartes = arbre.root.findAll((/** @type {any} */ n) => n.props?.children === libelle && typeof n.type !== 'string');
-    const carte = cartes[0].parent;
-    return carte.findAll((/** @type {any} */ n) => typeof n.props?.children === 'string' && n.props.children !== libelle && typeof n.type !== 'string')[0].props.children;
-  };
+  // IMPL-3-ORGA (planche 1a) : la carte « Équipes » est devenue le chiffre « équipes inscrites » du tableau
+  // de bord ; même compte (en attente + validées).
+  const inscrites = (/** @type {any} */ arbre) => arbre.root
+    .findAll((/** @type {any} */ n) => n.props?.testID === 'orga-chiffre-inscrites' && typeof n.type !== 'string')[0]
+    .findAll((/** @type {any} */ n) => typeof n.props?.children === 'string' && typeof n.type !== 'string')[0].props.children;
 
   test('🔴 1 validée, 4 en attente, 1 refusée, 1 archivée : « Équipes 5 »', async () => {
     const teams = [
@@ -326,10 +337,10 @@ describe('T-REGLES-EQUIPE point 8 — le compteur « Équipes » du cockpit', ()
       },
     ];
     const arbre = await monter(tableau({ teams }));
-    expect(valeurSous(arbre, 'Équipes')).toBe('5');
+    expect(inscrites(arbre)).toBe('5');
   });
 
   test('caractérisant : deux équipes validées => « Équipes 2 »', async () => {
-    expect(valeurSous(await monter(tableau()), 'Équipes')).toBe('2');
+    expect(inscrites(await monter(tableau()))).toBe('2');
   });
 });

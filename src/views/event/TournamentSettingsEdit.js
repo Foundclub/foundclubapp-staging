@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   ScrollView,
   Switch,
   Text,
@@ -336,8 +337,13 @@ function TournamentSettingsEdit({ navigation, route }) {
       keyboardAvoiding
     >
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
-        {/* REPRISE-EVENEMENTS 130 : même retour que la fiche d'un match, sans s'étirer. */}
-        <HeaderBackButton onPress={() => navigation.goBack()} style={{ alignSelf: 'flex-start' }} />
+        {/* REPRISE-EVENEMENTS 130 : même retour que la fiche d'un match, sans s'étirer.
+            IMPL-3-ORGA (check-list page 1, point 7) : sur le téléphone, la pile (EventStack.js) dessine
+            déjà son retour ; l'écran n'en ajoute plus un second et garde la même place. Le site n'a pas
+            de barre fine pour cet écran : son retour reste. */}
+        {Platform.OS === 'web' ? (
+          <HeaderBackButton onPress={() => navigation.goBack()} style={{ alignSelf: 'flex-start' }} />
+        ) : <View style={{ height: 44 }} />}
       </View>
       <WithDataWrapper
         data={event}

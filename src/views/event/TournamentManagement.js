@@ -18,6 +18,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import Tag from '@/components/atoms/tag/Tag';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import { useDeclarerPageDuSite } from '@/components/templates/pageDuSite';
@@ -34,6 +35,7 @@ import {
   publishTournamentCompetition,
   setupTournamentCompetition,
 } from '@/services/tournamentCompetition/tournamentCompetitionService';
+import { useTournamentOrganizerSummary } from '@/services/tournamentTeam/tournamentOrganizerService';
 import {
   closeTournament,
   reviewTournamentTeamRegistration,
@@ -41,13 +43,14 @@ import {
 
 import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 
+import TournamentOrganizerBoard from './components/TournamentOrganizerBoard';
 import {
   TournamentBracketBoard,
   TournamentGroupCards,
   TournamentMatchCard,
   TournamentStandingsTable,
 } from './tournamentCompetitionComponents';
-import { createTournamentDesignSystem } from './tournamentDesignSystem';
+import { createTournamentDesignSystem, withAlpha } from './tournamentDesignSystem';
 import TournamentInvitationRequest from './TournamentInvitationRequest';
 import TournamentInvites from './TournamentInvites';
 import { getTournamentRegisteredTeamsCount } from './tournamentTeamsCount';
@@ -136,7 +139,7 @@ function TournamentManagement({ navigation, route }) {
   const { width: largeurDeLaFenetre } = useWindowDimensions();
   const { eventId } = route?.params || {};
   const queryClient = useQueryClient();
-  const { canManageEvent } = useAuth();
+  const { canManageEvent, userData } = /** @type {any} */ (useAuth());
   const {
     Alignments,
     ApplicationStyle,
@@ -391,6 +394,12 @@ function TournamentManagement({ navigation, route }) {
     ? t('tournamentManagement.competition', 'Compétition')
     : titreDuLecteur;
   useDeclarerPageDuSite({ titre: canManageTournament && !isClosed ? null : titreDeLaBarre });
+  // IMPL-3-ORGA (18/11, page 1 des planches) : l'organisateur d'un tournoi ouvert lit le tableau de bord ;
+  // ses chiffres viennent de sa route à lui (admin tournament-organizer.js), jamais du tableau partagé.
+  const pilote = canManageTournament && !isClosed;
+  const { data: resumeDeLOrganisateur, refetch: relireLeResume } = useTournamentOrganizerSummary(eventId || '', {
+    enabled: Boolean(eventId) && pilote,
+  });
   const competitionStateLabel = isClosed
     ? t('tournamentManagement.closedTag', 'Clôturé')
     : getTournamentCompetitionStateLabel(tournamentConfig?.competitionState);
@@ -557,11 +566,7 @@ function TournamentManagement({ navigation, route }) {
               title: t('tournamentManagement.publishTheCompetition', 'Publier la compétition'),
               variant: 'Primary',
             }) : null}
-            {renderActionButton({
-              onPress: () => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId }),
-              title: t('tournamentManagement.editTheSettings', 'Modifier les paramètres'),
-              variant: 'Secondary',
-            })}
+            {/* IMPL-3-ORGA : « Modifier les paramètres » est devenu la ligne « Réglages » (planche 1c). */}
             <Button
               isLoading={closeTournamentMutation.isPending}
               onPress={handleCloseTournament}
@@ -747,6 +752,154 @@ function TournamentManagement({ navigation, route }) {
     return renderOverviewTab();
   };
 
+  // IMPL-3-ORGA (planche 1c) — « À la une » : la demande de mise en avant publique, validée par FoundClub
+  // (le même geste que le menu de la fiche, portée PUBLIC).
+  const demanderLaUne = () => {
+    Alert.alert(
+      t('implOrga.featuredTitle', 'Mettre le tournoi à la une ?'),
+      t('implOrga.featuredBody', 'FoundClub reçoit ta demande et la valide.'),
+      [
+        { style: 'cancel', text: t('tournamentManagement.cancel', 'Annuler') },
+        {
+          onPress: async () => {
+            try {
+              // Chargé au geste : eventService tire react-native-blob-util, que les suites du
+              // cockpit ne doublent pas (même parade que TournamentTeamDetails pour le fil).
+              // eslint-disable-next-line global-require
+              const { requestFeatured } = require('@/services/event/eventService');
+              await requestFeatured({ eventId, scopes: ['PUBLIC'] });
+              Alert.alert(t('implOrga.featuredSent', 'Demande envoyée'), t('implOrga.featuredSentBody', 'Tu seras prévenu quand le tournoi sera à la une.'));
+            } catch (/** @type {any} */ cause) {
+              Alert.alert(t('common.error', 'Erreur'), cause?.response?.data?.error?.message || cause?.message || t('implOrga.featuredError', 'La demande n’est pas partie.'));
+            }
+          },
+          text: t('implOrga.featuredConfirm', 'Demander'),
+        },
+      ],
+    );
+  };
+
+  const surfaceDesLignes = {
+    backgroundColor: withAlpha(Colors.primary900, 'F2'),
+    borderColor: withAlpha(Colors.primary500, '3D'),
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  };
+  const ligneDeNavigation = ({
+    icone, onPress, selected = false, sousTitre = '', testID, titre, valeur = '',
+  }) => (
+    <TouchableOpacity
+      accessibilityLabel={titre}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: selected }}
+      key={testID}
+      onPress={onPress}
+      style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], { minHeight: 56 }]}
+      testID={testID}
+    >
+      <GlyphIcon color={selected ? Colors.primary500 : Colors.neutral00} name={icone} size={20} />
+      <View style={{ flex: 1 }}>
+        <Text style={[Fonts.h5Bold, selected ? Fonts.primary500 : Fonts.neutral00]}>{titre}</Text>
+        {sousTitre ? <Text style={[Fonts.p3, Fonts.neutral300]}>{sousTitre}</Text> : null}
+      </View>
+      {valeur ? <Text style={[Fonts.p3, Fonts.neutral300]}>{valeur}</Text> : null}
+      <GlyphIcon color={Colors.neutral300} name={selected ? 'chevronDown' : 'chevronRight'} size={16} />
+    </TouchableOpacity>
+  );
+  const separateur = (/** @type {string} */ cle) => (
+    <View key={cle} style={{ backgroundColor: Colors.primary700, height: 1 }} />
+  );
+
+  // Planche 1c : « Jour J » (poules, matchs, classements, et la phase finale quand elle existe) ; chaque ligne
+  // déplie le contenu d'avant (les onglets), puis la structure sportive et ses gestes, gardés tels quels.
+  const renderJourJ = () => {
+    const groupes = Number(dashboard?.overview?.groups) || 0;
+    const matchs = Number(dashboard?.overview?.totalMatches) || 0;
+    const basculer = (/** @type {string} */ onglet) => setActiveTab(activeTab === onglet ? 'overview' : onglet);
+    const lignes = [
+      {
+        icone: 'chartSimpleHorizontal',
+        onglet: 'groups',
+        titre: t('tournamentManagement.tabGroups', 'Poules'),
+        valeur: groupes > 0
+          ? t('tournamentManagement.groupsCount', { count: groupes, defaultValue_one: '{{count}} poule', defaultValue_other: '{{count}} poules' })
+          : t('implOrga.toDo', 'à faire'),
+      },
+      {
+        icone: 'calendar',
+        onglet: 'matches',
+        titre: t('tournamentManagement.tabMatches', 'Matchs'),
+        valeur: t('implOrga.matchesScheduled', { count: matchs, defaultValue_one: '{{count}} programmé', defaultValue_other: '{{count}} programmés' }),
+      },
+      { icone: 'flag', onglet: 'standings', titre: t('tournamentManagement.tabStandings', 'Classements') },
+      ...(competitionActions.hasBracket || competitionActions.canGenerateKnockout ? [
+        { icone: 'chartColumn', onglet: 'bracket', titre: t('tournamentManagement.tabBracket', 'Phases finales') },
+      ] : []),
+    ];
+    const maxEquipes = Number(resumeDeLOrganisateur?.maxTeams ?? tournamentConfig?.maxTeams) || 0;
+    return (
+      <View style={Spaces.gap[12]}>
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('implOrga.dayTitle', 'Jour J')}</Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>{t('implOrga.daySubtitle', 'poules, matchs, classements')}</Text>
+        </View>
+        <View style={surfaceDesLignes}>
+          {lignes.flatMap((ligne, index) => [
+            index > 0 ? separateur(`sep-${ligne.onglet}`) : null,
+            ligneDeNavigation({
+              icone: ligne.icone,
+              onPress: () => basculer(ligne.onglet),
+              selected: activeTab === ligne.onglet,
+              testID: `orga-jour-j-${ligne.onglet}`,
+              titre: ligne.titre,
+              valeur: ligne.valeur,
+            }),
+          ])}
+        </View>
+        {activeTab !== 'overview' ? renderActiveTab() : null}
+        {renderOverviewTab()}
+        <View style={surfaceDesLignes}>
+          {ligneDeNavigation({
+            icone: 'penSquare',
+            onPress: () => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId }),
+            sousTitre: maxEquipes > 0
+              ? t('implOrga.settingsHintTeams', { count: maxEquipes, defaultValue: 'prix, âge, maillot, {{count}} équipes, date, lieu' })
+              : t('implOrga.settingsHint', 'prix, âge, maillot, équipes, date, lieu'),
+            testID: 'orga-reglages',
+            titre: t('implOrga.settings', 'Réglages'),
+          })}
+          {separateur('sep-une')}
+          {ligneDeNavigation({
+            icone: 'thumbtack',
+            onPress: demanderLaUne,
+            sousTitre: t('implOrga.featuredHint', 'demander la mise en avant'),
+            testID: 'orga-a-la-une',
+            titre: t('implOrga.featured', 'À la une'),
+          })}
+        </View>
+      </View>
+    );
+  };
+
+  const filtresDesEquipes = (
+    <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+      {TEAM_FILTER_OPTIONS.map((option) => {
+        const selected = teamFilter === option.value;
+        return (
+          <TouchableOpacity
+            key={option.value}
+            onPress={() => setTeamFilter(option.value)}
+            style={tournamentDs.getPillStyle(selected)}
+          >
+            <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
   // T3-TOURNOI-PRIVE : le lien d'un tournoi privé ouvre cet écran ;
   // un compte sans lien y demande à participer.
   if (isAccessRefusalError(error)) {
@@ -780,46 +933,68 @@ function TournamentManagement({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         >
+          {pilote ? (
+            <>
+              <View style={tournamentDs.styles.screenIntro}>
+                <Text style={[Fonts.h2, Fonts.neutral00]}>
+                  {t('tournamentManagement.tournamentControl', 'Gérer le tournoi')}
+                </Text>
+                <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300]}>{titreDuLecteur}</Text>
+              </View>
+              <TournamentOrganizerBoard
+                event={event}
+                eventId={eventId}
+                filters={filtresDesEquipes}
+                invites={estPrive ? <TournamentInvites clubId={event?.club?.documentId || null} eventId={eventId} /> : null}
+                navigation={navigation}
+                onChanged={async () => { await Promise.all([invalidate(), relireLeResume?.()]); }}
+                registeredTeamsCount={getTournamentRegisteredTeamsCount({ tournamentTeams })}
+                summary={resumeDeLOrganisateur || null}
+                teams={filteredTeams}
+                totalTeamsCount={tournamentTeams.length}
+                tournamentConfig={tournamentConfig}
+                viewerDocumentId={String(userData?.documentId || '')}
+              />
+              {renderJourJ()}
+            </>
+          ) : null}
           {/* REPRISE-EVENEMENTS 130 : le lecteur (parent, joueur) lit le nom du tournoi ; la
               phrase de pilotage ne s'adresse qu'à qui pilote. */}
-          <View style={tournamentDs.styles.screenIntro}>
-            <Text style={[Fonts.h2, Fonts.neutral00]}>
-              {canManageTournament && !isClosed
-                ? t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')
-                : titreDuLecteur}
-            </Text>
-            {canManageTournament && !isClosed ? (
-              <Text style={[Fonts.p2, Fonts.primary100]}>
-                {t('tournamentManagement.drawTheGroupsGenerateThe', 'Tire les poules, génère les matchs, calcule les classements et pilote la phase finale depuis un seul cockpit.')}
-              </Text>
-            ) : null}
-          </View>
+          {/* IMPL-3-ORGA : qui pilote lit le tableau de bord ci-dessus ; ce qui suit est la vue du lecteur
+              (parent, joueur) et du tournoi clôturé, inchangée. */}
+          {pilote ? null : (
+            <>
+              <View style={tournamentDs.styles.screenIntro}>
+                <Text style={[Fonts.h2, Fonts.neutral00]}>{titreDuLecteur}</Text>
+              </View>
 
-          <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-            {/* T-REGLES-EQUIPE (point 8) : en attente + validées, comme le serveur (maxTeams) et la fiche. */}
-            {renderSummaryCard(t('tournamentManagement.summaryTeams', 'Équipes'), getTournamentRegisteredTeamsCount({ tournamentTeams }), Colors.primary500)}
-            {renderSummaryCard(t('tournamentManagement.summaryGroups', 'Poules'), dashboard?.overview?.groups || 0, Colors.primary500)}
-            {renderSummaryCard(t('tournamentManagement.summaryMatches', 'Matchs'), dashboard?.overview?.totalMatches || 0, Colors.success500)}
-            {renderSummaryCard(t('tournamentManagement.summaryRosterAlerts', 'À revoir'), counters.warning, Colors.gold500)}
-          </View>
+              <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+                {/* T-REGLES-EQUIPE (point 8) : en attente + validées, comme le serveur (maxTeams) et la fiche. */}
+                {renderSummaryCard(t('tournamentManagement.summaryTeams', 'Équipes'), getTournamentRegisteredTeamsCount({ tournamentTeams }), Colors.primary500)}
+                {renderSummaryCard(t('tournamentManagement.summaryGroups', 'Poules'), dashboard?.overview?.groups || 0, Colors.primary500)}
+                {renderSummaryCard(t('tournamentManagement.summaryMatches', 'Matchs'), dashboard?.overview?.totalMatches || 0, Colors.success500)}
+                {renderSummaryCard(t('tournamentManagement.summaryRosterAlerts', 'À revoir'), counters.warning, Colors.gold500)}
+              </View>
 
-          <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
-            {TAB_OPTIONS.map((option) => {
-              const selected = activeTab === option.value;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  onPress={() => setActiveTab(option.value)}
-                  style={tournamentDs.getPillStyle(selected)}
-                  testID={`tournoi-onglet-${option.value}`}
-                >
-                  <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+              <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+                {TAB_OPTIONS.map((option) => {
+                  const selected = activeTab === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => setActiveTab(option.value)}
+                      style={tournamentDs.getPillStyle(selected)}
+                      testID={`tournoi-onglet-${option.value}`}
+                    >
+                      <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-          {renderActiveTab()}
+              {renderActiveTab()}
+            </>
+          )}
         </ScrollView>
       </WithDataWrapper>
     </ScreenContainer>
