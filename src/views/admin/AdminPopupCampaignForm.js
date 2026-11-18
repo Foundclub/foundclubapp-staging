@@ -17,6 +17,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import BilletTournoiModal from '@/components/organisms/popup/BilletTournoiModal';
+import estUnBillet from '@/components/organisms/popup/estUnBillet';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import AdminStateView from '@/views/admin/components/AdminStateView';
@@ -613,6 +615,39 @@ function AdminPopupCampaignForm() {
     );
   };
 
+  // La fenêtre ordinaire : l'aperçu d'avant, et le repli du billet.
+  const apercuFenetre = (
+    <GlobalPromptModal
+      body={previewPayload.body || ''}
+      eyebrow={previewPayload.eyebrow || undefined}
+      headerContent={imageUrl ? <Image source={{ uri: imageUrl }} style={styles.previewImage} /> : null}
+      onRequestClose={() => setIsPreviewVisible(false)}
+      primaryAction={previewPrimaryAction ? {
+        label: previewPrimaryAction.label || 'Action',
+        onPress: () => pressPreviewAction(previewPrimaryAction),
+        variant: previewPrimaryAction.variant || 'Primary',
+      } : {
+        label: t('adminPopupCampaignForm.close', 'Fermer'),
+        onPress: () => setIsPreviewVisible(false),
+      }}
+      secondaryAction={previewSecondaryAction ? {
+        label: previewSecondaryAction.label || t(
+          'adminPopupCampaignForm.secondaryAction',
+          'Action secondaire',
+        ),
+        onPress: () => pressPreviewAction(previewSecondaryAction),
+        variant: previewSecondaryAction.variant || 'Secondary',
+      } : null}
+      supportingText={previewPayload.subtitle || undefined}
+      title={previewPayload.title || previewPayload.internalName || t(
+        'adminPopupCampaignForm.previewTitle',
+        'Prévisualisation',
+      )}
+      tone={previewPayload.tone || 'primary'}
+      visible={isPreviewVisible}
+    />
+  );
+
   return (
     <ScreenContainer
       bgImage="bg2"
@@ -637,6 +672,15 @@ function AdminPopupCampaignForm() {
           'templateKey',
           TEMPLATE_OPTIONS,
         )}
+        {/* IMPL-4-ACCUEIL, page 5 (Adel 18/11) : le billet se choisit ici, sans clé neuve. */}
+        {formState.templateKey === 'hero_image_modal' ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'implAccueil.formulaireBillet',
+              'Avec une action principale « open_event », la pop-up s’affiche en billet : date, heure, lieu et prix lus sur l’événement ; « Eyebrow » en petite ligne, le titre en grand, l’image en haut.', // eslint-disable-line max-len
+            )}
+          </Text>
+        ) : null}
         {renderChoiceRow(t('adminPopupCampaignForm.fields.tone', 'Ton'), 'tone', TONE_OPTIONS)}
         {renderChoiceRow('Trigger', 'trigger', TRIGGER_OPTIONS)}
         {renderChoiceRow('Cadence', 'cadence', CADENCE_OPTIONS)}
@@ -792,35 +836,31 @@ function AdminPopupCampaignForm() {
         </View>
       </ScrollView>
 
-      <GlobalPromptModal
-        body={previewPayload.body || ''}
-        eyebrow={previewPayload.eyebrow || undefined}
-        headerContent={imageUrl ? <Image source={{ uri: imageUrl }} style={styles.previewImage} /> : null}
-        onRequestClose={() => setIsPreviewVisible(false)}
-        primaryAction={previewPrimaryAction ? {
-          label: previewPrimaryAction.label || 'Action',
-          onPress: () => pressPreviewAction(previewPrimaryAction),
-          variant: previewPrimaryAction.variant || 'Primary',
-        } : {
-          label: t('adminPopupCampaignForm.close', 'Fermer'),
-          onPress: () => setIsPreviewVisible(false),
-        }}
-        secondaryAction={previewSecondaryAction ? {
-          label: previewSecondaryAction.label || t(
-            'adminPopupCampaignForm.secondaryAction',
-            'Action secondaire',
-          ),
-          onPress: () => pressPreviewAction(previewSecondaryAction),
-          variant: previewSecondaryAction.variant || 'Secondary',
-        } : null}
-        supportingText={previewPayload.subtitle || undefined}
-        title={previewPayload.title || previewPayload.internalName || t(
-          'adminPopupCampaignForm.previewTitle',
-          'Prévisualisation',
-        )}
-        tone={previewPayload.tone || 'primary'}
-        visible={isPreviewVisible}
-      />
+      {/* IMPL-4-ACCUEIL, page 5 — l'aperçu suit l'hôte : le billet (même prédicat), sinon la
+          fenêtre ordinaire. */}
+      {estUnBillet(previewPayload, previewPrimaryAction) ? (
+        <BilletTournoiModal
+          body={previewPayload.body || ''}
+          eventId={String(previewPrimaryAction.eventId).trim()}
+          eyebrow={previewPayload.eyebrow || undefined}
+          imageUrl={imageUrl}
+          onRequestClose={() => setIsPreviewVisible(false)}
+          primaryAction={{
+            label: previewPrimaryAction.label || 'Action',
+            onPress: () => pressPreviewAction(previewPrimaryAction),
+          }}
+          repli={apercuFenetre}
+          secondaryAction={previewSecondaryAction ? {
+            label: previewSecondaryAction.label || t(
+              'adminPopupCampaignForm.secondaryAction',
+              'Action secondaire',
+            ),
+            onPress: () => pressPreviewAction(previewSecondaryAction),
+          } : null}
+          title={previewPayload.title || previewPayload.internalName || undefined}
+          visible={isPreviewVisible}
+        />
+      ) : apercuFenetre}
     </ScreenContainer>
   );
 }

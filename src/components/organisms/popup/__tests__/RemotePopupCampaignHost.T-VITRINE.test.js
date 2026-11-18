@@ -48,6 +48,9 @@ jest.mock('@/services/inAppPopupCampaign/inAppPopupCampaignService', () => ({
   recordInAppPopupDismiss: jest.fn(() => Promise.resolve()),
   recordInAppPopupImpression: jest.fn(() => Promise.resolve()),
 }));
+// IMPL-4-ACCUEIL (18/11) : le billet lit son événement (eventService, modules natifs) ; ces
+// campagnes standard ne le montent jamais.
+jest.mock('@/components/organisms/popup/BilletTournoiModal', () => () => null);
 jest.mock('@/components/organisms/popup/GlobalPromptModal', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return function GlobalPromptModalMock(/** @type {any} */ { body, visible }) {

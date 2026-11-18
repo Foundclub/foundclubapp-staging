@@ -13913,6 +13913,17 @@ export default {
   },
   // IMPL-4-ACCUEIL (18/11) : accueil, pop-up billet, recherche.
   implAccueil: {
+    billet: {
+      date: 'Date',
+      des: 'from {{heure}}',
+      fermer: 'Close',
+      heure: 'Time',
+      lieu: 'Venue',
+      parJoueur: 'per player',
+      plusTard: 'Later',
+    },
+    formulaireBillet:
+      'With an « open_event » main action, the pop-up shows as a ticket: date, time, venue and price read from the event; « Eyebrow » as the small line, the title in large, the image on top.',
     rechercheEffacer: 'Clear search',
   },
   inputStepper: {
