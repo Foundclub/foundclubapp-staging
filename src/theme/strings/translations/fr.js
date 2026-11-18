@@ -1236,6 +1236,9 @@ export default {
       subtitle: 'Sous-titre',
       subtitlePlaceholder: 'Texte secondaire optionnel',
       targetClubs: 'Clubs ciblés (documentIds csv)',
+      targetDepartments: 'Départements ciblés (codes csv)',
+      // eslint-disable-next-line max-len
+      targetDepartmentsHint: 'Vide = toute la France. Un compte dont FoundClub ne connaît pas le département ne la reçoit pas.',
       targetMultisportClubs: 'Multisports ciblés (documentIds csv)',
       targetPlatforms: 'Plateformes ciblées (csv)',
       targetRoles: 'Rôles ciblés (csv)',

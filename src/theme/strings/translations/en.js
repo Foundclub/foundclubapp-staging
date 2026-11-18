@@ -1178,6 +1178,9 @@ export default {
       subtitle: 'Subtitle',
       subtitlePlaceholder: 'Optional secondary text',
       targetClubs: 'Targeted clubs (documentIds csv)',
+      targetDepartments: 'Targeted departments (codes csv)',
+      // eslint-disable-next-line max-len
+      targetDepartmentsHint: 'Empty = all of France. An account whose department FoundClub does not know will not receive it.',
       targetMultisportClubs: 'Targeted multisport clubs (documentIds csv)',
       targetPlatforms: 'Targeted platforms (csv)',
       targetRoles: 'Targeted roles (csv)',
