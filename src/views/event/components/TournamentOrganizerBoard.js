@@ -155,6 +155,11 @@ function TournamentOrganizerBoard({
     padding: 16,
   };
 
+  // La barre « N payés sur 5 » : bleu primaire (Adel 18/11, plus aucun vert). Le libellé blanc est AU-DESSUS
+  // de la barre, jamais posé sur le bleu.
+  const pisteDeLaBarre = withAlpha(Colors.primary500, '29');
+  const remplissageDeLaBarre = Colors.primary500;
+
   const erreur = (/** @type {any} */ cause, /** @type {string} */ repli) => {
     Alert.alert(
       t('common.error', 'Erreur'),
@@ -434,7 +439,7 @@ function TournamentOrganizerBoard({
       <View
         accessibilityLabel={libelle}
         style={{
-          backgroundColor: withAlpha(Colors.primary500, '29'),
+          backgroundColor: pisteDeLaBarre,
           borderRadius: 100,
           height: 6,
           overflow: 'hidden',
@@ -442,7 +447,7 @@ function TournamentOrganizerBoard({
       >
         <View
           style={{
-            backgroundColor: Colors.primary500,
+            backgroundColor: remplissageDeLaBarre,
             height: 6,
             width: `${Math.min(100, Math.round((payes / Math.max(1, seuil)) * 100))}%`,
           }}
