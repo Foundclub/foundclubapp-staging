@@ -39,6 +39,7 @@ import {
   getTournamentTeamsCapacity,
   getTournamentTeamsLine,
 } from '@/views/event/tournamentTeamsCount';
+import { getTournamentShortPlace } from '@/views/event/tournamentJoinRules';
 import { getTournamentCategoryLabel } from '@/views/event/tournamentUtils';
 
 import {
@@ -121,7 +122,9 @@ export const getTypeAccentColor = (typeName, isStageEvent, Colors) => {
   if (normalizedType.includes('detection')) return Colors.primary500;
   if (normalizedType.includes('entrainement')) return Colors.success500;
   if (normalizedType.includes('match')) return Colors.violet500;
-  if (normalizedType.includes('tournoi')) return Colors.rose500;
+  // IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, 6a/7a) : plus de rose, le bleu primaire (Adel :
+  // « tout ce qui est vert passe en bleu », et la pastille TOURNOI de la fiche est bleue).
+  if (normalizedType.includes('tournoi')) return Colors.primary500;
   if (normalizedType.includes('stage') || isStageEvent) return Colors.warning500;
   if (normalizedType.includes('reservation')) return Colors.gold500;
   return Colors.neutral300;
@@ -551,8 +554,11 @@ function EventCardNew({
     || Array.isArray(item?.team?.externalCalendarData)
   );
 
+  // IMPL-1-FICHE (18/11, 6a/7a) : un tournoi dit son complexe et sa ville (« AR Soccer ·
+  // Montpellier »), jamais le terrain (« Terrain A », réglage de l'organisateur).
+  const lieuDuTournoi = isTournamentEvent ? getTournamentShortPlace(item) : '';
   // Location - check facility first (club installation), then other options
-  const locationText = isImportedExternalMatch
+  const locationText = lieuDuTournoi || (isImportedExternalMatch
     ? (
       item?.facility?.name
       || externalMatchLocation
@@ -568,7 +574,7 @@ function EventCardNew({
       || getShortAddress(item?.location)
       || externalMatchLocation
       || null
-    );
+    ));
 
   // Sport/Activity
   const sportName = item?.team?.activities?.map(({ name }) => name)?.join(', ')
@@ -993,7 +999,9 @@ function EventCardNew({
                 iconAccentStyle: locationIconAccentStyle,
                 textAccentStyle: locationTextAccentStyle,
               })}
-              {renderMetaCell(Images.running, sportName)}
+              {/* IMPL-1 (6a) : le lieu d'un tournoi prend toute la ligne (sinon « AR Soccer ·
+                  Montpellier » est coupé) ; le sport est déjà dans la ligne sous le titre. */}
+              {isTournamentEvent ? null : renderMetaCell(Images.running, sportName)}
             </View>
           </View>
 
@@ -1128,6 +1136,30 @@ function EventCardNew({
         {/* T-PARCOURS-2 (17/11, recette 42) — un tournoi n'a pas de « Participer » : on s'y inscrit
             par une équipe, depuis la fiche (comme la fiche depuis T-FINITIONS-3). Les deux boutons
             de l'organisateur (Valider / Refuser) restent. */}
+        {/* IMPL-1-FICHE (18/11, 6a option A, Adel « 6- A ») : la carte d'un tournoi dit où elle
+            mène, « Voir le tournoi » ; le même geste que toute la carte (`onPress`). */}
+        {isTournamentEvent && !isShareMode && onPress && !(onValidate && onRefuse) ? (
+          <View pointerEvents="auto" style={styles.ctaContainer}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.85}
+              onPress={() => onPress?.(item)}
+              style={{
+                alignItems: 'center',
+                backgroundColor: Colors.primary500,
+                borderRadius: 22,
+                justifyContent: 'center',
+                minHeight: 44,
+                paddingHorizontal: 16,
+              }}
+              testID="event-card-see-tournament"
+            >
+              <Text style={[Fonts.p2Bold, { color: Colors.primary900 }]}>
+                {t('implFiche.seeTournament', 'Voir le tournoi')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         {!isShareMode && !readOnly && !(isTournamentEvent && !(onValidate && onRefuse)) ? (
           <View pointerEvents="auto" style={styles.ctaContainer}>
             {renderCtaContent()}

@@ -11,7 +11,6 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 
 import { requestJoinTournamentTeam } from '@/services/tournamentTeam/tournamentTeamService';
@@ -22,9 +21,10 @@ import {
   getTournamentTeamCaptainShort,
   getTournamentTeamLookingFor,
   getTournamentTeamPlayerCount,
-  getTournamentTeamPublicPlayers,
 } from '../tournamentJoinRules';
 import { isTournamentTeamOpenToJoinRequests } from '../tournamentUtils';
+// L'aperçu (8e) vit dans la feuille d'équipe, doublée par les témoins du site.
+import { TournamentTeamPreviewSheet } from './TournamentTeamSheet';
 
 // IMPL-1-FICHE (18/11/2026, pack T-DESIGN-TOURNOI, page 8 et écran 8e, remarque 2 d'Adel) —
 // L'ONGLET ÉQUIPES VU PAR QUI N'ORGANISE PAS LE TOURNOI, le même au téléphone (EventDetails.js)
@@ -42,21 +42,6 @@ import { isTournamentTeamOpenToJoinRequests } from '../tournamentUtils';
 //     « Demander à rejoindre » en bas si l'équipe est ouverte.
 // Le paiement de chacun n'est jamais montré ici, même si le serveur le rend encore.
 // Témoin : __tests__/TournamentTeamsPublic.IMPL-1.test.js.
-
-/**
- * Les places payées d'une équipe et le seuil, lus dans le résumé du serveur.
- * @param {any} team - L'équipe.
- * @param {any} tournamentConfig - Le réglage du tournoi.
- * @returns {{ payees: number | null, seuil: number }} Les places payées (null si inconnues).
- */
-const placesDeLEquipe = (team, tournamentConfig) => {
-  const seuilLu = Math.round(Number(tournamentConfig?.paidMembersToValidate));
-  const lues = Number(team?.membersSummary?.paidCount);
-  return {
-    payees: team?.membersSummary && Number.isFinite(lues) ? Math.round(lues) : null,
-    seuil: seuilLu > 0 ? seuilLu : 5,
-  };
-};
 
 /**
  * Une pastille arrondie.
@@ -224,151 +209,6 @@ export function TournamentPublicTeamCard({
 }
 
 /**
- * 8e — l'aperçu d'une équipe, vu par qui n'en fait pas partie (feuille du bas ; fenêtre sur le
- * site).
- * @param {object} props - Les propriétés.
- * @param {any} props.team - L'équipe (null : fermée).
- * @param {string} [props.tournamentName] - Le nom du tournoi.
- * @param {any} [props.tournamentConfig] - Le réglage du tournoi.
- * @param {() => void} props.onClose - Fermer.
- * @param {((team: any) => void) | null} [props.onAsk] - « Demander à rejoindre », si permis.
- * @param {boolean} [props.requested] - Le lecteur a déjà demandé à rejoindre cette équipe.
- * @returns {import('react').ReactElement | null} L'aperçu.
- */
-export function TournamentTeamPreviewSheet({
-  onAsk = null, onClose, requested = false, team, tournamentConfig = {}, tournamentName = '',
-}) {
-  const { t } = useTranslation();
-  const {
-    Colors, Fonts, Spaces,
-  } = useTheme();
-  if (!team) return null;
-  const capitaine = getTournamentTeamCaptainShort(team);
-  const cherche = getTournamentTeamLookingFor(team, tournamentConfig);
-  const ouverte = isTournamentTeamOpenToJoinRequests(team);
-  const validee = String(team?.status || '').toLowerCase() === 'accepted';
-  const { payees, seuil } = placesDeLEquipe(team, tournamentConfig);
-  const joueurs = getTournamentTeamPublicPlayers(team);
-  const effectif = getTournamentTeamPlayerCount(team, tournamentConfig);
-  const resteAPayer = payees === null ? 0 : Math.max(0, seuil - payees);
-  const pied = ouverte && onAsk && !requested ? (
-    <Button
-      onPress={() => onAsk(team)}
-      style={{ minHeight: 44 }}
-      title={t('implFiche.askToJoin')}
-      variant="Primary"
-    />
-  ) : null;
-  return (
-    <BottomModal
-      close={onClose}
-      footerComponent={pied}
-      headerComponent={(
-        <View style={Spaces.gap[4]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
-          </Text>
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {tournamentName
-              ? t('implFiche.teamPreviewSubtitle', {
-                tournament: tournamentName, ...SANS_ECHAPPEMENT,
-              })
-              : t('implFiche.tournamentTeam')}
-          </Text>
-        </View>
-      )}
-      isVisible
-      webPresentation="dialog"
-    >
-      <View style={[Spaces.gap[12], Spaces.paddingBottom[16]]} testID="tournament-team-preview">
-        {capitaine ? (
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('implFiche.captainLine', { name: capitaine, ...SANS_ECHAPPEMENT })}
-          </Text>
-        ) : null}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {validee ? <Pastille color={Colors.primary500} text={t('implFiche.validated')} /> : null}
-          {!validee && resteAPayer > 0 ? (
-            <Pastille
-              color={Colors.warning400}
-              text={t('implFiche.placesToPay', { count: resteAPayer })}
-            />
-          ) : null}
-          {cherche > 0 ? (
-            <Pastille
-              color={Colors.primary200}
-              text={t('implFiche.lookingFor', { count: cherche })}
-            />
-          ) : null}
-          {ouverte
-            ? <Pastille color={Colors.primary500} text={t('implFiche.openToRequests')} />
-            : null}
-          {ouverte && requested ? (
-            <Pastille color={Colors.primary500} text={t('implFiche.requestSent')} />
-          ) : null}
-        </View>
-        {payees !== null ? (
-          <View style={Spaces.gap[8]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {t('implFiche.placesPaid', { count: payees, total: seuil })}
-            </Text>
-            <View
-              accessibilityRole="progressbar"
-              accessibilityValue={{ max: seuil, min: 0, now: Math.min(payees, seuil) }}
-              style={{
-                backgroundColor: withAlpha(Colors.neutral00, 0.12),
-                borderRadius: 4,
-                height: 8,
-                overflow: 'hidden',
-              }}
-            >
-              <View style={{
-                backgroundColor: Colors.primary500,
-                borderRadius: 4,
-                height: 8,
-                width: `${Math.round((Math.min(payees, seuil) / seuil) * 100)}%`,
-              }}
-              />
-            </View>
-          </View>
-        ) : null}
-        <View style={{
-          alignItems: 'baseline', flexDirection: 'row', justifyContent: 'space-between',
-        }}
-        >
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('implFiche.playersTitle')}</Text>
-          {effectif !== null ? (
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('implFiche.players', { count: effectif })}
-            </Text>
-          ) : null}
-        </View>
-        {joueurs.map((joueur, index) => (
-          <View
-            // Pas d'identifiant de joueur dans le résumé : la position suffit, la liste est figée.
-            // eslint-disable-next-line react/no-array-index-key
-            key={`joueur-${index}`}
-            style={{
-              borderTopColor: withAlpha(Colors.neutral00, 0.08),
-              borderTopWidth: index ? 1 : 0,
-              paddingVertical: 8,
-            }}
-          >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {joueur.minor ? t('implFiche.minorPlayer') : joueur.label}
-            </Text>
-            {joueur.minor ? (
-              <Text style={[Fonts.p4, Fonts.neutral300]}>{t('implFiche.minorNote')}</Text>
-            ) : null}
-          </View>
-        ))}
-        <Text style={[Fonts.p4, Fonts.neutral300]}>{t('implFiche.paymentsPrivate')}</Text>
-      </View>
-    </BottomModal>
-  );
-}
-
-/**
  * La demande pour rejoindre une équipe : la déclaration (JoinEventModal), puis la route
  * existante `request-join` (le serveur juge l'âge et « déjà dans une équipe »). Même parcours que
  * le panneau « Rejoindre une équipe » (TournamentJoinTeamPanel.js).
@@ -506,14 +346,16 @@ function TournamentTeamsPublic({
           tournamentConfig={config}
         />
       ))}
-      <TournamentTeamPreviewSheet
-        onAsk={viewerTeam ? null : demander}
-        onClose={() => setApercu(null)}
-        requested={aDemande(apercu)}
-        team={apercu}
-        tournamentConfig={config}
-        tournamentName={event?.name || ''}
-      />
+      {apercu ? (
+        <TournamentTeamPreviewSheet
+          onAsk={viewerTeam ? null : demander}
+          onClose={() => setApercu(null)}
+          requested={aDemande(apercu)}
+          team={apercu}
+          tournamentConfig={config}
+          tournamentName={event?.name || ''}
+        />
+      ) : null}
       {demande.modal}
     </View>
   );

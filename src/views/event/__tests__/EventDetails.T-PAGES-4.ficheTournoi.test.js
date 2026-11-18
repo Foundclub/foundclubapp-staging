@@ -552,6 +552,8 @@ const releve = (lecteur) => {
     barreDuBas: barre.length ? textes(barre[0]).join(' | ') : null,
     brouillon: compter(apercu, 'Compétition en brouillon'),
     carteMonEquipe: parTestID(root, 'tournament-fiche-my-team-progress').length,
+    // IMPL-1-FICHE (6b) : la pastille TOURNOI est dans le bandeau (EventHeader), plus au-dessus ;
+    // il reste celle de la carte de pilotage de l'organisateur.
     carteTournoi: apercu.filter((ligne) => ligne === 'TOURNOI').length,
     conditions: parTestID(root, 'event-tournament-terms-link').length,
     creerUneEquipe: compter(apercu, 'Créer une équipe pour ce tournoi'),
@@ -583,7 +585,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Voir mon équipe',
     brouillon: 0,
     carteMonEquipe: 1,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -612,7 +614,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Répondre à mon invitation',
     brouillon: 0,
     carteMonEquipe: 1,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -641,7 +643,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Voir mon équipe',
     brouillon: 0,
     carteMonEquipe: 1,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -670,7 +672,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Gérer le tournoi',
     brouillon: 1,
     carteMonEquipe: 0,
-    carteTournoi: 2,
+    carteTournoi: 1,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -699,7 +701,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: '20 € par joueur | Créer mon équipe',
     brouillon: 0,
     carteMonEquipe: 0,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -728,7 +730,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: null,
     brouillon: 0,
     carteMonEquipe: 0,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -758,7 +760,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: '20 € par joueur | Créer mon équipe',
     brouillon: 0,
     carteMonEquipe: 0,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -895,8 +897,10 @@ describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
     ]);
     expect(textes(parTestID(root, 'tournament-before-sign-up')[0])[0]).toBe('Avant le match');
     const [carte] = parTestID(root, 'tournament-fiche-my-team');
-    expect(textes(carte)).toEqual(expect.arrayContaining(['Les Aigles', 'Voir mon équipe', '1 / 5']));
-    expect(parTestID(root, 'tournament-team-progress-todo')).toHaveLength(1);
+    // IMPL-1-FICHE (9f) : la carte compacte dit « 1 place payée sur 5 ».
+    expect(textes(carte)).toEqual(expect.arrayContaining(['Les Aigles', 'Voir mon équipe', '1 place payée sur 5']));
+    // « Il te reste à faire » reste sur la page d'équipe (IMPL-1, 9f), où « Voir mon équipe » mène.
+    expect(parTestID(root, 'tournament-team-progress-todo')).toHaveLength(0);
     expect(barreDe(root)).toEqual(['Voir mon équipe']);
   });
 
@@ -1190,11 +1194,19 @@ describe('T-PAGES-4 · chef 4 — sous le seuil, le nombre ne se lit nulle part'
       });
   };
 
-  test('🔴 sans équipe, sous le seuil : seulement les équipes qui cherchent un joueur', () => {
-    expect(nomsDesEquipes(monter(LECTEURS.sansEquipe()))).toEqual(['Les Aigles']);
+  // IMPL-1-FICHE (8a) : sous le seuil, la phrase et les deux boutons ; les équipes qui cherchent
+  // paraissent après « Rejoindre une équipe ».
+  test('🔴 sans équipe, sous le seuil : les équipes qui cherchent, après « Rejoindre une équipe »', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(nomsDesEquipes(root)).toEqual([]);
+    const [seuil] = parTestID(root, 'tournament-teams-threshold');
+    const rejoindre = seuil.findAll((/** @type {any} */ n) => n.props?.title === 'Rejoindre une équipe' && typeof n.props?.onPress === 'function')[0];
+    act(() => { rejoindre.props.onPress(); });
+    expect(nomsDesEquipes(root)).toEqual(['Les Aigles']);
   });
 
-  test('🔴 membre d une équipe fermée, sous le seuil : la sienne, et celles qui cherchent', () => {
+  // IMPL-1-FICHE (8a) : un membre ne demande pas à rejoindre une autre équipe : il lit la sienne.
+  test('🔴 membre d une équipe fermée, sous le seuil : la sienne', () => {
     mockTeamQuery.data = null;
     const lecteur = {
       auth: compte('lion-1'),
@@ -1202,7 +1214,7 @@ describe('T-PAGES-4 · chef 4 — sous le seuil, le nombre ne se lit nulle part'
         tournamentTeams: [AIGLES, { ...LIONS, viewerMembership: { responseStatus: 'present' } }],
       }),
     };
-    expect(nomsDesEquipes(monter(lecteur))).toEqual(['Les Aigles', 'Les Lions']);
+    expect(nomsDesEquipes(monter(lecteur))).toEqual(['Les Lions']);
   });
 
   test('au seuil (8 sur 24) : la liste complète', () => {
