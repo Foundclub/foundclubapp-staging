@@ -108,9 +108,10 @@ test('🔴 le capitaine ouvre son propre lien : « C est ton équipe », envoyer
   expect([coded.secondaryAction, coded.secondary]).toEqual(['openTeam', 'Voir mon équipe']);
 });
 
-test('🔴 déjà dans l équipe : « Tu es déjà dans l équipe », « Voir mon équipe » (la place se paie sur sa page)', () => {
+// T-LIEN-MEMBRE (18/11, M1319 point 12) : le titre nomme l'équipe (« Tu fais déjà partie de l'équipe … »).
+test('🔴 déjà dans l équipe : « Tu fais déjà partie de l équipe … », « Voir mon équipe » (la place se paie sur sa page)', () => {
   const coded = connecte({ alreadyMember: true, canJoin: true, reason: null });
-  expect(coded.title).toBe("Tu es déjà dans l'équipe");
+  expect(coded.title).toBe("Tu fais déjà partie de l'équipe Recette Site 333");
   expect(coded.body).toBe('Ta place se paie sur la page de ton équipe.');
   expect([coded.action, coded.primary]).toEqual(['openTeam', 'Voir mon équipe']);
 });
