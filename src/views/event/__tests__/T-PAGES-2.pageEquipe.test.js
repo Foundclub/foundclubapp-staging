@@ -115,6 +115,10 @@ jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
 jest.mock('@/services/teamInvite/teamInviteShare', () => ({
   shareTournamentTeamInviteLink: jest.fn(async () => ({ envoi: 'copie', url: 'https://x' })),
 }));
+// IMPL-2-EQUIPE (M1311) : la conversation « Assistance FoundClub » ouverte avec un message prérempli.
+jest.mock('@/services/chat/assistanceService', () => ({
+  ouvrirMaConversationAssistance: jest.fn(async () => ({ documentId: 'chat-assistance' })),
+}));
 jest.mock('@/services/chat/chatService', () => ({
   createWhisperChat: jest.fn(async () => ({ documentId: 'chat-1' })),
 }));
@@ -860,7 +864,10 @@ describe('IMPL-2-EQUIPE — quitter avec une place payée (10c, 10d)', () => {
     await appuyer(arbre, ['Quitter l’équipe']);
     expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, tu es remboursé en entier : 20 €, sous 14 jours.');
     await appuyer(arbre, ['Écrire à l’Assistance']);
-    expect(mockOuvrirAssistance).toHaveBeenCalled();
+    // M1311 (chef, 19/11) : la conversation s'ouvre avec « je souhaite me retirer » prérempli.
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
+      brouillon: expect.stringContaining('je souhaite me retirer de l’équipe'), chatId: 'chat-assistance',
+    }));
     expect(services.leaveTournamentTeam).not.toHaveBeenCalled();
   });
 
@@ -883,5 +890,58 @@ describe('IMPL-2-EQUIPE — quitter avec une place payée (10c, 10d)', () => {
     const appel = alerte.mock.calls[alerte.mock.calls.length - 1];
     expect(appel[0]).toBe('Tu quittes l’équipe ?');
     expect(appel[2].map((/** @type {any} */ b) => b.text)).toEqual(['Rester dans l’équipe', 'Quitter l’équipe']);
+  });
+});
+
+// M1311 (testeur ; chef 19/11) — le capitaine ne pouvait ni retirer son équipe ni annuler son
+// inscription. « Retirer mon équipe » (rouge) : la règle des CGV § 5, puis la conversation
+// « Assistance FoundClub » avec le message prérempli ; le remboursement reste fait à la main (D233).
+describe('M1311 — le capitaine retire son équipe par l’Assistance', () => {
+  const NE_PAS_FIGER = ['nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'performance', 'hrtime'];
+  afterEach(() => { jest.useRealTimers(); });
+  const datee = () => {
+    const team = payante('capitaine');
+    team.event = { ...team.event, date: '2026-12-19T18:00:00.000Z' };
+    return team;
+  };
+
+  test('🔴 capitaine : « Retirer mon équipe », la règle, puis l’Assistance avec « je souhaite retirer mon équipe »', async () => {
+    jest.useFakeTimers({
+      doNotFake: NE_PAS_FIGER, now: new Date('2026-11-19T12:00:00.000Z'),
+    });
+    const arbre = await monter(datee(), 'u-cap');
+    await appuyer(arbre, ['Retirer mon équipe']);
+    expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, chaque place payée est remboursée intégralement. Après, pas de remboursement, mais chaque joueur peut céder sa place jusqu’au 17 décembre.');
+    await appuyer(arbre, ['Écrire à l’Assistance']);
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
+      brouillon: expect.stringContaining('je souhaite retirer mon équipe'), chatId: 'chat-assistance',
+    }));
+    const { brouillon } = navigation.navigate.mock.calls.find((/** @type {any[]} */ c) => c[0] === RouteNames.Conversation)[1];
+    expect(brouillon).toContain('FoundClub x AR Soccer');
+    expect(brouillon).toContain(datee().name);
+  });
+
+  test('un joueur ne voit pas « Retirer mon équipe »', async () => {
+    const arbre = await monter(payante('joueur'), 'u-2');
+    expect(combien(arbre, ['Retirer mon équipe'])).toBe(0);
+  });
+});
+
+// Contrat IMPL-5 (chef, 19/11) — un tiers reçoit `payment` sans `members`, et `membersSummary.list[]`
+// sans `paid` (`paidHidden: true`) : la page ne déduit jamais « non payé » d'un `paid` absent.
+describe('Contrat IMPL-5 — la page vue par un tiers', () => {
+  test('tiers : ni « À payer » ni « Payé » par joueur, ni nom de qui n’a pas payé ; le compte reste', async () => {
+    const team = payante('capitaine');
+    team.payment = {
+      currency: 'EUR', entryFeeCents: 2000, paidCount: 1, paidMembersToValidate: 5,
+    };
+    team.membersSummary = {
+      count: 2, list: [{ firstName: 'Capi', lastInitial: 'C', paidHidden: true }, { firstName: '', lastInitial: '', paidHidden: true }], paidCount: 1, pendingCount: 1,
+    };
+    const arbre = await monter(team, 'u-tiers');
+    const contenu = texte(arbre);
+    expect(contenu).toContain('1 place payée sur 5');
+    expect(contenu).not.toMatch(/À payer|n’a pas encore payé|n’ont pas encore payé/);
+    expect(contenu).not.toMatch(/(^| \| )Payé( \| |$)/);
   });
 });

@@ -29509,6 +29509,18 @@ export default {
       title: 'Recrutement',
       wants: 'veut rejoindre l’équipe',
     },
+    retrait: {
+      confirm: 'Écrire à l’Assistance',
+      draftMe: 'Bonjour, je souhaite me retirer de l’équipe « {{team}} » du tournoi « {{event}} ».',
+      draftTeam: 'Bonjour, je souhaite retirer mon équipe « {{team}} » du tournoi « {{event}} ».',
+      stay: 'Garder mon équipe',
+      teamButton: 'Retirer mon équipe',
+      teamHow: 'L’Assistance FoundClub retire l’équipe et s’occupe des remboursements des places payées.',
+      // eslint-disable-next-line max-len
+      teamRule: 'Jusqu’au {{refundDate}} inclus, chaque place payée est remboursée intégralement. Après, pas de remboursement, mais chaque joueur peut céder sa place jusqu’au {{cessionDate}}.',
+      teamRuleGeneric: 'Le remboursement des places suit les conditions d’inscription.',
+      teamTitle: 'Retirer ton équipe ?',
+    },
     roster: {
       count_one: '{{count}} joueur',
       count_other: '{{count}} joueurs',

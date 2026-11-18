@@ -17,6 +17,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
+import { ASSISTANCE_CHAT_TYPE, ASSISTANCE_NOM } from '@/domains/messaging/assistance';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -216,6 +217,8 @@ function TournamentTeamDetails({ navigation, route }) {
   const [inviteMode, setInviteMode] = useState(/** @type {'choice' | 'search'} */ ('choice'));
   const [inviteSlot, setInviteSlot] = useState(/** @type {number | null} */ (null));
   const [isPaidLeaveOpen, setIsPaidLeaveOpen] = useState(false);
+  // M1311 (chef, 19/11) : la fenêtre « Retirer ton équipe ? » du capitaine.
+  const [isTeamWithdrawOpen, setIsTeamWithdrawOpen] = useState(false);
   // T-INVITE (15/11) : « Inviter des joueurs » par lien ; sur un ordinateur le lien est copié,
   // l'écran le dit. États : '' | 'pending' | 'copie' | 'echec'.
   const [inviteLinkState, setInviteLinkState] = useState('');
@@ -1193,10 +1196,79 @@ function TournamentTeamDetails({ navigation, route }) {
   // IMPL-2-EQUIPE (10c, 10d) — quitter après avoir payé : la règle des conditions d'inscription,
   // puis l'Assistance (aucun écran de cession dans l'app).
   const withdrawal = getWithdrawalWindow({ eventDate: team?.event?.date });
-  const fermerEtEcrire = () => {
+  // M1311 (testeur ; chef 19/11) — se retirer, ou retirer son équipe, passe par la conversation
+  // « Assistance FoundClub », ouverte avec un message prérempli (`brouillon`, lu par Conversation.js
+  // et Conversation.web.js). Le remboursement reste fait à la main (D233) : aucune route neuve. Si la
+  // conversation ne s'ouvre pas, l'ouverture ordinaire (useOuvrirLAssistance) reprend et dit l'échec.
+  const tournoiPourLAssistance = [
+    resolveEventCustomName(team?.event) || team?.event?.name,
+    formatDateWithDayPrefix(team?.event?.date),
+  ].filter(Boolean).join(', ');
+  const brouillon = (/** @type {string} */ cle) => t(cle, {
+    event: tournoiPourLAssistance, team: team?.name || '', ...SANS_ECHAPPEMENT,
+  });
+  const ecrireALAssistance = async (/** @type {string} */ texte) => {
     setIsPaidLeaveOpen(false);
+    setIsTeamWithdrawOpen(false);
+    try {
+      // Chargé à la demande, comme le lien d'invitation.
+      // eslint-disable-next-line global-require
+      const { ouvrirMaConversationAssistance } = require('@/services/chat/assistanceService');
+      const chatId = String((await ouvrirMaConversationAssistance())?.documentId || '');
+      if (chatId) {
+        navigation.navigate(RouteNames.Conversation, {
+          brouillon: texte, chatId, chatType: ASSISTANCE_CHAT_TYPE, title: ASSISTANCE_NOM,
+        });
+        return;
+      }
+    } catch (_error) {
+      // L'ouverture ordinaire ci-dessous dit l'échec à l'écran.
+    }
     assistance.ouvrir();
   };
+  const fermerEtEcrire = () => ecrireALAssistance(brouillon('implEquipe.retrait.draftMe'));
+
+  // M1311 — « Retirer mon équipe » (capitaine) : la règle des conditions (CGV § 5), puis l'Assistance.
+  const canWithdrawTeam = canManageRoster && currentMemberIsCaptain;
+  const teamWithdrawLink = canWithdrawTeam ? (
+    <Button
+      onPress={() => setIsTeamWithdrawOpen(true)}
+      size="sm"
+      style={{ alignSelf: 'stretch' }}
+      title={t('implEquipe.retrait.teamButton')}
+      variant="Danger"
+    />
+  ) : null;
+  const teamWithdrawContent = (
+    <View style={Spaces.gap[12]} testID="tournament-team-withdraw-team">
+      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('implEquipe.retrait.teamTitle')}</Text>
+      <View style={[...tournamentDs.styles.insetPanelCard, Spaces.gap[8]]}>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {progress.isPaid && withdrawal.phase !== 'unknown'
+            ? t('implEquipe.retrait.teamRule', {
+              cessionDate: withdrawal.cessionDate,
+              refundDate: withdrawal.refundDate,
+              ...SANS_ECHAPPEMENT,
+            })
+            : t('implEquipe.retrait.teamRuleGeneric')}
+        </Text>
+      </View>
+      <Text style={[Fonts.p2, Fonts.neutral200]}>{t('implEquipe.retrait.teamHow')}</Text>
+      <Button
+        isLoading={assistance.enCours}
+        onPress={() => ecrireALAssistance(brouillon('implEquipe.retrait.draftTeam'))}
+        style={{ alignSelf: 'stretch' }}
+        title={t('implEquipe.retrait.confirm')}
+        variant="DangerFilled"
+      />
+      <Button
+        onPress={() => setIsTeamWithdrawOpen(false)}
+        style={{ alignSelf: 'stretch' }}
+        title={t('implEquipe.retrait.stay')}
+        variant="Ghost"
+      />
+    </View>
+  );
   const paidLeaveContent = (
     <View style={Spaces.gap[12]} testID="tournament-team-paid-leave">
       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('implEquipe.leave.paidTitle')}</Text>
@@ -1259,7 +1331,8 @@ function TournamentTeamDetails({ navigation, route }) {
     </View>
   );
 
-  const fenetres = isInviteOpen || isPaidLeaveOpen ? chargerLesFenetres() : null;
+  const fenetres = isInviteOpen || isPaidLeaveOpen || isTeamWithdrawOpen
+    ? chargerLesFenetres() : null;
 
   const mainColumn = (
     <View style={[Spaces.gap[16], isWide ? { flex: 1, minWidth: 0 } : null]}>
@@ -1507,6 +1580,7 @@ function TournamentTeamDetails({ navigation, route }) {
       {discussionCard}
       {withdrawCard}
       {leaveLink}
+      {teamWithdrawLink}
     </View>
   );
 
@@ -1611,6 +1685,15 @@ function TournamentTeamDetails({ navigation, route }) {
             webPresentation={isWide ? 'dialog' : undefined}
           >
             {paidLeaveContent}
+          </fenetres.BottomModal>
+        ) : null}
+        {fenetres && isTeamWithdrawOpen ? (
+          <fenetres.BottomModal
+            close={() => setIsTeamWithdrawOpen(false)}
+            isVisible
+            webPresentation={isWide ? 'dialog' : undefined}
+          >
+            {teamWithdrawContent}
           </fenetres.BottomModal>
         ) : null}
 

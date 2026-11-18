@@ -27719,6 +27719,18 @@ export default {
       title: 'Recruitment',
       wants: 'wants to join the team',
     },
+    retrait: {
+      confirm: 'Write to Support',
+      draftMe: 'Hello, I would like to withdraw from the team “{{team}}” of the tournament “{{event}}”.',
+      draftTeam: 'Hello, I would like to withdraw my team “{{team}}” from the tournament “{{event}}”.',
+      stay: 'Keep my team',
+      teamButton: 'Withdraw my team',
+      teamHow: 'FoundClub Support withdraws the team and handles the refunds of the paid spots.',
+      // eslint-disable-next-line max-len
+      teamRule: 'Until {{refundDate}} included, each paid spot is fully refunded. After that, no refund, but each player can hand over their spot until {{cessionDate}}.',
+      teamRuleGeneric: 'Refunds of the spots follow the registration terms.',
+      teamTitle: 'Withdraw your team?',
+    },
     roster: {
       count_one: '{{count}} player',
       count_other: '{{count}} players',
