@@ -61,6 +61,19 @@ export const respondToTournamentInvitation = async (teamId, status) => {
   return response?.data?.data || response?.data;
 };
 
+/**
+ * T-INVITATION-ACCUEIL (18/11/2026, Adel D237) — MES invitations d'équipe de tournoi en attente,
+ * pour la carte de l'accueil (admin : `listViewerInvitations`, tournament-competition.js). Un
+ * ancien serveur ignore `view=invitations` et rend la liste des équipes, sans `meta.view` : rien
+ * n'en sort, l'accueil reste tel quel.
+ * @returns {Promise<any[]>} Les invitations (`team`, `event`, `invitedBy`, `responseStatus`).
+ */
+export const getMyTournamentInvitations = async () => {
+  const response = await client.get('/tournament-teams', { params: { view: 'invitations' } });
+  const body = response?.data;
+  return body?.meta?.view === 'invitations' && Array.isArray(body?.data) ? body.data : [];
+};
+
 export const reviewTournamentJoinRequest = async (teamId, memberId, status) => {
   const response = await client.post(`/tournament-teams/${teamId}/review-request`, {
     data: { memberId, status },

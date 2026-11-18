@@ -25776,6 +25776,16 @@ export default {
     },
     teams: 'Teams',
   },
+  tournamentHomeInvitation: {
+    accept: 'Accept',
+    decline: 'Decline',
+    error: 'Your answer was not sent. Check your connection, then try again.',
+    pending: 'Pending invitation',
+    question: 'Do you want to join their team for this tournament?',
+    seeTournament: 'View tournament',
+    sentence: '{{inviter}} invites you to join their team {{team}} for the tournament {{tournament}}.',
+    someone: 'A player',
+  },
   tournamentInvitation: {
     error: 'The request could not be sent.',
     noTeam: 'You need to coach a team to ask to take part.',

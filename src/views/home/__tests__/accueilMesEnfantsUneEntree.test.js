@@ -197,6 +197,8 @@ jest.mock('@/views/collectivite/components/BandeauActualiteVille', () => ({
 }));
 jest.mock('@/views/collectivite/components/CollectivitePorteRow', () => () => null);
 jest.mock('@/views/home/FeuillePratiqueAussi', () => () => null);
+// T-INVITATION-ACCUEIL (18/11) : la carte d'invitation de tournoi a son propre témoin monté.
+jest.mock('@/views/home/InvitationsTournoiAccueil', () => () => null);
 
 const TITRE = 'Mes enfants';
 

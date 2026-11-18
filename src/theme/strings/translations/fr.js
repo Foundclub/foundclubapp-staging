@@ -26920,6 +26920,16 @@ export default {
     },
     teams: 'Les équipes',
   },
+  tournamentHomeInvitation: {
+    accept: 'Accepter',
+    decline: 'Refuser',
+    error: 'Ta réponse n’est pas partie. Vérifie ta connexion, puis réessaie.',
+    pending: 'Invitation en attente',
+    question: 'Veux-tu rejoindre son équipe pour ce tournoi ?',
+    seeTournament: 'Voir le tournoi',
+    sentence: '{{inviter}} t’invite à rejoindre son équipe {{team}} pour le tournoi {{tournament}}.',
+    someone: 'Un joueur',
+  },
   tournamentInvitation: {
     error: "La demande n'a pas pu partir.",
     noTeam: 'Il faut encadrer une équipe pour demander à participer.',
