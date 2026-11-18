@@ -754,7 +754,8 @@ const RELEVE_DU_LECTEUR = {
     validationManuelle: 0,
   },
   visiteur: {
-    barreDuBas: "Se connecter pour s'inscrire",
+    // T-PAGES-4b (18/11, chef, R7) : « Créer mon équipe », comme le site.
+    barreDuBas: '20 € par joueur | Créer mon équipe',
     brouillon: 0,
     carteMonEquipe: 0,
     carteTournoi: 1,
@@ -1214,5 +1215,160 @@ describe('T-PAGES-4 · chef 4 — sous le seuil, le nombre ne se lit nulle part'
 
   test('l organisateur voit toutes les équipes', () => {
     expect(nomsDesEquipes(monter(LECTEURS.organisateur()))).toEqual(['Les Aigles', 'Les Lions']);
+  });
+});
+
+// ============================================================================================
+// T-PAGES-4b (18/11, nuit automatique, chef) — la finition du téléphone : « Mon équipe » juste
+// sous le bandeau, les étiquettes du bandeau, un seul bouton en bas, l'id du tournoi aux
+// conditions.
+// ============================================================================================
+
+// La discussion de l'événement, posée entre l'en-tête et « Mon équipe » avant ce lot.
+jest.mock('../components/EventChatRow', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function EventChatRowDouble() {
+    return react.createElement(rn.View, { testID: 'event-chat-row' });
+  };
+});
+
+const ORDRE_4B = ['tournament-fiche-my-team', 'event-chat-row', 'tournament-essentials'];
+const ordreDuHaut = (/** @type {any} */ root) => [...new Set(root
+  .findAll((/** @type {any} */ node) => ORDRE_4B.includes(node.props?.testID)
+    || (node.type === Text && textOf(node) === 'DOUBLURE_EventHeader'), { deep: true })
+  .map((/** @type {any} */ node) => node.props?.testID || 'en-tete'))];
+
+const proprietesDeLEnTete = (/** @type {any} */ root) => root
+  .findAll((/** @type {any} */ node) => node.type?.name === 'TextDouble'
+    && node.findAllByType(Text).some((texte) => textOf(texte) === 'DOUBLURE_EventHeader'))
+  .pop()?.props;
+
+describe('T-PAGES-4b · 1 — « Mon équipe » vient juste sous le bandeau (maquette b)', () => {
+  test('🔴 capitaine, membre, invité : en-tête, « Mon équipe », la discussion, puis l essentiel', () => {
+    mockTeamQuery.data = null;
+    ['capitaine', 'membre', 'invite'].forEach((qui) => {
+      expect(ordreDuHaut(monter(LECTEURS[qui]()))).toEqual([
+        'en-tete', 'tournament-fiche-my-team', 'event-chat-row', 'tournament-essentials',
+      ]);
+    });
+  });
+
+  test('sans équipe : pas de « Mon équipe », l essentiel après la discussion (inchangé)', () => {
+    expect(ordreDuHaut(monter(LECTEURS.sansEquipe()))).toEqual([
+      'en-tete', 'event-chat-row', 'tournament-essentials',
+    ]);
+  });
+});
+
+describe('T-PAGES-4b · 2 — l en-tête passe en bandeau, avec l étiquette du lecteur', () => {
+  test('🔴 capitaine et membre : « Ton équipe est inscrite »', () => {
+    mockTeamQuery.data = null;
+    ['capitaine', 'membre'].forEach((qui) => {
+      expect(proprietesDeLEnTete(monter(LECTEURS[qui]())).tournamentHero)
+        .toEqual({ statusLabel: 'Ton équipe est inscrite' });
+    });
+  });
+
+  test('🔴 sans équipe, invité, visiteur, organisateur : « Inscriptions ouvertes » avant la publication', () => {
+    mockTeamQuery.data = null;
+    ['sansEquipe', 'invite', 'visiteur', 'organisateur', 'tropJeune'].forEach((qui) => {
+      expect(proprietesDeLEnTete(monter(LECTEURS[qui]())).tournamentHero)
+        .toEqual({ statusLabel: 'Inscriptions ouvertes' });
+    });
+  });
+
+  test('🔴 compétition publiée : plus d étiquette de statut', () => {
+    const lecteur = LECTEURS.sansEquipe();
+    lecteur.event.tournamentConfig = { ...lecteur.event.tournamentConfig, competitionState: 'published' };
+    expect(proprietesDeLEnTete(monter(lecteur)).tournamentHero).toEqual({ statusLabel: null });
+  });
+});
+
+describe('T-PAGES-4b · 3 — en bas, un seul bouton, celui du lecteur', () => {
+  test('chaque lecteur : un bouton et un seul dans la barre collée', () => {
+    mockTeamQuery.data = null;
+    const attendus = {
+      capitaine: 'Voir mon équipe',
+      invite: 'Répondre à mon invitation',
+      membre: 'Voir mon équipe',
+      organisateur: 'Gérer le tournoi',
+      sansEquipe: 'Créer mon équipe',
+      visiteur: 'Créer mon équipe',
+    };
+    Object.entries(attendus).forEach(([qui, titre]) => {
+      const [barre] = parTestID(monter(LECTEURS[qui]()), 'tournament-bottom-bar');
+      const boutons = barre.findAllByType(TouchableOpacity);
+      expect([qui, boutons.length, textOf(boutons[0])]).toEqual([qui, 1, titre]);
+    });
+  });
+});
+
+describe('T-PAGES-4b · 4 — « Lire les conditions » passe l id du tournoi', () => {
+  test('🔴 joueur (« Avant de t inscrire ») et organisateur : openTournamentTerms(« event-1 »)', () => {
+    // eslint-disable-next-line global-require
+    const conditions = require('../components/tournamentTerms');
+    const ouvrir = jest.spyOn(conditions, 'openTournamentTerms').mockImplementation(() => undefined);
+    const appuyer = (/** @type {any} */ root, /** @type {string} */ id) => {
+      const [bloc] = parTestID(root, id);
+      const bouton = bloc.findAllByType(TouchableOpacity)
+        .find((/** @type {any} */ node) => /conditions/i.test(textOf(node)));
+      act(() => {
+        bouton.props.onPress({ nativeEvent: {} });
+      });
+    };
+    appuyer(monter(LECTEURS.sansEquipe()), 'tournament-before-sign-up');
+    appuyer(monter(LECTEURS.organisateur()), 'event-tournament-terms-link');
+    expect(ouvrir.mock.calls).toEqual([['event-1'], ['event-1']]);
+    ouvrir.mockRestore();
+  });
+});
+
+describe('T-PAGES-4b · 5 — le visiteur sans compte : « Créer mon équipe », comme le site (R7)', () => {
+  const ATTENDU_CONNEXION = {
+    params: { origin: 'EventDetails', source: 'event-details-tournament-register' },
+    screen: 'Login',
+  };
+
+  test('🔴 la carte « Ton inscription » : « Créer mon équipe », puis « J’ai déjà un compte »', () => {
+    const [carte] = parTestID(monter(LECTEURS.visiteur()), 'tournament-registration-card');
+    expect(carte).toBeTruthy();
+    expect(textes(carte)).toEqual([
+      'Ton inscription',
+      'Inscris ton équipe',
+      '20 € par joueur',
+      'Ton équipe est validée dès la 5ᵉ place payée.',
+      'Créer mon équipe',
+      'J’ai déjà un compte',
+    ]);
+  });
+
+  test('🔴 chacun des deux range le tournoi et ouvre la connexion', () => {
+    // eslint-disable-next-line global-require
+    const { prendreLeRetourAuTournoi } = require('@/navigation/retourAuTournoi');
+    ['Créer mon équipe', 'J’ai déjà un compte'].forEach((titre) => {
+      prendreLeRetourAuTournoi();
+      mockNavigate.mockClear();
+      const [carte] = parTestID(monter(LECTEURS.visiteur()), 'tournament-registration-card');
+      const bouton = carte.findAllByType(TouchableOpacity)
+        .find((/** @type {any} */ node) => textOf(node) === titre);
+      act(() => {
+        bouton.props.onPress();
+      });
+      expect([titre, mockNavigate.mock.calls]).toEqual([titre, [['PublicAuthStack', ATTENDU_CONNEXION]]]);
+      expect(prendreLeRetourAuTournoi()).toBe('event-1');
+    });
+  });
+
+  test('🔴 la barre du bas : « 20 € par joueur », « Créer mon équipe »', () => {
+    expect(barreDe(monter(LECTEURS.visiteur()))).toEqual(['20 € par joueur', 'Créer mon équipe']);
+  });
+
+  test('tournoi publié ou clos : le visiteur garde « Se connecter pour s inscrire » / « Voir le tournoi »', () => {
+    const publie = LECTEURS.visiteur();
+    publie.event.tournamentConfig = { ...publie.event.tournamentConfig, competitionState: 'published' };
+    const root = monter(publie);
+    expect(barreDe(root)).toEqual(["Se connecter pour s'inscrire"]);
+    expect(parTestID(root, 'tournament-registration-card')).toHaveLength(0);
   });
 });

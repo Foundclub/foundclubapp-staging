@@ -1701,8 +1701,10 @@ describe('T-PARCOURS-2 — « Voir mon équipe » et le bouton du visiteur', () 
       auth: { ...authPour('', false), userData: null },
       event: tournoiDuServeur(),
     });
-    expect(libelleDeLaBarre(root)).toContain("Se connecter pour s'inscrire");
-    appuyerSur(root, "Se connecter pour s'inscrire");
+    // T-PAGES-4b (18/11, chef, R7) : le bouton du visiteur dit « Créer mon équipe », comme le
+    // site ; il range toujours le tournoi et ouvre la connexion.
+    expect(libelleDeLaBarre(root)).toContain('Créer mon équipe');
+    appuyerSur(root, 'Créer mon équipe');
     expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {
       params: { origin: 'EventDetails', source: 'event-details-tournament-register' },
       screen: 'Login',

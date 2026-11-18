@@ -1371,6 +1371,18 @@ function EventDetails({ navigation, route }) {
       userData?.documentId,
     )?.responseStatus) === 'invited' ? 'invited' : 'requested';
   }
+  // T-PAGES-4b (18/11, maquette (a) et (b), téléphone) — l'étiquette de statut du bandeau :
+  // « Ton équipe est inscrite » (capitaine, membre), sinon « Inscriptions ouvertes » tant que la
+  // compétition n'est pas publiée ni le tournoi clos.
+  let statutDuBandeau = null;
+  if (managedTournamentTeam || currentUserTournamentTeam) {
+    statutDuBandeau = t('eventDetails.header.teamRegistered');
+  } else if (!tournoiClos && tournamentConfig?.competitionState !== 'published') {
+    statutDuBandeau = t('eventDetails.header.registrationOpen');
+  }
+  const bandeauDuTournoi = isTournamentEvent && !isStageDayEvent
+    ? { statusLabel: statutDuBandeau }
+    : null;
   // T-PAGES-4 (17/11, chef, dans l'esprit de « 4- A » + « 2 ok ») — sous le seuil des 30 %, un
   // non-organisateur ne lit le nombre d'équipes nulle part : l'onglet Équipes ne liste que les
   // équipes qui cherchent un joueur, et la sienne. La liste complète paraît au seuil.
@@ -7264,21 +7276,42 @@ function EventDetails({ navigation, route }) {
    * pas publiée ; rien pour le trop jeune. Ensuite, « Voir le tournoi » reste la porte du déroulé.
    * @returns {{ note?: string | null, onPress: () => void, title: string } | null}
    */
+  // T-PAGES-4b (18/11, chef, maquette R7 et site) — le visiteur sans compte voit « Créer mon
+  // équipe » (et « J'ai déjà un compte » dans la carte) tant que l'équipe se crée encore : les deux
+  // rangent le tournoi où revenir, puis ouvrent la connexion (comme le site, un seul tunnel).
+  const visiteurPeutCreerSonEquipe = Boolean(
+    isTournamentEvent
+    && !isStageDayEvent
+    && !userData?.documentId
+    && !tournoiClos
+    && tournamentConfig?.allowCustomTeams !== false
+    && tournamentConfig?.competitionState !== 'published',
+  );
+  const ouvrirLaConnexionDuTournoi = () => {
+    retenirLeRetourAuTournoi(eventId);
+    openPublicAuthFlow(navigation, {
+      origin: RouteNames.EventDetails,
+      source: 'event-details-tournament-register',
+    });
+  };
+
   const getTournamentPrimaryAction = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
+
+    if (visiteurPeutCreerSonEquipe) {
+      return {
+        note: getTournamentEntryFeeLabel(event),
+        onPress: ouvrirLaConnexionDuTournoi,
+        title: t('eventDetails.createMyTeam', 'Créer mon équipe'),
+      };
+    }
 
     // T-PARCOURS-2 (17/11, point 2, R12) : le visiteur n'avait aucun chemin pour s'inscrire
     // (« Voir le tournoi » ne changeait rien à son écran). Ce bouton range le tournoi où revenir,
     // puis ouvre la connexion ; la fiche se rouvre une fois le compte prêt (useLiensEnAttente).
     if (!userData?.documentId && !tournoiClos) {
       return {
-        onPress: () => {
-          retenirLeRetourAuTournoi(eventId);
-          openPublicAuthFlow(navigation, {
-            origin: RouteNames.EventDetails,
-            source: 'event-details-tournament-register',
-          });
-        },
+        onPress: ouvrirLaConnexionDuTournoi,
         title: t('eventDetails.signInToRegister', "Se connecter pour s'inscrire"),
       };
     }
@@ -7387,7 +7420,7 @@ function EventDetails({ navigation, route }) {
         )}
         <TournamentBeforeSignUpCard
           event={event}
-          onOpenTerms={openTournamentTerms}
+          onOpenTerms={() => openTournamentTerms(event?.documentId)}
           title={equipeDuLecteurAuTournoi ? t('tournamentFicheWeb.before.beforeMatch') : undefined}
         />
       </>
@@ -7414,7 +7447,7 @@ function EventDetails({ navigation, route }) {
     if (!isTournamentEvent || isStageDayEvent || !isPaidTournament(event)) return null;
     return (
       <Button
-        onPress={openTournamentTerms}
+        onPress={() => openTournamentTerms(event?.documentId)}
         testID="event-tournament-terms-link"
         title={t('publicLicensePayment.tournament.termsLink', "Conditions d'inscription")}
         variant="SecondaryLight"
@@ -7449,7 +7482,11 @@ function EventDetails({ navigation, route }) {
     // du bas (`getTournamentPrimaryAction`). Elles etaient en HAUT de la page :
     // hors de portee du pouce, et invisibles des qu'on avait defile.
     // ⛔ Il ne reste ici que les deux gestes d'INSCRIPTION.
-    if (!canRegisterTournamentSourceTeam && !canCreateCustomTournamentTeam) return null;
+    if (
+      !canRegisterTournamentSourceTeam
+      && !canCreateCustomTournamentTeam
+      && !visiteurPeutCreerSonEquipe
+    ) return null;
     const prix = getTournamentEntryFeeLabel(event);
     const regle = isPaidTournament(event)
       ? t('tournamentFicheWeb.signUp.rule', { count: tournamentPaidThreshold(event) })
@@ -7468,12 +7505,22 @@ function EventDetails({ navigation, route }) {
         {/* Le seul bouton principal de la carte : « Créer mon équipe » (le même geste que le
             bouton du bas). L'équipe du club, pour l'entraîneur du club organisateur, reste
             secondaire (maquette (a), variante). */}
-        {canCreateCustomTournamentTeam ? (
+        {canCreateCustomTournamentTeam || visiteurPeutCreerSonEquipe ? (
           <Button
-            onPress={() => setIsTournamentCreateModalVisible(true)}
+            onPress={visiteurPeutCreerSonEquipe
+              ? ouvrirLaConnexionDuTournoi
+              : () => setIsTournamentCreateModalVisible(true)}
             style={{ minHeight: 44 }}
             title={t('tournamentFicheWeb.signUp.create')}
             variant="Primary"
+          />
+        ) : null}
+        {visiteurPeutCreerSonEquipe ? (
+          <Button
+            onPress={ouvrirLaConnexionDuTournoi}
+            style={{ minHeight: 44 }}
+            title={t('tournamentFicheWeb.signUp.haveAccount')}
+            variant="Secondary"
           />
         ) : null}
         {canRegisterTournamentSourceTeam ? (
@@ -8692,7 +8739,11 @@ function EventDetails({ navigation, route }) {
               detectionSummary={detectionHeaderSummary}
               event={event}
               matchScoreSummary={matchEncartSummary}
+              tournamentHero={bandeauDuTournoi}
             />
+            {/* T-PAGES-4b (18/11, maquette (b), téléphone) : « Mon équipe » vient juste sous le
+                bandeau, avant la discussion et « L'essentiel ». */}
+            {renderTournamentMyTeamCard()}
             {/* CONVERSATION-EVENEMENT (10/11) — le chat de l'evenement, sous la carte,
                 au-dessus des onglets (maquette validee, ecrans A a G) ;
                 le serveur dit qui voit quoi. */}
@@ -8758,8 +8809,8 @@ function EventDetails({ navigation, route }) {
             {openTrainingPublicLine ? (
               <Text style={[Fonts.p3, Fonts.neutral200]}>{openTrainingPublicLine}</Text>
             ) : null}
-            {/* T-PAGES-4 (17/11) : « Mon équipe » (b), L'essentiel, puis l'inscription (a). */}
-            {renderTournamentMyTeamCard()}
+            {/* T-PAGES-4 (17/11) : L'essentiel, puis l'inscription (a) ; « Mon équipe » est
+                sous le bandeau (T-PAGES-4b). */}
             {renderTournamentEssentials()}
             {renderTournamentActionsPanel()}
             {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte.
