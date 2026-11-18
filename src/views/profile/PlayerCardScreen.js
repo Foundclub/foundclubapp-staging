@@ -537,7 +537,13 @@ function PlayerCardScreen({ navigation, route }) {
   if (showExample) {
     const exampleWidth = Math.min(windowWidth - 96, 420);
     return (
-      <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+      // A4 : sur le SITE, sans cadre borné, la page entière défile et le pied passe dessous.
+      <ScreenContainer
+        bgImage="bg2"
+        bottomInsetMode="screen"
+        boundedHeight
+        contentContainerStyle={CADRE_BORNE}
+      >
         <ScrollView
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]}
           showsVerticalScrollIndicator={false}
@@ -579,7 +585,13 @@ function PlayerCardScreen({ navigation, route }) {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+    // A4 : borné en fin d'inscription seulement (site : « Plus tard » mesuré à 1 094 px sur 667).
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="screen"
+      boundedHeight={isCelebration}
+      contentContainerStyle={isCelebration ? CADRE_BORNE : undefined}
+    >
       <ScrollView contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]} showsVerticalScrollIndicator={false}>
         {/* En-tete */}
         <View style={[Spaces.gap[8], Alignments.alignCenter]}>
@@ -761,6 +773,10 @@ function PlayerCardScreen({ navigation, route }) {
     </ScreenContainer>
   );
 }
+
+// A4 — le motif du projet pour un pied fixe sur le site (FacilityReportDetails) : cadre borné ET
+// contenu en `flex: 1`, sinon le contenu (flexShrink 0 sur le site) reprend toute sa hauteur.
+const CADRE_BORNE = [{ flex: 1 }];
 
 const styles = StyleSheet.create({
   accroche: { maxWidth: 320 },

@@ -131,7 +131,9 @@ jest.mock(
 
 jest.mock(
   '@/components/templates/ScreenContainer',
-  () => function ScreenContainerMock({ children }) {
+  () => function ScreenContainerMock({ boundedHeight, children }) {
+    // INSCRIPTION-PARCOURS A4 : le dernier cadre monté dit s'il est borné (site).
+    global.mockCadreBorne = Boolean(boundedHeight);
     return children;
   },
 );
@@ -381,7 +383,17 @@ describe('INSCRIPTION-PARCOURS A4 — « Plus tard, continuer » hors de ce qui 
     expect(navigation.navigate).toHaveBeenCalledWith('UserTeamAffiliation');
   });
 
-  it('hors inscription (depuis le profil) : aucun « Plus tard »', () => {
+  it('hors inscription (depuis le profil) : aucun « Plus tard », cadre non borné', () => {
     expect(gestes(monter().arbre, 'Plus tard, continuer')).toHaveLength(0);
+    expect(global.mockCadreBorne).toBe(false);
+  });
+
+  // Sur le SITE, la page entière défilait : le pied passait sous 1 094 px (écran de 667, banc du
+  // 18/11). Le cadre borné (RECHERCHE-UNIQUE) fait défiler la zone seule, le pied reste en bas.
+  it('en fin d inscription, carte modèle puis la sienne : cadre borné (site)', () => {
+    const monte = monter({ celebration: true });
+    expect(global.mockCadreBorne).toBe(true);
+    act(() => gestes(monte.arbre, 'Découvrir ma carte')[0].props.onPress());
+    expect(global.mockCadreBorne).toBe(true);
   });
 });
