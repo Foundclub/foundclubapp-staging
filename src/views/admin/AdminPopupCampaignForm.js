@@ -92,7 +92,9 @@ const campaignToForm = (campaign) => {
     status: campaign?.status || 'draft',
     subtitle: campaign?.subtitle || '',
     targetClubsText: Array.isArray(campaign?.audience?.targetClubIds) ? campaign.audience.targetClubIds.join(', ') : '',
-    targetDepartmentsText: Array.isArray(campaign?.audience?.targetDepartments) ? campaign.audience.targetDepartments.join(', ') : '',
+    targetDepartmentsText: Array.isArray(campaign?.audience?.targetDepartments)
+      ? campaign.audience.targetDepartments.join(', ')
+      : '',
     targetMultisportClubsText: Array.isArray(campaign?.audience?.targetMultisportClubIds) ? campaign.audience.targetMultisportClubIds.join(', ') : '',
     targetPlatformsText: Array.isArray(campaign?.audience?.targetPlatforms) ? campaign.audience.targetPlatforms.join(', ') : '',
     targetRolesText: Array.isArray(campaign?.audience?.targetRoles) ? campaign.audience.targetRoles.join(', ') : '',
@@ -745,7 +747,8 @@ function AdminPopupCampaignForm() {
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
           {t(
             'adminPopupCampaignForm.fields.targetDepartmentsHint',
-            'Vide = toute la France. Un compte dont FoundClub ne connaît pas le département ne la reçoit pas.',
+            'Vide = toute la France. Un compte dont FoundClub ne connaît pas le département '
+              + 'ne la reçoit pas.',
           )}
         </Text>
         {renderInput(

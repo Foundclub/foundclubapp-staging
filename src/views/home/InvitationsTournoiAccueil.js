@@ -181,9 +181,10 @@ function CarteInvitationTournoi({ invitation, navigation }) {
  * @returns {import('react').ReactElement | null} Les cartes, ou rien.
  */
 function InvitationsTournoiAccueil({ navigation }) {
-  // L'onglet de l'accueil reste monté et l'app ne relit rien au retour (`refetchOnWindowFocus: false`) :
-  // la lecture suit le focus de l'écran (comme HomeHub.js), une invitation répondue sur la page
-  // d'équipe ou reçue entre-temps est à jour au retour sur l'accueil.
+  // L'onglet de l'accueil reste monté et l'app ne relit rien au retour
+  // (`refetchOnWindowFocus: false`) : la lecture suit le focus de l'écran (comme HomeHub.js),
+  // une invitation répondue sur la page d'équipe ou reçue entre-temps est à jour au retour sur
+  // l'accueil.
   const isFocused = useIsFocused();
   const lecture = useMyTournamentInvitations({ ...LECTURE_DISCRETE, enabled: isFocused });
   const invitations = (Array.isArray(lecture?.data) ? lecture.data : [])

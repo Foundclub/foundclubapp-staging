@@ -95,7 +95,9 @@ const monter = async (initialCampaign) => {
   montes.push(arbre);
 };
 
-test('joueur connecté — titre, image, et « Voir le tournoi » ouvre la fiche de CE tournoi', async () => {
+const TITRE_JOUEUR_CONNECTE = 'joueur connecté — titre, image, et « Voir le tournoi » '
+  + 'ouvre la fiche de CE tournoi';
+test(TITRE_JOUEUR_CONNECTE, async () => {
   mockAuth = { token: 'jeton', user: { documentId: 'joueur-1' } };
   await monter(TOURNOI);
 

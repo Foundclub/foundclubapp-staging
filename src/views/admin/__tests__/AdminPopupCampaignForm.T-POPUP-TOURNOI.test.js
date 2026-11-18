@@ -232,7 +232,9 @@ test('C2 (caractérisant) — un brouillon relu garde son eventId', async () => 
   expect(data.actions[0]).toEqual(expect.objectContaining({ eventId: 'evt-7' }));
 });
 
-test('R1 — le SuperAdmin cherche le tournoi par son nom et le choisit, sans taper d id', async () => {
+const TITRE_R1 = 'R1 — le SuperAdmin cherche le tournoi par son nom et le choisit, '
+  + 'sans taper d id';
+test(TITRE_R1, async () => {
   const arbre = monter();
   actionPrincipaleOuvreUnEvenement(arbre);
 
@@ -284,7 +286,9 @@ test('R2 — dans l aperçu, « Voir le tournoi » ouvre la fiche de CE tournoi'
 });
 
 // T-POPUP-ZONE (18/11, décision d'Adel D236) — n'annoncer le tournoi qu'aux comptes de sa zone.
-test('ZONE-R1 — « Départements ciblés » part dans targetDepartments, et vide = toute la France', async () => {
+const TITRE_ZONE_R1 = 'ZONE-R1 — « Départements ciblés » part dans targetDepartments, '
+  + 'et vide = toute la France';
+test(TITRE_ZONE_R1, async () => {
   const arbre = monter();
   const aide = arbre.root.findAllByType(Text)
     .map((t) => [].concat(t.props.children).join(''))
@@ -296,7 +300,8 @@ test('ZONE-R1 — « Départements ciblés » part dans targetDepartments, et vi
 
   act(() => { champ(arbre, '34, 30').props.onChangeText('34, 30'); });
   await enregistrer(arbre, 'Créer le brouillon');
-  expect(/** @type {any} */ (mockCreer.mock.calls[1])[0].data.targetDepartments).toEqual(['34', '30']);
+  expect(/** @type {any} */ (mockCreer.mock.calls[1])[0].data.targetDepartments)
+    .toEqual(['34', '30']);
 });
 
 test('ZONE-R2 — un brouillon relu garde ses départements', async () => {

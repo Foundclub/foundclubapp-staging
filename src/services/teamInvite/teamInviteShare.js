@@ -260,8 +260,8 @@ export const buildTournamentTeamInviteMessage = ({ eventName, teamName, url }) =
  * T-INVITE — fabrique (ou relit) le code de l'équipe, puis partage
  * `/i/tournament/<tournoi>?c=<code>` :
  * feuille du système sur le téléphone, copie sur un ordinateur (comme `envoyerLeLien`).
- * @param {{ eventId: string, eventName?: string, teamId: string, teamName?: string }} params -
- * L'équipe.
+ * @param {{ eventId: string, eventName?: string, lienSeul?: boolean, teamId: string,
+ *   teamName?: string }} params - L'équipe ; `lienSeul` copie le lien sans le message (site).
  * @returns {Promise<{ envoi?: '' | 'copie' | 'echec', url: string | null }>} Ce qui est parti.
  */
 export const shareTournamentTeamInviteLink = async ({

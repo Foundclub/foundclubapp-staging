@@ -1290,7 +1290,8 @@ function TournamentTeamDetails({ navigation, route }) {
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('tournamentTeamDetails.roster.title', 'Effectif')}
           </Text>
-          {/* T-SANS-PLAFOND (D239) : plus de « sur {{max}} » ; le seuil est dans la progression. */}
+          {/* T-SANS-PLAFOND (D239) : plus de « sur {{max}} » ; le seuil est dans la
+              progression. */}
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
               count: activeMembers.length,

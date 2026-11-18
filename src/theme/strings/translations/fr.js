@@ -26937,7 +26937,8 @@ export default {
     pending: 'Invitation en attente',
     question: 'Veux-tu rejoindre son équipe pour ce tournoi ?',
     seeTournament: 'Voir le tournoi',
-    sentence: '{{inviter}} t’invite à rejoindre son équipe {{team}} pour le tournoi {{tournament}}.',
+    sentence:
+      '{{inviter}} t’invite à rejoindre son équipe {{team}} pour le tournoi {{tournament}}.',
     someone: 'Un joueur',
   },
   tournamentInvitation: {

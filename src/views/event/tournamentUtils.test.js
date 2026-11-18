@@ -91,8 +91,9 @@ describe('tournamentUtils', () => {
     });
   });
 
-  // T-SUITES-TOURNOI (18/11, chef « 2- A ») : une équipe archivée (`archivedAt`, même restée
-  // « pending ») ne compte plus dans « en attente » : même règle que getTournamentRegisteredTeamsCount.
+  // T-SUITES-TOURNOI (18/11, chef « 2- A ») : une équipe archivée (`archivedAt`, même
+  // restée « pending ») ne compte plus dans « en attente » : même règle que
+  // getTournamentRegisteredTeamsCount.
   test('🔴 T-SUITES : une équipe archivée (archivedAt) n est plus « en attente »', () => {
     const teams = [
       { members: [], status: 'accepted' },
