@@ -168,6 +168,12 @@ function AssignmentCard({ assignment, onPress }) {
   const remaining = Number(assignment?.amountRemainingCents) || 0;
   const isWaived = assignment?.status === 'waived';
   const isCancelled = assignment?.status === 'cancelled';
+  // T-NOTIFS-TOURNOI (j, 18/11) — soldee : ce qui a ete paye (« 20,00 € soldée »),
+  // pas un reste a 0 lu « PAYÉE · 0,00 € ». Due, exemptee ou annulee : le reste, comme avant.
+  // Temoin : __tests__/MyLicenses.TNOTIFS.montantSolde.test.js.
+  const shownCents = assignment?.status === 'paid' && remaining <= 0
+    ? Number(assignment?.amountPaidCents) || 0
+    : remaining;
 
   let amountStyle = Fonts.neutral00;
   if (isWaived || isCancelled) amountStyle = Fonts.neutral300;
@@ -212,7 +218,7 @@ function AssignmentCard({ assignment, onPress }) {
             isCancelled ? { textDecorationLine: 'line-through' } : null,
           ]}
           >
-            {formatLicenseMoney(remaining, currency)}
+            {formatLicenseMoney(shownCents, currency)}
           </Text>
           <Text style={[type.keyLabel, Fonts.neutral300]}>
             {describeAssignmentContext(assignment)}

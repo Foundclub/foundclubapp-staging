@@ -1543,6 +1543,9 @@ export const NOTIFICATION_TYPES = {
   TOURNAMENT_TEAM_INVITATION_STATUS: 'tournamentTeamInvitationStatus',
   TOURNAMENT_TEAM_JOIN_REQUEST: 'tournamentTeamJoinRequest',
   TOURNAMENT_TEAM_JOIN_REQUEST_STATUS: 'tournamentTeamJoinRequestStatus',
+  // T-NOTIFS-TOURNOI (18/11) : l organisateur apprend qu une equipe s est inscrite
+  // (meme chaine que le serveur).
+  TOURNAMENT_TEAM_REGISTERED: 'tournamentTeamRegistered',
   TOURNAMENT_TEAM_ROSTER_WARNING: 'tournamentTeamRosterWarning',
   TOURNAMENT_TEAM_STATUS: 'tournamentTeamStatus',
 
