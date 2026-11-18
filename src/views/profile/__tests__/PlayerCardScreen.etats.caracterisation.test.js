@@ -350,3 +350,37 @@ describe('PAR-L14 — etat CELEBRATION (fin d inscription) : inchange apres la c
     expect(navigation.navigate).toHaveBeenCalledWith('Home');
   });
 });
+
+// INSCRIPTION-PARCOURS A4 (D245, 18/11) — un vrai inscrit : « Plus tard » est trop bas, il faut
+// défiler pour le voir. La carte arrive AU MILIEU de l'inscription (après « Ouvert au
+// recrutement ? ») : la sortie doit se voir sans défiler, sur la carte modèle comme sur la sienne.
+// Le banc ne mesure pas des pixels ; il vérifie que le bouton n'est plus DANS ce qui défile.
+describe('INSCRIPTION-PARCOURS A4 — « Plus tard, continuer » hors de ce qui défile', () => {
+  const { ScrollView } = jest.requireActual('react-native');
+  const dansLeDefilement = (arbre, nom) => arbre.root.findAllByType(ScrollView)
+    .some((zone) => zone.findAll((n) => n.type === TouchableOpacity
+      && n.findAllByType(Text).some((t) => [].concat(t.props.children).join('') === nom)).length > 0);
+
+  it('sur SA carte : le bouton existe, hors de la zone qui défile, et mène à la suite', () => {
+    const { arbre, navigation } = monterCelebration();
+
+    expect(gestes(arbre, 'Plus tard, continuer')).toHaveLength(1);
+    expect(dansLeDefilement(arbre, 'Plus tard, continuer')).toBe(false);
+    act(() => gestes(arbre, 'Plus tard, continuer')[0].props.onPress());
+    expect(navigation.navigate).toHaveBeenCalledWith('Home');
+  });
+
+  it('sur la carte MODÈLE : on peut déjà passer, sans défiler', () => {
+    const { arbre, navigation } = monter({ celebration: true, nextRoute: 'UserTeamAffiliation' });
+
+    expect(gestes(arbre, 'Découvrir ma carte')).toHaveLength(1);
+    expect(gestes(arbre, 'Plus tard, continuer')).toHaveLength(1);
+    expect(dansLeDefilement(arbre, 'Plus tard, continuer')).toBe(false);
+    act(() => gestes(arbre, 'Plus tard, continuer')[0].props.onPress());
+    expect(navigation.navigate).toHaveBeenCalledWith('UserTeamAffiliation');
+  });
+
+  it('hors inscription (depuis le profil) : aucun « Plus tard »', () => {
+    expect(gestes(monter().arbre, 'Plus tard, continuer')).toHaveLength(0);
+  });
+});

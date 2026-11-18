@@ -467,6 +467,18 @@ function PlayerCardScreen({ navigation, route }) {
     ville: 'Lyon 69007',
   };
   const showExample = isCelebration && !hasSeenExample && !parcours;
+  // INSCRIPTION-PARCOURS A4 (D245) : la carte arrive AU MILIEU de l'inscription ; « Plus tard,
+  // continuer » était sous la jauge et les deux boutons de partage, il fallait défiler pour sortir.
+  // Il quitte la zone qui défile : posé sous elle, il se voit sur la carte modèle comme sur la sienne.
+  const piedPlusTard = isCelebration ? (
+    <View style={[Spaces.paddingVertical[8]]}>
+      <Button
+        onPress={handleContinueOnboarding}
+        title={t('playerCard.revealContinue', 'Plus tard, continuer')}
+        variant="Ghost"
+      />
+    </View>
+  ) : null;
 
   if (parcours) {
     return (
@@ -561,6 +573,7 @@ function PlayerCardScreen({ navigation, route }) {
             variant="Primary"
           />
         </ScrollView>
+        {piedPlusTard}
       </ScreenContainer>
     );
   }
@@ -714,14 +727,8 @@ function PlayerCardScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {isCelebration ? (
-          <Button
-            onPress={handleContinueOnboarding}
-            title={t('playerCard.revealContinue', 'Plus tard, continuer')}
-            variant="Ghost"
-          />
-        ) : null}
       </ScrollView>
+      {piedPlusTard}
 
       {/* Rendu HORS-ECRAN dedie a la capture (992×1262 a l'export, jamais voile) */}
       <View collapsable={false} pointerEvents="none" style={styles.offscreen}>
