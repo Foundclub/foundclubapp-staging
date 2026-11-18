@@ -29,7 +29,9 @@ import {
   useGetInAppPopupCampaign,
   useUpdateInAppPopupCampaign,
 } from '@/services/inAppPopupCampaign/inAppPopupCampaignQueries';
+import { useSearchEvents } from '@/services/search/searchQueries';
 
+import { formatDateTimeWithDayPrefix } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
@@ -171,6 +173,95 @@ const getActionTargetLabel = (actionType) => {
 };
 
 /**
+ * T-POPUP-TOURNOI (18/11) — trouver l'événement d'une action « open_event » par son NOM,
+ * au lieu de taper son documentId. Réutilise la recherche de Recherche › Événements
+ * (`/search/events` : événements visibles et à venir). Toucher un résultat remplit l'id.
+ * ponytail: 8 résultats, sans pagination ; sortie : préciser le nom.
+ * @param {{ onSelect: (documentId: string) => void, slot: string }} props
+ * @returns {import('react').ReactElement}
+ */
+function PopupEventSearch({ onSelect, slot }) {
+  const {
+    ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const [selectedName, setSelectedName] = useState('');
+  const normalizedQuery = query.trim();
+  // ponytail: pas de filtre `excludeType` (il exige le nom français exact du type) : une
+  // réservation visible peut sortir dans la liste ; le nom et la date départagent.
+  const { data } = useSearchEvents({
+    pageSize: 8,
+    q: normalizedQuery,
+    sort: 'relevance',
+  }, { enabled: normalizedQuery.length >= 2 });
+  const events = normalizedQuery.length >= 2
+    ? (data?.pages || []).flatMap((page) => (page?.data || []).map((entry) => entry?.payload))
+      .filter((event) => event?.documentId)
+      .slice(0, 8)
+    : [];
+
+  return (
+    <View style={[Spaces.gap[8]]}>
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('adminPopupCampaignForm.eventSearch.label', 'Chercher l’événement')}
+      </Text>
+      <TextInput
+        onChangeText={setQuery}
+        placeholder={t('adminPopupCampaignForm.eventSearch.placeholder', 'Ex : AR Soccer')}
+        placeholderTextColor={Colors.neutral300}
+        style={[
+          styles.input,
+          ApplicationStyle.backgroundColor.neutral800,
+          { borderColor: `${Colors.primary500}24`, color: Colors.neutral00 },
+        ]}
+        testID={`popup-recherche-evenement-${slot}`}
+        value={query}
+      />
+      {selectedName ? (
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          {t('adminPopupCampaignForm.eventSearch.selected', 'Choisi : {{name}}', {
+            interpolation: { escapeValue: false },
+            name: selectedName,
+          })}
+        </Text>
+      ) : null}
+      {normalizedQuery.length < 2 ? (
+        <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+          {t(
+            'adminPopupCampaignForm.eventSearch.hint',
+            "Tape au moins 2 lettres du nom : l'id se remplit tout seul.",
+          )}
+        </Text>
+      ) : null}
+      {normalizedQuery.length >= 2 && events.length === 0 ? (
+        <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+          {t('adminPopupCampaignForm.eventSearch.empty', 'Aucun événement à venir ne correspond.')}
+        </Text>
+      ) : null}
+      {events.map((event) => (
+        <TouchableOpacity
+          accessibilityRole="button"
+          key={event.documentId}
+          onPress={() => {
+            onSelect(String(event.documentId));
+            setSelectedName(event.name || String(event.documentId));
+            setQuery('');
+          }}
+          style={[styles.eventRow, { borderColor: `${Colors.neutral300}33` }]}
+          testID={`popup-evenement-${event.documentId}`}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{event.name || event.documentId}</Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+            {formatDateTimeWithDayPrefix(event.date, { fallback: '' })}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+/**
  *
  */
 function AdminPopupCampaignForm() {
@@ -203,6 +294,19 @@ function AdminPopupCampaignForm() {
   const previewActions = Array.isArray(previewPayload.actions) ? previewPayload.actions : [];
   const previewPrimaryAction = previewActions.find((action) => action.slot === 'primary') || null;
   const previewSecondaryAction = previewActions.find((action) => action.slot === 'secondary') || null;
+
+  // T-POPUP-TOURNOI — dans l'aperçu, « Voir le tournoi » ouvre la fiche choisie : le SuperAdmin
+  // voit que l'action mène au BON événement. Même destination que RemotePopupCampaignHost.
+  // ponytail: seul open_event navigue dans l'aperçu ; les autres actions ferment l'aperçu.
+  const pressPreviewAction = (action) => {
+    setIsPreviewVisible(false);
+    if (action?.actionType === 'open_event' && action?.eventId) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId: action.eventId },
+        screen: RouteNames.EventDetails,
+      });
+    }
+  };
 
   if (campaignId && campaignQuery.isLoading) {
     return (
@@ -478,6 +582,13 @@ function AdminPopupCampaignForm() {
           </ScrollView>
         </View>
 
+        {action.actionType === 'open_event' ? (
+          <PopupEventSearch
+            onSelect={(documentId) => setActionField(slot, 'targetValue', documentId)}
+            slot={slot}
+          />
+        ) : null}
+
         {needsTarget ? (
           <View style={[Spaces.gap[8]]}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{getActionTargetLabel(action.actionType)}</Text>
@@ -671,7 +782,7 @@ function AdminPopupCampaignForm() {
         onRequestClose={() => setIsPreviewVisible(false)}
         primaryAction={previewPrimaryAction ? {
           label: previewPrimaryAction.label || 'Action',
-          onPress: () => setIsPreviewVisible(false),
+          onPress: () => pressPreviewAction(previewPrimaryAction),
           variant: previewPrimaryAction.variant || 'Primary',
         } : {
           label: t('adminPopupCampaignForm.close', 'Fermer'),
@@ -682,7 +793,7 @@ function AdminPopupCampaignForm() {
             'adminPopupCampaignForm.secondaryAction',
             'Action secondaire',
           ),
-          onPress: () => setIsPreviewVisible(false),
+          onPress: () => pressPreviewAction(previewSecondaryAction),
           variant: previewSecondaryAction.variant || 'Secondary',
         } : null}
         supportingText={previewPayload.subtitle || undefined}
@@ -703,6 +814,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  eventRow: {
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 2,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   image: {
     borderRadius: 18,

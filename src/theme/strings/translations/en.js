@@ -1160,6 +1160,13 @@ export default {
     close: 'Close',
     createDraft: 'Create the draft',
     editTitle: 'Edit the campaign',
+    eventSearch: {
+      empty: 'No upcoming event matches.',
+      hint: 'Type at least 2 letters of the name: the id fills in by itself.',
+      label: 'Find the event',
+      placeholder: 'E.g. AR Soccer',
+      selected: 'Selected: {{name}}',
+    },
     fields: {
       body: 'Body',
       bodyPlaceholder: 'Main message shown in the popup',
