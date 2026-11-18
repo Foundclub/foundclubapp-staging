@@ -119,3 +119,25 @@ describe('T-PARCOURS-2 -- apres la connexion, l app revient sur la fiche du tour
     expect(mockNaviguer).toHaveBeenCalledWith(...FICHE);
   });
 });
+
+// T-PAGES-6b (18/11/2026, points 5 et 6 de T-PAGES-6) : le tournoi rappelé pendant la création du
+// compte (domains/tournoi/inscriptionEnCours.js) reste tant que le tunnel n'est pas fini, puis le
+// retour l'efface. ROUGE avant le lot : rien ne l'effaçait.
+describe('T-PAGES-6b -- le tournoi rappele dans le tunnel est efface au retour', () => {
+  const tunnel = () => require('@/domains/tournoi/inscriptionEnCours'); // eslint-disable-line global-require
+  const TOURNOI = { date: '2026-12-19T18:00:00.000Z', documentId: 'tournoi-1912', name: 'FoundClub x AR Soccer' };
+
+  it('🔴 compte pret : le rappel du tunnel est efface', async () => {
+    tunnel().retenirLInscriptionAuTournoi({ event: TOURNOI });
+    repere().retenirLeRetourAuTournoi('tournoi-1912');
+    await monterPuisAttendre(true);
+    expect(tunnel().lireLInscriptionAuTournoi()).toBeNull();
+    expect(mockNaviguer).toHaveBeenCalledWith(...FICHE);
+  });
+
+  it('caracterisant : une etape d accueil attend, le rappel reste pour le tunnel', async () => {
+    tunnel().retenirLInscriptionAuTournoi({ event: TOURNOI });
+    await monterPuisAttendre(false);
+    expect(tunnel().lireLInscriptionAuTournoi()?.eventId).toBe('tournoi-1912');
+  });
+});

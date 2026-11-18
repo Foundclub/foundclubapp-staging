@@ -6,14 +6,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { lireLInscriptionAuTournoi } from '@/domains/tournoi/inscriptionEnCours';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import OTPForm from '@/components/organisms/otpForm/OTPForm';
 import PhoneForm from '@/components/organisms/signinPhoneForm/SigninPhoneForm';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import BandeauTournoiEnCours from '@/views/onboarding/components/BandeauTournoiEnCours';
 
 import { RouteNames } from '@/navigation/routeNames';
+
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
@@ -25,6 +28,9 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 function Register({ navigation }) {
   // local states
   const [phone, setPhone] = useState('');
+  // T-PAGES-6b (18/11, point 6 de T-PAGES-6) : venu d'un tournoi, le visiteur lit le tournoi en
+  // tête et le bouton dit ce qu'il fait (« Recevoir mon code ») ; sinon, l'écran ne change pas.
+  const [vientDUnTournoi] = useState(() => Boolean(lireLInscriptionAuTournoi()));
   // hooks
   const {
     Alignments, Fonts, Images, Spaces,
@@ -92,6 +98,7 @@ function Register({ navigation }) {
             <View style={Alignments.alignCenter}>
               {renderBrandLogo()}
             </View>
+            <BandeauTournoiEnCours />
             <View style={[Spaces.gap[16], Alignments.fullWidth]}>
               <Text style={[Fonts.h2Black, Fonts.neutral00]}>{t('register.title')}</Text>
               <Text style={[Fonts.p1, Fonts.neutral00]}>
@@ -113,7 +120,9 @@ function Register({ navigation }) {
               <PhoneForm
                 isLoading={isLoading}
                 onSubmit={handleFormSubmit}
-                submitLabel={t('register.actions.submit')}
+                submitLabel={vientDUnTournoi
+                  ? t('register.actions.receiveCode', 'Recevoir mon code')
+                  : t('register.actions.submit')}
               />
             )}
           {authErrorMessage ? (

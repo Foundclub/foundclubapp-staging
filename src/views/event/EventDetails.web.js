@@ -37,6 +37,7 @@ import {
   resolveParticipationOffer,
 } from '@/domains/participation/participationFlow';
 import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
+import { retenirLInscriptionAuTournoi } from '@/domains/tournoi/inscriptionEnCours';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -2292,11 +2293,15 @@ function EventDetails({ navigation, route }) {
       userData?.documentId,
     )?.responseStatus) === 'invited' ? 'invited' : 'requested';
   }
-  const ouvrirLaConnexionDuTournoi = () => openPublicAuthFlow(navigation, {
-    origin: RouteNames.EventDetails,
-    retourApresConnexion: true,
-    source: 'event-details-register-team',
-  });
+  // T-PAGES-6b : l'écran du numéro et celui du rôle rappelleront ce tournoi.
+  const ouvrirLaConnexionDuTournoi = () => {
+    retenirLInscriptionAuTournoi({ event });
+    openPublicAuthFlow(navigation, {
+      origin: RouteNames.EventDetails,
+      retourApresConnexion: true,
+      source: 'event-details-register-team',
+    });
+  };
   const erreurDeLaCarte = erreurEquipeTournoi || actionError;
   const carteDuTournoi = vueJoueurDuTournoi ? (
     <div data-testid="event-tournament-side" style={{ display: 'grid', gap: 16, minWidth: 0 }}>
@@ -3365,6 +3370,7 @@ function EventDetails({ navigation, route }) {
                         } else if (isSignedIn) {
                           handleCreateTournamentTeam();
                         } else {
+                          retenirLInscriptionAuTournoi({ event });
                           openPublicAuthFlow(navigation, {
                             origin: RouteNames.EventDetails,
                             retourApresConnexion: true,

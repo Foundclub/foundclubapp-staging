@@ -18,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import BandeauTournoiEnCours from '@/views/onboarding/components/BandeauTournoiEnCours';
 import ChoixPourUnComplexe from '@/views/onboarding/components/ChoixPourUnComplexe';
 import {
   continuerSurOrdinateur,
@@ -299,6 +300,15 @@ function UserRole({ navigation }) {
         )}
       >
         <View style={[Spaces.gap[16]]}>
+          {/* T-PAGES-6b (18/11, point 5 de T-PAGES-6) : venu d'un tournoi, le rappel du tournoi et
+              la phrase de Clément ; sinon le bandeau ne rend rien. */}
+          <BandeauTournoiEnCours
+            phrase={t(
+              'inscriptionTournoi.roleSansEffet',
+              'Le rôle que tu choisis ne change rien pour le tournoi : il sert seulement à '
+                + 'savoir quel est ton rôle dans ta vie sportive de tous les jours.',
+            )}
+          />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('profile.titles.type')}
           </Text>

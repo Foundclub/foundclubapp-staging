@@ -54,6 +54,24 @@ export const resolveShareEnvironment = (appEnv = process.env.APP_ENV || process.
   return normalizedEnv === 'production' ? 'production' : 'staging';
 };
 
+const STAGING_WEB_APP_ORIGIN = 'https://staging.foundclub.app';
+
+/**
+ * T-PAGES-6b (18/11/2026) — le SITE de l'environnement de l'app, au téléphone : la base du site de
+ * la config (`WEB_APP_URL`) si elle est posée, sinon la production pour une build de production et
+ * la recette sinon (même règle que les liens d'invitation, teamInviteShare.js). Au téléphone,
+ * `resolveWebAppOrigin` retombait sur la production : la base de l'API n'est pas le site.
+ * ponytail: teamInviteShare.js garde sa propre copie des deux origines ; sortie : l'y brancher.
+ * @param {{ appEnv?: string, webUrl?: string }} [params] - L'environnement et la base configurée.
+ * @returns {string} L'origine du site.
+ */
+export const resolveAppSiteOrigin = ({
+  appEnv,
+  webUrl = process.env.WEB_APP_URL || process.env.FRONTEND_URL,
+} = {}) => normalizeOrigin(webUrl) || (resolveShareEnvironment(appEnv) === 'production'
+  ? DEFAULT_WEB_APP_ORIGIN
+  : STAGING_WEB_APP_ORIGIN);
+
 export const resolveWebAppOrigin = ({
   apiUrl = getApiBaseUrl(),
   publicOrigin = getPublicApiOrigin(),

@@ -67,6 +67,7 @@ import {
   canManageCompositionForClub,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
+import { retenirLInscriptionAuTournoi } from '@/domains/tournoi/inscriptionEnCours';
 import { hasLivingUser } from '@/domains/user/deletedAccount';
 import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
@@ -7274,6 +7275,8 @@ function EventDetails({ navigation, route }) {
       return {
         onPress: () => {
           retenirLeRetourAuTournoi(eventId);
+          // T-PAGES-6b : l'écran du numéro et celui du rôle rappelleront ce tournoi.
+          retenirLInscriptionAuTournoi({ event });
           openPublicAuthFlow(navigation, {
             origin: RouteNames.EventDetails,
             source: 'event-details-tournament-register',
