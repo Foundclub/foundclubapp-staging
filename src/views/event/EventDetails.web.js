@@ -59,9 +59,13 @@ import TrainingReviewsCard, {
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   getTournamentTeamsSeekingPlayers,
+  getTournamentTeamsThreshold,
   getTournamentVisitorTeamsLine,
 } from '@/views/event/tournamentJoinRules';
-import { getTournamentRegisteredTeamsCount } from '@/views/event/tournamentTeamsCount';
+import {
+  getTournamentRegisteredTeamsCount,
+  getTournamentTeamsCapacity,
+} from '@/views/event/tournamentTeamsCount';
 import {
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
@@ -142,6 +146,7 @@ import {
 import CancelSeriesSheet from './components/CancelSeriesSheet';
 import EventChatRow from './components/EventChatRow';
 import EventHeader from './components/EventHeader';
+import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
 } from './components/EventChildRegistration';
@@ -2430,6 +2435,11 @@ function EventDetails({ navigation, route }) {
 
   // T-PAGES-3 : le bloc du tournoi, posé à droite pour l organisateur (comme avant) et dans la
   // colonne principale pour le joueur, sous le titre « Les équipes », sans les réglages.
+  // IMPL-1-FICHE (8a) : « Créer mon équipe » de l'onglet, le même geste que la carte « Ton
+  // inscription ».
+  let creerDepuisLOnglet = null;
+  if (isSignedIn && canCreateCustomTournamentTeam) creerDepuisLOnglet = handleCreateTournamentTeam;
+  else if (!isSignedIn && inscrireMonEquipeVisiteur) creerDepuisLOnglet = ouvrirLInscriptionDuTournoi;
   const blocDuTournoi = isTournamentEvent ? (
     <div
       data-event-section="tournament"
@@ -2698,6 +2708,21 @@ function EventDetails({ navigation, route }) {
           {erreurEquipeTournoi}
         </div>
       ) : null}
+      {/* IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8, écrans 8a à 8e) : le joueur lit l'onglet
+          Équipes de la maquette, le même qu'au téléphone (seuil, cartes qui s'ouvrent, « Cherche N
+          joueurs », « Demander à rejoindre », aperçu sans le paiement de chacun). */}
+      {vueJoueurDuTournoi ? (
+        <TournamentTeamsPublic
+          belowThreshold={nombreDEquipesCache}
+          event={event}
+          onCreate={creerDepuisLOnglet}
+          onOpenTeamPage={handleOpenTournamentTeam}
+          teams={equipesDeLaListe}
+          threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
+          viewerRequested={roleDuLecteur === 'requested'}
+          viewerTeam={equipeDuLecteur}
+        />
+      ) : null}
       {tournamentTeams.length === 0 && !vueJoueurDuTournoi ? (
         <div style={{ color: mutedTextColor, fontSize: 14 }}>
           {t(
@@ -2707,7 +2732,7 @@ function EventDetails({ navigation, route }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
-          {equipesDeLaListe.map((team) => {
+          {(vueJoueurDuTournoi ? [] : equipesDeLaListe).map((team) => {
             const rosterSummary = getTournamentRosterSummary(team, tournamentConfig);
             const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
             const status = normalizeTournamentText(team?.status);

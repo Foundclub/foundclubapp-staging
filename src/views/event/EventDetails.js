@@ -216,6 +216,7 @@ import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentEssentials, { getTournamentEssentials } from './components/TournamentEssentials';
 import { TournamentBeforeSignUpCard, TournamentHowItWorksCard } from './components/TournamentFicheBlocks';
 import TournamentFicheMyTeamCard from './components/TournamentFicheMyTeamCard';
+import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import { withTournamentTeamsLine } from './components/TournamentFicheWeb';
 import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentPeopleList from './components/TournamentPeopleList';
@@ -243,7 +244,7 @@ import {
 } from './matchPageModel';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { getTournamentTeamsSeekingPlayers } from './tournamentJoinRules';
+import { getTournamentTeamsSeekingPlayers, getTournamentTeamsThreshold } from './tournamentJoinRules';
 import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
@@ -1363,6 +1364,9 @@ function EventDetails({ navigation, route }) {
     || currentUserTournamentTeam
     || currentUserPendingTournamentTeam
     || null;
+  // IMPL-1-FICHE (11a) : l'organisateur du tournoi qui a aussi une équipe (capitaine ou membre).
+  const organisateurQuiJoue = Boolean(isTournamentEvent && !isStageDayEvent && canEdit
+    && (managedTournamentTeam || currentUserTournamentTeam)?.documentId);
   let roleDuLecteurAuTournoi = /** @type {'captain' | 'member' | 'invited' | 'requested'} */ (
     'member'
   );
@@ -7452,8 +7456,42 @@ function EventDetails({ navigation, route }) {
 
   // T-PAGES-4 (maquette (b), R4) — « Mon équipe » en tête, pour qui a une équipe dans le tournoi.
   const renderTournamentMyTeamCard = () => {
-    if (!isTournamentEvent || isStageDayEvent || canEdit) return null;
+    if (!isTournamentEvent || isStageDayEvent) return null;
     if (!equipeDuLecteurAuTournoi?.documentId) return null;
+    // IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écran 11a) — l'organisateur qui joue aussi :
+    // « Gérer le tournoi » et « Mon équipe » côte à côte, puis la carte de son équipe (sans
+    // bouton : « Mon équipe » le porte). Le bas ne les redit pas (`renderActionButtons`).
+    if (canEdit) {
+      if (!organisateurQuiJoue) return null;
+      return (
+        <View style={Spaces.gap[12]}>
+          <View
+            style={[Alignments.row, Spaces.gap[12]]}
+            testID="tournament-organizer-player-actions"
+          >
+            <Button
+              onPress={handleOpenTournamentManagement}
+              style={{ flex: 1, minHeight: 44 }}
+              title={t('implFiche.manageTournament')}
+              variant="Secondary"
+            />
+            <Button
+              onPress={() => handleOpenTournamentTeam(equipeDuLecteurAuTournoi.documentId)}
+              style={{ flex: 1, minHeight: 44 }}
+              title={t('implFiche.myTeam')}
+              variant="Primary"
+            />
+          </View>
+          <TournamentFicheMyTeamCard
+            action={null}
+            navigation={navigation}
+            role={roleDuLecteurAuTournoi}
+            team={equipeDuLecteurAuTournoi}
+            tournamentConfig={tournamentConfig}
+          />
+        </View>
+      );
+    }
     return (
       <TournamentFicheMyTeamCard
         action={getTournamentPrimaryAction()}
@@ -8047,6 +8085,27 @@ function EventDetails({ navigation, route }) {
 
         </View>
 
+        {/* IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8, écrans 8a à 8c et 8e) : qui
+            n'organise pas le tournoi lit l'onglet de la maquette (seuil, cartes qui s'ouvrent,
+            « Cherche N joueurs », « Demander à rejoindre », aperçu). L'organisateur garde ses
+            cartes de pilotage, ci-dessous. */}
+        {canEdit ? null : (
+          <TournamentTeamsPublic
+            belowThreshold={listeDesEquipesMasquee}
+            event={event}
+            onCreate={(() => {
+              if (visiteurPeutCreerSonEquipe) return ouvrirLaConnexionDuTournoi;
+              if (canCreateCustomTournamentTeam) return () => setIsTournamentCreateModalVisible(true);
+              return null;
+            })()}
+            onOpenTeamPage={handleOpenTournamentTeam}
+            teams={equipesMontreesDuTournoi}
+            threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
+            viewerRequested={roleDuLecteurAuTournoi === 'requested'}
+            viewerTeam={equipeDuLecteurAuTournoi}
+          />
+        )}
+
         {tournamentTeams.length === 0 && canEdit ? (
           <View style={tournamentDs.styles.panelCard}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
@@ -8058,7 +8117,7 @@ function EventDetails({ navigation, route }) {
           </View>
         ) : null}
 
-        {equipesMontreesDuTournoi.map((tournamentTeam) => {
+        {(canEdit ? equipesMontreesDuTournoi : []).map((tournamentTeam) => {
           const rosterSummary = getTournamentRosterSummary(tournamentTeam, tournamentConfig);
           const hasRosterWarning = isTournamentTeamNonCompliant(tournamentTeam, tournamentConfig);
           // 🏷️ Les quatre etats, tels que la planche 04 les nomme : deux mots
@@ -8255,6 +8314,8 @@ function EventDetails({ navigation, route }) {
     // demande explicitement pour cette barre-la. C'est le seul bouton de
     // l'ecran, il porte donc toute la surface d'appui.
     if (isTournamentEvent && !isStageDayEvent) {
+      // IMPL-1-FICHE (11a) : les deux boutons du haut remplacent le bas.
+      if (organisateurQuiJoue) return null;
       const primaryAction = getTournamentPrimaryAction();
       if (!primaryAction) return null;
 

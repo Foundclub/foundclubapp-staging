@@ -551,7 +551,7 @@ const releve = (lecteur) => {
   const resultat = {
     barreDuBas: barre.length ? textes(barre[0]).join(' | ') : null,
     brouillon: compter(apercu, 'Compétition en brouillon'),
-    carteMonEquipe: parTestID(root, 'tournament-team-progress').length,
+    carteMonEquipe: parTestID(root, 'tournament-fiche-my-team-progress').length,
     carteTournoi: apercu.filter((ligne) => ligne === 'TOURNOI').length,
     conditions: parTestID(root, 'event-tournament-terms-link').length,
     creerUneEquipe: compter(apercu, 'Créer une équipe pour ce tournoi'),
@@ -1420,5 +1420,71 @@ describe('T-SUITES (11) — le compteur d équipes de la fiche suit la règle du
     });
     const onglet = ongletsDe(root).find((libelle) => libelle.startsWith('Équipes'));
     expect(onglet).toMatch(/^Équipes\D*6$/);
+  });
+});
+
+// IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écran 11a) — L'ORGANISATEUR QUI JOUE AUSSI : sous
+// le bandeau, deux boutons côte à côte, « Gérer le tournoi » et « Mon équipe », puis la carte « Mon
+// équipe · capitaine ». Avant, « Gérer le tournoi » (bas) cachait son équipe : il devait la
+// retrouver dans l'onglet. Le bas ne redit pas les deux boutons.
+describe('IMPL-1 · 11a — l organisateur qui joue : « Gérer le tournoi » et « Mon équipe »', () => {
+  const organisateurQuiJoue = () => ({
+    auth: compte('orga-1', { peutGerer: true }),
+    event: TOURNOI({
+      organizer: { documentId: 'orga-1' },
+      tournamentTeams: [{ ...AIGLES, captainUser: { documentId: 'orga-1', firstname: 'Adel', lastname: 'F' } }, LIONS],
+    }),
+  });
+
+  test('🔴 les deux boutons côte à côte, puis la carte de son équipe ; plus de barre du bas', () => {
+    mockTeamQuery.data = null;
+    const root = monter(organisateurQuiJoue());
+    const [rangee] = parTestID(root, 'tournament-organizer-player-actions');
+    expect(rangee).toBeDefined();
+    expect(textes(rangee)).toEqual(['Gérer le tournoi', 'Mon équipe']);
+    expect(parTestID(root, 'tournament-fiche-my-team')).toHaveLength(1);
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(0);
+  });
+
+  test('🔴 « Mon équipe » ouvre sa page d équipe, « Gérer le tournoi » le pilotage', () => {
+    mockTeamQuery.data = null;
+    mockNavigate.mockClear();
+    const root = monter(organisateurQuiJoue());
+    const [rangee] = parTestID(root, 'tournament-organizer-player-actions');
+    const boutons = rangee.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function' && n.props?.title);
+    const [gerer, equipe] = boutons;
+    act(() => { equipe.props.onPress(); });
+    expect(JSON.stringify(mockNavigate.mock.calls)).toContain('eq-aigles');
+    act(() => { gerer.props.onPress(); });
+    expect(mockNavigate.mock.calls.length).toBe(2);
+  });
+
+  test('l organisateur sans équipe garde son bas « Gérer le tournoi », sans les deux boutons', () => {
+    const root = monter(LECTEURS.organisateur());
+    expect(parTestID(root, 'tournament-organizer-player-actions')).toHaveLength(0);
+    expect(textes(parTestID(root, 'tournament-bottom-bar')[0]).join(' | ')).toBe('Gérer le tournoi');
+  });
+});
+
+// IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8) — l'onglet Équipes de la maquette pour qui
+// n'organise pas le tournoi ; l'organisateur garde ses cartes de pilotage.
+describe('IMPL-1 · 8 — l onglet Équipes de la maquette', () => {
+  test('🔴 sans équipe, sous le seuil : « Les équipes s’affichent dès 8 inscrites »', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-teams-public')).toHaveLength(1);
+    expect(textes(parTestID(root, 'tournament-teams-threshold')[0])[0]).toBe('Les équipes s’affichent dès 8 inscrites');
+  });
+
+  test('🔴 plus de « Équipe éphémère » pour le joueur', () => {
+    const root = monter(LECTEURS.membre());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(textes(root).join(' | ')).not.toContain('Équipe éphémère');
+  });
+
+  test('l organisateur garde ses cartes de pilotage, sans l onglet de la maquette', () => {
+    const root = monter(LECTEURS.organisateur());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-teams-public')).toHaveLength(0);
   });
 });
