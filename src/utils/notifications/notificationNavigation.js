@@ -1063,6 +1063,12 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
       // concernee ; sans lui, elle depose sur la LISTE, qui est l entree du
       // parcours. ⛔ Jamais un detail sans identifiant : ce serait un ecran
       // vide au bout d une notification.
+      // T-NOTIFS-TOURNOI (g, 18/11) — une PLACE de tournoi porte `teamId` + `eventId` (serveur) :
+      // elle ouvre la page de l equipe, ou se paie la place. Une cotisation de club n en a pas.
+      // (h) Sans equipe, une place porte son tournoi (`campaignType`) : la fiche du tournoi.
+      if (payload.eventId && (payload.teamId || payload.campaignType === 'tournament')) {
+        return tournamentTeamDestination(payload.eventId, payload.teamId);
+      }
       return adaptDestinationForCurrentPlatform(payload, payload.assignmentId
         ? {
           params: { assignmentId: String(payload.assignmentId) },
@@ -1163,6 +1169,7 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
       return tournamentTeamDestination(payload.eventId, payload.teamId);
     case NOTIFICATION_TYPES.TOURNAMENT_CLOSED:
       return eventDetailsDestination(payload.eventId);
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_REGISTERED:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_ROSTER_WARNING:
       return {
         params: {
