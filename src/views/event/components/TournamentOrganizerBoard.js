@@ -708,6 +708,9 @@ function TournamentOrganizerBoard({
             testID="orga-inscriptions"
             thumbColor={Colors.neutral00}
             trackColor={{ false: withAlpha(Colors.neutral300, '66'), true: Colors.primary500 }}
+            // Site : react-native-web peint le rond allumé en vert-bleu (#009688) sans cette propriété
+            // à lui ; plus aucun vert (Adel 18/11). Le téléphone l'ignore.
+            {...{ activeThumbColor: Colors.neutral00 }}
             value={ouvertes}
           />
         </View>

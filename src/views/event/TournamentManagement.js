@@ -900,6 +900,11 @@ function TournamentManagement({ navigation, route }) {
     </View>
   );
 
+  const deuxColonnes = largeurDeLaFenetre >= 1024;
+  const invitesDuTournoiPrive = estPrive
+    ? <TournamentInvites clubId={event?.club?.documentId || null} eventId={eventId} />
+    : null;
+
   // T3-TOURNOI-PRIVE : le lien d'un tournoi privé ouvre cet écran ;
   // un compte sans lien y demande à participer.
   if (isAccessRefusalError(error)) {
@@ -941,21 +946,31 @@ function TournamentManagement({ navigation, route }) {
                 </Text>
                 <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300]}>{titreDuLecteur}</Text>
               </View>
-              <TournamentOrganizerBoard
-                event={event}
-                eventId={eventId}
-                filters={filtresDesEquipes}
-                invites={estPrive ? <TournamentInvites clubId={event?.club?.documentId || null} eventId={eventId} /> : null}
-                navigation={navigation}
-                onChanged={async () => { await Promise.all([invalidate(), relireLeResume?.()]); }}
-                registeredTeamsCount={getTournamentRegisteredTeamsCount({ tournamentTeams })}
-                summary={resumeDeLOrganisateur || null}
-                teams={filteredTeams}
-                totalTeamsCount={tournamentTeams.length}
-                tournamentConfig={tournamentConfig}
-                viewerDocumentId={String(userData?.documentId || '')}
-              />
-              {renderJourJ()}
+              {/* Planche 1f : au bureau (1024 px et plus), « Jour J » et les réglages passent à droite. */}
+              <View
+                style={deuxColonnes
+                  ? [Alignments.row, Spaces.gap[24], { alignItems: 'flex-start' }]
+                  : Spaces.gap[24]}
+                testID={deuxColonnes ? 'orga-deux-colonnes' : 'orga-une-colonne'}
+              >
+                <View style={deuxColonnes ? { flex: 2, minWidth: 0 } : null}>
+                  <TournamentOrganizerBoard
+                    event={event}
+                    eventId={eventId}
+                    filters={filtresDesEquipes}
+                    invites={invitesDuTournoiPrive}
+                    navigation={navigation}
+                    onChanged={async () => { await Promise.all([invalidate(), relireLeResume?.()]); }}
+                    registeredTeamsCount={getTournamentRegisteredTeamsCount({ tournamentTeams })}
+                    summary={resumeDeLOrganisateur || null}
+                    teams={filteredTeams}
+                    totalTeamsCount={tournamentTeams.length}
+                    tournamentConfig={tournamentConfig}
+                    viewerDocumentId={String(userData?.documentId || '')}
+                  />
+                </View>
+                <View style={deuxColonnes ? { flex: 1, minWidth: 0 } : null}>{renderJourJ()}</View>
+              </View>
             </>
           ) : null}
           {/* REPRISE-EVENEMENTS 130 : le lecteur (parent, joueur) lit le nom du tournoi ; la

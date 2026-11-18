@@ -375,3 +375,20 @@ describe('IMPL-3 1c — Jour J, Réglages, À la une', () => {
     expect(mockRequestFeatured).toHaveBeenCalledWith({ eventId: 'evt-1', scopes: ['PUBLIC'] });
   });
 });
+
+describe('IMPL-3 1f — le bureau', () => {
+  test.each([
+    [390, 'orga-une-colonne'],
+    [1280, 'orga-deux-colonnes'],
+  ])('🔴 à %i px : %s', async (largeur, attendu) => {
+    const fenetre = jest.spyOn(
+      jest.requireActual('react-native/Libraries/Utilities/useWindowDimensions'),
+      'default',
+    ).mockReturnValue({
+      fontScale: 1, height: 900, scale: 1, width: largeur,
+    });
+    const arbre = await monter();
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === attendu).length).toBeGreaterThan(0);
+    fenetre.mockRestore();
+  });
+});
