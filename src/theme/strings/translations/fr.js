@@ -14770,6 +14770,10 @@ export default {
       },
     },
   },
+  // IMPL-4-ACCUEIL (18/11) : accueil, pop-up billet, recherche.
+  implAccueil: {
+    rechercheEffacer: 'Effacer la recherche',
+  },
   inputStepper: {
     decrement: 'Un de moins',
     increment: 'Un de plus',

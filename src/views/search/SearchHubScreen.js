@@ -233,6 +233,9 @@ function SearchHubScreen({ navigation, route }) {
         <EventListContent
           additionalFilters={DEFAULT_EVENT_FILTERS}
           annuaire={annuaire}
+          // IMPL-4-ACCUEIL, page 7 (Adel 18/11) : le champ pleine largeur, les filtres dedans ;
+          // pas sur l'annuaire du site.
+          champDeRecherchePlein={!annuaire}
           enableMapMode={enableMapMode}
           // R17-EVT-1-BIS (g) (20/10) : sur le téléphone, la recherche d'événements est ICI ; la
           // bande « Événements de la Ville » en tête de liste. Pas sur l'annuaire du site (sans
@@ -249,6 +252,7 @@ function SearchHubScreen({ navigation, route }) {
       return (
         <ClubListContent
           annuaire={annuaire}
+          champDeRecherchePlein={!annuaire}
           childDocumentId={childDocumentId}
           enableMapMode={enableMapMode}
           refreshSignal={refreshSignals.clubs}

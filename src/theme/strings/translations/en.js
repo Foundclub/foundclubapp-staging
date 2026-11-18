@@ -13911,6 +13911,10 @@ export default {
       },
     },
   },
+  // IMPL-4-ACCUEIL (18/11) : accueil, pop-up billet, recherche.
+  implAccueil: {
+    rechercheEffacer: 'Clear search',
+  },
   inputStepper: {
     decrement: 'One less',
     increment: 'One more',

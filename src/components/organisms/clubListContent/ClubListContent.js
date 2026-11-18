@@ -142,6 +142,7 @@ const mergeClubCollections = (...collections) => {
  * @param {{
  *  actionDeCarte?: (club: any) => import('react').ReactNode;
  *  annuaire?: boolean;
+ *  champDeRecherchePlein?: boolean;
  *  childDocumentId?: string;
  *  enableMapMode?: boolean;
  *  paramsDeFiche?: Record<string, unknown>;
@@ -165,11 +166,14 @@ const mergeClubCollections = (...collections) => {
  *   colonnes. Absent, ou sur le téléphone, rien ne change.
  *   `pied` (CORR-RECHERCHE point 2, posé par la seule Ville dans « Ajouter un club ») : rendu en
  *   fin de liste, il défile avec elle au lieu de rester figé dessous. Absent, rien ne change.
+ *   `champDeRecherchePlein` (IMPL-4-ACCUEIL, page 7, posé par la recherche du téléphone) : le
+ *   champ pleine largeur, les filtres dedans. Absent, rien ne change.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
   actionDeCarte = undefined,
   annuaire = false,
+  champDeRecherchePlein = false,
   childDocumentId = undefined,
   enableMapMode = false,
   paramsDeFiche = undefined,
@@ -950,6 +954,7 @@ function ClubListContent({
         <View style={{ flex: 1 }}>
           <SearchComponent
             filterNumber={getClubFiltersNumber(clubFilters)}
+            filtresDansLeChamp={champDeRecherchePlein}
             handleSearchField={handleSearchField}
             inputDensity="default"
             inputStyle={{ lineHeight: 20, paddingVertical: 2 }}

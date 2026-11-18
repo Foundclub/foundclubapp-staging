@@ -306,8 +306,10 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
     // 🔒 Props EXACTES : aujourd'hui l'écran ne passe ni sport, ni ville, ni nom
     // tapé à la liste de clubs — tout vit dans `clubFilters` du contexte.
     // ANNUAIRE-E1 (29/09) : `annuaire` s'y ajoute, FAUX tant que la route ne le pose pas.
+    // IMPL-4-ACCUEIL page 7 (18/11) : `champDeRecherchePlein` s'y ajoute, VRAI hors annuaire.
     expect(mockPanneaux.clubs.props).toEqual({
       annuaire: false,
+      champDeRecherchePlein: true,
       enableMapMode: true,
       refreshSignal: 0,
       screenActive: true,
@@ -453,6 +455,8 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
     expect(mockPanneaux.events.props).toEqual({
       additionalFilters: FILTRES_EVENEMENTS_PAR_DEFAUT,
       annuaire: false,
+      // IMPL-4-ACCUEIL page 7 (18/11) : le champ pleine largeur, posé hors annuaire.
+      champDeRecherchePlein: true,
       enableMapMode: true,
       // R17-EVT-1-BIS (g) (20/10) : la bande « Événements de la Ville » en tête de liste.
       entete: expect.anything(),
@@ -686,5 +690,23 @@ describe('SearchHubScreen — CORR-RECHERCHE point 2 : le panneau Bientot porte 
     expect(lu).toContain('temoin-entete-recherche');
     expect(lu.indexOf('temoin-entete-recherche')).toBeLessThan(lu.indexOf('Bientôt disponible'));
     expect(reclamer).toHaveBeenCalled();
+  });
+});
+
+// IMPL-4-ACCUEIL, page 7 (planche 7a-7c, Adel 18/11) — « le champ sur toute la largeur, les filtres
+// dedans » : la recherche du téléphone l'allume sur les onglets Événements et Clubs ; l'annuaire du
+// site (`annuaire`), qui garde sa propre mise en page, non.
+describe('IMPL-4 page 7 — le champ pleine largeur, posé par la recherche', () => {
+  test('Événements et Clubs reçoivent champDeRecherchePlein', async () => {
+    await monter({});
+    expect(mockPanneaux.events.props.champDeRecherchePlein).toBe(true);
+    await changerOnglet('clubs');
+    expect(mockPanneaux.clubs.props.champDeRecherchePlein).toBe(true);
+  });
+
+  test('📌 l annuaire du site ne l allume pas', async () => {
+    await monter({ annuaire: true, types: 'clubs,events' });
+    expect(mockPanneaux.clubs.props?.champDeRecherchePlein ?? mockPanneaux.events.props?.champDeRecherchePlein)
+      .toBe(false);
   });
 });

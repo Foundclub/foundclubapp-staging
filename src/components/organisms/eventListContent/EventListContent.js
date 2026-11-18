@@ -178,11 +178,15 @@ function EventListSeparator() {
  * @param {import('react').ReactElement | null} [props.entete] - R17-EVT-1-BIS (20/10) : posé en
  *   tête de la liste, au-dessus de « Événements à partir de », et défile avec elle (la bande
  *   « Événements de la Ville » de la recherche). Sans lui, rien ne change.
+ * @param {boolean} [props.champDeRecherchePlein] - IMPL-4-ACCUEIL (page 7, 18/11) : posé par la
+ *   recherche du téléphone seulement ; le champ pleine largeur, les filtres dedans
+ *   (`SearchComponent.filtresDansLeChamp`). Absent, rien ne change.
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
   additionalFilters,
   annuaire = false,
+  champDeRecherchePlein = false,
   customEmptyComponent = null,
   enableMapMode = false,
   entete = null,
@@ -1561,6 +1565,7 @@ function EventListContent({
           >
             <SearchComponent
               filterNumber={filterCount}
+              filtresDansLeChamp={champDeRecherchePlein}
               handleSearchField={handleSearchField}
               openFilters={handleOpenFilters}
               placeholder={t('eventList.searchPlaceholder', 'Rechercher un événement')}
