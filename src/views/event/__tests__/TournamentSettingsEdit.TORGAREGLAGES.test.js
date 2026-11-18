@@ -167,4 +167,11 @@ describe('T-ORGA-REGLAGES — les règles payantes dans « Modifier les paramèt
     await enregistrer(arbre);
     expect(envoye().entryFeeCents).toBe(0);
   });
+
+  test('🔴 un tournoi GRATUIT de 4 joueurs max s’enregistre : le seuil par défaut ne bloque rien', async () => {
+    const arbre = await monter({ club: PAYANT.club, documentId: 'evt-1', tournamentConfig: { formatMode: 'groups_only', maxRosterSize: 4 } });
+    expect(JSON.stringify(arbre.toJSON())).not.toContain('Ce nombre ne peut pas dépasser');
+    await enregistrer(arbre);
+    expect(mockUpdateEvent).toHaveBeenCalledTimes(1);
+  });
 });

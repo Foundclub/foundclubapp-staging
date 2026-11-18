@@ -95,6 +95,7 @@ describe('T-ORGA-REGLAGES — les règles payantes dans l’assistant', () => {
 
   test('🔴 un seuil au-dessus de l’effectif max est dit et bloque « Suivant »', () => {
     const arbre = monter({ team: CLUB, tournamentMaxRosterSize: 6 });
+    saisir(arbre, 'tournoi-regles-prix', '20');
     saisir(arbre, 'tournoi-regles-seuil', '7');
     expect(mockGabarit.props.isNextDisabled).toBe(true);
     expect(texte(arbre)).toContain('Ce nombre ne peut pas dépasser l’effectif maximum');
@@ -113,5 +114,10 @@ describe('T-ORGA-REGLAGES — les règles payantes dans l’assistant', () => {
     expect(champ(arbre, 'tournoi-regles-prix')?.props.value).toBe('19,50');
     expect(champ(arbre, 'tournoi-regles-age')?.props.value).toBe('18');
     expect(champ(arbre, 'tournoi-regles-seuil')?.props.value).toBe('3');
+  });
+
+  test('🔴 un tournoi gratuit de 4 joueurs max passe « Suivant » avec le seuil par défaut', () => {
+    monter({ team: CLUB, tournamentMaxRosterSize: 4 });
+    expect(mockGabarit.props.isNextDisabled).toBe(false);
   });
 });

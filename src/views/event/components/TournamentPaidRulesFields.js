@@ -87,7 +87,8 @@ export const lireReglesPayantes = ({
     fee: Number.isNaN(entryFeeCents),
     minAge: minAge !== null && (Number.isNaN(minAge) || minAge < 1 || minAge > 99),
     paid: paid !== null && (Number.isNaN(paid) || paid < 1),
-    paidTooHigh: Number.isInteger(paid) && Number(paid) > 0
+    // Seulement pour un tournoi payant : un tournoi gratuit de 4 joueurs garde le seuil par défaut.
+    paidTooHigh: entryFeeCents > 0 && Number.isInteger(paid) && Number(paid) > 0
       && Number(maxRosterSize) > 0 && Number(paid) > Number(maxRosterSize),
   };
   return {
