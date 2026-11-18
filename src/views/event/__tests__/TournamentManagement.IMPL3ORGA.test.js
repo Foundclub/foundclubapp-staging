@@ -13,6 +13,7 @@ import TournamentManagement from '../TournamentManagement';
 let mockDashboard = null;
 /** @type {any} */
 let mockSummary = null;
+const mockErreurDuResume = { value: /** @type {any} */ (null) };
 const mockReview = jest.fn(() => Promise.resolve({}));
 const mockRemind = jest.fn();
 const mockRegistrations = jest.fn();
@@ -96,7 +97,9 @@ jest.mock('@/services/tournamentTeam/tournamentOrganizerService', () => ({
   remindTournamentTeamUnpaid: (/** @type {any[]} */ ...args) => mockRemind(...args),
   setTournamentRegistrations: (/** @type {any[]} */ ...args) => mockRegistrations(...args),
   tournamentOrganizerSummaryKey: (/** @type {string} */ id) => ['tournament-organizer', id],
-  useTournamentOrganizerSummary: () => ({ data: mockSummary, isLoading: false, refetch: jest.fn() }),
+  useTournamentOrganizerSummary: () => ({
+    data: mockSummary, error: mockErreurDuResume.value, isLoading: false, refetch: jest.fn(),
+  }),
 }));
 jest.mock('@/platform/media/saveTextFile', () => ({
   saveTextFile: (/** @type {any[]} */ ...args) => mockSave(...args),
@@ -390,5 +393,31 @@ describe('IMPL-3 1f — le bureau', () => {
     const arbre = await monter();
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === attendu).length).toBeGreaterThan(0);
     fenetre.mockRestore();
+  });
+});
+
+// Relecture du 18/11 : le résumé peut manquer (chargement, panne, 403 d'un dirigeant du club porteur qui passe
+// canManageEvent côté app mais pas la garde du serveur). Aucun chiffre de paiement n'est alors inventé.
+describe('IMPL-3 — sans résumé de l organisateur', () => {
+  afterEach(() => { mockErreurDuResume.value = null; });
+
+  test('🔴 403 : ni « 0 € » ni « 0 payés sur 5 », l interrupteur est grisé, la raison est dite', async () => {
+    mockErreurDuResume.value = { status: 403 };
+    const arbre = await monter(tableau(), null);
+    const rendu = texte(arbre);
+    expect(rendu).not.toContain('0 €');
+    expect(rendu).not.toContain('payés sur');
+    expect(rendu).toContain('—');
+    expect(rendu).toContain('Les paiements et l’interrupteur des inscriptions sont réservés à l’organisateur du tournoi.');
+    expect(parTestID(arbre, 'orga-inscriptions').props.disabled).toBe(true);
+  });
+
+  test('🔴 sans résumé, la fenêtre de refus dit la règle, jamais « rien à rembourser »', async () => {
+    const arbre = await monter(tableau(), null);
+    await toucher(parTestID(arbre, 'orga-menu-eq-rauze'));
+    await toucher(parTestID(arbre, 'orga-refuser-eq-rauze'));
+    const rendu = texte(arbre);
+    expect(rendu).toContain('Les places déjà payées sont remboursées en entier, sous 14 jours.');
+    expect(rendu).not.toContain('rien à rembourser');
   });
 });

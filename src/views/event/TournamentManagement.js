@@ -35,7 +35,9 @@ import {
   publishTournamentCompetition,
   setupTournamentCompetition,
 } from '@/services/tournamentCompetition/tournamentCompetitionService';
-import { useTournamentOrganizerSummary } from '@/services/tournamentTeam/tournamentOrganizerService';
+import {
+  useTournamentOrganizerSummary,
+} from '@/services/tournamentTeam/tournamentOrganizerService';
 import {
   closeTournament,
   reviewTournamentTeamRegistration,
@@ -394,10 +396,15 @@ function TournamentManagement({ navigation, route }) {
     ? t('tournamentManagement.competition', 'Compétition')
     : titreDuLecteur;
   useDeclarerPageDuSite({ titre: canManageTournament && !isClosed ? null : titreDeLaBarre });
-  // IMPL-3-ORGA (18/11, page 1 des planches) : l'organisateur d'un tournoi ouvert lit le tableau de bord ;
-  // ses chiffres viennent de sa route à lui (admin tournament-organizer.js), jamais du tableau partagé.
+  // IMPL-3-ORGA (18/11, page 1 des planches) : l'organisateur d'un tournoi ouvert lit le tableau
+  // de bord ; ses chiffres viennent de sa route à lui (admin tournament-organizer.js), jamais du
+  // tableau partagé.
   const pilote = canManageTournament && !isClosed;
-  const { data: resumeDeLOrganisateur, refetch: relireLeResume } = useTournamentOrganizerSummary(eventId || '', {
+  const {
+    data: resumeDeLOrganisateur,
+    error: erreurDuResume,
+    refetch: relireLeResume,
+  } = useTournamentOrganizerSummary(eventId || '', {
     enabled: Boolean(eventId) && pilote,
   });
   const competitionStateLabel = isClosed
@@ -566,7 +573,8 @@ function TournamentManagement({ navigation, route }) {
               title: t('tournamentManagement.publishTheCompetition', 'Publier la compétition'),
               variant: 'Primary',
             }) : null}
-            {/* IMPL-3-ORGA : « Modifier les paramètres » est devenu la ligne « Réglages » (planche 1c). */}
+            {/* IMPL-3-ORGA : « Modifier les paramètres » est devenu la ligne « Réglages »
+                (planche 1c). */}
             <Button
               isLoading={closeTournamentMutation.isPending}
               onPress={handleCloseTournament}
@@ -752,7 +760,8 @@ function TournamentManagement({ navigation, route }) {
     return renderOverviewTab();
   };
 
-  // IMPL-3-ORGA (planche 1c) — « À la une » : la demande de mise en avant publique, validée par FoundClub
+  // IMPL-3-ORGA (planche 1c) — « À la une » : la demande de mise en avant publique, validée par
+  // FoundClub
   // (le même geste que le menu de la fiche, portée PUBLIC).
   const demanderLaUne = () => {
     Alert.alert(
@@ -768,9 +777,16 @@ function TournamentManagement({ navigation, route }) {
               // eslint-disable-next-line global-require
               const { requestFeatured } = require('@/services/event/eventService');
               await requestFeatured({ eventId, scopes: ['PUBLIC'] });
-              Alert.alert(t('implOrga.featuredSent', 'Demande envoyée'), t('implOrga.featuredSentBody', 'Tu seras prévenu quand le tournoi sera à la une.'));
+              Alert.alert(
+                t('implOrga.featuredSent', 'Demande envoyée'),
+                t('implOrga.featuredSentBody', 'Tu seras prévenu quand le tournoi sera à la une.'),
+              );
             } catch (/** @type {any} */ cause) {
-              Alert.alert(t('common.error', 'Erreur'), cause?.response?.data?.error?.message || cause?.message || t('implOrga.featuredError', 'La demande n’est pas partie.'));
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                cause?.response?.data?.error?.message || cause?.message
+                  || t('implOrga.featuredError', 'La demande n’est pas partie.'),
+              );
             }
           },
           text: t('implOrga.featuredConfirm', 'Demander'),
@@ -787,6 +803,18 @@ function TournamentManagement({ navigation, route }) {
     paddingHorizontal: 16,
     paddingVertical: 4,
   };
+  /**
+   * Une ligne de « Jour J » ou des réglages (planche 1c).
+   * @param {object} ligne
+   * @param {any} ligne.icone - Le glyphe.
+   * @param {() => void} ligne.onPress - Le geste.
+   * @param {boolean} [ligne.selected] - Ouverte.
+   * @param {string} [ligne.sousTitre] - La phrase sous le titre.
+   * @param {string} ligne.testID - Le repère des témoins.
+   * @param {string} ligne.titre - Le titre.
+   * @param {string} [ligne.valeur] - La valeur à droite.
+   * @returns {import('react').ReactElement} La ligne.
+   */
   const ligneDeNavigation = ({
     icone, onPress, selected = false, sousTitre = '', testID, titre, valeur = '',
   }) => (
@@ -805,37 +833,60 @@ function TournamentManagement({ navigation, route }) {
         {sousTitre ? <Text style={[Fonts.p3, Fonts.neutral300]}>{sousTitre}</Text> : null}
       </View>
       {valeur ? <Text style={[Fonts.p3, Fonts.neutral300]}>{valeur}</Text> : null}
-      <GlyphIcon color={Colors.neutral300} name={selected ? 'chevronDown' : 'chevronRight'} size={16} />
+      <GlyphIcon
+        color={Colors.neutral300}
+        name={selected ? 'chevronDown' : 'chevronRight'}
+        size={16}
+      />
     </TouchableOpacity>
   );
   const separateur = (/** @type {string} */ cle) => (
     <View key={cle} style={{ backgroundColor: Colors.primary700, height: 1 }} />
   );
 
-  // Planche 1c : « Jour J » (poules, matchs, classements, et la phase finale quand elle existe) ; chaque ligne
-  // déplie le contenu d'avant (les onglets), puis la structure sportive et ses gestes, gardés tels quels.
+  // Planche 1c : « Jour J » (poules, matchs, classements, et la phase finale quand elle existe) ;
+  // chaque ligne déplie le contenu d'avant (les onglets), puis la structure sportive et ses gestes,
+  // gardés tels quels.
   const renderJourJ = () => {
     const groupes = Number(dashboard?.overview?.groups) || 0;
     const matchs = Number(dashboard?.overview?.totalMatches) || 0;
-    const basculer = (/** @type {string} */ onglet) => setActiveTab(activeTab === onglet ? 'overview' : onglet);
+    const basculer = (/** @type {string} */ onglet) => setActiveTab(
+      activeTab === onglet ? 'overview' : onglet,
+    );
     const lignes = [
       {
         icone: 'chartSimpleHorizontal',
         onglet: 'groups',
         titre: t('tournamentManagement.tabGroups', 'Poules'),
         valeur: groupes > 0
-          ? t('tournamentManagement.groupsCount', { count: groupes, defaultValue_one: '{{count}} poule', defaultValue_other: '{{count}} poules' })
+          ? t('tournamentManagement.groupsCount', {
+            count: groupes,
+            defaultValue_one: '{{count}} poule',
+            defaultValue_other: '{{count}} poules',
+          })
           : t('implOrga.toDo', 'à faire'),
       },
       {
         icone: 'calendar',
         onglet: 'matches',
         titre: t('tournamentManagement.tabMatches', 'Matchs'),
-        valeur: t('implOrga.matchesScheduled', { count: matchs, defaultValue_one: '{{count}} programmé', defaultValue_other: '{{count}} programmés' }),
+        valeur: t('implOrga.matchesScheduled', {
+          count: matchs,
+          defaultValue_one: '{{count}} programmé',
+          defaultValue_other: '{{count}} programmés',
+        }),
       },
-      { icone: 'flag', onglet: 'standings', titre: t('tournamentManagement.tabStandings', 'Classements') },
+      {
+        icone: 'flag',
+        onglet: 'standings',
+        titre: t('tournamentManagement.tabStandings', 'Classements'),
+      },
       ...(competitionActions.hasBracket || competitionActions.canGenerateKnockout ? [
-        { icone: 'chartColumn', onglet: 'bracket', titre: t('tournamentManagement.tabBracket', 'Phases finales') },
+        {
+          icone: 'chartColumn',
+          onglet: 'bracket',
+          titre: t('tournamentManagement.tabBracket', 'Phases finales'),
+        },
       ] : []),
     ];
     const maxEquipes = Number(resumeDeLOrganisateur?.maxTeams ?? tournamentConfig?.maxTeams) || 0;
@@ -843,7 +894,9 @@ function TournamentManagement({ navigation, route }) {
       <View style={Spaces.gap[12]}>
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('implOrga.dayTitle', 'Jour J')}</Text>
-          <Text style={[Fonts.p3, Fonts.neutral300]}>{t('implOrga.daySubtitle', 'poules, matchs, classements')}</Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {t('implOrga.daySubtitle', 'poules, matchs, classements')}
+          </Text>
         </View>
         <View style={surfaceDesLignes}>
           {lignes.flatMap((ligne, index) => [
@@ -865,7 +918,10 @@ function TournamentManagement({ navigation, route }) {
             icone: 'penSquare',
             onPress: () => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId }),
             sousTitre: maxEquipes > 0
-              ? t('implOrga.settingsHintTeams', { count: maxEquipes, defaultValue: 'prix, âge, maillot, {{count}} équipes, date, lieu' })
+              ? t('implOrga.settingsHintTeams', {
+                count: maxEquipes,
+                defaultValue: 'prix, âge, maillot, {{count}} équipes, date, lieu',
+              })
               : t('implOrga.settingsHint', 'prix, âge, maillot, équipes, date, lieu'),
             testID: 'orga-reglages',
             titre: t('implOrga.settings', 'Réglages'),
@@ -893,7 +949,9 @@ function TournamentManagement({ navigation, route }) {
             onPress={() => setTeamFilter(option.value)}
             style={tournamentDs.getPillStyle(selected)}
           >
-            <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
+            <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>
+              {option.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -901,6 +959,7 @@ function TournamentManagement({ navigation, route }) {
   );
 
   const deuxColonnes = largeurDeLaFenetre >= 1024;
+  const inscrites = getTournamentRegisteredTeamsCount({ tournamentTeams }) || 0;
   const invitesDuTournoiPrive = estPrive
     ? <TournamentInvites clubId={event?.club?.documentId || null} eventId={eventId} />
     : null;
@@ -946,7 +1005,8 @@ function TournamentManagement({ navigation, route }) {
                 </Text>
                 <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300]}>{titreDuLecteur}</Text>
               </View>
-              {/* Planche 1f : au bureau (1024 px et plus), « Jour J » et les réglages passent à droite. */}
+              {/* Planche 1f : au bureau (1024 px et plus), « Jour J » et les réglages passent
+                  à droite. */}
               <View
                 style={deuxColonnes
                   ? [Alignments.row, Spaces.gap[24], { alignItems: 'flex-start' }]
@@ -960,9 +1020,12 @@ function TournamentManagement({ navigation, route }) {
                     filters={filtresDesEquipes}
                     invites={invitesDuTournoiPrive}
                     navigation={navigation}
-                    onChanged={async () => { await Promise.all([invalidate(), relireLeResume?.()]); }}
-                    registeredTeamsCount={getTournamentRegisteredTeamsCount({ tournamentTeams })}
+                    onChanged={async () => {
+                      await Promise.all([invalidate(), relireLeResume?.()]);
+                    }}
+                    registeredTeamsCount={inscrites}
                     summary={resumeDeLOrganisateur || null}
+                    summaryFailed={Boolean(erreurDuResume)}
                     teams={filteredTeams}
                     totalTeamsCount={tournamentTeams.length}
                     tournamentConfig={tournamentConfig}
@@ -975,8 +1038,8 @@ function TournamentManagement({ navigation, route }) {
           ) : null}
           {/* REPRISE-EVENEMENTS 130 : le lecteur (parent, joueur) lit le nom du tournoi ; la
               phrase de pilotage ne s'adresse qu'à qui pilote. */}
-          {/* IMPL-3-ORGA : qui pilote lit le tableau de bord ci-dessus ; ce qui suit est la vue du lecteur
-              (parent, joueur) et du tournoi clôturé, inchangée. */}
+          {/* IMPL-3-ORGA : qui pilote lit le tableau de bord ci-dessus ; ce qui suit est la vue du
+              lecteur (parent, joueur) et du tournoi clôturé, inchangée. */}
           {pilote ? null : (
             <>
               <View style={tournamentDs.styles.screenIntro}>

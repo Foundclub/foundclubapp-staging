@@ -29436,9 +29436,11 @@ export default {
     dayTitle: 'Jour J',
     declineBody: 'L’équipe quitte le tournoi et ses joueurs sont prévenus.',
     declineNothingPaid: 'Aucune place n’a encore été payée : rien à rembourser.',
-    declineRefundHow: 'Le remboursement revient sur le moyen de paiement de chaque joueur.',
     declineRefund_one: 'La place déjà payée est remboursée en entier ({{amount}}), sous 14 jours.',
-    declineRefund_other: 'Les {{count}} places déjà payées sont remboursées en entier ({{amount}}), sous 14 jours.',
+    declineRefund_other: 'Les {{count}} places déjà payées sont remboursées en entier '
+      + '({{amount}}), sous 14 jours.',
+    declineRefundHow: 'Le remboursement revient sur le moyen de paiement de chaque joueur.',
+    declineRefundRule: 'Les places déjà payées sont remboursées en entier, sous 14 jours.',
     declineTitle: 'Refuser {{name}} ?',
     emptyBody: 'Partage le tournoi : les équipes apparaîtront ici dès leur inscription.',
     emptyTitle: 'Aucune équipe pour l’instant',
@@ -29489,6 +29491,8 @@ export default {
     settingsHintTeams: 'prix, âge, maillot, {{count}} équipes, date, lieu',
     share: 'Partager le tournoi',
     statusWaitingPayments: 'En attente des paiements',
+    summaryUnavailable: 'Les paiements et l’interrupteur des inscriptions sont réservés à '
+      + 'l’organisateur du tournoi.',
     tagTournament: 'TOURNOI',
     teamsOn: '{{count}} sur {{max}}',
     teamsRegistered: 'équipes inscrites',

@@ -21,8 +21,6 @@ import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventMo
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { saveTextFile } from '@/platform/media/saveTextFile';
-
 import { createChatMessage, createWhisperChat } from '@/services/chat/chatService';
 import {
   exportTournamentPlayers,
@@ -39,12 +37,13 @@ import {
   normalizeTournamentText,
 } from '../tournamentUtils';
 
-// IMPL-3-ORGA (18/11/2026, page 1 des planches T-DESIGN-TOURNOI, Adel D261 « 1- A ») — LE TABLEAU DE
-// BORD DE L ORGANISATEUR : le tournoi et l'interrupteur des inscriptions (1a, 1e), quatre chiffres,
-// trois boutons, puis une carte par équipe avec son menu ⋯ (1b) et la fenêtre de refus qui dit la
-// règle de remboursement (1d). Bleu primaire partout (Adel 18/11, plus aucun vert) ; « Refuser » en
-// rouge (Danger / DangerFilled). Le remboursement d'une équipe refusée reste le geste manuel d'Adel
-// (REMBOURSEMENTS.md, cas F, D233) : la fenêtre dit la règle des CGV (§ 5), elle ne rembourse rien.
+// IMPL-3-ORGA (18/11/2026, page 1 des planches T-DESIGN-TOURNOI, Adel D261 « 1- A »)
+// LE TABLEAU DE BORD DE L ORGANISATEUR : le tournoi et l'interrupteur des inscriptions (1a, 1e),
+// quatre chiffres, trois boutons, puis une carte par équipe avec son menu ⋯ (1b) et la fenêtre
+// de refus qui dit la règle de remboursement (1d). Bleu primaire partout (Adel 18/11, plus aucun
+// vert) ; « Refuser » en rouge (Danger / DangerFilled). Le remboursement d'une équipe refusée
+// reste le geste manuel d'Adel (REMBOURSEMENTS.md, cas F, D233) : la fenêtre dit la règle des
+// CGV (§ 5), elle ne rembourse rien.
 // Témoin : src/views/event/__tests__/TournamentManagement.IMPL3ORGA.test.js.
 
 const SEUIL_PAR_DEFAUT = 5;
@@ -97,6 +96,8 @@ const seuilDesPayes = (summary, tournamentConfig) => {
  * @param {any} props.navigation - La navigation.
  * @param {() => Promise<void>} props.onChanged - Rafraîchit le tableau de bord après un geste.
  * @param {any} props.summary - Le résumé de l'organisateur, ou null.
+ * @param {boolean} [props.summaryFailed] - Le résumé est refusé ou en panne (403 : pas
+ *   l'organisateur).
  * @param {any[]} props.teams - Les équipes affichées (déjà filtrées).
  * @param {number} props.totalTeamsCount - Toutes les équipes, filtre ou non.
  * @param {number} props.registeredTeamsCount - Inscrites (en attente + validées).
@@ -115,6 +116,7 @@ function TournamentOrganizerBoard({
   onChanged,
   registeredTeamsCount,
   summary,
+  summaryFailed = false,
   teams,
   totalTeamsCount,
   tournamentConfig,
@@ -138,6 +140,8 @@ function TournamentOrganizerBoard({
   const estPayant = Number(tournamentConfig?.entryFeeCents) > 0
     || Number(summary?.entryFeeCents) > 0;
   const seuil = seuilDesPayes(summary, tournamentConfig);
+  // Sans résumé (chargement, panne, 403), aucun chiffre de paiement n'est inventé : pas de « 0 € ».
+  const connu = Boolean(summary);
   const ouvertes = inscriptionsOuvertes
     ?? (summary ? summary.registrationsOpen !== false : true);
   const maxLu = Number(summary?.maxTeams ?? tournamentConfig?.maxTeams);
@@ -155,8 +159,8 @@ function TournamentOrganizerBoard({
     padding: 16,
   };
 
-  // La barre « N payés sur 5 » : bleu primaire (Adel 18/11, plus aucun vert). Le libellé blanc est AU-DESSUS
-  // de la barre, jamais posé sur le bleu.
+  // La barre « N payés sur 5 » : bleu primaire (Adel 18/11, plus aucun vert). Le libellé blanc
+  // est AU-DESSUS de la barre, jamais posé sur le bleu.
   const pisteDeLaBarre = withAlpha(Colors.primary500, '29');
   const remplissageDeLaBarre = Colors.primary500;
 
@@ -215,7 +219,10 @@ function TournamentOrganizerBoard({
       }));
     }
     if (!phrases.length) {
-      phrases.push(t('implOrga.remindNobody', 'Personne à relancer : toutes les places sont payées.'));
+      phrases.push(t(
+        'implOrga.remindNobody',
+        'Personne à relancer : toutes les places sont payées.',
+      ));
     }
     return phrases.join(' ');
   };
@@ -263,6 +270,12 @@ function TournamentOrganizerBoard({
   const exporter = async () => {
     try {
       const csv = await exportTournamentPlayers(eventId);
+      // Résolution par suffixe de plateforme (`.native.js` / `.web.js`) : chargé au geste,
+      // comme le fil de TournamentTeamDetails ; le contrôle de types ne voit aucun fichier à
+      // ce chemin exact.
+      // @ts-ignore -- cf. ci-dessus
+      const media = require('@/platform/media/saveTextFile'); // eslint-disable-line global-require
+      const { saveTextFile } = /** @type {any} */ (media);
       const nom = String(event?.name || 'tournoi').normalize('NFD')
         .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '') || 'tournoi';
       await saveTextFile({
@@ -279,7 +292,10 @@ function TournamentOrganizerBoard({
       await createChatMessage({ chatId, event: /** @type {any} */ (eventId), message: 'Partage' });
       ouvrirLeFil(chatId);
     } catch (cause) {
-      erreur(cause, t('event.shareInChatError', 'Impossible de partager l’événement pour le moment.'));
+      erreur(cause, t(
+        'event.shareInChatError',
+        'Impossible de partager l’événement pour le moment.',
+      ));
     }
   };
 
@@ -358,7 +374,9 @@ function TournamentOrganizerBoard({
   const ligneDeMenu = (/** @type {any} */ {
     action, danger = false, icone, libelle, testID,
   }) => {
-    const couleur = danger ? Colors.error500 : Colors.neutral00;
+    // « Refuser l'équipe » des menus : chatDanger, le rouge des menus de la messagerie sur chatMenu
+    // (6,3:1, PACK « Fidélité au thème ») ; error500 y tombait sous 4,5:1.
+    const couleur = danger ? Colors.chatDanger : Colors.neutral00;
     return (
       <TouchableOpacity
         accessibilityLabel={libelle}
@@ -380,7 +398,7 @@ function TournamentOrganizerBoard({
     const id = String(equipe?.documentId || '');
     const statut = normalizeTournamentText(equipe?.status) || 'pending';
     const aRelancer = Number(ligne?.unpaidCount) || 0;
-    const actif = !['declined', 'archived'].includes(statut);
+    const actif = !['archived', 'declined'].includes(statut);
     const capitaineId = String(ligne?.captain?.documentId || '');
     const fermerPuis = (/** @type {() => void} */ geste) => () => { setMenuOuvert(''); geste(); };
     return [
@@ -399,7 +417,8 @@ function TournamentOrganizerBoard({
         libelle: t('implOrga.menuWriteCaptain', 'Écrire au capitaine'),
         testID: `orga-ecrire-${id}`,
       } : null,
-      // Un tournoi payant valide l'équipe seul au seuil payé (planche 1b) ; un gratuit garde « Valider ».
+      // Un tournoi payant valide l'équipe seul au seuil payé (planche 1b) ; un gratuit garde
+      // « Valider ».
       !estPayant && statut === 'pending' ? {
         action: fermerPuis(() => revue.mutate({ equipe, status: 'accepted' })),
         icone: 'check',
@@ -488,7 +507,7 @@ function TournamentOrganizerBoard({
       .filter(Boolean).join(' ');
     const payes = Number(ligne?.paidCount) || 0;
     const joueurs = Number(ligne?.count) || 0;
-    const actif = !['declined', 'archived'].includes(statut);
+    const actif = !['archived', 'declined'].includes(statut);
     const menuEstOuvert = menuOuvert === id;
     const menu = lignesDuMenu(equipe, ligne);
     const nomDeLEquipe = equipe?.name || t('tournamentManagement.tournamentTeam', 'Équipe tournoi');
@@ -509,8 +528,10 @@ function TournamentOrganizerBoard({
           {pastille(etat.texte, etat.couleur)}
         </View>
 
-        {estPayant && actif ? barreDesPaiements(payes, libelleDesPaiements(payes, joueurs)) : null}
-        {!estPayant && actif ? (
+        {estPayant && actif && ligne
+          ? barreDesPaiements(payes, libelleDesPaiements(payes, joueurs))
+          : null}
+        {!estPayant && actif && ligne ? (
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {t('tournamentManagement.rosterTotal', {
               count: joueurs,
@@ -535,12 +556,16 @@ function TournamentOrganizerBoard({
             testID={`orga-voir-${id}`}
           >
             <GlyphIcon color={Colors.primary500} name="chevronRight" size={16} />
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>{t('implOrga.seeTeam', 'Voir l’équipe')}</Text>
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t('implOrga.seeTeam', 'Voir l’équipe')}
+            </Text>
           </TouchableOpacity>
           {menu.length ? (
             <TouchableOpacity
               accessibilityLabel={t('implOrga.moreActions', {
-                defaultValue: 'Plus d’actions pour {{name}}', name: nomDeLEquipe, ...SANS_ECHAPPEMENT,
+                defaultValue: 'Plus d’actions pour {{name}}',
+                name: nomDeLEquipe,
+                ...SANS_ECHAPPEMENT,
               })}
               accessibilityRole="button"
               accessibilityState={{ expanded: menuEstOuvert }}
@@ -559,7 +584,10 @@ function TournamentOrganizerBoard({
           <View
             accessibilityRole="menu"
             style={{
-              backgroundColor: Colors.chatMenu, borderRadius: 16, overflow: 'hidden', paddingVertical: 4,
+              backgroundColor: Colors.chatMenu,
+              borderRadius: 16,
+              overflow: 'hidden',
+              paddingVertical: 4,
             }}
           >
             {menu.map((/** @type {any} */ entree) => ligneDeMenu(entree))}
@@ -581,18 +609,28 @@ function TournamentOrganizerBoard({
     );
   };
 
-  const texteDuRemboursement = (/** @type {number} */ payees, /** @type {number} */ montant) => (
-    payees > 0
+  const texteDuRemboursement = (/** @type {number} */ payees, /** @type {number} */ montant) => {
+    if (!connu) {
+      return t(
+        'implOrga.declineRefundRule',
+        'Les places déjà payées sont remboursées en entier, sous 14 jours.',
+      );
+    }
+    return payees > 0
       ? t('implOrga.declineRefund', {
         amount: euros(montant),
         count: payees,
-        defaultValue_one: 'La place déjà payée est remboursée en entier ({{amount}}), sous 14 jours.',
-        defaultValue_other:
-          'Les {{count}} places déjà payées sont remboursées en entier ({{amount}}), sous 14 jours.',
+        defaultValue_one:
+          'La place déjà payée est remboursée en entier ({{amount}}), sous 14 jours.',
+        defaultValue_other: 'Les {{count}} places déjà payées sont remboursées en entier '
+          + '({{amount}}), sous 14 jours.',
         ...SANS_ECHAPPEMENT,
       })
-      : t('implOrga.declineNothingPaid', 'Aucune place n’a encore été payée : rien à rembourser.')
-  );
+      : t(
+        'implOrga.declineNothingPaid',
+        'Aucune place n’a encore été payée : rien à rembourser.',
+      );
+  };
 
   const fenetreDeRefus = () => {
     if (!equipeARefuser) return null;
@@ -627,11 +665,16 @@ function TournamentOrganizerBoard({
           >
             <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
               {t('implOrga.declineTitle', {
-                defaultValue: 'Refuser {{name}} ?', name: equipeARefuser?.name || '', ...SANS_ECHAPPEMENT,
+                defaultValue: 'Refuser {{name}} ?',
+                name: equipeARefuser?.name || '',
+                ...SANS_ECHAPPEMENT,
               })}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {t('implOrga.declineBody', 'L’équipe quitte le tournoi et ses joueurs sont prévenus.')}
+              {t(
+                'implOrga.declineBody',
+                'L’équipe quitte le tournoi et ses joueurs sont prévenus.',
+              )}
             </Text>
             <View
               style={{
@@ -642,9 +685,11 @@ function TournamentOrganizerBoard({
                 padding: 12,
               }}
             >
-              <Text style={[Fonts.p2Bold, Fonts.primary500]}>{texteDuRemboursement(payees, montant)}</Text>
+              <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+                {texteDuRemboursement(payees, montant)}
+              </Text>
             </View>
-            {payees > 0 ? (
+            {payees > 0 || !connu ? (
               <Text style={[Fonts.p3, Fonts.neutral300]}>
                 {t(
                   'implOrga.declineRefundHow',
@@ -657,7 +702,11 @@ function TournamentOrganizerBoard({
               title={t('implOrga.menuDecline', 'Refuser l’équipe')}
               variant="DangerFilled"
             />
-            <Button onPress={fermer} title={t('common.actions.cancel', 'Annuler')} variant="Ghost" />
+            <Button
+              onPress={fermer}
+              title={t('common.actions.cancel', 'Annuler')}
+              variant="Ghost"
+            />
           </View>
         </View>
       </Modal>
@@ -686,7 +735,11 @@ function TournamentOrganizerBoard({
         ) : null}
         <View
           style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], {
-            borderTopColor: Colors.primary700, borderTopWidth: 1, marginTop: 4, minHeight: 52, paddingTop: 12,
+            borderTopColor: Colors.primary700,
+            borderTopWidth: 1,
+            marginTop: 4,
+            minHeight: 52,
+            paddingTop: 12,
           }]}
         >
           <GlyphIcon color={Colors.neutral00} name={ouvertes ? 'users' : 'lockShut'} size={20} />
@@ -695,12 +748,15 @@ function TournamentOrganizerBoard({
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {ouvertes
                 ? t('implOrga.registrationsOpenHint', 'Les joueurs peuvent s’inscrire')
-                : t('implOrga.registrationsClosedHint', 'Plus aucune équipe ne s’inscrit. Le tournoi continue.')}
+                : t(
+                  'implOrga.registrationsClosedHint',
+                  'Plus aucune équipe ne s’inscrit. Le tournoi continue.',
+                )}
             </Text>
           </View>
           <Switch
             accessibilityLabel={t('implOrga.registrationsOpen', 'Inscriptions ouvertes')}
-            disabled={inscriptions.isPending}
+            disabled={inscriptions.isPending || !connu}
             onValueChange={(valeur) => {
               setInscriptionsOuvertes(valeur);
               return inscriptions.mutate(valeur);
@@ -708,8 +764,8 @@ function TournamentOrganizerBoard({
             testID="orga-inscriptions"
             thumbColor={Colors.neutral00}
             trackColor={{ false: withAlpha(Colors.neutral300, '66'), true: Colors.primary500 }}
-            // Site : react-native-web peint le rond allumé en vert-bleu (#009688) sans cette propriété
-            // à lui ; plus aucun vert (Adel 18/11). Le téléphone l'ignore.
+            // Site : react-native-web peint le rond allumé en vert-bleu par défaut sans cette
+            // propriété à lui ; plus aucun vert (Adel 18/11). Le téléphone l'ignore.
             {...{ activeThumbColor: Colors.neutral00 }}
             value={ouvertes}
           />
@@ -740,25 +796,31 @@ function TournamentOrganizerBoard({
       </Text>
     );
     const libelleDesValidees = estPayant
-      ? t('implOrga.teamsValidatedPaid', { count: seuil, defaultValue: 'équipes validées ({{count}} payés)' })
+      ? t('implOrga.teamsValidatedPaid', {
+        count: seuil, defaultValue: 'équipes validées ({{count}} payés)',
+      })
       : t('implOrga.teamsValidated', 'équipes validées');
     return (
       <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
         {chiffre(inscrites, libelleDesInscrites, Colors.neutral00, 'orga-chiffre-inscrites')}
         {chiffre(
-          String(Number(summary?.validatedTeamsCount) || 0),
+          String(connu
+            ? Number(summary.validatedTeamsCount) || 0
+            : teams.filter((/** @type {any} */ e) => (
+              normalizeTournamentText(e?.status) === 'accepted'
+            )).length),
           libelleDesValidees,
           Colors.neutral00,
           'orga-chiffre-validees',
         )}
         {estPayant ? chiffre(
-          String(Number(summary?.paidPlacesCount) || 0),
+          connu ? String(Number(summary.paidPlacesCount) || 0) : '—',
           t('implOrga.paidPlaces', 'places payées'),
           Colors.neutral00,
           'orga-chiffre-payees',
         ) : null}
         {estPayant ? chiffre(
-          euros(summary?.collectedCents),
+          connu ? euros(summary.collectedCents) : '—',
           t('implOrga.collected', 'encaissé'),
           Colors.primary500,
           'orga-chiffre-encaisse',
@@ -780,7 +842,10 @@ function TournamentOrganizerBoard({
             {t('implOrga.emptyTitle', 'Aucune équipe pour l’instant')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200, { textAlign: 'center' }]}>
-            {t('implOrga.emptyBody', 'Partage le tournoi : les équipes apparaîtront ici dès leur inscription.')}
+            {t(
+              'implOrga.emptyBody',
+              'Partage le tournoi : les équipes apparaîtront ici dès leur inscription.',
+            )}
           </Text>
           <Button
             onPress={() => setPartageVisible(true)}
@@ -812,6 +877,15 @@ function TournamentOrganizerBoard({
     <View style={Spaces.gap[16]}>
       {enTete()}
       {chiffres()}
+      {summaryFailed ? (
+        <Text accessibilityRole="alert" style={[Fonts.p3, { color: Colors.warning400 }]}>
+          {t(
+            'implOrga.summaryUnavailable',
+            'Les paiements et l’interrupteur des inscriptions sont réservés à l’organisateur '
+              + 'du tournoi.',
+          )}
+        </Text>
+      ) : null}
 
       <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
         {tuile(t('implOrga.share', 'Partager le tournoi'), 'send', () => setPartageVisible(true))}
@@ -824,7 +898,9 @@ function TournamentOrganizerBoard({
       </View>
 
       <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('tournamentManagement.tabTeams', 'Équipes')}</Text>
+        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {t('tournamentManagement.tabTeams', 'Équipes')}
+        </Text>
         <Text style={[Fonts.p3, Fonts.neutral300]}>
           {registeredTeamsCount > 0
             ? t('implOrga.registeredCount', {
@@ -840,7 +916,9 @@ function TournamentOrganizerBoard({
 
       {fenetreDeRefus()}
       <ShareEventModal
-        event={event ? { ...event, title: event?.name || t('implOrga.tagTournament', 'TOURNOI') } : null}
+        event={event
+          ? { ...event, title: event?.name || t('implOrga.tagTournament', 'TOURNOI') }
+          : null}
         isVisible={partageVisible}
         onClose={() => setPartageVisible(false)}
         onSelectChat={partagerDansUnFil}
