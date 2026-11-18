@@ -66,11 +66,6 @@ function EventWizardTournamentSettings({ navigation, route }) {
       ? ''
       : String(state.tournamentMinRosterSize),
   );
-  const [maxRosterText, setMaxRosterText] = useState(
-    state.tournamentMaxRosterSize === null || state.tournamentMaxRosterSize === undefined
-      ? ''
-      : String(state.tournamentMaxRosterSize),
-  );
   const [allowCustomTeams, setAllowCustomTeams] = useState(
     state.tournamentAllowCustomTeams !== false,
   );
@@ -92,17 +87,11 @@ function EventWizardTournamentSettings({ navigation, route }) {
 
   const maxTeams = useMemo(() => parseOptionalInteger(maxTeamsText), [maxTeamsText]);
   const minRosterSize = useMemo(() => parseOptionalInteger(minRosterText), [minRosterText]);
-  const maxRosterSize = useMemo(() => parseOptionalInteger(maxRosterText), [maxRosterText]);
 
-  const isRosterRangeInvalid = Boolean(
-    minRosterSize
-    && maxRosterSize
-    && minRosterSize > maxRosterSize,
-  );
   // REPRISE-EVENEMENTS 129 : la règle des réglages du tournoi, dès la création. Sans elle, un 0
   // était jeté sans un mot (`parseOptionalInteger`) et le tournoi naissait sans minimum.
   const isMinRosterTooLow = isTournamentMinRosterTooLow(minRosterText);
-  const lectureDesReglesPayantes = lireReglesPayantes({ ...reglesPayantes, maxRosterSize });
+  const lectureDesReglesPayantes = lireReglesPayantes(reglesPayantes);
   // Le club porteur, comme le Recap l envoie (EventWizardRecap.js `buildWizardFormData`,
   // `club`). Un avertissement seulement : le serveur juge le club d une equipe en base, et
   // refuse avec le meme message.
@@ -115,7 +104,6 @@ function EventWizardTournamentSettings({ navigation, route }) {
         tournamentAllowCustomTeams: allowCustomTeams,
         tournamentEntryFeeCents: lectureDesReglesPayantes.config.entryFeeCents,
         tournamentJerseySizeRequired: lectureDesReglesPayantes.config.jerseySizeRequired,
-        tournamentMaxRosterSize: maxRosterSize,
         tournamentMaxTeams: maxTeams,
         tournamentMinAge: lectureDesReglesPayantes.config.minAge,
         tournamentMinRosterSize: minRosterSize,
@@ -169,7 +157,7 @@ function EventWizardTournamentSettings({ navigation, route }) {
   return (
     <WizardStepLayout
       isNextDisabled={
-        isRosterRangeInvalid || isMinRosterTooLow || lectureDesReglesPayantes.hasError
+        isMinRosterTooLow || lectureDesReglesPayantes.hasError
       }
       onBack={() => navigation.goBack()}
       onNext={handleNext}
@@ -220,20 +208,6 @@ function EventWizardTournamentSettings({ navigation, route }) {
                 value={minRosterText}
               />
             </View>
-
-            <View style={[Spaces.gap[8], { flex: 1 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                {t('eventWizardTournamentSettings.maxSquad', 'Effectif max')}
-              </Text>
-              <TextInput
-                keyboardType="number-pad"
-                onChangeText={setMaxRosterText}
-                placeholder="Ex. 8"
-                placeholderTextColor={Colors.neutral500}
-                style={tournamentDs.styles.input}
-                value={maxRosterText}
-              />
-            </View>
           </View>
 
           {isMinRosterTooLow ? (
@@ -244,20 +218,11 @@ function EventWizardTournamentSettings({ navigation, route }) {
               )}
             </Text>
           ) : null}
-          {isRosterRangeInvalid ? (
-            <Text style={[Fonts.p3, Fonts.error500]}>
-              {t(
-                'eventWizardTournamentSettings.theMinimumSquadSizeCan',
-                'L effectif minimum ne peut pas dépasser l effectif maximum.',
-              )}
-            </Text>
-          ) : null}
         </View>
 
         <TournamentPaidRulesFields
           cardStyle={tournamentDs.styles.wizardSectionCard}
           inputStyle={tournamentDs.styles.input}
-          maxRosterSize={maxRosterSize}
           onChange={(patch) => setReglesPayantes((avant) => ({ ...avant, ...patch }))}
           showClubWarning={!hasClubPorteur}
           values={reglesPayantes}

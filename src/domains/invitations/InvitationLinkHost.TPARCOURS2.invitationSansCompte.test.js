@@ -6,7 +6,8 @@
  * t'attendra. », sans la date, le lieu, les joueurs ni le prix (capture app-P2-01), et
  * « Continuer » fermait la fenêtre sur l'Accueil du visiteur (app-P2-02).
  * Maintenant : la date, le lieu, les
- * joueurs sur N et le prix (si le serveur le rend) sont lus dans l'aperçu public, et « Continuer »
+ * joueurs (plus « sur N » depuis T-SANS-PLAFOND, D239) et le prix (si le serveur le rend) sont
+ * lus dans l'aperçu public, et « Continuer »
  * ouvre la connexion. AUCUNE personne n'est affichée (décision d'Adel en attente).
  */
 import { act, create } from 'react-test-renderer';
@@ -106,13 +107,13 @@ const INTRO = "Tu es invité·e à rejoindre l'équipe EMU Test 002 pour le tour
 const ATTENDRA = "Connecte-toi ou crée ton compte : l'invitation t'attendra.";
 
 describe('T-PARCOURS-2 point 5 — l invitation de tournoi ouverte SANS compte', () => {
-  test('🔴 elle dit la date, le lieu, les joueurs sur 5 et le prix', () => {
+  test('🔴 elle dit la date, le lieu, les joueurs (sans « sur 5 », D239) et le prix', () => {
     const coded = describeCodedTournamentInvite({ isSignedIn: false, preview: apercu(), t });
     expect(coded.body.split('\n')).toEqual([
       INTRO,
       // T-PAGES-6 (M1319) : la règle de la fiche (jour + heure saisie).
       `${formatEventWhenLine({ date: DATE })} · AR Soccer`,
-      '3 joueurs sur 5 · 20 € par joueur',
+      '3 joueurs · 20 € par joueur',
       ATTENDRA,
     ]);
     expect(coded.title).toBe('Rejoindre EMU Test 002');
@@ -124,7 +125,7 @@ describe('T-PARCOURS-2 point 5 — l invitation de tournoi ouverte SANS compte',
       const coded = describeCodedTournamentInvite({
         isSignedIn: false, preview: apercu({ entryFeeCents }), t,
       });
-      expect(coded.body.split('\n')[2]).toBe('3 joueurs sur 5');
+      expect(coded.body.split('\n')[2]).toBe('3 joueurs');
       expect(coded.body).not.toContain('€');
     });
   });
@@ -162,7 +163,7 @@ describe('T-PARCOURS-2 point 5 — l invitation de tournoi ouverte SANS compte',
     await act(async () => { await Promise.resolve(); });
     expect(mockApercu).toHaveBeenCalledWith(CODE);
     expect(LIEN).toContain(CODE);
-    expect(lastModalProps.body).toContain('3 joueurs sur 5 · 20 € par joueur');
+    expect(lastModalProps.body).toContain('3 joueurs · 20 € par joueur');
 
     await act(async () => { await lastModalProps.primaryAction.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith('PublicAuthStack', {

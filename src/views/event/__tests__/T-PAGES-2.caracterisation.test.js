@@ -545,13 +545,14 @@ describe('T-PAGES-2 — les états de l’équipe', () => {
     expect(combien(arbre, ['Retirer', 'Capitaine', 'Nommer capitaine', 'Inviter', 'Partager le lien', "Annuler l'invitation"])).toBe(0);
   });
 
-  test('17. effectif maximum dépassé (max 2, 3 actifs) : l’avertissement est affiché', async () => {
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum ; l'avertissement « dépassé » a disparu.
+  test('17. D239 : 3 actifs sur un plafond 2 en base : AUCUN avertissement d effectif maximum', async () => {
     const team = equipe({ event: { ...equipe().event, tournamentConfig: { maxRosterSize: 2 } } });
     team.members.push({
       documentId: 'mb-5', origin: 'invited', responseStatus: 'pending', role: 'member', user: { documentId: 'u-5', firstname: 'Cinq' },
     });
     const arbre = await monter(team, 'u-cap');
-    expect(texte(arbre)).toContain('Effectif maximum dépassé');
+    expect(texte(arbre)).not.toContain('Effectif maximum dépassé');
   });
 
   test('18. discussion de l’équipe : le bouton ouvre la conversation', async () => {

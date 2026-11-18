@@ -56,7 +56,7 @@ import TournamentTeamProgress, {
 } from './components/TournamentTeamProgress';
 import { openTournamentTerms } from './components/tournamentTerms';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { getTournamentTeamPlayerCount, hasTournamentTeamForUser } from './tournamentJoinRules';
+import { hasTournamentTeamForUser } from './tournamentJoinRules';
 import TournamentMemberConsent from './TournamentMemberConsent';
 import { TournamentMemberPlace } from './TournamentMemberPlace';
 import TournamentTeamDiscussion from './TournamentTeamDiscussion';
@@ -325,11 +325,8 @@ function TournamentTeamDetails({ navigation, route }) {
     tournamentEvent?.tournamentTeams,
     currentUserDocumentId,
   );
-  // Même compte que « Rejoindre une équipe » (getTournamentTeamsSeekingPlayers) : inconnu => le
-  // bouton reste.
-  const rosterMaxSize = Number(tournamentConfig?.maxRosterSize);
-  const rosterPlayerCount = getTournamentTeamPlayerCount(team, tournamentConfig);
-  const rosterMaxReached = rosterMaxSize > 0 && rosterPlayerCount !== null && rosterPlayerCount >= rosterMaxSize;
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus d'« Équipe complète » : une équipe n'a plus de nombre
+  // maximum de joueurs (remplaçants sans limite, chacun paie sa place).
   let joinBlockedReason = null;
   if (tooYoung) joinBlockedReason = getTournamentAgeNotice(team?.event);
   else if (alreadyInTeam) {
@@ -337,10 +334,6 @@ function TournamentTeamDetails({ navigation, route }) {
       'tournamentTeamDetails.joinBlocked.alreadyInTeam',
       'Tu es déjà dans une équipe de ce tournoi : tu ne peux pas en rejoindre une autre.',
     );
-  } else if (rosterMaxReached) {
-    // T-REGLES-EQUIPE (18/11, point 2) : le serveur refuse la demande d'une équipe pleine
-    // (requestJoin).
-    joinBlockedReason = t('matchCenterScreen.slots.teamComplete', 'Équipe complète');
   }
   // Une raison INCONNUE ne cache pas le bouton : seul le chargement le retient ; une lecture en
   // échec le laisse (le serveur rejuge tout, `requestJoin`).
@@ -847,16 +840,10 @@ function TournamentTeamDetails({ navigation, route }) {
   const rosterTarget = Number(tournamentConfig?.minRosterSize) > 0
     ? Number(tournamentConfig.minRosterSize)
     : progress.needed;
-  // T-REGLES-EQUIPE (point 7) : équipe pleine, plus de place à proposer (le serveur refuserait).
-  const freeSlots = canManageRoster && !progress.isValidated && !rosterMaxReached
+  const freeSlots = canManageRoster && !progress.isValidated
     ? Math.max(0, rosterTarget - activeMembers.length)
     : 0;
-  const rosterMax = Number(tournamentConfig?.maxRosterSize) > 0
-    ? Number(tournamentConfig.maxRosterSize)
-    : rosterTarget;
-  const todoItems = canManageRoster && !progress.isValidated
-    ? progress.todo.filter((/** @type {any} */ item) => !(rosterMaxReached && item.kind === 'players'))
-    : [];
+  const todoItems = canManageRoster && !progress.isValidated ? progress.todo : [];
   const essentials = getTournamentEssentials(team?.event);
   const entryFeeLabel = getTournamentEntryFeeLabel(team?.event);
   const openInviteSearch = () => setIsInviteOpen(true);
@@ -910,17 +897,7 @@ function TournamentTeamDetails({ navigation, route }) {
     </View>
   );
 
-  // T-REGLES-EQUIPE (18/11, point 7) : équipe pleine, ni invitation, ni lien, ni ouverture aux
-  // demandes (affichage seulement : `isOpenToJoinRequests` reste en base, une place libérée rend
-  // tout ; le serveur refuse invitation et demande, requestJoin / inviteMember).
-  const fullTeamCard = (
-    <View style={tournamentDs.styles.panelCard} testID="tournament-team-full">
-      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-        {t('matchCenterScreen.slots.teamComplete', 'Équipe complète')}
-      </Text>
-    </View>
-  );
-  const openInviteCard = canManageRoster ? (
+  const inviteCard = canManageRoster ? (
     <View style={tournamentDs.styles.panelCard}>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], styles.spreadWrap]}>
         <View style={{ flex: 1, minWidth: 160 }}>
@@ -1033,7 +1010,6 @@ function TournamentTeamDetails({ navigation, route }) {
       ) : null}
     </View>
   ) : null;
-  const inviteCard = canManageRoster && rosterMaxReached ? fullTeamCard : openInviteCard;
 
   const discussionCard = team?.discussion ? (
     <View style={tournamentDs.styles.panelCard}>
@@ -1134,11 +1110,6 @@ function TournamentTeamDetails({ navigation, route }) {
         tournamentConfig={tournamentConfig}
         viewerIsMember={isCurrentActiveMember || canManageTeam}
       />
-      {!rosterSummary.meetsMaxRoster ? (
-        <Text style={[Fonts.p3, Fonts.error500]}>
-          {t('tournamentTeamDetails.maximumSquadSizeExceeded', 'Effectif maximum dépassé: {{totalCount}}/{{maxRosterSize}}', { maxRosterSize: rosterSummary.maxRosterSize, totalCount: rosterSummary.totalCount, ...SANS_ECHAPPEMENT })}
-        </Text>
-      ) : null}
       {rosterSummary.hasWarning && normalizeTournamentText(team?.status) === 'accepted' ? (
         <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
           {t('tournamentTeamDetails.thisTeamStaysAcceptedBut', "Cette équipe reste acceptée, mais un warning roster est maintenant visible pour l'organisateur.")}
@@ -1282,16 +1253,12 @@ function TournamentTeamDetails({ navigation, route }) {
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('tournamentTeamDetails.roster.title', 'Effectif')}
           </Text>
-          {rosterMax > 0 ? (
-            <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {t('tournamentTeamDetails.roster.count', {
-                count: activeMembers.length,
-                defaultValue_one: '{{count}} joueur sur {{max}}',
-                defaultValue_other: '{{count}} joueurs sur {{max}}',
-                max: rosterMax,
-              })}
-            </Text>
-          ) : null}
+          {/* T-SANS-PLAFOND (D239) : plus de « sur {{max}} » ; le seuil est dans la progression. */}
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
+              count: activeMembers.length,
+            })}
+          </Text>
         </View>
         {team?.sourceType === 'club_team' ? (
           <Text style={[Fonts.p3, Fonts.primary100]}>

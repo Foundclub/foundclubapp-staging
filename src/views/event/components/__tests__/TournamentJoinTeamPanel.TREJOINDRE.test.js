@@ -6,8 +6,8 @@ import TournamentJoinTeamPanel from '../TournamentJoinTeamPanel';
 // ==========================================================================
 // T-REJOINDRE (17/11/2026, Clément D50 « 2- A », registre D210) — « REJOINDRE UNE ÉQUIPE » SUR LA
 // FICHE DU TOURNOI, le même panneau pour le site et le téléphone.
-//   · le bouton, le petit texte de la maquette validée, la liste des équipes ouvertes ET pas
-//     complètes (« 3 joueurs sur 5 »), « Demander à rejoindre » ;
+//   · le bouton, le petit texte de la maquette validée, la liste des équipes ouvertes (« 3 joueurs » ;
+//     T-SANS-PLAFOND, D239 : une équipe à 5 ou plus reste proposée, plus de « sur 5 »), « Demander à rejoindre » ;
 //   · la demande passe par la route existante (`requestJoinTournamentTeam`), après la déclaration ;
 //   · aucune équipe ouverte : un message clair, pas une liste vide ;
 //   · ni le visiteur, ni le joueur plus jeune que l'âge minimum ne voient le bouton.
@@ -151,10 +151,12 @@ describe('T-REJOINDRE — le panneau « Rejoindre une équipe »', () => {
 
     await appuyer(arbre, 'tournament-join-team-button');
     expect(textes(arbre)).toContain('Les Seuls');
-    expect(textes(arbre)).toContain('3 joueurs sur 5');
+    expect(textes(arbre)).toContain('3 joueurs');
+    expect(textes(arbre)).not.toContain('sur 5');
     expect(textes(arbre)).toContain('Demander à rejoindre');
-    // L'équipe complète n'est pas proposée.
-    expect(textes(arbre)).not.toContain('Les Complets');
+    // T-SANS-PLAFOND (D239) : l'équipe de 5 reste proposée (plus de nombre maximum).
+    expect(textes(arbre)).toContain('Les Complets');
+    expect(textes(arbre)).toContain('5 joueurs');
   });
 
   it('tournoi gratuit : le petit texte ne parle pas de payer', async () => {

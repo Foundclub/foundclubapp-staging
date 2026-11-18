@@ -114,7 +114,6 @@ function TournamentSettingsEdit({ navigation, route }) {
 
   const [maxTeamsText, setMaxTeamsText] = useState('');
   const [minRosterText, setMinRosterText] = useState('');
-  const [maxRosterText, setMaxRosterText] = useState('');
   const [allowCustomTeams, setAllowCustomTeams] = useState(true);
   const [allowCrossClubPlayers, setAllowCrossClubPlayers] = useState(false);
   const [formatMode, setFormatMode] = useState('groups_only');
@@ -139,7 +138,6 @@ function TournamentSettingsEdit({ navigation, route }) {
     if (!event) return;
     setMaxTeamsText(String(event?.tournamentConfig?.maxTeams || ''));
     setMinRosterText(String(event?.tournamentConfig?.minRosterSize || ''));
-    setMaxRosterText(String(event?.tournamentConfig?.maxRosterSize || ''));
     setAllowCustomTeams(event?.tournamentConfig?.allowCustomTeams !== false);
     setAllowCrossClubPlayers(event?.tournamentConfig?.allowCrossClubPlayers === true);
     setFormatMode(event?.tournamentConfig?.formatMode || 'groups_only');
@@ -161,7 +159,6 @@ function TournamentSettingsEdit({ navigation, route }) {
 
   const maxTeams = useMemo(() => parseOptionalInteger(maxTeamsText), [maxTeamsText]);
   const minRosterSize = useMemo(() => parseOptionalInteger(minRosterText), [minRosterText]);
-  const maxRosterSize = useMemo(() => parseOptionalInteger(maxRosterText), [maxRosterText]);
   const groupCount = useMemo(() => parseOptionalInteger(groupCountText) || 1, [groupCountText]);
   const qualifiedPerGroup = useMemo(() => parseOptionalInteger(qualifiedPerGroupText) || 1, [qualifiedPerGroupText]);
   const bestThirdPlacesCount = useMemo(() => Number.parseInt(String(bestThirdPlacesText || '0'), 10) || 0, [bestThirdPlacesText]);
@@ -177,7 +174,6 @@ function TournamentSettingsEdit({ navigation, route }) {
   }, [pointsDrawText]);
   const pointsLoss = useMemo(() => Number.parseInt(String(pointsLossText || '0'), 10) || 0, [pointsLossText]);
   const pointsForfeit = useMemo(() => Number.parseInt(String(pointsForfeitText || '0'), 10) || 0, [pointsForfeitText]);
-  const isRosterRangeInvalid = Boolean(minRosterSize && maxRosterSize && minRosterSize > maxRosterSize);
   // CORR-EVENEMENTS 129 (décision B) : des réglages qui peuvent marcher. Un effectif minimum
   // saisi vaut au moins 1 ; une poule compte au moins 2 équipes (les acceptées, sinon le maximum).
   const isMinRosterTooLow = isTournamentMinRosterTooLow(minRosterText);
@@ -190,10 +186,10 @@ function TournamentSettingsEdit({ navigation, route }) {
   const usesGroups = ['groups_only', 'groups_to_knockout', 'round_robin'].includes(formatMode);
   const usesKnockout = ['groups_to_knockout', 'knockout_only'].includes(formatMode);
   const isKnockoutSizeInvalid = usesKnockout && knockoutSize > 0 && ![16, 2, 32, 4, 8].includes(knockoutSize);
-  const lectureDesReglesPayantes = lireReglesPayantes({ ...reglesPayantes, maxRosterSize });
+  const lectureDesReglesPayantes = lireReglesPayantes(reglesPayantes);
   const isPaidWithoutClub = lectureDesReglesPayantes.config.entryFeeCents > 0
     && !event?.club?.documentId;
-  const hasInvalidSettings = isRosterRangeInvalid || isKnockoutSizeInvalid
+  const hasInvalidSettings = isKnockoutSizeInvalid
     || isMinRosterTooLow || isGroupCountTooHigh
     || lectureDesReglesPayantes.hasError || isPaidWithoutClub;
   const reglesPayantesEnvoyees = lectureDesReglesPayantes.config;
@@ -212,7 +208,8 @@ function TournamentSettingsEdit({ navigation, route }) {
     groupCount: resolvedGroupCount,
     knockoutSize: usesKnockout ? knockoutSize : 0,
     matchGenerationMode,
-    maxRosterSize,
+    // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum ; enregistrer efface l'ancien.
+    maxRosterSize: null,
     maxTeams,
     minRosterSize,
     pointsDraw,
@@ -232,7 +229,6 @@ function TournamentSettingsEdit({ navigation, route }) {
     bestThirdPlacesCount,
     formatMode,
     knockoutSize,
-    maxRosterSize,
     maxTeams,
     matchGenerationMode,
     minRosterSize,
@@ -422,19 +418,6 @@ function TournamentSettingsEdit({ navigation, route }) {
                     value={minRosterText}
                   />
                 </View>
-                <View style={[Spaces.gap[8], { flex: 1 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                    {t('tournamentSettingsEdit.maxSquad', 'Effectif max')}
-                  </Text>
-                  <TextInput
-                    keyboardType="number-pad"
-                    onChangeText={setMaxRosterText}
-                    placeholder="Ex. 8"
-                    placeholderTextColor={Colors.neutral500}
-                    style={inputStyle}
-                    value={maxRosterText}
-                  />
-                </View>
               </View>
 
               {isMinRosterTooLow ? (
@@ -442,14 +425,6 @@ function TournamentSettingsEdit({ navigation, route }) {
                   {t(
                     'tournamentSettingsEdit.minSquadAtLeastOne',
                     'L’effectif minimum est d’au moins 1 joueur.',
-                  )}
-                </Text>
-              ) : null}
-              {isRosterRangeInvalid ? (
-                <Text style={[Fonts.p3, Fonts.error500]}>
-                  {t(
-                    'tournamentSettingsEdit.theMinimumSquadSizeCan',
-                    'L effectif minimum ne peut pas dépasser l effectif maximum.',
                   )}
                 </Text>
               ) : null}
@@ -475,7 +450,6 @@ function TournamentSettingsEdit({ navigation, route }) {
             <TournamentPaidRulesFields
               cardStyle={sectionCardStyle}
               inputStyle={inputStyle}
-              maxRosterSize={maxRosterSize}
               onChange={(patch) => setReglesPayantes((avant) => ({ ...avant, ...patch }))}
               showClubWarning={!event?.club?.documentId}
               values={reglesPayantes}

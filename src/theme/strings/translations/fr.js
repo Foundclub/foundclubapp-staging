@@ -27410,6 +27410,8 @@ export default {
     ruleValidated_one: 'Ton équipe est validée : {{count}} place payée sur {{needed}}.',
     ruleValidated_other: 'Ton équipe est validée : {{count}} places payées sur {{needed}}.',
     sizeChosen: 'Taille choisie : {{size}}',
+    substitutes_one: '+ {{count}} remplaçant',
+    substitutes_other: '+ {{count}} remplaçants',
     title: 'Où en est l’équipe',
     todo: {
       consents_one: '{{count}} autorisation parentale',

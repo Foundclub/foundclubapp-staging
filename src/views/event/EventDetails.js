@@ -7379,7 +7379,10 @@ function EventDetails({ navigation, route }) {
   const prixDUnePlace = Number(tournamentConfig?.entryFeeCents) > 0
     ? formatEuros(Number(tournamentConfig.entryFeeCents) / 100)
     : '';
-  const coequipiersAInviter = Number(tournamentConfig?.maxRosterSize) - 1;
+  // T-SANS-PLAFOND (D239) : plus de nombre maximum ; on invite de quoi atteindre le seuil
+  // (5 payés).
+  const seuilDesPayes = Number(tournamentConfig?.paidMembersToValidate);
+  const coequipiersAInviter = (seuilDesPayes > 0 ? seuilDesPayes : 5) - 1;
   let ligneEnsuiteDeLaCreation = '';
   if (prixDUnePlace) {
     ligneEnsuiteDeLaCreation = coequipiersAInviter > 0

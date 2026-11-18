@@ -36,47 +36,32 @@ export const getTournamentTeamPlayerCount = (team, tournamentConfig = {}) => {
 
 /**
  * D50 « 2- A » — les équipes qu'un joueur seul peut demander à rejoindre : ouvertes aux demandes
- * (règle de `isTournamentTeamOpenToJoinRequests`, celle du serveur) ET pas complètes (effectif
- * connu < maximum du tournoi). Sans maximum, ou effectif inconnu : l'équipe reste proposée, le
- * serveur tranche.
+ * (règle de `isTournamentTeamOpenToJoinRequests`, celle du serveur).
+ * T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum de joueurs ; une équipe à 5 ou plus
+ * reste proposée (elle prend des remplaçants).
  * @param {any[]} teams - Les équipes du tournoi.
  * @param {any} [tournamentConfig] - Le réglage du tournoi.
- * @returns {{ maxRosterSize: number | null, playerCount: number | null, team: any }[]} La liste.
+ * @returns {{ playerCount: number | null, team: any }[]} La liste.
  */
-export const getTournamentTeamsSeekingPlayers = (teams, tournamentConfig = {}) => {
-  const max = Number(tournamentConfig?.maxRosterSize);
-  const maxRosterSize = Number.isFinite(max) && max > 0 ? max : null;
-  return (Array.isArray(teams) ? teams : [])
+export const getTournamentTeamsSeekingPlayers = (teams, tournamentConfig = {}) => (
+  (Array.isArray(teams) ? teams : [])
     .filter(isTournamentTeamOpenToJoinRequests)
     .map((team) => ({
-      maxRosterSize,
       playerCount: getTournamentTeamPlayerCount(team, tournamentConfig),
       team,
     }))
-    .filter(({ playerCount }) => (
-      maxRosterSize === null || playerCount === null || playerCount < maxRosterSize
-    ));
-};
+);
 
 /**
- * « 3 joueurs sur 5 », « 3 joueurs » sans maximum, `null` si le nombre n'est pas connu.
- * @param {{ maxRosterSize: number | null, playerCount: number | null }} entry - Une équipe listée.
+ * « 3 joueurs » (plus de « sur 5 » : D239), `null` si le nombre n'est pas connu.
+ * @param {{ playerCount: number | null }} entry - Une équipe listée.
  * @returns {string | null} La ligne sous le nom de l'équipe.
  */
-export const getTournamentTeamPlayersLine = ({ maxRosterSize, playerCount }) => {
-  if (playerCount === null) return null;
-  if (maxRosterSize === null) {
-    return i18next.t('tournamentManagement.rosterTotal', '{{count}} joueurs', {
-      count: playerCount,
-    });
-  }
-  return i18next.t('tournamentJoin.playersOutOf', {
-    count: playerCount,
-    defaultValue_one: '{{count}} joueur sur {{max}}',
-    defaultValue_other: '{{count}} joueurs sur {{max}}',
-    max: maxRosterSize,
-  });
-};
+export const getTournamentTeamPlayersLine = ({ playerCount }) => (
+  playerCount === null
+    ? null
+    : i18next.t('tournamentManagement.rosterTotal', '{{count}} joueurs', { count: playerCount })
+);
 
 /**
  * T-PAGES-6 (17/11/2026, question 5 de T-REJOINDRE, « C ») — le compte est-il l'organisateur de CE

@@ -149,21 +149,16 @@ export const getTournamentRosterSummary = (team, tournamentConfig = {}) => {
   const minRosterSize = Number.isFinite(Number(tournamentConfig?.minRosterSize))
     ? Number(tournamentConfig.minRosterSize)
     : null;
-  const maxRosterSize = Number.isFinite(Number(tournamentConfig?.maxRosterSize))
-    ? Number(tournamentConfig.maxRosterSize)
-    : null;
   // T-JOUEURS : le nombre de la carte vient du résumé du serveur quand il est là.
   const totalCount = membersSummary ? membersSummary.count : rosterMembers.length;
   const shouldApplyMinRoster = normalizeTournamentText(team?.sourceType) !== 'club_team';
   const meetsMinRoster = !shouldApplyMinRoster || !minRosterSize || totalCount >= minRosterSize;
-  const meetsMaxRoster = !maxRosterSize || totalCount <= maxRosterSize;
 
   return {
     absentCount,
-    hasWarning: !meetsMinRoster || !meetsMaxRoster,
+    // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum ; seul l'effectif minimum avertit.
+    hasWarning: !meetsMinRoster,
     invitedCount: buckets.invitedMembers.length,
-    maxRosterSize,
-    meetsMaxRoster,
     meetsMinRoster,
     membersSummary,
     minRosterSize,

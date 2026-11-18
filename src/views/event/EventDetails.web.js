@@ -58,7 +58,6 @@ import TrainingReviewsCard, {
 } from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
-  getTournamentTeamPlayerCount,
   getTournamentTeamsSeekingPlayers,
   getTournamentVisitorTeamsLine,
 } from '@/views/event/tournamentJoinRules';
@@ -2467,7 +2466,8 @@ function EventDetails({ navigation, route }) {
             {' '}
             -
             {' '}
-            {event?.tournamentConfig?.maxRosterSize ?? t('eventDetails.open2', 'Libre')}
+            {/* T-SANS-PLAFOND (D239) : plus de nombre maximum de joueurs par équipe. */}
+            {t('eventDetails.open2', 'Libre')}
           </span>
           <span>
             {t('eventDetails.temporaryTeams', 'Equipes ephemeres:')}
@@ -2699,13 +2699,9 @@ function EventDetails({ navigation, route }) {
             const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
             const status = normalizeTournamentText(team?.status);
             const statusLabel = getTournamentTeamStatusLabel(status);
-            // T-SUITES-TOURNOI (18/11, point 3) : une équipe pleine ne se dit plus « Ouverte aux
-            // demandes » (le serveur refuse la demande) ; même règle que la page d'équipe
-            // (TournamentTeamDetails.js, `rosterMaxReached`) : effectif inconnu => ouverte.
+            // T-SANS-PLAFOND (18/11, Adel D239) : plus d'« Équipe complète » (T-SUITES-TOURNOI 3
+            // retourné) : une équipe ouverte aux demandes le reste, quel que soit son effectif.
             // Témoin : __tests__/EventDetailsWeb.T-FINITIONS3.tournoi.test.js (T-SUITES (3)).
-            const effectifMax = Number(tournamentConfig?.maxRosterSize);
-            const effectif = getTournamentTeamPlayerCount(team, tournamentConfig);
-            const equipeComplete = effectifMax > 0 && effectif !== null && effectif >= effectifMax;
 
             return (
               <div
@@ -2738,9 +2734,7 @@ function EventDetails({ navigation, route }) {
                     </span>
                     {isTournamentTeamOpenToJoinRequests(team) ? (
                       <span style={{ color: textColor, fontSize: 13 }}>
-                        {equipeComplete
-                          ? t('matchCenterScreen.slots.teamComplete', 'Équipe complète')
-                          : t('tournamentUtils.openToRequests', 'Ouverte aux demandes')}
+                        {t('tournamentUtils.openToRequests', 'Ouverte aux demandes')}
                       </span>
                     ) : null}
                   </div>
@@ -4471,11 +4465,11 @@ function EventDetails({ navigation, route }) {
       <TournamentTeamSheet
         entryFeeCents={Number(tournamentConfig?.entryFeeCents) || 0}
         isPending={createTournamentTeamMutation.isPending || registerTournamentTeamMutation.isPending}
-        maxRosterSize={Number(tournamentConfig?.maxRosterSize) || null}
         mode={feuilleEquipeTournoi}
         onChoose={inscrireLEquipeDuClub}
         onClose={() => setFeuilleEquipeTournoi(null)}
         onCreate={creerLEquipeDuTournoi}
+        paidMembersToValidate={Number(tournamentConfig?.paidMembersToValidate) || null}
         teams={availableTournamentSourceTeams}
       />
       <CancelSeriesSheet

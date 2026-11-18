@@ -430,11 +430,13 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
     expect(combien(arbre, ['Partager le lien d’invitation'])).toBe(1);
   });
 
-  test('🔴 effectif : « 2 joueurs sur 8 », 3 lignes « Place libre » (jusqu’à 5), plus de « Roster actif »', async () => {
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum, donc « 2 joueurs », plus « 2 joueurs sur 8 ».
+  test('🔴 effectif : « 2 joueurs » (plus de « sur 8 », D239), 3 lignes « Place libre » (jusqu’à 5), plus de « Roster actif »', async () => {
     const arbre = await monter(payante('capitaine'), 'u-cap');
     const contenu = texte(arbre);
     expect(contenu).toContain('Effectif');
-    expect(contenu).toContain('2 joueurs sur 8');
+    expect(contenu).toContain('2 joueurs');
+    expect(contenu).not.toContain('sur 8');
     expect(contenu).not.toContain('Roster actif');
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-free-slot' && typeof n.type === 'string')).toHaveLength(3);
   });
@@ -466,6 +468,24 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
     expect(contenu).not.toContain('À faire maintenant');
     expect(contenu).not.toContain('Il manque');
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-free-slot')).toHaveLength(0);
+  });
+
+  // T-SANS-PLAFOND (18/11, Adel D239) : pas de nombre maximum ; au-delà du seuil, des remplaçants.
+  test('🔴 D239 : 7 joueurs, 7 payés, plafond 8 en base : « 5 places payées sur 5 », « + 2 remplaçants », toujours les gestes d invitation', async () => {
+    const team = payante('capitaine', { status: 'accepted' });
+    const enPlus = [5, 6, 7, 8, 9].map((n) => ({
+      documentId: `mb-${n}`, origin: 'invited', responseStatus: 'pending', role: 'member', user: { documentId: `u-${n}`, firstname: `Joueur${n}` },
+    }));
+    team.members = [...team.members, ...enPlus];
+    team.payment.paidCount = 7;
+    const arbre = await monter(team, 'u-cap');
+    const contenu = texte(arbre);
+    expect(contenu).toContain('Équipe validée');
+    expect(contenu).toContain('5 places payées sur 5');
+    expect(contenu).not.toContain('7 places payées sur 5');
+    expect(contenu).toContain('+ 2 remplaçants');
+    expect(contenu).not.toContain('Équipe complète');
+    expect(combien(arbre, ['Partager le lien']) > 0).toBe(true);
   });
 
   test('🔴 retour au tournoi EN HAUT : c’est le premier bouton de la page', async () => {
@@ -631,17 +651,18 @@ describe('T-NOMS-EQUIPE (Adel « 3- B », D227, défaut M1331) — le roster vu 
   });
 });
 
-// T-REGLES-EQUIPE (18/11/2026, nuit D231, point 2 du chef) — une équipe PLEINE ne propose plus
-// « Demander à rejoindre » (le serveur refuserait, requestJoin) : la raison « Équipe complète » à la place.
-describe('T-REGLES-EQUIPE — équipe pleine : la raison, pas le bouton', () => {
+// T-REGLES-EQUIPE (18/11/2026, nuit D231, point 2 du chef) — une équipe PLEINE ne proposait plus
+// « Demander à rejoindre ». RETOURNÉ par T-SANS-PLAFOND (18/11, décision d'Adel D239 « pas de limite de
+// joueurs ») : à l'effectif du plafond en base, et au-delà, le bouton reste, jamais « Équipe complète ».
+describe('T-SANS-PLAFOND (D239) — effectif au plafond en base : le bouton reste', () => {
   afterEach(() => { mockEvent = { documentId: 'evt-1', tournamentTeams: [] }; });
   const actifs = equipe().members.filter((m) => ['absent', 'pending', 'present'].includes(m.responseStatus)).length;
   const avecPlafond = (max) => equipe({ event: { ...equipe().event, tournamentConfig: { maxRosterSize: max } }, isOpenToJoinRequests: true });
 
-  test('🔴 effectif = plafond : « Équipe complète », pas de « Demander à rejoindre »', async () => {
+  test('🔴 effectif = plafond en base : « Demander à rejoindre » reste, pas d « Équipe complète »', async () => {
     const arbre = await monter(avecPlafond(actifs), 'u-9', 'player', '1990-01-01');
-    expect(texte(arbre)).toContain('Équipe complète');
-    expect(combien(arbre, ['Demander à rejoindre'])).toBe(0);
+    expect(texte(arbre)).not.toContain('Équipe complète');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(1);
   });
 
   test('une place libre : le bouton reste, sans la raison', async () => {
@@ -650,27 +671,27 @@ describe('T-REGLES-EQUIPE — équipe pleine : la raison, pas le bouton', () => 
     expect(texte(arbre)).not.toContain('Équipe complète');
   });
 
-  test('🔴 lecteur tiers : le résumé du serveur (membersSummary.count) dit l’équipe pleine', async () => {
-    const team = { ...avecPlafond(5), members: [], membersSummary: { count: 5, list: [], paidCount: 0 } };
+  test('🔴 lecteur tiers : le résumé du serveur (membersSummary.count) dit 7 sur un plafond 5 : le bouton reste', async () => {
+    const team = { ...avecPlafond(5), members: [], membersSummary: { count: 7, list: [], paidCount: 0 } };
     const arbre = await monter(team, 'u-9', 'player', '1990-01-01');
-    expect(texte(arbre)).toContain('Équipe complète');
-    expect(combien(arbre, ['Demander à rejoindre'])).toBe(0);
+    expect(texte(arbre)).not.toContain('Équipe complète');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(1);
   });
 });
 
 // T-REGLES-EQUIPE (18/11, point 7 du chef, capture Android recette 45) — équipe PLEINE vue par son
-// capitaine : ni « Inviter », ni « Partager le lien », ni « Ouvrir / Fermer les demandes » (affichage
-// seulement : la valeur en base ne change pas, une place qui se libère rouvre tout).
-describe('T-REGLES-EQUIPE — équipe pleine, page du capitaine', () => {
+// capitaine : les gestes d'invitation étaient masqués. RETOURNÉ par T-SANS-PLAFOND (D239) : au plafond
+// en base, « Inviter », « Partager le lien » et « Ouvrir / Fermer les demandes » restent proposés.
+describe('T-SANS-PLAFOND (D239) — effectif au plafond en base, page du capitaine', () => {
   const actifs = equipe().members.filter((m) => ['absent', 'pending', 'present'].includes(m.responseStatus)).length;
   const avecPlafond = (max) => equipe({ event: { ...equipe().event, tournamentConfig: { maxRosterSize: max } }, isOpenToJoinRequests: true });
-  const gestes = ['Inviter', 'Partager le lien', 'Partager le lien d’invitation', 'Chercher un joueur', 'Fermer les demandes', 'Ouvrir les demandes'];
 
-  test('🔴 effectif = plafond : aucun geste d’invitation ni d’ouverture, « Équipe complète » à la place', async () => {
+  test('🔴 effectif = plafond en base : « Inviter », « Partager le lien » et « Fermer les demandes » restent, pas d « Équipe complète »', async () => {
     const arbre = await monter(avecPlafond(actifs), 'u-cap');
-    gestes.forEach((geste) => expect([geste, combien(arbre, [geste])]).toEqual([geste, 0]));
-    expect(texte(arbre)).not.toContain('Les joueurs peuvent envoyer une demande');
-    expect(texte(arbre)).toContain('Équipe complète');
+    ['Inviter', 'Partager le lien', 'Fermer les demandes'].forEach((geste) => {
+      expect([geste, combien(arbre, [geste]) > 0]).toEqual([geste, true]);
+    });
+    expect(texte(arbre)).not.toContain('Équipe complète');
   });
 
   test('une place libre : « Inviter », « Partager le lien » et « Fermer les demandes » restent', async () => {

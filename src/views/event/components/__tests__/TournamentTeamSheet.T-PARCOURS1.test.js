@@ -49,11 +49,11 @@ const textesDe = (props) => {
     arbre = renderer.create(
       <TournamentTeamSheet
         entryFeeCents={props.entryFeeCents}
-        maxRosterSize={props.maxRosterSize}
         mode="name"
         onChoose={jest.fn()}
         onClose={jest.fn()}
         onCreate={jest.fn()}
+        paidMembersToValidate={props.paidMembersToValidate}
       />,
     );
   });
@@ -73,22 +73,25 @@ describe('T-PARCOURS-1 — R10, la feuille « Créer une équipe »', () => {
     expect(textes).toContain('[Annuler]');
   });
 
-  test('🔴 tournoi payant de 5 joueurs : « Ensuite : invite 4 joueurs, chacun paie 20 €. »', () => {
-    expect(textesDe({ entryFeeCents: 2000, maxRosterSize: 5 }))
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum ; on invite de quoi
+  // atteindre le seuil de payés (5 par défaut).
+  test('🔴 validé à 5 payés : « Ensuite : invite 4 joueurs, chacun paie 20 €. »', () => {
+    expect(textesDe({ entryFeeCents: 2000, paidMembersToValidate: 5 }))
       .toContain('Ensuite : invite 4 joueurs, chacun paie 20 €.');
   });
 
   test('🔴 un seul coéquipier : le singulier', () => {
-    expect(textesDe({ entryFeeCents: 1500, maxRosterSize: 2 }))
+    expect(textesDe({ entryFeeCents: 1500, paidMembersToValidate: 2 }))
       .toContain('Ensuite : invite 1 joueur, chacun paie 15 €.');
   });
 
-  test('🔴 taille d équipe inconnue : « invite tes joueurs »', () => {
-    expect(textesDe({ entryFeeCents: 2000 })).toContain('Ensuite : invite tes joueurs, chacun paie 20 €.');
+  test('🔴 D239, seuil absent = 5 par défaut : plus « invite tes joueurs »', () => {
+    expect(textesDe({ entryFeeCents: 2000 }))
+      .toContain('Ensuite : invite 4 joueurs, chacun paie 20 €.');
   });
 
   test('🔒 tournoi gratuit : aucune ligne « Ensuite »', () => {
-    const textes = textesDe({ entryFeeCents: 0, maxRosterSize: 5 });
+    const textes = textesDe({ entryFeeCents: 0, paidMembersToValidate: 5 });
     expect(textes.some((texte) => texte.startsWith('Ensuite'))).toBe(false);
   });
 });

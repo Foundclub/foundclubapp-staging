@@ -26213,6 +26213,8 @@ export default {
     ruleValidated_one: 'Your team is validated: {{count}} spot paid out of {{needed}}.',
     ruleValidated_other: 'Your team is validated: {{count}} spots paid out of {{needed}}.',
     sizeChosen: 'Size chosen: {{size}}',
+    substitutes_one: '+ {{count}} substitute',
+    substitutes_other: '+ {{count}} substitutes',
     title: 'Team status',
     todo: {
       consents_one: '{{count}} parental consent',

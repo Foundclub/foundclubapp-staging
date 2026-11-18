@@ -349,7 +349,8 @@ export const buildWizardFormData = (wizardState) => {
       jerseySizeRequired: wizardState.tournamentJerseySizeRequired === true,
       knockoutSize: wizardState.tournamentKnockoutSize ?? 0,
       matchGenerationMode: wizardState.tournamentMatchGenerationMode || 'auto',
-      maxRosterSize: wizardState.tournamentMaxRosterSize ?? null,
+      // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum de joueurs par équipe.
+      maxRosterSize: null,
       maxTeams: wizardState.tournamentMaxTeams ?? null,
       minAge: wizardState.tournamentMinAge ?? null,
       minRosterSize: wizardState.tournamentMinRosterSize ?? null,
@@ -1615,7 +1616,7 @@ function EventWizardRecap({ navigation }) {
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
                   {t('eventWizardRecap.squadSize', 'Effectif: {{min}} - {{max}}', {
-                    max: state.tournamentMaxRosterSize ?? recapNotSet,
+                    max: t('eventDetails.open2', 'Libre'),
                     min: state.tournamentMinRosterSize ?? recapNotSet,
                     ...SANS_ECHAPPEMENT,
                   })}

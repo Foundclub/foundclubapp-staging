@@ -281,9 +281,9 @@ export const describeCodedTeamInvite = ({
 const describeTournamentInviteDetails = (preview, t) => {
   const place = String(preview?.event?.place || '').trim();
   const count = Number(preview?.rosterCount);
-  const max = Number(preview?.maxRosterSize);
-  const roster = Number.isFinite(count) && count >= 0 && Number.isFinite(max) && max > 0
-    ? t('invitationLink.tournamentTeam.roster', '{{count}} joueurs sur {{max}}', { count, max })
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum, donc plus de « sur {{max}} ».
+  const roster = Number.isFinite(count) && count > 0
+    ? t('tournamentManagement.rosterTotal', '{{count}} joueurs', { count })
     : '';
   const fee = getTournamentEntryFeeLabel({
     tournamentConfig: { entryFeeCents: preview?.entryFeeCents },
@@ -315,18 +315,6 @@ const describeTournamentAgeNotice = (preview, t) => {
       { minAge },
     )
     : t('invitationLink.tournamentTeam.ageNotice', 'À partir de {{minAge}} ans.', { minAge });
-};
-
-/**
- * T-PAGES-6b (18/11/2026, recette 45) — l'équipe du lien est PLEINE : l'aperçu porte `rosterCount`
- * sur `maxRosterSize` (même compte que le serveur). Le capitaine et les membres n'y sont pas
- * concernés : ils gardent leur variante. Lu aussi par le site (InviteLandingPage).
- * @param {any} preview - L'aperçu public du lien.
- * @returns {boolean} Vrai si l'équipe est complète pour qui n'en est pas.
- */
-export const isTournamentInviteTeamFull = (preview) => {
-  const max = Math.round(Number(preview?.maxRosterSize));
-  return max > 0 && Number(preview?.rosterCount) >= max && preview?.viewer?.alreadyMember !== true;
 };
 
 /**
@@ -397,31 +385,8 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       },
     )
     : withTeam;
-  // T-PAGES-6b : une équipe pleine ne propose plus de la rejoindre (ni « Continuer » au visiteur) ;
-  // elle renvoie à la fiche du tournoi pour en trouver une autre.
-  if (isTournamentInviteTeamFull(preview)) {
-    return {
-      ...notes,
-      // Décision 2 A du chef (18/11) : la FICHE du tournoi, où l'on rejoint une autre équipe.
-      action: 'openEventDetails',
-      body: t(
-        'invitationLink.tournamentTeam.fullBody',
-        "L'équipe {{team}} est complète ({{count}} joueurs sur {{max}}). Trouve une autre équipe "
-          + 'sur la fiche du tournoi.',
-        {
-          ...SANS_ECHAPPEMENT,
-          count: Number(preview?.rosterCount),
-          max: Math.round(Number(preview?.maxRosterSize)),
-          team: teamName,
-        },
-      ),
-      closed: false,
-      primary: t('invitationLink.tournament.primary', 'Voir le tournoi'),
-      secondary: t('invitationLink.later', 'Plus tard'),
-      secondaryAction: 'dismiss',
-      title: t('invitationLink.tournamentTeam.fullTitle', 'Équipe complète'),
-    };
-  }
+  // T-SANS-PLAFOND (18/11, Adel D239) : plus de variante « équipe complète » (T-PAGES-6b) : une
+  // équipe n'a plus de nombre maximum de joueurs, le lien propose toujours de la rejoindre.
   if (!isSignedIn) {
     // T-PARCOURS-2 (point 5) : sans compte, la fenêtre dit à quoi on est invité (une ligne par
     // information) ; tant que l'aperçu n'est pas arrivé, la phrase d'avant, sur une ligne.
@@ -475,7 +440,7 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
   }
   // T-FINITIONS-3 (16/11, chef d'orchestre) : le serveur dit d'avance si rejoindre est impossible
   // (`viewer`, envoyé à
-  // un compte connecté : autre équipe du tournoi, effectif plein, âge) ; « Rejoindre l'équipe » est
+  // un compte connecté : autre équipe du tournoi, âge) ; « Rejoindre l'équipe » est
   // alors désactivé et
   // sa phrase remplace l'invitation. Sans `viewer` (serveur d'avant) : rien ne change, le serveur
   // tranche à l'appui.
@@ -668,8 +633,7 @@ function InvitationLinkHost({ userId } = {}) {
       .then((preview) => {
         if (!isCurrent) return;
         setTournamentPreview(preview);
-        if (!isSignedIn && preview?.event && preview?.status !== 'closed'
-          && !isTournamentInviteTeamFull(preview)) {
+        if (!isSignedIn && preview?.event && preview?.status !== 'closed') {
           retenirLInscriptionAuTournoi({ equipe: preview?.team?.name, event: preview.event });
         }
       })
