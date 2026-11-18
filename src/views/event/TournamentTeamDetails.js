@@ -54,7 +54,7 @@ import TournamentTeamProgress, {
 } from './components/TournamentTeamProgress';
 import { openTournamentTerms } from './components/tournamentTerms';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { hasTournamentTeamForUser } from './tournamentJoinRules';
+import { getTournamentTeamPlayerCount, hasTournamentTeamForUser } from './tournamentJoinRules';
 import TournamentMemberConsent from './TournamentMemberConsent';
 import { TournamentMemberPlace } from './TournamentMemberPlace';
 import TournamentTeamDiscussion from './TournamentTeamDiscussion';
@@ -307,6 +307,10 @@ function TournamentTeamDetails({ navigation, route }) {
     tournamentEvent?.tournamentTeams,
     currentUserDocumentId,
   );
+  // Même compte que « Rejoindre une équipe » (getTournamentTeamsSeekingPlayers) : inconnu => le bouton reste.
+  const rosterMaxSize = Number(tournamentConfig?.maxRosterSize);
+  const rosterPlayerCount = getTournamentTeamPlayerCount(team, tournamentConfig);
+  const rosterMaxReached = rosterMaxSize > 0 && rosterPlayerCount !== null && rosterPlayerCount >= rosterMaxSize;
   let joinBlockedReason = null;
   if (tooYoung) joinBlockedReason = getTournamentAgeNotice(team?.event);
   else if (alreadyInTeam) {
@@ -314,6 +318,9 @@ function TournamentTeamDetails({ navigation, route }) {
       'tournamentTeamDetails.joinBlocked.alreadyInTeam',
       'Tu es déjà dans une équipe de ce tournoi : tu ne peux pas en rejoindre une autre.',
     );
+  } else if (rosterMaxReached) {
+    // T-REGLES-EQUIPE (18/11, point 2) : le serveur refuse la demande d'une équipe pleine (requestJoin).
+    joinBlockedReason = t('matchCenterScreen.slots.teamComplete', 'Équipe complète');
   }
   // Une raison INCONNUE ne cache pas le bouton : seul le chargement le retient ; une lecture en
   // échec le laisse (le serveur rejuge tout, `requestJoin`).
@@ -817,13 +824,16 @@ function TournamentTeamDetails({ navigation, route }) {
   const rosterTarget = Number(tournamentConfig?.minRosterSize) > 0
     ? Number(tournamentConfig.minRosterSize)
     : progress.needed;
-  const freeSlots = canManageRoster && !progress.isValidated
+  // T-REGLES-EQUIPE (point 7) : équipe pleine, plus de place à proposer (le serveur refuserait).
+  const freeSlots = canManageRoster && !progress.isValidated && !rosterMaxReached
     ? Math.max(0, rosterTarget - activeMembers.length)
     : 0;
   const rosterMax = Number(tournamentConfig?.maxRosterSize) > 0
     ? Number(tournamentConfig.maxRosterSize)
     : rosterTarget;
-  const todoItems = canManageRoster && !progress.isValidated ? progress.todo : [];
+  const todoItems = canManageRoster && !progress.isValidated
+    ? progress.todo.filter((/** @type {any} */ item) => !(rosterMaxReached && item.kind === 'players'))
+    : [];
   const essentials = getTournamentEssentials(team?.event);
   const entryFeeLabel = getTournamentEntryFeeLabel(team?.event);
   const openInviteSearch = () => setIsInviteOpen(true);
@@ -877,7 +887,17 @@ function TournamentTeamDetails({ navigation, route }) {
     </View>
   );
 
-  const inviteCard = canManageRoster ? (
+  // T-REGLES-EQUIPE (18/11, point 7) : équipe pleine, ni invitation, ni lien, ni ouverture aux demandes
+  // (affichage seulement : `isOpenToJoinRequests` reste en base, une place libérée rend tout ; le serveur
+  // refuse invitation et demande, requestJoin / inviteMember).
+  const fullTeamCard = (
+    <View style={tournamentDs.styles.panelCard} testID="tournament-team-full">
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {t('matchCenterScreen.slots.teamComplete', 'Équipe complète')}
+      </Text>
+    </View>
+  );
+  const openInviteCard = canManageRoster ? (
     <View style={tournamentDs.styles.panelCard}>
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12], styles.spreadWrap]}>
         <View style={{ flex: 1, minWidth: 160 }}>
@@ -990,6 +1010,7 @@ function TournamentTeamDetails({ navigation, route }) {
       ) : null}
     </View>
   ) : null;
+  const inviteCard = canManageRoster && rosterMaxReached ? fullTeamCard : openInviteCard;
 
   const discussionCard = team?.discussion ? (
     <View style={tournamentDs.styles.panelCard}>

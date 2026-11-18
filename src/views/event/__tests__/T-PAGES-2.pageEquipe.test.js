@@ -585,3 +585,54 @@ describe('M1312 (testeur, 17/11) — le capitaine fondateur', () => {
     expect(texte(arbre)).not.toContain('Ajout exceptionnel');
   });
 });
+
+// T-REGLES-EQUIPE (18/11/2026, nuit D231, point 2 du chef) — une équipe PLEINE ne propose plus
+// « Demander à rejoindre » (le serveur refuserait, requestJoin) : la raison « Équipe complète » à la place.
+describe('T-REGLES-EQUIPE — équipe pleine : la raison, pas le bouton', () => {
+  afterEach(() => { mockEvent = { documentId: 'evt-1', tournamentTeams: [] }; });
+  const actifs = equipe().members.filter((m) => ['absent', 'pending', 'present'].includes(m.responseStatus)).length;
+  const avecPlafond = (max) => equipe({ event: { ...equipe().event, tournamentConfig: { maxRosterSize: max } }, isOpenToJoinRequests: true });
+
+  test('🔴 effectif = plafond : « Équipe complète », pas de « Demander à rejoindre »', async () => {
+    const arbre = await monter(avecPlafond(actifs), 'u-9', 'player', '1990-01-01');
+    expect(texte(arbre)).toContain('Équipe complète');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(0);
+  });
+
+  test('une place libre : le bouton reste, sans la raison', async () => {
+    const arbre = await monter(avecPlafond(actifs + 1), 'u-9', 'player', '1990-01-01');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(1);
+    expect(texte(arbre)).not.toContain('Équipe complète');
+  });
+
+  test('🔴 lecteur tiers : le résumé du serveur (membersSummary.count) dit l’équipe pleine', async () => {
+    const team = { ...avecPlafond(5), members: [], membersSummary: { count: 5, list: [], paidCount: 0 } };
+    const arbre = await monter(team, 'u-9', 'player', '1990-01-01');
+    expect(texte(arbre)).toContain('Équipe complète');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(0);
+  });
+});
+
+// T-REGLES-EQUIPE (18/11, point 7 du chef, capture Android recette 45) — équipe PLEINE vue par son
+// capitaine : ni « Inviter », ni « Partager le lien », ni « Ouvrir / Fermer les demandes » (affichage
+// seulement : la valeur en base ne change pas, une place qui se libère rouvre tout).
+describe('T-REGLES-EQUIPE — équipe pleine, page du capitaine', () => {
+  const actifs = equipe().members.filter((m) => ['absent', 'pending', 'present'].includes(m.responseStatus)).length;
+  const avecPlafond = (max) => equipe({ event: { ...equipe().event, tournamentConfig: { maxRosterSize: max } }, isOpenToJoinRequests: true });
+  const gestes = ['Inviter', 'Partager le lien', 'Partager le lien d’invitation', 'Chercher un joueur', 'Fermer les demandes', 'Ouvrir les demandes'];
+
+  test('🔴 effectif = plafond : aucun geste d’invitation ni d’ouverture, « Équipe complète » à la place', async () => {
+    const arbre = await monter(avecPlafond(actifs), 'u-cap');
+    gestes.forEach((geste) => expect([geste, combien(arbre, [geste])]).toEqual([geste, 0]));
+    expect(texte(arbre)).not.toContain('Les joueurs peuvent envoyer une demande');
+    expect(texte(arbre)).toContain('Équipe complète');
+  });
+
+  test('une place libre : « Inviter », « Partager le lien » et « Fermer les demandes » restent', async () => {
+    const arbre = await monter(avecPlafond(actifs + 1), 'u-cap');
+    ['Inviter', 'Partager le lien', 'Fermer les demandes'].forEach((geste) => {
+      expect([geste, combien(arbre, [geste]) > 0]).toEqual([geste, true]);
+    });
+    expect(texte(arbre)).not.toContain('Équipe complète');
+  });
+});
