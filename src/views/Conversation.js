@@ -6726,12 +6726,22 @@ function Conversation({ navigation, route }) {
     // VOCAL — le champ de la maquette (M1) : 44 de haut, rayon 22, fond
     // primary800, bord primary700, marge interne 16, « Message » 16/400 en
     // neutral400 (5,3:1). Il s'efface quand la bande d'enregistrement arrive.
-    // `flex: 0` : dans son enveloppe, le champ garde sa hauteur calculée
-    // (il grandit jusqu'à 5 lignes) au lieu de se caler sur une base nulle.
+    // `flex: 0` : dans son enveloppe, le champ garde sa hauteur au lieu de se
+    // caler sur une base nulle.
+    // ✍️ CHAT-SAISIE (18/11, D262) — il grandit avec le texte, de 44 à 5 lignes, puis
+    // défile en lui-même. `composerHeight={null}` retire la hauteur que GiftedChat pose
+    // en DERNIER : sur iPhone (RN 0.81, nouvelle archi), `onContentSizeChange` ne part
+    // que si la boîte change de taille (RCTTextInputComponentView.mm:365), donc jamais
+    // sous une hauteur figée — le champ restait à 44, le texte coupé. Sans hauteur, le
+    // champ se mesure lui-même, borné par minHeight / maxHeight.
+    // ponytail: on court-circuite `composerHeight` de GiftedChat 2.8.1 (sa valeur par
+    // défaut ne joue que pour `undefined`) ; si une version future l'impose autrement,
+    // le témoin ConversationCHATSAISIE (S1) rougit.
     return (
       <VoiceRestFade style={{ flex: 1, marginLeft: 8 }}>
         <Composer
           {...props}
+          composerHeight={/** @type {any} */ (null)}
           placeholder={composerPlaceholder}
           placeholderTextColor={Colors.neutral400}
           textInputProps={{
@@ -6754,6 +6764,8 @@ function Conversation({ navigation, route }) {
               marginBottom: 0,
               marginLeft: 0,
               marginTop: 0,
+              // 5 lignes + la marge interne (8 + 8) + le bord (1 + 1).
+              maxHeight: (5 * Fonts.p1.lineHeight) + 16 + 2,
               minHeight: 44,
             },
           ]}
@@ -7182,7 +7194,8 @@ function Conversation({ navigation, route }) {
                 ApplicationStyle.noBorderTop,
                 { backgroundColor: Colors.transparent, paddingHorizontal: 0, paddingVertical: 0 },
               ]}
-              primaryStyle={{ alignItems: 'center' }}
+              // CHAT-SAISIE — « + » et Envoyer restent en bas quand le champ grandit (WhatsApp).
+              primaryStyle={{ alignItems: 'flex-end' }}
               renderActions={renderActions}
               renderComposer={renderComposer}
             />
