@@ -24,6 +24,10 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { useGetEvent } from '@/services/event/eventQueries';
 import { updateEvent } from '@/services/event/eventService';
 
+import TournamentPaidRulesFields, {
+  lireReglesPayantes,
+  textesDesReglesPayantes,
+} from './components/TournamentPaidRulesFields';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
   getTournamentGroupBounds,
@@ -127,6 +131,9 @@ function TournamentSettingsEdit({ navigation, route }) {
   const [thirdPlaceMatch, setThirdPlaceMatch] = useState(false);
   const [registrationMode, setRegistrationMode] = useState('manual');
   const [rulesText, setRulesText] = useState('');
+  // T-ORGA-REGLAGES (18/11) : prix, âge minimum, seuil de payés, maillot
+  // (components/TournamentPaidRulesFields).
+  const [reglesPayantes, setReglesPayantes] = useState(() => textesDesReglesPayantes(null));
 
   useEffect(() => {
     if (!event) return;
@@ -149,6 +156,7 @@ function TournamentSettingsEdit({ navigation, route }) {
     setThirdPlaceMatch(event?.tournamentConfig?.thirdPlaceMatch === true);
     setRegistrationMode(event?.tournamentConfig?.registrationMode || event?.validationMode || 'manual');
     setRulesText(event?.tournamentConfig?.rulesText || '');
+    setReglesPayantes(textesDesReglesPayantes(event?.tournamentConfig));
   }, [event]);
 
   const maxTeams = useMemo(() => parseOptionalInteger(maxTeamsText), [maxTeamsText]);
@@ -182,8 +190,13 @@ function TournamentSettingsEdit({ navigation, route }) {
   const usesGroups = ['groups_only', 'groups_to_knockout', 'round_robin'].includes(formatMode);
   const usesKnockout = ['groups_to_knockout', 'knockout_only'].includes(formatMode);
   const isKnockoutSizeInvalid = usesKnockout && knockoutSize > 0 && ![16, 2, 32, 4, 8].includes(knockoutSize);
+  const lectureDesReglesPayantes = lireReglesPayantes({ ...reglesPayantes, maxRosterSize });
+  const isPaidWithoutClub = lectureDesReglesPayantes.config.entryFeeCents > 0
+    && !event?.club?.documentId;
   const hasInvalidSettings = isRosterRangeInvalid || isKnockoutSizeInvalid
-    || isMinRosterTooLow || isGroupCountTooHigh;
+    || isMinRosterTooLow || isGroupCountTooHigh
+    || lectureDesReglesPayantes.hasError || isPaidWithoutClub;
+  const reglesPayantesEnvoyees = lectureDesReglesPayantes.config;
   const canManageTournament = Boolean(canManageEvent(event));
   let resolvedGroupCount = 0;
   if (formatMode === 'round_robin') {
@@ -212,6 +225,7 @@ function TournamentSettingsEdit({ navigation, route }) {
     scorePolicy: 'organizer_only',
     seedingMode,
     thirdPlaceMatch: usesKnockout && thirdPlaceMatch,
+    ...reglesPayantesEnvoyees,
   }), [
     allowCrossClubPlayers,
     allowCustomTeams,
@@ -227,6 +241,7 @@ function TournamentSettingsEdit({ navigation, route }) {
     pointsLoss,
     pointsWin,
     qualifiedPerGroup,
+    reglesPayantesEnvoyees,
     resolvedGroupCount,
     registrationMode,
     rulesText,
@@ -454,6 +469,17 @@ function TournamentSettingsEdit({ navigation, route }) {
                 </View>
               ) : null}
             </View>
+          ) : null}
+
+          {canManageTournament ? (
+            <TournamentPaidRulesFields
+              cardStyle={sectionCardStyle}
+              inputStyle={inputStyle}
+              maxRosterSize={maxRosterSize}
+              onChange={(patch) => setReglesPayantes((avant) => ({ ...avant, ...patch }))}
+              showClubWarning={!event?.club?.documentId}
+              values={reglesPayantes}
+            />
           ) : null}
 
           {canManageTournament ? (

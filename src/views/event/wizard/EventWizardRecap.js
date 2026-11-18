@@ -237,7 +237,7 @@ const preloadCreatedEventDetail = async ({
 
 const getErrorMessage = (error, fallback) => getCreationErrorMessage(error, fallback, i18next.t);
 
-const buildWizardFormData = (wizardState) => {
+export const buildWizardFormData = (wizardState) => {
   const isTournament = isTournamentEventType(wizardState?.type?.name);
   const tournamentScopeMode = wizardState.tournamentScopeMode === 'autonomous' ? 'autonomous' : 'team';
   const eventDate = wizardState.date ? new Date(wizardState.date) : new Date();
@@ -342,13 +342,18 @@ const buildWizardFormData = (wizardState) => {
       allowCrossClubPlayers: wizardState.tournamentAllowCrossClubPlayers === true,
       allowCustomTeams: wizardState.tournamentAllowCustomTeams !== false,
       bestThirdPlacesCount: wizardState.tournamentBestThirdPlacesCount ?? 0,
+      // T-ORGA-REGLAGES (18/11) : les règles payantes saisies à l étape des réglages.
+      entryFeeCents: wizardState.tournamentEntryFeeCents ?? 0,
       formatMode: wizardState.tournamentFormatMode || 'groups_only',
       groupCount: wizardState.tournamentGroupCount ?? 2,
+      jerseySizeRequired: wizardState.tournamentJerseySizeRequired === true,
       knockoutSize: wizardState.tournamentKnockoutSize ?? 0,
       matchGenerationMode: wizardState.tournamentMatchGenerationMode || 'auto',
       maxRosterSize: wizardState.tournamentMaxRosterSize ?? null,
       maxTeams: wizardState.tournamentMaxTeams ?? null,
+      minAge: wizardState.tournamentMinAge ?? null,
       minRosterSize: wizardState.tournamentMinRosterSize ?? null,
+      paidMembersToValidate: wizardState.tournamentPaidMembersToValidate ?? null,
       pointsDraw: wizardState.tournamentPointsDraw ?? 1,
       pointsForfeit: wizardState.tournamentPointsForfeit ?? 0,
       pointsLoss: wizardState.tournamentPointsLoss ?? 0,
