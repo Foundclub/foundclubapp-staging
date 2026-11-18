@@ -486,14 +486,21 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
    * (`resolveNotificationRefreshAction`). Sans type, ou sur un type ordinaire,
    * cette fonction fait exactement ce qu'elle faisait hier : deux invalidations.
    * @param {string} [notificationType] Le type porte par la notification recue.
+   * @param {any} [notificationData] La notification (T-REGLES-EQUIPE : son `teamId`).
    * @returns {void}
    */
-  const invalidateNotificationQueries = useCallback((notificationType) => {
+  const invalidateNotificationQueries = useCallback((notificationType, notificationData) => {
     // FINITIONS7 — `exact` : `['notifications']` couvre aussi le compteur par
     // prefixe ; la seconde ligne annulait sa lecture en vol et en relancait une.
     // Journal T8 : chaque notification et chaque retour lisaient le compteur 2 fois.
     queryClient.invalidateQueries({ exact: true, queryKey: NOTIFICATIONS_QUERY_KEY });
     queryClient.invalidateQueries({ exact: true, queryKey: UNREAD_COUNT_QUERY_KEY });
+    // T-REGLES-EQUIPE (18/11, point 9 B) : une notification de tournoi (demande, statut…)
+    // fait relire l'équipe qu'elle nomme : la page d'équipe déjà ouverte se met à jour.
+    const tournamentTeamId = String(notificationData?.teamId || '').trim();
+    if (tournamentTeamId && String(notificationType || '').startsWith('tournament')) {
+      queryClient.invalidateQueries({ queryKey: ['tournamentTeam', tournamentTeamId] });
+    }
 
     const refreshAction = resolveNotificationRefreshAction(notificationType);
     if (!refreshAction) return;
@@ -814,7 +821,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const handled = tryNavigate(destination.route, destination.params || {});
     if (handled) {
       markHandled();
-      invalidateNotificationQueries(notificationData.type);
+      invalidateNotificationQueries(notificationData.type, notificationData);
       // MSGNOTIF — le message de cette notification est sur le serveur, pas
       // forcément dans le cache : écrit pendant que l'app dormait, il n'est jamais
       // passé par la socket. On le relit tout de suite, sans attendre qu'elle revienne.
@@ -868,7 +875,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-      invalidateNotificationQueries(normalizedData?.type);
+      invalidateNotificationQueries(normalizedData?.type, normalizedData);
 
       const messageType = normalizedData?.type;
       if (!messageType && !remoteMessage?.notification?.title && !remoteMessage?.notification?.body) {
@@ -973,7 +980,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
       if (type === EventType.PRESS && detail.notification?.data?.type) {
         const normalizedData = normalizeNotificationPayload(detail.notification.data);
-        invalidateNotificationQueries(normalizedData?.type);
+        invalidateNotificationQueries(normalizedData?.type, normalizedData);
         const handled = handleNavigateOnOpen(normalizedData);
         if (!handled) {
           dispatch({
@@ -1060,7 +1067,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       messagingInstance.getInitialNotification().then((remoteMessage) => {
         if (!remoteMessage) return;
         const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-        invalidateNotificationQueries(normalizedData?.type);
+        invalidateNotificationQueries(normalizedData?.type, normalizedData);
         notificationsLogger.debug('[FCM] App opened from QUIT state by notification:', remoteMessage);
         queuePendingNotification(normalizedData, 'fcm');
       }).catch((error) => {
@@ -1073,7 +1080,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       (remoteMessage) => {
         if (!remoteMessage) return;
         const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-        invalidateNotificationQueries(normalizedData?.type);
+        invalidateNotificationQueries(normalizedData?.type, normalizedData);
         if (normalizedData?.type) {
           notificationsLogger.debug(`[NOTIF_OPENED] type=${normalizedData.type} source=background_push`);
         }

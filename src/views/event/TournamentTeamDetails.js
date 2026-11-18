@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useMemo, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -162,7 +164,23 @@ const getMemberStatusMeta = (status, colors) => {
 function TournamentTeamDetails({ navigation, route }) {
   const { t } = useTranslation();
   const retraitBas = useRetraitBasDuDefilement(12);
-  const { eventId, teamId } = route?.params || {};
+  const { eventId, focusSection, teamId } = route?.params || {};
+  // T-REGLES-EQUIPE (18/11, point 9) : arrivée par la notification « demande de rejoindre »
+  // (notificationNavigation.js, `focusSection: 'requests'`) : la page défile jusqu'aux demandes,
+  // une fois par arrivée (nouveaux paramètres de route = nouvelle arrivée).
+  const scrollRef = useRef(/** @type {any} */ (null));
+  const columnsYRef = useRef(/** @type {number | null} */ (null));
+  const requestsYRef = useRef(/** @type {number | null} */ (null));
+  const focusDoneForRef = useRef(/** @type {any} */ (null));
+  const scrollToFocusedSection = () => {
+    if (focusSection !== 'requests' || focusDoneForRef.current === route?.params) return;
+    if (columnsYRef.current === null || requestsYRef.current === null) return;
+    focusDoneForRef.current = route?.params;
+    scrollRef.current?.scrollTo?.({ animated: true, y: columnsYRef.current + requestsYRef.current });
+  };
+  // Page déjà ouverte dans la pile : les mesures sont là, seuls les paramètres changent.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { scrollToFocusedSection(); }, [route?.params]);
   const queryClient = useQueryClient();
   const { accountRoleKey, userData } = useAuth();
   const {
@@ -1323,7 +1341,14 @@ function TournamentTeamDetails({ navigation, route }) {
       ) : null}
 
       {(requestedMembers.length > 0 || currentMemberStatus === 'requested') ? (
-        <View style={Spaces.gap[12]}>
+        <View
+          onLayout={(event) => {
+            requestsYRef.current = event?.nativeEvent?.layout?.y ?? null;
+            scrollToFocusedSection();
+          }}
+          style={Spaces.gap[12]}
+          testID="tournament-team-requests"
+        >
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('tournamentTeamDetails.joinRequests', 'Demandes de rejoindre')}
           </Text>
@@ -1371,6 +1396,7 @@ function TournamentTeamDetails({ navigation, route }) {
             tournamentDs.styles.screenContent,
             { paddingBottom: 40 + retraitBas },
           ]}
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         >
@@ -1410,7 +1436,14 @@ function TournamentTeamDetails({ navigation, route }) {
             ) : null}
           </View>
 
-          <View style={[Spaces.gap[16], isWide ? styles.twoColumns : null]}>
+          <View
+            onLayout={(event) => {
+              columnsYRef.current = event?.nativeEvent?.layout?.y ?? null;
+              scrollToFocusedSection();
+            }}
+            style={[Spaces.gap[16], isWide ? styles.twoColumns : null]}
+            testID="tournament-team-columns"
+          >
             {mainColumn}
             {sideColumn}
           </View>
