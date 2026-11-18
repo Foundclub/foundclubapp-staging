@@ -1218,6 +1218,13 @@ export default {
     close: 'Fermer',
     createDraft: 'Créer le brouillon',
     editTitle: 'Éditer la campagne',
+    eventSearch: {
+      empty: 'Aucun événement à venir ne correspond.',
+      hint: "Tape au moins 2 lettres du nom : l'id se remplit tout seul.",
+      label: 'Chercher l’événement',
+      placeholder: 'Ex : AR Soccer',
+      selected: 'Choisi : {{name}}',
+    },
     fields: {
       body: 'Corps',
       bodyPlaceholder: 'Message principal affiché dans le popup',
