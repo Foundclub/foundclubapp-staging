@@ -14,6 +14,10 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import TournamentPaidRulesFields, {
+  lireReglesPayantes,
+  textesDesReglesPayantes,
+} from '../components/TournamentPaidRulesFields';
 import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 import { isTournamentMinRosterTooLow } from '../tournamentUtils';
 import { useEventWizard } from './EventWizardContext';
@@ -77,6 +81,14 @@ function EventWizardTournamentSettings({ navigation, route }) {
     state.tournamentRegistrationMode || 'manual',
   );
   const [rulesText, setRulesText] = useState(state.tournamentRulesText || '');
+  // T-ORGA-REGLAGES (18/11) : prix, âge minimum, seuil de payés, maillot
+  // (components/TournamentPaidRulesFields).
+  const [reglesPayantes, setReglesPayantes] = useState(() => textesDesReglesPayantes({
+    entryFeeCents: state.tournamentEntryFeeCents,
+    jerseySizeRequired: state.tournamentJerseySizeRequired,
+    minAge: state.tournamentMinAge,
+    paidMembersToValidate: state.tournamentPaidMembersToValidate,
+  }));
 
   const maxTeams = useMemo(() => parseOptionalInteger(maxTeamsText), [maxTeamsText]);
   const minRosterSize = useMemo(() => parseOptionalInteger(minRosterText), [minRosterText]);
@@ -90,15 +102,24 @@ function EventWizardTournamentSettings({ navigation, route }) {
   // REPRISE-EVENEMENTS 129 : la règle des réglages du tournoi, dès la création. Sans elle, un 0
   // était jeté sans un mot (`parseOptionalInteger`) et le tournoi naissait sans minimum.
   const isMinRosterTooLow = isTournamentMinRosterTooLow(minRosterText);
+  const lectureDesReglesPayantes = lireReglesPayantes({ ...reglesPayantes, maxRosterSize });
+  // Le club porteur, comme le Recap l envoie (EventWizardRecap.js `buildWizardFormData`,
+  // `club`). Un avertissement seulement : le serveur juge le club d une equipe en base, et
+  // refuse avec le meme message.
+  const hasClubPorteur = Boolean(state.team?.club?.documentId || state.club?.documentId);
 
   const handleNext = () => {
     dispatch({
       payload: {
         tournamentAllowCrossClubPlayers: allowCrossClubPlayers,
         tournamentAllowCustomTeams: allowCustomTeams,
+        tournamentEntryFeeCents: lectureDesReglesPayantes.config.entryFeeCents,
+        tournamentJerseySizeRequired: lectureDesReglesPayantes.config.jerseySizeRequired,
         tournamentMaxRosterSize: maxRosterSize,
         tournamentMaxTeams: maxTeams,
+        tournamentMinAge: lectureDesReglesPayantes.config.minAge,
         tournamentMinRosterSize: minRosterSize,
+        tournamentPaidMembersToValidate: lectureDesReglesPayantes.config.paidMembersToValidate,
         tournamentRegistrationMode: registrationMode,
         tournamentRulesText: rulesText.trim(),
         validationMode: registrationMode,
@@ -147,7 +168,9 @@ function EventWizardTournamentSettings({ navigation, route }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={isRosterRangeInvalid || isMinRosterTooLow}
+      isNextDisabled={
+        isRosterRangeInvalid || isMinRosterTooLow || lectureDesReglesPayantes.hasError
+      }
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
@@ -230,6 +253,15 @@ function EventWizardTournamentSettings({ navigation, route }) {
             </Text>
           ) : null}
         </View>
+
+        <TournamentPaidRulesFields
+          cardStyle={tournamentDs.styles.wizardSectionCard}
+          inputStyle={tournamentDs.styles.input}
+          maxRosterSize={maxRosterSize}
+          onChange={(patch) => setReglesPayantes((avant) => ({ ...avant, ...patch }))}
+          showClubWarning={!hasClubPorteur}
+          values={reglesPayantes}
+        />
 
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
