@@ -124,8 +124,11 @@ describe('T-PARCOURS-2 -- apres la connexion, l app revient sur la fiche du tour
 // compte (domains/tournoi/inscriptionEnCours.js) reste tant que le tunnel n'est pas fini, puis le
 // retour l'efface. ROUGE avant le lot : rien ne l'effaçait.
 describe('T-PAGES-6b -- le tournoi rappele dans le tunnel est efface au retour', () => {
-  const tunnel = () => require('@/domains/tournoi/inscriptionEnCours'); // eslint-disable-line global-require
-  const TOURNOI = { date: '2026-12-19T18:00:00.000Z', documentId: 'tournoi-1912', name: 'FoundClub x AR Soccer' };
+  // eslint-disable-next-line global-require
+  const tunnel = () => require('@/domains/tournoi/inscriptionEnCours');
+  const TOURNOI = {
+    date: '2026-12-19T18:00:00.000Z', documentId: 'tournoi-1912', name: 'FoundClub x AR Soccer',
+  };
 
   it('🔴 compte pret : le rappel du tunnel est efface', async () => {
     tunnel().retenirLInscriptionAuTournoi({ event: TOURNOI });

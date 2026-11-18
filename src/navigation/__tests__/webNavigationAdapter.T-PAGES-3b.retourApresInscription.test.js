@@ -23,14 +23,19 @@ const fabriquer = () => {
 
 test('🔴 l inscription demandée avec le retour porte l adresse de la fiche (state.from)', () => {
   const { adapter, appels } = fabriquer();
-  openPublicAuthFlow(adapter, { origin: RouteNames.EventDetails, retourApresConnexion: true }, RouteNames.Register);
+  openPublicAuthFlow(
+    adapter,
+    { origin: RouteNames.EventDetails, retourApresConnexion: true },
+    RouteNames.Register,
+  );
   expect(appels).toHaveLength(1);
   expect(appels[0][0].split('?')[0]).toBe('/register');
   expect(appels[0][1]).toEqual({ from: '/events/evt-tournoi' });
 });
 
 test('🔒 sans écran demandé, le tunnel ouvre la connexion, comme avant', () => {
-  expect(buildPublicAuthStackParams({ a: 1 })).toEqual({ params: { a: 1 }, screen: RouteNames.Login });
+  expect(buildPublicAuthStackParams({ a: 1 }))
+    .toEqual({ params: { a: 1 }, screen: RouteNames.Login });
 });
 
 test('🔒 l inscription sans la demande de retour ne pose aucun état', () => {

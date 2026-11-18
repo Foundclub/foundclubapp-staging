@@ -5,8 +5,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import { retenirLInscriptionAuTournoi } from '@/domains/tournoi/inscriptionEnCours';
 
-import { createFoundClubQueryClient } from '@/app/queryClient';
 import UserRole from '../UserRole';
+import { createFoundClubQueryClient } from '@/app/queryClient';
 
 /**
  * T-PAGES-6b (18/11/2026, point 5 de T-PAGES-6) — L'ÉCRAN DU RÔLE QUAND ON VIENT D'UN TOURNOI. En

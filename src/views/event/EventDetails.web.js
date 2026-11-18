@@ -2316,7 +2316,8 @@ function EventDetails({ navigation, route }) {
   // T-PAGES-3b (point 4) : les conditions savent de quel tournoi l'on vient (« Revenir au
   // tournoi », `?tournoi=<id>` de PublicConditionsTournoiPage).
   const ouvrirLesConditionsDuTournoi = () => openTournamentTerms(event?.documentId);
-  // T-PAGES-3b (point 1) : les étiquettes de l'en-tête (maquette a et b). Sans valeur, pas d'étiquette.
+  // T-PAGES-3b (point 1) : les étiquettes de l'en-tête (maquette a et b). Sans valeur, pas
+  // d'étiquette.
   const equipeInscriteDuLecteur = Boolean(equipeDuLecteur) && ['captain', 'member'].includes(roleDuLecteur);
   const inscriptionsOuvertes = !tournoiClos && !isCancelled && event?.isActive !== false;
   const ageMinimumDuTournoi = getTournamentMinAge(event);

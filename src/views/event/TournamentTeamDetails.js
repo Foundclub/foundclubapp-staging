@@ -325,7 +325,8 @@ function TournamentTeamDetails({ navigation, route }) {
     tournamentEvent?.tournamentTeams,
     currentUserDocumentId,
   );
-  // Même compte que « Rejoindre une équipe » (getTournamentTeamsSeekingPlayers) : inconnu => le bouton reste.
+  // Même compte que « Rejoindre une équipe » (getTournamentTeamsSeekingPlayers) : inconnu => le
+  // bouton reste.
   const rosterMaxSize = Number(tournamentConfig?.maxRosterSize);
   const rosterPlayerCount = getTournamentTeamPlayerCount(team, tournamentConfig);
   const rosterMaxReached = rosterMaxSize > 0 && rosterPlayerCount !== null && rosterPlayerCount >= rosterMaxSize;
@@ -337,7 +338,8 @@ function TournamentTeamDetails({ navigation, route }) {
       'Tu es déjà dans une équipe de ce tournoi : tu ne peux pas en rejoindre une autre.',
     );
   } else if (rosterMaxReached) {
-    // T-REGLES-EQUIPE (18/11, point 2) : le serveur refuse la demande d'une équipe pleine (requestJoin).
+    // T-REGLES-EQUIPE (18/11, point 2) : le serveur refuse la demande d'une équipe pleine
+    // (requestJoin).
     joinBlockedReason = t('matchCenterScreen.slots.teamComplete', 'Équipe complète');
   }
   // Une raison INCONNUE ne cache pas le bouton : seul le chargement le retient ; une lecture en
@@ -655,7 +657,8 @@ function TournamentTeamDetails({ navigation, route }) {
   };
 
   // T-NOMS-EQUIPE (Adel « 3- B », D227) : un lecteur sans lien reçoit `user: null` et `displayName`
-  // (« Prénom I. », calculé par le serveur) ; « Participant » seulement si le serveur ne rend aucun nom.
+  // (« Prénom I. », calculé par le serveur) ; « Participant » seulement si le serveur ne rend aucun
+  // nom.
   const memberName = (/** @type {any} */ member) => [
     member?.user?.firstname, member?.user?.lastname,
   ].filter(Boolean).join(' ') || member?.displayName || t('tournamentTeamDetails.participant', 'Participant');
@@ -907,9 +910,9 @@ function TournamentTeamDetails({ navigation, route }) {
     </View>
   );
 
-  // T-REGLES-EQUIPE (18/11, point 7) : équipe pleine, ni invitation, ni lien, ni ouverture aux demandes
-  // (affichage seulement : `isOpenToJoinRequests` reste en base, une place libérée rend tout ; le serveur
-  // refuse invitation et demande, requestJoin / inviteMember).
+  // T-REGLES-EQUIPE (18/11, point 7) : équipe pleine, ni invitation, ni lien, ni ouverture aux
+  // demandes (affichage seulement : `isOpenToJoinRequests` reste en base, une place libérée rend
+  // tout ; le serveur refuse invitation et demande, requestJoin / inviteMember).
   const fullTeamCard = (
     <View style={tournamentDs.styles.panelCard} testID="tournament-team-full">
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>

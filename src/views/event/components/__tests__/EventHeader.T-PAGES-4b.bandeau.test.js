@@ -68,9 +68,12 @@ const monter = (/** @type {any} */ props) => {
 
 describe('T-PAGES-4b — le bandeau du tournoi au téléphone (maquette b)', () => {
   test('🔴 titre, « Organisé par AR Soccer · Foot à 5 », puis les 3 étiquettes de la maquette', () => {
-    const { etiquettes, tous } = monter({ tournamentHero: { statusLabel: 'Ton équipe est inscrite' } });
-    expect(tous.slice(0, 2)).toEqual(['FoundClub x AR Soccer', 'Organisé par AR Soccer · Foot à 5']);
-    expect(etiquettes).toEqual(['Ton équipe est inscrite', 'Mixte', 'À partir de 16 ans']);
+    const statusLabel = 'Ton équipe est inscrite';
+    const { etiquettes, tous } = monter({ tournamentHero: { statusLabel } });
+    expect(tous.slice(0, 2))
+      .toEqual(['FoundClub x AR Soccer', 'Organisé par AR Soccer · Foot à 5']);
+    expect(etiquettes)
+      .toEqual(['Ton équipe est inscrite', 'Mixte', 'À partir de 16 ans']);
   });
 
   test('🔴 l âge une seule fois ; ni date, ni lieu, ni prix (ils sont dans « L essentiel »)', () => {
@@ -82,7 +85,8 @@ describe('T-PAGES-4b — le bandeau du tournoi au téléphone (maquette b)', () 
   });
 
   test('🔴 sans statut à dire (inscriptions closes) : Mixte et l âge seuls', () => {
-    expect(monter({ tournamentHero: { statusLabel: null } }).etiquettes).toEqual(['Mixte', 'À partir de 16 ans']);
+    expect(monter({ tournamentHero: { statusLabel: null } }).etiquettes)
+      .toEqual(['Mixte', 'À partir de 16 ans']);
   });
 
   test('sans bandeau demandé : le bloc d avant reste (prix, lieu), aucune étiquette', () => {

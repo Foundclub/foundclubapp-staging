@@ -266,7 +266,8 @@ test('tournoi payant : le lien est là et ouvre /conditions-tournoi', () => {
   expect(lien(arbre)).toHaveLength(1);
   act(() => { lien(arbre)[0].props.onClick(); });
   expect(mockOpenUrl).toHaveBeenCalledTimes(1);
-  expect(mockOpenUrl.mock.calls[0][0]).toMatch(/\/conditions-tournoi$/);
+  // Récolte 9 (18/11) : T-PAGES-3b passe l'id du tournoi, T-PAGES-6b le pose en ?tournoi=<id>.
+  expect(mockOpenUrl.mock.calls[0][0]).toMatch(/\/conditions-tournoi\?tournoi=event-1$/);
 });
 
 test('tournoi gratuit : pas de lien (caractérisant)', () => {

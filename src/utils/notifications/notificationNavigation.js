@@ -266,7 +266,8 @@ const tournamentTeamDestination = (eventId, teamId, focusSection = '') => {
     params: {
       params: {
         eventId: safeEventId,
-        // T-REGLES-EQUIPE (18/11, point 9) : la page défile jusqu'à cette section (TournamentTeamDetails).
+        // T-REGLES-EQUIPE (18/11, point 9) : la page défile jusqu'à cette section
+        // (TournamentTeamDetails).
         ...(focusSection ? { focusSection } : {}),
         teamId: safeTeamId,
       },

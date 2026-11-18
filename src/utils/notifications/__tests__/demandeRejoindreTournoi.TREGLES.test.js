@@ -15,12 +15,16 @@ const versEquipe = (/** @type {any} */ params) => ({
 
 describe('T-REGLES-EQUIPE — la demande de rejoindre mène aux demandes', () => {
   test('🔴 « tournamentTeamJoinRequest » : la page d équipe, focusSection « requests »', () => {
-    expect(resolveNotificationDestination({ eventId: 'evt-1', teamId: 'tt-1', type: 'tournamentTeamJoinRequest' }))
+    const type = 'tournamentTeamJoinRequest';
+    expect(resolveNotificationDestination({ eventId: 'evt-1', teamId: 'tt-1', type }))
       .toEqual(versEquipe({ eventId: 'evt-1', focusSection: 'requests', teamId: 'tt-1' }));
   });
 
   test('les autres notifications d équipe : la page d équipe, sans focusSection', () => {
-    ['tournamentCaptainTransfer', 'tournamentTeamInvitation', 'tournamentTeamInvitationStatus', 'tournamentTeamJoinRequestStatus', 'tournamentTeamStatus'].forEach((type) => {
+    [
+      'tournamentCaptainTransfer', 'tournamentTeamInvitation', 'tournamentTeamInvitationStatus',
+      'tournamentTeamJoinRequestStatus', 'tournamentTeamStatus',
+    ].forEach((type) => {
       expect(resolveNotificationDestination({ eventId: 'evt-1', teamId: 'tt-1', type }))
         .toEqual(versEquipe({ eventId: 'evt-1', teamId: 'tt-1' }));
     });

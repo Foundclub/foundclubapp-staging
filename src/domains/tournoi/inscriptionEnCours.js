@@ -6,7 +6,8 @@ import { getItem, removeItem, setItem } from '@/platform/storage';
  * T-PAGES-6b (18/11/2026, points 5 et 6 de T-PAGES-6) — LE TOURNOI RETENU PENDANT LA
  * CRÉATION DU COMPTE, téléphone et site. Le visiteur vient d'un tournoi (le bouton de sa fiche, ou
  * l'aperçu d'un lien d'équipe) : l'écran du numéro (Register) et celui du rôle (UserRole) le lui
- * rappellent par un bandeau. Ils le LISENT sans l'effacer (on peut revenir en arrière dans le tunnel) ; le retour au
+ * rappellent par un bandeau. Ils le LISENT sans l'effacer (on peut revenir en arrière dans le
+ * tunnel) ; le retour au
  * tournoi l'efface (useLiensEnAttente, l'invitation ouverte avec un compte, l'accueil du site).
  * Rangé : l'identifiant, le nom et la date du tournoi, le nom de l'équipe s'il y en a une — jamais
  * une personne.
