@@ -397,3 +397,62 @@ describe('INSCRIPTION-PARCOURS A4 — « Plus tard, continuer » hors de ce qui 
     expect(global.mockCadreBorne).toBe(true);
   });
 });
+
+// INSCRIPTION-PARCOURS-2 (18/11/2026, D257, Q5 d'Adel) : la carte modèle de fin d'inscription
+// montre le sport de la personne ; sans modèle pour son sport, une carte neutre
+// (ni terrain ni numéro).
+describe('INSCRIPTION-PARCOURS-2 — la carte modèle prend le sport de la personne', () => {
+  const carteModele = (preferredSport) => {
+    mockUser = { ...ADULTE, preferredSport };
+    mockCardProps.length = 0;
+    monter({ celebration: true });
+    return mockCardProps.find((p) => p.prenom === 'Léa');
+  };
+
+  it('basket : la carte de Léa, meneuse, inchangée', () => {
+    const c = carteModele('Basketball');
+    expect(c).toEqual(expect.objectContaining({
+      club: 'Basket Club Exemple', numero: '7', poste: 'Meneuse', sport: 'Basketball',
+    }));
+    expect(c.neutre).toBeFalsy();
+  });
+
+  it('foot : son sport, un poste de foot, le numéro, son terrain', () => {
+    const c = carteModele('Football');
+    expect(c).toEqual(expect.objectContaining({
+      club: 'Club Exemple', numero: '7', poste: 'Milieu central', sport: 'Football',
+    }));
+    expect(c.neutre).toBeFalsy();
+  });
+
+  it('« Volley » (le doublon de Volleyball) : un poste de volley', () => {
+    expect(carteModele('Volley')).toEqual(expect.objectContaining({
+      poste: 'Passeur', sport: 'Volley',
+    }));
+  });
+
+  it('hand et rugby : un poste de leur sport', () => {
+    expect(carteModele('Handball').poste).toBe('Demi-centre');
+    expect(carteModele('Rugby').poste).toBe("Demi d'ouverture");
+  });
+
+  it('tennis (un terrain, pas de postes) : son terrain, ni poste ni numéro', () => {
+    const c = carteModele('Tennis');
+    expect(c).toEqual(expect.objectContaining({ numero: '', poste: '', sport: 'Tennis' }));
+    expect(c.neutre).toBeFalsy();
+  });
+
+  it('spéléo (pas de modèle) : carte neutre, son sport écrit, ni poste ni numéro ni équipe', () => {
+    const c = carteModele('Spéléologie');
+    expect(c).toEqual(expect.objectContaining({
+      equipe: '', neutre: true, numero: '', poste: '', sport: 'Spéléologie',
+    }));
+    expect(c.club).not.toMatch(/Basket/);
+    expect(c.niveau).not.toBe('Régional');
+  });
+
+  it('sans sport choisi : carte neutre, aucun sport écrit', () => {
+    const c = carteModele(undefined);
+    expect(c).toEqual(expect.objectContaining({ neutre: true, numero: '', sport: '' }));
+  });
+});

@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { cleDeSport } from '@/domains/activity/cleDeSport';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { CARD_COMPLETION_STEP, listMissingCardSteps } from '@/domains/playerCard/cardCompletion';
@@ -38,6 +39,7 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import CardDisclosureSheet from '@/components/organisms/playerCard/CardDisclosureSheet';
 import CardSheen from '@/components/organisms/playerCard/CardSheen';
+import { courtFamily } from '@/components/organisms/playerCard/courts';
 import PlayerCard, { CARD_EXPORT_HEIGHT, CARD_EXPORT_WIDTH } from '@/components/organisms/playerCard/PlayerCard';
 import ShareCardModal from '@/components/organisms/shareCardModal/ShareCardModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -53,12 +55,22 @@ import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 import { formatHeight } from '@/utils/heightCentimeters';
 import { getImageUrl } from '@/utils/imageUrl';
 
+import { sportHasPositions } from '@/constants/positions';
 import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
 
 /**
  * @typedef {{ done?: boolean, mode: 'full' | 'share', startRarity?: string, steps: string[] }}
  *   ParcoursCarte
  */
+
+// INSCRIPTION-PARCOURS-2 (D257, Q5 d'Adel) : le poste de la carte modèle, pris dans les postes du
+// sport (constants/positions.js) ; le basket garde la « Meneuse » traduite.
+const POSTE_DU_MODELE = Object.freeze({
+  football: 'Milieu central',
+  handball: 'Demi-centre',
+  rugby: "Demi d'ouverture",
+  volleyball: 'Passeur',
+});
 
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -444,24 +456,37 @@ function PlayerCardScreen({ navigation, route }) {
 
   // ponytail: carte modèle FICTIVE (aucun compte derrière) ; ses mots passent par la traduction,
   // les noms propres restent. Sortie : la tirer du serveur si un jour elle doit changer seule.
+  // INSCRIPTION-PARCOURS-2 (D257, Q5) : la carte modèle prend le sport de la personne ; un sport
+  // sans terrain connu (spéléo, course…) ou pas de sport : carte neutre, ni terrain ni numéro.
+  const sportDuModele = model.sport;
+  const cleDuModele = cleDeSport(sportDuModele);
+  const modeleAvecPostes = sportHasPositions(cleDuModele);
+  const modeleBasket = cleDuModele === 'basketball';
   const exampleCardProps = {
     age: `22 ${t('playerCard.field.yearsUnit', 'ans')}`,
     categorie: t('playerCard.example.category', 'Seniors'),
-    club: t('playerCard.example.club', 'Basket Club Exemple'),
-    equipe: t('playerCard.example.team', 'Seniors filles'),
+    club: modeleBasket
+      ? t('playerCard.example.club', 'Basket Club Exemple')
+      : t('playerCard.example.clubNeutral', 'Club Exemple'),
+    equipe: modeleAvecPostes ? t('playerCard.example.team', 'Seniors filles') : '',
     historique: [],
     nationalite: t('playerCard.example.nationality', 'Française'),
-    niveau: t('playerCard.example.level', 'Régional'),
+    neutre: courtFamily(sportDuModele) === 'generique',
+    niveau: modeleAvecPostes
+      ? t('playerCard.example.level', 'Régional')
+      : t('playerCard.example.levelNeutral', 'Confirmé'),
     nom: 'MARTIN',
-    numero: '7',
+    numero: modeleAvecPostes ? '7' : '',
     poids: '62 kg',
-    poste: t('playerCard.example.position', 'Meneuse'),
+    poste: modeleBasket
+      ? t('playerCard.example.position', 'Meneuse')
+      : POSTE_DU_MODELE[/** @type {keyof typeof POSTE_DU_MODELE} */ (cleDuModele)] || '',
     prenom: 'Léa',
     qrLabel: 'foundclub.app',
     qrValue: '',
     rarity: 'EPIC',
     section: '',
-    sport: 'basketball',
+    sport: sportDuModele,
     statut: 'DISPONIBLE',
     taille: formatHeight(172),
     ville: 'Lyon 69007',

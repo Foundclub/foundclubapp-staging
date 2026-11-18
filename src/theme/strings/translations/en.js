@@ -18056,8 +18056,10 @@ export default {
     example: {
       category: 'Seniors',
       club: 'Example Basketball Club',
+      clubNeutral: 'Example Club',
       cta: 'Discover my card',
       level: 'Regional',
+      levelNeutral: 'Advanced',
       nationality: 'French',
       position: 'Point guard',
       subtitle: 'Photo, position, level, club, history: '
