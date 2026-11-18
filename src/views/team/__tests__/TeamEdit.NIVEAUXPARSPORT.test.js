@@ -3,6 +3,8 @@ import renderer, { act } from 'react-test-renderer';
 import TeamEdit from '../TeamEdit';
 
 // NIVEAUX-PAR-SPORT (17/11/2026) — echafaudage repris de TeamEdit.retraitNiveau.test.js.
+// INSCRIPTION-PARCOURS-2 (D257, Q1 d'Adel) : les 4 niveaux sont pour tous (aucun sport relie), la
+// competition est reliee au Football ; un sport voit les « tous sports » + les siens.
 
 // Le rangement reel (compareLevels) charge le service, qui charge le client HTTP.
 jest.mock('@/services/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
@@ -14,16 +16,16 @@ const mockSelecteurs = new Map();
 // Forme rendue par le serveur (controleur level.find) : chaque niveau porte ses sports relies.
 // Rangee comme getLevels la rend (compareLevels).
 const NIVEAUX = [
-  { activities: [], documentId: 'niveau-1', name: 'Departemental' },
-  { activities: [], documentId: 'niveau-2', name: 'Regional' },
+  { activities: [{ documentId: 'sport-1' }], documentId: 'niveau-1', name: 'Departemental' },
+  { activities: [{ documentId: 'sport-1' }], documentId: 'niveau-2', name: 'Regional' },
   {
-    activities: [{ documentId: 'sport-speleo' }],
+    activities: [],
     documentId: 'niveau-s3',
     name: '3 - Confirmé',
     rank: 3,
   },
   {
-    activities: [{ documentId: 'sport-speleo' }],
+    activities: [],
     documentId: 'niveau-s1',
     name: '1 - Débutant',
     rank: 1,
@@ -278,9 +280,10 @@ describe('NIVEAUX-PAR-SPORT · TeamEdit — les niveaux proposes suivent le spor
     mockSelecteurs.clear();
   });
 
-  it('equipe de Football : les niveaux de competition, sans ceux de la speleo', () => {
+  it('equipe de Football : les 4 (ici 2) d abord, puis les niveaux de competition', () => {
     monter();
-    expect(niveauxProposes()).toEqual(['Departemental', 'Regional']);
+    expect(niveauxProposes())
+      .toEqual(['1 - Débutant', '3 - Confirmé', 'Departemental', 'Regional']);
   });
 
   it('passer le sport a Speleologie : seulement ses niveaux, dans l ordre du rang', () => {

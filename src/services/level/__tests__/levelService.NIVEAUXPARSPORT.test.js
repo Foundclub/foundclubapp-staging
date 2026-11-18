@@ -7,35 +7,42 @@ import { compareLevels, getLevels, niveauxPourLeSport } from '../levelService';
 // NIVEAUX-PAR-SPORT (17/11/2026) — un niveau d'equipe peut etre propre a un sport (speleo :
 // « 1 - Débutant » a « 4 - Expert »). Le serveur renvoie, pour chaque niveau, ses sports relies
 // (`activities`) et son rang (`rank`). Un niveau sans sport relie vaut pour tous les sports.
+// INSCRIPTION-PARCOURS-2 (18/11/2026, D257, Q1 d'Adel) : les 4 niveaux valent pour TOUS les sports
+// (aucun sport relie) ; la competition est reliee aux sports a competition. Un sport voit les
+// niveaux sans sport + ceux de son sport, reconnu par son documentId OU par son nom
+// (« Volley » = « Volleyball »).
 
 jest.mock('@/services/client', () => ({ __esModule: true, default: { get: jest.fn() } }));
 
 const SPELEO = 'sport-speleo';
 const FOOT = 'sport-foot';
-const relie = (/** @type {string} */ sport) => [{ documentId: sport, name: sport }];
+const COMPETITION_RELIEE = [
+  { documentId: FOOT, name: 'Football' },
+  { documentId: 'sport-vb', name: 'Volleyball' },
+];
 
 // L'ordre du serveur (name:asc), volontairement : le rang doit l'emporter sur l'alphabet.
 const NIVEAUX_SERVEUR = [
   {
-    activities: relie(SPELEO), documentId: 'n-am', name: 'Amateur', rank: 2,
+    activities: [], documentId: 'n-am', name: 'Amateur', rank: 2,
   },
   {
-    activities: relie(SPELEO), documentId: 'n-co', name: 'Confirmé', rank: 3,
+    activities: [], documentId: 'n-co', name: 'Confirmé', rank: 3,
   },
   {
-    activities: [], documentId: 'n-dep', name: 'Départemental', rank: null,
+    activities: COMPETITION_RELIEE, documentId: 'n-dep', name: 'Départemental', rank: null,
   },
   {
-    activities: relie(SPELEO), documentId: 'n-de', name: 'Débutant', rank: 1,
+    activities: [], documentId: 'n-de', name: 'Débutant', rank: 1,
   },
   {
-    activities: relie(SPELEO), documentId: 'n-ex', name: 'Expert', rank: 4,
+    activities: [], documentId: 'n-ex', name: 'Expert', rank: 4,
   },
   {
-    activities: [], documentId: 'n-nat', name: 'National', rank: null,
+    activities: COMPETITION_RELIEE, documentId: 'n-nat', name: 'National', rank: null,
   },
   {
-    activities: [], documentId: 'n-reg', name: 'Régional', rank: null,
+    activities: COMPETITION_RELIEE, documentId: 'n-reg', name: 'Régional', rank: null,
   },
 ];
 
@@ -55,19 +62,26 @@ describe('NIVEAUX-PAR-SPORT · levelService', () => {
     expect(noms([...sansRang].sort(compareLevels))).toEqual(COMPETITION);
   });
 
-  it('Speleologie : seulement ses 4 niveaux, dans l ordre', () => {
+  it('Speleologie (sans competition) : les 4 seulement, dans l ordre', () => {
     const ranges = [...NIVEAUX_SERVEUR].sort(compareLevels);
     expect(noms(niveauxPourLeSport(ranges, SPELEO))).toEqual(SPELEO_4);
   });
 
-  it('Football : les niveaux de competition, sans les 4 de la speleo', () => {
+  it('Football (par son documentId) : les 4 d abord, puis la competition', () => {
     const ranges = [...NIVEAUX_SERVEUR].sort(compareLevels);
-    expect(noms(niveauxPourLeSport(ranges, FOOT))).toEqual(COMPETITION);
+    expect(noms(niveauxPourLeSport(ranges, FOOT))).toEqual([...SPELEO_4, ...COMPETITION]);
   });
 
-  it('aucun sport choisi : les niveaux « tous sports »', () => {
+  it('par le NOM du sport (l inscription ne garde que le nom) : « Volley » = Volleyball', () => {
+    const ranges = [...NIVEAUX_SERVEUR].sort(compareLevels);
+    expect(noms(niveauxPourLeSport(ranges, 'Volley'))).toEqual([...SPELEO_4, ...COMPETITION]);
+    expect(noms(niveauxPourLeSport(ranges, 'football'))).toEqual([...SPELEO_4, ...COMPETITION]);
+    expect(noms(niveauxPourLeSport(ranges, 'Spéléologie'))).toEqual(SPELEO_4);
+  });
+
+  it('aucun sport choisi : les niveaux « tous sports » (les 4)', () => {
     expect(noms(niveauxPourLeSport(NIVEAUX_SERVEUR, '')))
-      .toEqual(['Départemental', 'National', 'Régional']);
+      .toEqual(['Amateur', 'Confirmé', 'Débutant', 'Expert']);
   });
 
   it('serveur ancien (aucun champ activities) : tous les niveaux, rien ne disparait', () => {

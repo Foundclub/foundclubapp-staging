@@ -7,6 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { niveauxPourLeSport } from '@/domains/level/niveauxDuSport';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -136,7 +137,16 @@ function UserLevel({ navigation }) {
   };
 
   // CORR-INSCRIPTION p17 : du plus bas au plus haut, rangés par `getLevels` (levelService).
-  const sortedLevels = levels || [];
+  // INSCRIPTION-PARCOURS-2 (D257, Q1) : les niveaux de SON sport (les 4 pour tous, puis la
+  // compétition si son sport en a) ; un niveau déjà enregistré hors de cette liste reste affiché.
+  const niveauxDuSport = niveauxPourLeSport(levels, userData?.preferredSport);
+  const niveauEnregistre = String(userData?.bestLevel?.name || userData?.bestLevel || '');
+  const horsDeLaListe = niveauEnregistre
+    && !niveauxDuSport.some((level) => level.name === niveauEnregistre);
+  const sortedLevels = horsDeLaListe
+    ? [...niveauxDuSport, ...(levels || []).filter((level) => level.name === niveauEnregistre)
+      .slice(0, 1)]
+    : niveauxDuSport;
 
   return (
     <FormScreenContainer

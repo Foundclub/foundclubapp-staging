@@ -5,26 +5,28 @@ import TeamWizardLevel from '../TeamWizardLevel';
 
 // NIVEAUX-PAR-SPORT (17/11/2026) — l'etape « Niveau » de l'assistant ne propose que les niveaux
 // du sport choisi a l'etape « Sport », s'il en a ; sinon, les niveaux « tous sports ».
+// INSCRIPTION-PARCOURS-2 (D257, Q1 d'Adel) : les 4 niveaux sont pour tous (aucun sport relie), la
+// competition est reliee aux sports a competition ; un sport voit les « tous sports » + les siens.
 
 const mockEtat = { current: /** @type {any} */ ({ activities: '', level: '' }) };
 const mockDispatch = jest.fn();
 
 // Forme rendue par le serveur, rangee comme getLevels la rend (compareLevels).
 const mockNiveaux = [
-  { activities: [], documentId: 'n-dep', name: 'Départemental' },
-  { activities: [], documentId: 'n-nat', name: 'National' },
-  { activities: [], documentId: 'n-reg', name: 'Régional' },
+  { activities: [{ documentId: 'sport-foot' }], documentId: 'n-dep', name: 'Départemental' },
+  { activities: [{ documentId: 'sport-foot' }], documentId: 'n-nat', name: 'National' },
+  { activities: [{ documentId: 'sport-foot' }], documentId: 'n-reg', name: 'Régional' },
   {
-    activities: [{ documentId: 'sport-speleo' }], documentId: 'n-2', name: '2 - Amateur', rank: 2,
+    activities: [], documentId: 'n-2', name: '2 - Amateur', rank: 2,
   },
   {
-    activities: [{ documentId: 'sport-speleo' }], documentId: 'n-4', name: '4 - Expert', rank: 4,
+    activities: [], documentId: 'n-4', name: '4 - Expert', rank: 4,
   },
   {
-    activities: [{ documentId: 'sport-speleo' }], documentId: 'n-1', name: '1 - Débutant', rank: 1,
+    activities: [], documentId: 'n-1', name: '1 - Débutant', rank: 1,
   },
   {
-    activities: [{ documentId: 'sport-speleo' }], documentId: 'n-3', name: '3 - Confirmé', rank: 3,
+    activities: [], documentId: 'n-3', name: '3 - Confirmé', rank: 3,
   },
 ];
 
@@ -91,13 +93,16 @@ describe('NIVEAUX-PAR-SPORT · TeamWizardLevel', () => {
       .toEqual(['1 - Débutant', '2 - Amateur', '3 - Confirmé', '4 - Expert']);
   });
 
-  it('Football : les niveaux de competition, sans les 4', () => {
-    expect(niveauxProposes('sport-foot')).toEqual(['Départemental', 'Régional', 'National']);
+  it('Football : les 4 d abord, puis les niveaux de competition', () => {
+    expect(niveauxProposes('sport-foot')).toEqual([
+      '1 - Débutant', '2 - Amateur', '3 - Confirmé', '4 - Expert',
+      'Départemental', 'Régional', 'National',
+    ]);
   });
 
   it('un niveau deja choisi qui n est plus propose (sport change) est retire de l equipe', () => {
     mockDispatch.mockClear();
-    niveauxProposes('sport-foot', 'n-3');
+    niveauxProposes('sport-speleo', 'n-reg');
     expect(mockDispatch).toHaveBeenCalledWith({ payload: '', type: 'SET_LEVEL' });
   });
 
