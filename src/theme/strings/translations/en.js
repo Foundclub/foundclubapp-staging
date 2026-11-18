@@ -18602,7 +18602,7 @@ export default {
       manageTeams: 'Manage my teams',
       myCard: 'My collector card',
       myChildren: 'My children',
-      myLicenses: 'My fees',
+      myLicenses: 'My payments',
       myParent: 'My parent',
       myTeams: 'My teams',
       presidentGuide: 'Club manager guide',

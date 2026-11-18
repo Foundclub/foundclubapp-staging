@@ -19333,7 +19333,8 @@ export default {
       myCard: 'Ma carte de collection',
       myChildren: 'Mes enfants',
       // A17 (audit V1, 30/09) — venue de la rubrique « Mon profil » de l'accueil.
-      myLicenses: 'Mes cotisations',
+      // IMPL-2-EQUIPE (chef « Q1 : A », 19/11) : même nom que l'écran ouvert (myLicenses.title).
+      myLicenses: 'Mes paiements',
       // PARENT-LIEN (30/09) — la porte de l'ENFANT : accepter, refuser, retirer le lien.
       myParent: 'Mon parent',
       myTeams: 'Mes équipes',
