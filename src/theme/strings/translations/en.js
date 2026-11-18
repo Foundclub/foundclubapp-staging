@@ -17262,6 +17262,8 @@ export default {
   },
   onboarding: {
     actions: {
+      optionalNotice: 'Optional: you can skip this step',
+      skipShort: 'Skip',
       skipStep: 'Skip this step',
     },
     category: {

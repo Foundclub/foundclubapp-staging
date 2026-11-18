@@ -11,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
@@ -154,6 +155,7 @@ function UserLevel({ navigation }) {
     >
       <View style={[Alignments.fill, Spaces.gap[24]]}>
         <View style={[Spaces.gap[16]]}>
+          <OnboardingFacultatif onPress={handleSkip} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.level.title', 'Ton meilleur niveau ?')}
           </Text>

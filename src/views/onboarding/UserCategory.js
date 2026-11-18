@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingChoiceChip from '@/views/onboarding/components/OnboardingChoiceChip';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
@@ -207,6 +208,7 @@ function UserCategory({ navigation }) {
     >
       <View style={[Alignments.fill, Spaces.gap[24]]}>
         <View style={[Spaces.gap[8]]}>
+          <OnboardingFacultatif onPress={handleSkip} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.category.title', 'Ta catégorie ?')}
           </Text>

@@ -38,6 +38,7 @@ import OnboardingOverlay from '@/components/molecules/onboardingOverlay/Onboardi
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import OnboardingClubCard from '@/views/onboarding/components/OnboardingClubCard';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -1462,6 +1463,7 @@ function UserAffiliationGuideContent({ navigation, route }) {
     >
       <View style={[Alignments.fill, styles.screenColumn]}>
         <View style={[Spaces.gap[8]]}>
+          <OnboardingFacultatif onPress={handleContinueLater} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {screenTitle}
           </Text>

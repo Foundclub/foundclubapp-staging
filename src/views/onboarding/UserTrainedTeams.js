@@ -13,6 +13,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
@@ -247,6 +248,7 @@ function UserTrainedTeams({ navigation, route }) {
     >
       <View style={[Alignments.fill, Spaces.gap[24]]}>
         <View style={[Spaces.gap[16]]}>
+          <OnboardingFacultatif onPress={goToNextStep} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.trainedTeams.title', 'Quelles équipes entraînes-tu ?')}
           </Text>

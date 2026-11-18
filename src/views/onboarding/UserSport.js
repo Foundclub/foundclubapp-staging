@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
@@ -234,6 +235,7 @@ function UserSport({ navigation }) {
     >
       <View style={[Alignments.fill, Spaces.gap[16]]}>
         <View style={[Spaces.gap[16]]}>
+          <OnboardingFacultatif onPress={handleSkip} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.sport.title', 'Quel est ton sport ?')}
           </Text>

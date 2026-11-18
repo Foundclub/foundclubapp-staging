@@ -9,6 +9,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import UserHistorySection from '@/components/organisms/userHistorySection/UserHistorySection'; // Added import
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 
@@ -116,6 +117,7 @@ function UserSportHistory({ navigation }) {
     >
       <View style={[Spaces.gap[40], { flex: 1 }]}>
         <View style={[Spaces.gap[16]]}>
+          <OnboardingFacultatif onPress={handleSkip} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.history.title', 'Ton parcours sportif')}
           </Text>

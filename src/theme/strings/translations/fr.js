@@ -18079,6 +18079,9 @@ export default {
   },
   onboarding: {
     actions: {
+      // INSCRIPTION-PARCOURS A3 (D245) : en haut de chaque étape facultative.
+      optionalNotice: 'Facultatif : tu peux passer cette étape',
+      skipShort: 'Passer',
       skipStep: 'Passer cette étape',
     },
     category: {

@@ -132,6 +132,8 @@ const saisir = (tree, taille, poids) => {
 const continuer = (tree) => {
   const bouton = tree.root.findAll((/** @type {any} */ n) => (
     n.props?.accessibilityRole === 'button' && typeof n.props?.onPress === 'function'
+    // INSCRIPTION-PARCOURS A3 : le « Passer » du bandeau du haut n'est pas « Continuer ».
+    && n.props?.testID !== 'onboarding-facultatif-passer'
   ))[0];
   act(() => { bouton.props.onPress(); });
 };
