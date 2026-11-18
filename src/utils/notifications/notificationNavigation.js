@@ -255,8 +255,9 @@ const eventDetailsDestination = (eventId) => {
 /**
  * @param {unknown} eventId
  * @param {unknown} teamId
+ * @param {string} [focusSection] - La section de la page d'équipe à montrer (« requests »).
  */
-const tournamentTeamDestination = (eventId, teamId) => {
+const tournamentTeamDestination = (eventId, teamId, focusSection = '') => {
   const safeTeamId = normalizeEntityId(teamId);
   const safeEventId = normalizeEntityId(eventId);
   if (!safeTeamId) return eventDetailsDestination(safeEventId);
@@ -265,6 +266,8 @@ const tournamentTeamDestination = (eventId, teamId) => {
     params: {
       params: {
         eventId: safeEventId,
+        // T-REGLES-EQUIPE (18/11, point 9) : la page défile jusqu'à cette section (TournamentTeamDetails).
+        ...(focusSection ? { focusSection } : {}),
         teamId: safeTeamId,
       },
       screen: RouteNames.TournamentTeamDetails,
@@ -1163,12 +1166,13 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.TOURNAMENT_CAPTAIN_TRANSFER:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_INVITATION:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_INVITATION_STATUS:
-    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_JOIN_REQUEST:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_JOIN_REQUEST_STATUS:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_STATUS:
       return tournamentTeamDestination(payload.eventId, payload.teamId);
     case NOTIFICATION_TYPES.TOURNAMENT_CLOSED:
       return eventDetailsDestination(payload.eventId);
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_JOIN_REQUEST:
+      return tournamentTeamDestination(payload.eventId, payload.teamId, 'requests');
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_REGISTERED:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_ROSTER_WARNING:
       return {

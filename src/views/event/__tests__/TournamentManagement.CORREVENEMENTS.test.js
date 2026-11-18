@@ -305,3 +305,31 @@ describe('T-PARCOURS-2 point 11 — la validation des équipes d un tournoi paya
     expect(texte(auto)).not.toContain('joueur payé');
   });
 });
+
+// T-REGLES-EQUIPE (18/11/2026, point 8 du chef, capture Android recette 45) — le compteur « Équipes »
+// du cockpit comptait l'équipe refusée (6 pour « 1 validée · 4 en attente »). Même compte que le
+// serveur (`maxTeams`, point 3) et la fiche (tournamentTeamsCount.js) : en attente + validées.
+describe('T-REGLES-EQUIPE point 8 — le compteur « Équipes » du cockpit', () => {
+  const valeurSous = (/** @type {any} */ arbre, /** @type {string} */ libelle) => {
+    const cartes = arbre.root.findAll((/** @type {any} */ n) => n.props?.children === libelle && typeof n.type !== 'string');
+    const carte = cartes[0].parent;
+    return carte.findAll((/** @type {any} */ n) => typeof n.props?.children === 'string' && n.props.children !== libelle && typeof n.type !== 'string')[0].props.children;
+  };
+
+  test('🔴 1 validée, 4 en attente, 1 refusée, 1 archivée : « Équipes 5 »', async () => {
+    const teams = [
+      { documentId: 'eq-1', name: 'A', status: 'accepted' },
+      ...[2, 3, 4, 5].map((n) => ({ documentId: `eq-${n}`, name: `P${n}`, status: 'pending' })),
+      { documentId: 'eq-6', name: 'R', status: 'declined' },
+      {
+        archivedAt: '2026-11-17T10:00:00.000Z', documentId: 'eq-7', name: 'Z', status: 'archived',
+      },
+    ];
+    const arbre = await monter(tableau({ teams }));
+    expect(valeurSous(arbre, 'Équipes')).toBe('5');
+  });
+
+  test('caractérisant : deux équipes validées => « Équipes 2 »', async () => {
+    expect(valeurSous(await monter(tableau()), 'Équipes')).toBe('2');
+  });
+});

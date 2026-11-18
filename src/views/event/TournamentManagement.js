@@ -50,6 +50,7 @@ import {
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import TournamentInvitationRequest from './TournamentInvitationRequest';
 import TournamentInvites from './TournamentInvites';
+import { getTournamentRegisteredTeamsCount } from './tournamentTeamsCount';
 import {
   getTournamentClosure,
   getTournamentCompetitionActions,
@@ -795,7 +796,8 @@ function TournamentManagement({ navigation, route }) {
           </View>
 
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-            {renderSummaryCard(t('tournamentManagement.summaryTeams', 'Équipes'), tournamentTeams.length, Colors.primary500)}
+            {/* T-REGLES-EQUIPE (point 8) : en attente + validées, comme le serveur (maxTeams) et la fiche. */}
+            {renderSummaryCard(t('tournamentManagement.summaryTeams', 'Équipes'), getTournamentRegisteredTeamsCount({ tournamentTeams }), Colors.primary500)}
             {renderSummaryCard(t('tournamentManagement.summaryGroups', 'Poules'), dashboard?.overview?.groups || 0, Colors.primary500)}
             {renderSummaryCard(t('tournamentManagement.summaryMatches', 'Matchs'), dashboard?.overview?.totalMatches || 0, Colors.success500)}
             {renderSummaryCard(t('tournamentManagement.summaryRosterAlerts', 'À revoir'), counters.warning, Colors.gold500)}

@@ -1,5 +1,5 @@
 /* eslint-disable max-len, no-unused-vars -- les témoins se lisent en entier ; harnais repris tel quel du témoin caractérisant. */
-import { Alert } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -345,9 +345,10 @@ let navigation = null;
  * @param {string} lecteur - Le documentId du lecteur.
  * @param {string} [role] - Le rôle du compte.
  * @param {string} [naissance] - La date de naissance du compte.
+ * @param {any} [params] - Paramètres de route en plus (T-REGLES-EQUIPE : focusSection).
  * @returns {Promise<any>} L'arbre monté.
  */
-const monter = async (team, lecteur, role = 'player', naissance = undefined) => {
+const monter = async (team, lecteur, role = 'player', naissance = undefined, params = {}) => {
   mockAuth = { accountRoleKey: role, userData: { birthdate: naissance, documentId: lecteur } };
   mockTeam = team;
   navigation = { goBack: jest.fn(), navigate: jest.fn() };
@@ -355,7 +356,7 @@ const monter = async (team, lecteur, role = 'player', naissance = undefined) => 
   let arbre = null;
   await act(async () => {
     arbre = renderer.create(
-      <TournamentTeamDetails navigation={navigation} route={{ params: { eventId: 'evt-1', teamId: 'tt-1' } }} />,
+      <TournamentTeamDetails navigation={navigation} route={{ params: { eventId: 'evt-1', teamId: 'tt-1', ...params } }} />,
     );
   });
   montes.push(arbre);
@@ -627,5 +628,101 @@ describe('T-NOMS-EQUIPE (Adel « 3- B », D227, défaut M1331) — le roster vu 
     const arbre = await monter(equipe(), 'u-2');
     expect(textes(arbre, 'Capi')).toHaveLength(1);
     expect(texte(arbre)).not.toContain('Participant');
+  });
+});
+
+// T-REGLES-EQUIPE (18/11/2026, nuit D231, point 2 du chef) — une équipe PLEINE ne propose plus
+// « Demander à rejoindre » (le serveur refuserait, requestJoin) : la raison « Équipe complète » à la place.
+describe('T-REGLES-EQUIPE — équipe pleine : la raison, pas le bouton', () => {
+  afterEach(() => { mockEvent = { documentId: 'evt-1', tournamentTeams: [] }; });
+  const actifs = equipe().members.filter((m) => ['absent', 'pending', 'present'].includes(m.responseStatus)).length;
+  const avecPlafond = (max) => equipe({ event: { ...equipe().event, tournamentConfig: { maxRosterSize: max } }, isOpenToJoinRequests: true });
+
+  test('🔴 effectif = plafond : « Équipe complète », pas de « Demander à rejoindre »', async () => {
+    const arbre = await monter(avecPlafond(actifs), 'u-9', 'player', '1990-01-01');
+    expect(texte(arbre)).toContain('Équipe complète');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(0);
+  });
+
+  test('une place libre : le bouton reste, sans la raison', async () => {
+    const arbre = await monter(avecPlafond(actifs + 1), 'u-9', 'player', '1990-01-01');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(1);
+    expect(texte(arbre)).not.toContain('Équipe complète');
+  });
+
+  test('🔴 lecteur tiers : le résumé du serveur (membersSummary.count) dit l’équipe pleine', async () => {
+    const team = { ...avecPlafond(5), members: [], membersSummary: { count: 5, list: [], paidCount: 0 } };
+    const arbre = await monter(team, 'u-9', 'player', '1990-01-01');
+    expect(texte(arbre)).toContain('Équipe complète');
+    expect(combien(arbre, ['Demander à rejoindre'])).toBe(0);
+  });
+});
+
+// T-REGLES-EQUIPE (18/11, point 7 du chef, capture Android recette 45) — équipe PLEINE vue par son
+// capitaine : ni « Inviter », ni « Partager le lien », ni « Ouvrir / Fermer les demandes » (affichage
+// seulement : la valeur en base ne change pas, une place qui se libère rouvre tout).
+describe('T-REGLES-EQUIPE — équipe pleine, page du capitaine', () => {
+  const actifs = equipe().members.filter((m) => ['absent', 'pending', 'present'].includes(m.responseStatus)).length;
+  const avecPlafond = (max) => equipe({ event: { ...equipe().event, tournamentConfig: { maxRosterSize: max } }, isOpenToJoinRequests: true });
+  const gestes = ['Inviter', 'Partager le lien', 'Partager le lien d’invitation', 'Chercher un joueur', 'Fermer les demandes', 'Ouvrir les demandes'];
+
+  test('🔴 effectif = plafond : aucun geste d’invitation ni d’ouverture, « Équipe complète » à la place', async () => {
+    const arbre = await monter(avecPlafond(actifs), 'u-cap');
+    gestes.forEach((geste) => expect([geste, combien(arbre, [geste])]).toEqual([geste, 0]));
+    expect(texte(arbre)).not.toContain('Les joueurs peuvent envoyer une demande');
+    expect(texte(arbre)).toContain('Équipe complète');
+  });
+
+  test('une place libre : « Inviter », « Partager le lien » et « Fermer les demandes » restent', async () => {
+    const arbre = await monter(avecPlafond(actifs + 1), 'u-cap');
+    ['Inviter', 'Partager le lien', 'Fermer les demandes'].forEach((geste) => {
+      expect([geste, combien(arbre, [geste]) > 0]).toEqual([geste, true]);
+    });
+    expect(texte(arbre)).not.toContain('Équipe complète');
+  });
+});
+
+// T-REGLES-EQUIPE (18/11, point 9 du chef, venu de T-NOTIFS-TOURNOI) — la notification « demande de
+// rejoindre » ouvre la page d'équipe SUR les demandes (`focusSection: 'requests'`), pas en haut.
+describe('T-REGLES-EQUIPE — arrivée par la notification : la page défile jusqu’aux demandes', () => {
+  const poser = async (/** @type {any} */ arbre, /** @type {string} */ testID, /** @type {number} */ y) => {
+    const vue = arbre.root.find((/** @type {any} */ n) => n.props?.testID === testID && typeof n.props?.onLayout === 'function');
+    const layout = {
+      height: 100, width: 390, x: 0, y,
+    };
+    await act(async () => { vue.props.onLayout({ nativeEvent: { layout } }); });
+  };
+
+  test('🔴 focusSection « requests » : défile jusqu’aux demandes (colonnes + position dans la colonne)', async () => {
+    const arbre = await monter(equipe(), 'u-cap', 'player', undefined, { focusSection: 'requests' });
+    const defiler = jest.spyOn(arbre.root.findByType(ScrollView).instance, 'scrollTo');
+    await poser(arbre, 'tournament-team-columns', 300);
+    await poser(arbre, 'tournament-team-requests', 900);
+    expect(defiler).toHaveBeenCalledTimes(1);
+    expect(defiler).toHaveBeenCalledWith({ animated: true, y: 1200 });
+  });
+
+  test('🔴 page déjà ouverte dans la pile : la nouvelle arrivée (nouveaux paramètres) défile, une fois', async () => {
+    const arbre = await monter(equipe(), 'u-cap');
+    const defiler = jest.spyOn(arbre.root.findByType(ScrollView).instance, 'scrollTo');
+    await poser(arbre, 'tournament-team-columns', 300);
+    await poser(arbre, 'tournament-team-requests', 900);
+    const arrivee = {
+      eventId: 'evt-1', focusSection: 'requests', teamId: 'tt-1',
+    };
+    await act(async () => {
+      arbre.update(<TournamentTeamDetails navigation={navigation} route={{ params: arrivee }} />);
+    });
+    await poser(arbre, 'tournament-team-requests', 900);
+    expect(defiler).toHaveBeenCalledTimes(1);
+    expect(defiler).toHaveBeenCalledWith({ animated: true, y: 1200 });
+  });
+
+  test('sans focusSection : la page reste en haut', async () => {
+    const arbre = await monter(equipe(), 'u-cap');
+    const defiler = jest.spyOn(arbre.root.findByType(ScrollView).instance, 'scrollTo');
+    await poser(arbre, 'tournament-team-columns', 300);
+    await poser(arbre, 'tournament-team-requests', 900);
+    expect(defiler).not.toHaveBeenCalled();
   });
 });
