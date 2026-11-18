@@ -63,10 +63,32 @@ export const rangDuNiveau = (nom) => {
 };
 
 /**
- * Comparateur des niveaux, du plus bas au plus haut (CORR-INSCRIPTION p17).
- * @param {{ name?: string }} a - Un niveau.
- * @param {{ name?: string }} b - Un autre.
+ * Le rang pose par le serveur (NIVEAUX-PAR-SPORT), ou rien.
+ * @param {{ rank?: number | null }} niveau - Un niveau.
+ * @returns {number | null}
+ */
+const rangPose = (niveau) => (Number.isInteger(niveau?.rank) ? Number(niveau?.rank) : null);
+
+/**
+ * Comparateur des niveaux, du plus bas au plus haut (CORR-INSCRIPTION p17). NIVEAUX-PAR-SPORT
+ * (17/11) : un niveau qui a un rang (« 1 - Débutant »… « 4 - Expert ») passe d'abord, par rang
+ * croissant ; les autres gardent l'ordre d'avant.
+ * @param {{ name?: string, rank?: number | null }} a - Un niveau.
+ * @param {{ name?: string, rank?: number | null }} b - Un autre.
  * @returns {number}
  */
-export const compareLevels = (a, b) => (rangDuNiveau(a?.name) - rangDuNiveau(b?.name))
-  || String(a?.name || '').localeCompare(String(b?.name || ''), 'fr');
+export const compareLevels = (a, b) => {
+  const rangA = rangPose(a);
+  const rangB = rangPose(b);
+  if (rangA !== null || rangB !== null) {
+    if (rangA === null) return 1;
+    if (rangB === null) return -1;
+    if (rangA !== rangB) return rangA - rangB;
+  }
+  return (rangDuNiveau(a?.name) - rangDuNiveau(b?.name))
+    || String(a?.name || '').localeCompare(String(b?.name || ''), 'fr');
+};
+
+// NIVEAUX-PAR-SPORT : le filtre est pur ; il vit dans le domaine, pour que les ecrans
+// l'importent sans charger le client HTTP (meme motif que domains/category/categorySort.js).
+export { niveauxPourLeSport } from '@/domains/level/niveauxDuSport';
