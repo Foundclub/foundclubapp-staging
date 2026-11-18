@@ -265,7 +265,7 @@ export const buildTournamentTeamInviteMessage = ({ eventName, teamName, url }) =
  * @returns {Promise<{ envoi?: '' | 'copie' | 'echec', url: string | null }>} Ce qui est parti.
  */
 export const shareTournamentTeamInviteLink = async ({
-  eventId, eventName, teamId, teamName,
+  eventId, eventName, lienSeul = false, teamId, teamName,
 }) => {
   // ponytail: chargé à la demande, comme le partage de l'équipe dans la fiche : un service réseau
   // importé en tête
@@ -283,6 +283,12 @@ export const shareTournamentTeamInviteLink = async ({
     subject: 'tournament',
   });
   if (!url || !link?.code) return { url: null };
+  // T-SUITES-TOURNOI (18/11, point 13) : « Copier le lien » (site) copie l'adresse SEULE, sans le
+  // message ; le partage, lui, garde le message.
+  if (lienSeul) {
+    const copie = await SharePlatform.copier(url);
+    return { envoi: copie ? 'copie' : 'echec', url };
+  }
   const { envoi } = await envoyerLeLien({
     message: buildTournamentTeamInviteMessage({ eventName, teamName, url }),
     title: String(teamName || ''),

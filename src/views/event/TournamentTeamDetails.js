@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -834,7 +835,7 @@ function TournamentTeamDetails({ navigation, route }) {
     'tournamentTeamDetails.inviteLink.hint',
     "Envoie ce lien à tes joueurs : ils rejoignent l'équipe puis paient leur place.",
   );
-  const shareInviteLink = async () => {
+  const shareInviteLink = async (/** @type {{ lienSeul?: boolean }} */ options = {}) => {
     setInviteLinkState('pending');
     try {
       // Chargé à la demande (comme teamInviteShare) : les suites de la fiche
@@ -844,6 +845,7 @@ function TournamentTeamDetails({ navigation, route }) {
       const { envoi, url } = await shareTournamentTeamInviteLink({
         eventId,
         eventName: team?.event?.name,
+        lienSeul: options?.lienSeul === true,
         teamId: team?.documentId || teamId,
         teamName: team?.name,
       });
@@ -890,7 +892,7 @@ function TournamentTeamDetails({ navigation, route }) {
         <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
           <Button
             isLoading={inviteLinkState === 'pending'}
-            onPress={shareInviteLink}
+            onPress={() => shareInviteLink()}
             size="sm"
             title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien d’invitation')}
             variant="Primary"
@@ -968,14 +970,25 @@ function TournamentTeamDetails({ navigation, route }) {
           {t('tournamentTeamDetails.inviteLink.title', 'Inviter des joueurs par lien')}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>{inviteLinkHint}</Text>
-        <Button
-          isLoading={inviteLinkState === 'pending'}
-          onPress={shareInviteLink}
-          size="sm"
-          style={{ alignSelf: 'flex-start' }}
-          title={t('tournamentTeamDetails.inviteLink.button', 'Partager le lien')}
-          variant="Secondary"
-        />
+        <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+          <Button
+            isLoading={inviteLinkState === 'pending'}
+            onPress={() => shareInviteLink()}
+            size="sm"
+            title={t('tournamentTeamDetails.inviteLink.button', 'Partager le lien')}
+            variant="Secondary"
+          />
+          {/* T-SUITES-TOURNOI (18/11, point 13) : sur le site, le lien SEUL dans le presse-papiers
+              (le partage envoie le lien et le message). Clé existante, pas de texte neuf. */}
+          {Platform.OS === 'web' ? (
+            <Button
+              onPress={() => shareInviteLink({ lienSeul: true })}
+              size="sm"
+              title={t('reserverTerrain.lien.copier', 'Copier le lien')}
+              variant="Secondary"
+            />
+          ) : null}
+        </View>
       </View>
 
       {normalizeTournamentText(team?.sourceType) === 'custom_team' ? (

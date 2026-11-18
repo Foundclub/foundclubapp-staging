@@ -787,3 +787,29 @@ describe('T-SUITES — « Chercher un joueur » et « Inviter » d une place lib
     focus.mockRestore();
   });
 });
+
+// T-SUITES-TOURNOI (18/11, point 13 ; testeur M1319) : sur le site, le partage du lien envoie le lien
+// ET le message. Un geste « Copier le lien » copie le lien SEUL ; le partage reste à côté.
+describe('T-SUITES (13) — « Copier le lien » sur le site', () => {
+  const { Platform } = jest.requireActual('react-native');
+  const avant = Platform.OS;
+  afterEach(() => { Platform.OS = avant; });
+  const copier = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Copier le lien' && typeof n.props?.onPress === 'function' && n.type !== 'View')[0];
+
+  test('🔴 site : « Copier le lien » à côté de « Partager le lien », copie le lien seul et dit « Lien copié »', async () => {
+    Platform.OS = 'web';
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    expect(combien(arbre, ['Partager le lien'])).toBeGreaterThan(0);
+    const bouton = copier(arbre);
+    expect(bouton).toBeDefined();
+    await act(async () => { bouton.props.onPress(); });
+    expect(partageLien.shareTournamentTeamInviteLink).toHaveBeenCalledWith(expect.objectContaining({ lienSeul: true }));
+    expect(texte(arbre)).toContain('Lien copié');
+  });
+
+  test('téléphone : pas de « Copier le lien » (la feuille de partage du téléphone le propose déjà)', async () => {
+    Platform.OS = 'ios';
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    expect(copier(arbre)).toBeUndefined();
+  });
+});
