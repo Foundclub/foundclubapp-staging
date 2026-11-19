@@ -551,7 +551,9 @@ const releve = (lecteur) => {
   const resultat = {
     barreDuBas: barre.length ? textes(barre[0]).join(' | ') : null,
     brouillon: compter(apercu, 'Compétition en brouillon'),
-    carteMonEquipe: parTestID(root, 'tournament-team-progress').length,
+    carteMonEquipe: parTestID(root, 'tournament-fiche-my-team-progress').length,
+    // IMPL-1-FICHE (6b) : la pastille TOURNOI est dans le bandeau (EventHeader), plus au-dessus ;
+    // il reste celle de la carte de pilotage de l'organisateur.
     carteTournoi: apercu.filter((ligne) => ligne === 'TOURNOI').length,
     conditions: parTestID(root, 'event-tournament-terms-link').length,
     creerUneEquipe: compter(apercu, 'Créer une équipe pour ce tournoi'),
@@ -583,7 +585,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Voir mon équipe',
     brouillon: 0,
     carteMonEquipe: 1,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -612,7 +614,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Répondre à mon invitation',
     brouillon: 0,
     carteMonEquipe: 1,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -641,7 +643,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Voir mon équipe',
     brouillon: 0,
     carteMonEquipe: 1,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -670,7 +672,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: 'Gérer le tournoi',
     brouillon: 1,
     carteMonEquipe: 0,
-    carteTournoi: 2,
+    carteTournoi: 1,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -699,7 +701,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: '20 € par joueur | Créer mon équipe',
     brouillon: 0,
     carteMonEquipe: 0,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -728,7 +730,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: null,
     brouillon: 0,
     carteMonEquipe: 0,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -758,7 +760,7 @@ const RELEVE_DU_LECTEUR = {
     barreDuBas: '20 € par joueur | Créer mon équipe',
     brouillon: 0,
     carteMonEquipe: 0,
-    carteTournoi: 1,
+    carteTournoi: 0,
     conditions: 1,
     creerUneEquipe: 0,
     essentiel: 1,
@@ -895,8 +897,10 @@ describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
     ]);
     expect(textes(parTestID(root, 'tournament-before-sign-up')[0])[0]).toBe('Avant le match');
     const [carte] = parTestID(root, 'tournament-fiche-my-team');
-    expect(textes(carte)).toEqual(expect.arrayContaining(['Les Aigles', 'Voir mon équipe', '1 / 5']));
-    expect(parTestID(root, 'tournament-team-progress-todo')).toHaveLength(1);
+    // IMPL-1-FICHE (9f) : la carte compacte dit « 1 place payée sur 5 ».
+    expect(textes(carte)).toEqual(expect.arrayContaining(['Les Aigles', 'Voir mon équipe', '1 place payée sur 5']));
+    // « Il te reste à faire » reste sur la page d'équipe (IMPL-1, 9f), où « Voir mon équipe » mène.
+    expect(parTestID(root, 'tournament-team-progress-todo')).toHaveLength(0);
     expect(barreDe(root)).toEqual(['Voir mon équipe']);
   });
 
@@ -1190,11 +1194,19 @@ describe('T-PAGES-4 · chef 4 — sous le seuil, le nombre ne se lit nulle part'
       });
   };
 
-  test('🔴 sans équipe, sous le seuil : seulement les équipes qui cherchent un joueur', () => {
-    expect(nomsDesEquipes(monter(LECTEURS.sansEquipe()))).toEqual(['Les Aigles']);
+  // IMPL-1-FICHE (8a) : sous le seuil, la phrase et les deux boutons ; les équipes qui cherchent
+  // paraissent après « Rejoindre une équipe ».
+  test('🔴 sans équipe, sous le seuil : les équipes qui cherchent, après « Rejoindre une équipe »', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(nomsDesEquipes(root)).toEqual([]);
+    const [seuil] = parTestID(root, 'tournament-teams-threshold');
+    const rejoindre = seuil.findAll((/** @type {any} */ n) => n.props?.title === 'Rejoindre une équipe' && typeof n.props?.onPress === 'function')[0];
+    act(() => { rejoindre.props.onPress(); });
+    expect(nomsDesEquipes(root)).toEqual(['Les Aigles']);
   });
 
-  test('🔴 membre d une équipe fermée, sous le seuil : la sienne, et celles qui cherchent', () => {
+  // IMPL-1-FICHE (8a) : un membre ne demande pas à rejoindre une autre équipe : il lit la sienne.
+  test('🔴 membre d une équipe fermée, sous le seuil : la sienne', () => {
     mockTeamQuery.data = null;
     const lecteur = {
       auth: compte('lion-1'),
@@ -1202,7 +1214,7 @@ describe('T-PAGES-4 · chef 4 — sous le seuil, le nombre ne se lit nulle part'
         tournamentTeams: [AIGLES, { ...LIONS, viewerMembership: { responseStatus: 'present' } }],
       }),
     };
-    expect(nomsDesEquipes(monter(lecteur))).toEqual(['Les Aigles', 'Les Lions']);
+    expect(nomsDesEquipes(monter(lecteur))).toEqual(['Les Lions']);
   });
 
   test('au seuil (8 sur 24) : la liste complète', () => {
@@ -1420,5 +1432,111 @@ describe('T-SUITES (11) — le compteur d équipes de la fiche suit la règle du
     });
     const onglet = ongletsDe(root).find((libelle) => libelle.startsWith('Équipes'));
     expect(onglet).toMatch(/^Équipes\D*6$/);
+  });
+});
+
+// IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écran 11a) — L'ORGANISATEUR QUI JOUE AUSSI : sous
+// le bandeau, deux boutons côte à côte, « Gérer le tournoi » et « Mon équipe », puis la carte « Mon
+// équipe · capitaine ». Avant, « Gérer le tournoi » (bas) cachait son équipe : il devait la
+// retrouver dans l'onglet. Le bas ne redit pas les deux boutons.
+describe('IMPL-1 · 11a — l organisateur qui joue : « Gérer le tournoi » et « Mon équipe »', () => {
+  const organisateurQuiJoue = () => ({
+    auth: compte('orga-1', { peutGerer: true }),
+    event: TOURNOI({
+      organizer: { documentId: 'orga-1' },
+      tournamentTeams: [{ ...AIGLES, captainUser: { documentId: 'orga-1', firstname: 'Adel', lastname: 'F' } }, LIONS],
+    }),
+  });
+
+  test('🔴 les deux boutons côte à côte, puis la carte de son équipe ; plus de barre du bas', () => {
+    mockTeamQuery.data = null;
+    const root = monter(organisateurQuiJoue());
+    const [rangee] = parTestID(root, 'tournament-organizer-player-actions');
+    expect(rangee).toBeDefined();
+    expect(textes(rangee)).toEqual(['Gérer le tournoi', 'Mon équipe']);
+    expect(parTestID(root, 'tournament-fiche-my-team')).toHaveLength(1);
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(0);
+  });
+
+  test('🔴 « Mon équipe » ouvre sa page d équipe, « Gérer le tournoi » le pilotage', () => {
+    mockTeamQuery.data = null;
+    mockNavigate.mockClear();
+    const root = monter(organisateurQuiJoue());
+    const [rangee] = parTestID(root, 'tournament-organizer-player-actions');
+    const boutons = rangee.findAll((/** @type {any} */ n) => typeof n.props?.onPress === 'function' && n.props?.title);
+    const [gerer, equipe] = boutons;
+    act(() => { equipe.props.onPress(); });
+    expect(JSON.stringify(mockNavigate.mock.calls)).toContain('eq-aigles');
+    act(() => { gerer.props.onPress(); });
+    expect(mockNavigate.mock.calls.length).toBe(2);
+  });
+
+  test('l organisateur sans équipe garde son bas « Gérer le tournoi », sans les deux boutons', () => {
+    const root = monter(LECTEURS.organisateur());
+    expect(parTestID(root, 'tournament-organizer-player-actions')).toHaveLength(0);
+    expect(textes(parTestID(root, 'tournament-bottom-bar')[0]).join(' | ')).toBe('Gérer le tournoi');
+  });
+});
+
+// IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8) — l'onglet Équipes de la maquette pour qui
+// n'organise pas le tournoi ; l'organisateur garde ses cartes de pilotage.
+describe('IMPL-1 · 8 — l onglet Équipes de la maquette', () => {
+  test('🔴 sans équipe, sous le seuil : « Les équipes s’affichent dès 8 inscrites »', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-teams-public')).toHaveLength(1);
+    expect(textes(parTestID(root, 'tournament-teams-threshold')[0])[0]).toBe('Les équipes s’affichent dès 8 inscrites');
+  });
+
+  test('🔴 plus de « Équipe éphémère » pour le joueur', () => {
+    const root = monter(LECTEURS.membre());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(textes(root).join(' | ')).not.toContain('Équipe éphémère');
+  });
+
+  test('l organisateur garde ses cartes de pilotage, sans l onglet de la maquette', () => {
+    const root = monter(LECTEURS.organisateur());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-teams-public')).toHaveLength(0);
+  });
+});
+
+// IMPL-1-FICHE × IMPL-3 (chef, 18/11) — INSCRIPTIONS FERMÉES (`tournamentConfig.registrationsClosed`
+// === true ; absent = ouvertes) : la pastille « Inscriptions fermées » en jaune ; plus de « Créer
+// mon équipe » ni de « Rejoindre une équipe » pour un joueur sans équipe ; qui a une équipe garde
+// « Voir mon équipe » et ses gestes.
+describe('IMPL-1 × IMPL-3 — inscriptions fermées', () => {
+  const fermer = (/** @type {any} */ lecteur) => ({
+    ...lecteur,
+    event: { ...lecteur.event, tournamentConfig: { ...lecteur.event.tournamentConfig, registrationsClosed: true } },
+  });
+
+  test('🔴 sans équipe : « Inscriptions fermées » (jaune), ni inscription ni « Rejoindre », pas de « Créer mon équipe » en bas', () => {
+    mockTeamQuery.data = null;
+    const root = monter(fermer(LECTEURS.sansEquipe()));
+    expect(proprietesDeLEnTete(root).tournamentHero).toEqual({ statusLabel: 'Inscriptions fermées', statusTone: 'warning' });
+    expect(parTestID(root, 'tournament-registration-card')).toHaveLength(0);
+    expect(parTestID(root, 'tournament-join-team-panel')).toHaveLength(0);
+    expect((barreDe(root) || []).join(' | ')).not.toContain('Créer mon équipe');
+  });
+
+  test('🔴 visiteur : plus de « Créer mon équipe » ni de « Se connecter pour s inscrire »', () => {
+    const root = monter(fermer(LECTEURS.visiteur()));
+    const bas = (barreDe(root) || []).join(' | ');
+    expect(bas).not.toContain('Créer mon équipe');
+    expect(bas).not.toContain('Se connecter pour s');
+  });
+
+  test('🔴 capitaine : « Ton équipe est inscrite », sa carte et « Voir mon équipe » restent', () => {
+    mockTeamQuery.data = null;
+    const root = monter(fermer(LECTEURS.capitaine()));
+    expect(proprietesDeLEnTete(root).tournamentHero).toEqual({ statusLabel: 'Ton équipe est inscrite' });
+    expect(parTestID(root, 'tournament-fiche-my-team')).toHaveLength(1);
+    expect(barreDe(root)).toEqual(['Voir mon équipe']);
+  });
+
+  test('absent : ouvertes, comme avant', () => {
+    mockTeamQuery.data = null;
+    expect(proprietesDeLEnTete(monter(LECTEURS.sansEquipe())).tournamentHero).toEqual({ statusLabel: 'Inscriptions ouvertes' });
   });
 });

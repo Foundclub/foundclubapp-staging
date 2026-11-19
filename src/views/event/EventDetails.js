@@ -220,6 +220,7 @@ import { withTournamentTeamsLine } from './components/TournamentFicheWeb';
 import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
+import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import {
   isPaidTournament, openTournamentTerms, tournamentPaidThreshold,
 } from './components/tournamentTerms';
@@ -243,7 +244,11 @@ import {
 } from './matchPageModel';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { getTournamentTeamsSeekingPlayers } from './tournamentJoinRules';
+import {
+  getTournamentTeamsSeekingPlayers,
+  getTournamentTeamsThreshold,
+  isTournamentRegistrationClosed,
+} from './tournamentJoinRules';
 import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
@@ -1252,9 +1257,12 @@ function EventDetails({ navigation, route }) {
   const tropJeunePourLeTournoi = isTournamentEvent
     && Boolean(userData?.documentId)
     && isTooYoungForTournament(event, userData);
+  // IMPL-1-FICHE × IMPL-3 : inscriptions fermées par l'organisateur.
+  const inscriptionsFermees = isTournamentEvent && isTournamentRegistrationClosed(event);
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !isStageDayEvent
     && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
@@ -1267,6 +1275,7 @@ function EventDetails({ navigation, route }) {
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !isStageDayEvent
     && !tropJeunePourLeTournoi
     && !currentUserTournamentTeam
@@ -1363,6 +1372,9 @@ function EventDetails({ navigation, route }) {
     || currentUserTournamentTeam
     || currentUserPendingTournamentTeam
     || null;
+  // IMPL-1-FICHE (11a) : l'organisateur du tournoi qui a aussi une équipe (capitaine ou membre).
+  const organisateurQuiJoue = Boolean(isTournamentEvent && !isStageDayEvent && canEdit
+    && (managedTournamentTeam || currentUserTournamentTeam)?.documentId);
   let roleDuLecteurAuTournoi = /** @type {'captain' | 'member' | 'invited' | 'requested'} */ (
     'member'
   );
@@ -1377,15 +1389,24 @@ function EventDetails({ navigation, route }) {
   // « Ton équipe est inscrite » (capitaine, membre), sinon « Inscriptions ouvertes » tant que la
   // compétition n'est pas publiée ni le tournoi clos.
   let statutDuBandeau = null;
+  let tonDuBandeau = null;
   if (managedTournamentTeam || currentUserTournamentTeam) {
     statutDuBandeau = t('eventDetails.header.teamRegistered');
+  } else if (inscriptionsFermees && !tournoiClos) {
+    // IMPL-1-FICHE × IMPL-3 : « Inscriptions fermées », en jaune.
+    statutDuBandeau = t('implFiche.registrationsClosed');
+    tonDuBandeau = 'warning';
   } else if (!tournoiClos && tournamentConfig?.competitionState !== 'published') {
     statutDuBandeau = t('eventDetails.header.registrationOpen');
   }
   // T-SUITES-TOURNOI (18/11, point 9) : la pastille du terrain, pour l'organisateur seul (le
   // joueur lit le lieu réel dans « L'essentiel »).
   const bandeauDuTournoi = isTournamentEvent && !isStageDayEvent
-    ? { statusLabel: statutDuBandeau, ...(canEdit ? { showFacility: true } : {}) }
+    ? {
+      statusLabel: statutDuBandeau,
+      ...(canEdit ? { showFacility: true } : {}),
+      ...(tonDuBandeau ? { statusTone: tonDuBandeau } : {}),
+    }
     : null;
   // T-PAGES-4 (17/11, chef, dans l'esprit de « 4- A » + « 2 ok ») — sous le seuil des 30 %, un
   // non-organisateur ne lit le nombre d'équipes nulle part : l'onglet Équipes ne liste que les
@@ -7297,6 +7318,7 @@ function EventDetails({ navigation, route }) {
     && !isStageDayEvent
     && !userData?.documentId
     && !tournoiClos
+    && !inscriptionsFermees
     && tournamentConfig?.allowCustomTeams !== false
     && tournamentConfig?.competitionState !== 'published',
   );
@@ -7324,7 +7346,7 @@ function EventDetails({ navigation, route }) {
     // T-PARCOURS-2 (17/11, point 2, R12) : le visiteur n'avait aucun chemin pour s'inscrire
     // (« Voir le tournoi » ne changeait rien à son écran). Ce bouton range le tournoi où revenir,
     // puis ouvre la connexion ; la fiche se rouvre une fois le compte prêt (useLiensEnAttente).
-    if (!userData?.documentId && !tournoiClos) {
+    if (!userData?.documentId && !tournoiClos && !inscriptionsFermees) {
       return {
         onPress: ouvrirLaConnexionDuTournoi,
         title: t('eventDetails.signInToRegister', "Se connecter pour s'inscrire"),
@@ -7412,6 +7434,9 @@ function EventDetails({ navigation, route }) {
     const lieu = getEventLocationText(event);
     return (
       <TournamentEssentials
+        // IMPL-1-FICHE (18/11, écran 6b) : une carte, une ligne par info ; l'activité et la
+        // section (« Foot à 5, Mixte ») ouvrent la ligne du format (elles quittent les pastilles
+        // du bandeau).
         actions={lieu ? {
           place: (
             <OuvrirDansLeGps
@@ -7420,7 +7445,10 @@ function EventDetails({ navigation, route }) {
             />
           ),
         } : undefined}
+        formatPrefix={[event?.tournamentActivity?.name, event?.tournamentSection?.name]
+          .map((nom) => String(nom || '').trim()).filter(Boolean).join(', ')}
         items={items}
+        variant="liste"
       />
     );
   };
@@ -7447,8 +7475,42 @@ function EventDetails({ navigation, route }) {
 
   // T-PAGES-4 (maquette (b), R4) — « Mon équipe » en tête, pour qui a une équipe dans le tournoi.
   const renderTournamentMyTeamCard = () => {
-    if (!isTournamentEvent || isStageDayEvent || canEdit) return null;
+    if (!isTournamentEvent || isStageDayEvent) return null;
     if (!equipeDuLecteurAuTournoi?.documentId) return null;
+    // IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écran 11a) — l'organisateur qui joue aussi :
+    // « Gérer le tournoi » et « Mon équipe » côte à côte, puis la carte de son équipe (sans
+    // bouton : « Mon équipe » le porte). Le bas ne les redit pas (`renderActionButtons`).
+    if (canEdit) {
+      if (!organisateurQuiJoue) return null;
+      return (
+        <View style={Spaces.gap[12]}>
+          <View
+            style={[Alignments.row, Spaces.gap[12]]}
+            testID="tournament-organizer-player-actions"
+          >
+            <Button
+              onPress={handleOpenTournamentManagement}
+              style={{ flex: 1, minHeight: 44 }}
+              title={t('implFiche.manageTournament')}
+              variant="Secondary"
+            />
+            <Button
+              onPress={() => handleOpenTournamentTeam(equipeDuLecteurAuTournoi.documentId)}
+              style={{ flex: 1, minHeight: 44 }}
+              title={t('implFiche.myTeam')}
+              variant="Primary"
+            />
+          </View>
+          <TournamentFicheMyTeamCard
+            action={null}
+            navigation={navigation}
+            role={roleDuLecteurAuTournoi}
+            team={equipeDuLecteurAuTournoi}
+            tournamentConfig={tournamentConfig}
+          />
+        </View>
+      );
+    }
     return (
       <TournamentFicheMyTeamCard
         action={getTournamentPrimaryAction()}
@@ -8042,6 +8104,29 @@ function EventDetails({ navigation, route }) {
 
         </View>
 
+        {/* IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8, écrans 8a à 8c et 8e) : qui
+            n'organise pas le tournoi lit l'onglet de la maquette (seuil, cartes qui s'ouvrent,
+            « Cherche N joueurs », « Demander à rejoindre », aperçu). L'organisateur garde ses
+            cartes de pilotage, ci-dessous. */}
+        {canEdit ? null : (
+          <TournamentTeamsPublic
+            belowThreshold={listeDesEquipesMasquee}
+            event={event}
+            onCreate={(() => {
+              if (visiteurPeutCreerSonEquipe) return ouvrirLaConnexionDuTournoi;
+              if (canCreateCustomTournamentTeam) {
+                return () => setIsTournamentCreateModalVisible(true);
+              }
+              return null;
+            })()}
+            onOpenTeamPage={handleOpenTournamentTeam}
+            teams={equipesMontreesDuTournoi}
+            threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
+            viewerRequested={roleDuLecteurAuTournoi === 'requested'}
+            viewerTeam={equipeDuLecteurAuTournoi}
+          />
+        )}
+
         {tournamentTeams.length === 0 && canEdit ? (
           <View style={tournamentDs.styles.panelCard}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
@@ -8053,7 +8138,7 @@ function EventDetails({ navigation, route }) {
           </View>
         ) : null}
 
-        {equipesMontreesDuTournoi.map((tournamentTeam) => {
+        {(canEdit ? equipesMontreesDuTournoi : []).map((tournamentTeam) => {
           const rosterSummary = getTournamentRosterSummary(tournamentTeam, tournamentConfig);
           const hasRosterWarning = isTournamentTeamNonCompliant(tournamentTeam, tournamentConfig);
           // 🏷️ Les quatre etats, tels que la planche 04 les nomme : deux mots
@@ -8250,6 +8335,8 @@ function EventDetails({ navigation, route }) {
     // demande explicitement pour cette barre-la. C'est le seul bouton de
     // l'ecran, il porte donc toute la surface d'appui.
     if (isTournamentEvent && !isStageDayEvent) {
+      // IMPL-1-FICHE (11a) : les deux boutons du haut remplacent le bas.
+      if (organisateurQuiJoue) return null;
       const primaryAction = getTournamentPrimaryAction();
       if (!primaryAction) return null;
 
@@ -8731,16 +8818,20 @@ function EventDetails({ navigation, route }) {
               ⛔ Ni `ScreenContainer` ni `Tag` ne bougent : ils sont partages, le
               defaut ne l est pas. Et surtout PAS de plafond de largeur ici, qui
               tronquerait « SEANCE D ESSAI ». */}
-          <View
-            style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}
-            testID="event-type-tag-row"
-          >
-            <Tag
-              style={{}}
-              text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
-              textStyle={Fonts.p2}
-            />
-            {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
+          {/* IMPL-1-FICHE (18/11, écran 6b) : sur la fiche d'un tournoi, TOURNOI passe dans
+              les pastilles du bandeau (EventHeader) ; la pastille de type ne le redit pas
+              au-dessus. */}
+          {bandeauDuTournoi ? null : (
+            <View
+              style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}
+              testID="event-type-tag-row"
+            >
+              <Tag
+                style={{}}
+                text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
+                textStyle={Fonts.p2}
+              />
+              {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
                 RETIREE : l'adversaire vit desormais dans l'encart de la carte,
                 face au club (« Test FC — FC Bonneveine »). La garder ferait dire
                 trois fois la meme chose — encart, titre, et cette ligne.
@@ -8748,7 +8839,8 @@ function EventDetails({ navigation, route }) {
                 JAMAIS ete ajoutee (verifie — aucune occurrence dans
                 src/theme/strings/translations/). Elle ne vivait que comme repli
                 de t() ici meme ; elle part avec la ligne. */}
-          </View>
+            </View>
+          )}
           <WithDataWrapper
             error={error}
             errorMessage={eventLoadErrorMessage}

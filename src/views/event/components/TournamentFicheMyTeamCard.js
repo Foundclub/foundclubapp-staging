@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -12,7 +13,6 @@ import LinksPlatform from '@/platform/links';
 // eslint-disable-next-line perfectionist/sort-imports -- « @/platform » est hors groupe pour perfectionist ; import/order le veut avant les chemins relatifs (même parade que TournamentFicheWeb.js).
 import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 import TournamentTeamDiscussion from '../TournamentTeamDiscussion';
-import TournamentTeamProgress from './TournamentTeamProgress';
 
 /**
  * T-PAGES-4 (17/11, maquette validée (b), R4) — la carte « Mon équipe » de la fiche du tournoi,
@@ -55,6 +55,26 @@ function TournamentFicheMyTeamCard({
     (role === 'captain' || role === 'member')
     && maPlace && maPlace.status !== 'paid' && maPlace.paymentUrl,
   );
+  // IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écran 9f) — la carte compacte : « N places payées
+  // sur 5 », la barre, et l'état (« N places à payer » ou « Validée »), en bleu, plus de vert.
+  // « Où en est l'équipe » et « Il te reste à faire » restent sur la page d'équipe.
+  const seuilLu = Math.round(Number(
+    detail?.payment?.paidMembersToValidate
+    ?? detail?.event?.tournamentConfig?.paidMembersToValidate
+    ?? tournamentConfig?.paidMembersToValidate,
+  ));
+  const seuil = seuilLu > 0 ? seuilLu : 5;
+  const payees = Math.max(0, Math.round(Number(detail?.payment?.paidCount)) || 0);
+  const validee = ['accepted', 'validated'].includes(String(detail?.status || '').toLowerCase());
+  let pastille = null;
+  if (detail && validee) {
+    pastille = { couleur: Colors.primary500, texte: t('implFiche.validated') };
+  } else if (detail && seuil - payees > 0) {
+    pastille = {
+      couleur: Colors.warning400,
+      texte: t('implFiche.placesToPay', { count: seuil - payees }),
+    };
+  }
 
   return (
     <View
@@ -62,21 +82,50 @@ function TournamentFicheMyTeamCard({
       testID="tournament-fiche-my-team"
     >
       <View style={Spaces.gap[4]}>
-        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-          {t(`tournamentFicheWeb.myTeam.kicker.${role}`)}
-        </Text>
+        <View style={{
+          alignItems: 'center', flexDirection: 'row', gap: 8, justifyContent: 'space-between',
+        }}
+        >
+          <Text style={[Fonts.p4Bold, Fonts.primary500, { flexShrink: 1 }]}>
+            {t(`tournamentFicheWeb.myTeam.kicker.${role}`)}
+          </Text>
+          {pastille ? (
+            <View style={[ApplicationStyle.borderRadius100, Spaces.paddingHorizontal[12], {
+              backgroundColor: withAlpha(pastille.couleur, 0.16), paddingVertical: 6,
+            }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: pastille.couleur }]}>{pastille.texte}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {detail?.name || team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
         </Text>
       </View>
       {detail ? (
-        <TournamentTeamProgress
-          members={detail.members || []}
-          payment={detail.payment || null}
-          showTodo
-          teamStatus={detail.status || ''}
-          tournamentConfig={detail?.event?.tournamentConfig || tournamentConfig}
-        />
+        <View style={Spaces.gap[8]} testID="tournament-fiche-my-team-progress">
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t('implFiche.placesPaid', { count: payees, total: seuil })}
+          </Text>
+          <View
+            accessibilityRole="progressbar"
+            accessibilityValue={{ max: seuil, min: 0, now: Math.min(payees, seuil) }}
+            style={{
+              backgroundColor: withAlpha(Colors.neutral00, 0.12),
+              borderRadius: 4,
+              height: 8,
+              overflow: 'hidden',
+            }}
+          >
+            <View style={{
+              backgroundColor: Colors.primary500,
+              borderRadius: 4,
+              height: 8,
+              width: `${Math.round((Math.min(payees, seuil) / seuil) * 100)}%`,
+            }}
+            />
+          </View>
+        </View>
       ) : null}
       {payer ? (
         // L'identifiant des témoins sur une enveloppe : le bouton commun ne le déclare pas.
@@ -94,7 +143,8 @@ function TournamentFicheMyTeamCard({
           onPress={action.onPress}
           style={{ minHeight: 44 }}
           title={action.title}
-          variant="Secondary"
+          // Un seul bouton principal : « Payer ma place » s'il est là, sinon « Voir mon équipe ».
+          variant={payer ? 'Secondary' : 'Primary'}
         />
       ) : null}
       {detail?.discussion ? (

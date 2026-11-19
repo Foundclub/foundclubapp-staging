@@ -380,9 +380,10 @@ const EQUIPE_FERMEE = {
   isOpenToJoinRequests: false,
   name: 'Complets',
 };
-const carteEquipe = (/** @type {any} */ arbre, /** @type {string} */ nom) => blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'div'
-  && texte(n).includes(nom)
-  && n.findAll((/** @type {any} */ b) => b.type === 'button' && texte(b) === 'Ouvrir l’équipe').length === 1)
+// IMPL-1-FICHE (8b) : le joueur lit les cartes de TournamentTeamsPublic (toute la carte s'ouvre).
+const carteEquipe = (/** @type {any} */ arbre, /** @type {string} */ nom) => blocTournoi(arbre).findAll((/** @type {any} */ n) => typeof n.type === 'string'
+  && String(n.props?.testID || '').startsWith('tournament-public-team-')
+  && texte(n).includes(nom))
   .slice(-1)[0];
 
 test('🔴 T-F3 joueur seul — une équipe ouverte aux demandes le dit sur sa carte ; une équipe fermée non', () => {
@@ -393,8 +394,11 @@ test('🔴 T-F3 joueur seul — une équipe ouverte aux demandes le dit sur sa c
     tournamentTeams: [EQUIPE_FERMEE, EQUIPE_OUVERTE],
     tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 },
   }), compteNeLe('2008-01-01'));
-  expect(texte(carteEquipe(arbre, 'On te trouve une place'))).toContain('Ouverte aux demandes');
-  expect(texte(carteEquipe(arbre, 'Complets'))).not.toContain('Ouverte aux demandes');
+  // IMPL-1-FICHE (8b) : une équipe ouverte le dit par « Cherche N joueurs » (sous 5) ou « Ouverte aux
+  // demandes » (5 et plus), avec « Demander à rejoindre » ; une équipe fermée, rien de tout cela.
+  expect(texte(carteEquipe(arbre, 'On te trouve une place'))).toMatch(/Cherche \d joueurs?|Ouverte aux demandes/);
+  expect(texte(carteEquipe(arbre, 'On te trouve une place'))).toContain('Demander à rejoindre');
+  expect(texte(carteEquipe(arbre, 'Complets'))).not.toMatch(/Cherche|Ouverte aux demandes|Demander à rejoindre/);
 });
 
 // T-SUITES-TOURNOI (18/11, point 3) : une équipe ouverte mais PLEINE disait « Équipe complète ».
@@ -418,12 +422,15 @@ test('🔴 T-SUITES (3) / D239 — une équipe ouverte à 5 ou 7 sur un plafond 
   expect(texte(carteEquipe(arbre, 'Avec deux remplaçants'))).not.toContain('Équipe complète');
 });
 
-test('T-F3 joueur seul caractérisant — sans équipe, il ouvre l équipe ouverte (là où il demande à la rejoindre)', () => {
-  const arbre = monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), compteNeLe('2008-01-01'));
-  const ouvrir = carteEquipe(arbre, 'On te trouve une place')
-    .findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Ouvrir l’équipe')[0];
-  act(() => { ouvrir.props.onClick(); });
-  expect(mockNavigate).toHaveBeenCalledWith('TournamentTeamDetails', { eventId: 'event-1', teamId: 'equipe-ouverte' });
+// IMPL-1-FICHE (8b, 8e) : la carte d'une équipe ouverte porte « Demander à rejoindre » ; la toucher
+// ouvre l'aperçu (feuille d'équipe, doublée ici), plus la page d'équipe.
+test('T-F3 joueur seul — sans équipe, la carte de l équipe ouverte porte « Demander à rejoindre »', () => {
+  const arbre = monter(TOURNOI_19_12({
+    tournamentConfig: { maxTeams: 24, minAge: 16 },
+    tournamentTeams: [EQUIPE_OUVERTE],
+    tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 },
+  }), compteNeLe('2008-01-01'));
+  expect(texte(carteEquipe(arbre, 'On te trouve une place'))).toContain('Demander à rejoindre');
 });
 
 // --- Ajout du chef (17/11, recette 41) : le haut de la fiche dit la vraie règle de validation -----------

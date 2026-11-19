@@ -477,7 +477,11 @@ test('T-FINITIONS2 caractérisant — entraîneur du club organisateur : le bout
 });
 
 // T-FINITIONS2 (16/11, M1294 / M1295) — fiche du tournoi sur le site.
-const textesH1 = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'h1').map(texte);
+// IMPL-1-FICHE (6b) : le titre du joueur est celui du bandeau commun (EventHeader), un Text
+// `accessibilityRole="header"` que react-native-web rend en titre (vérifié dans
+// web/tests/components/impl-1-fiche.spec.ts) ; l'organisateur garde son `h1`.
+const textesH1 = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'h1'
+  || (typeof n.type === 'string' && n.props?.accessibilityRole === 'header')).map(texte);
 const ligneInfo = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root.findAll((/** @type {any} */ n) => n.type === 'div'
   && n.children.length >= 2 && texte(n.children[0]) === libelle).length;
 

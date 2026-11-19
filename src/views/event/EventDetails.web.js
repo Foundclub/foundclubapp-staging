@@ -59,9 +59,14 @@ import TrainingReviewsCard, {
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   getTournamentTeamsSeekingPlayers,
+  getTournamentTeamsThreshold,
   getTournamentVisitorTeamsLine,
+  isTournamentRegistrationClosed,
 } from '@/views/event/tournamentJoinRules';
-import { getTournamentRegisteredTeamsCount } from '@/views/event/tournamentTeamsCount';
+import {
+  getTournamentRegisteredTeamsCount,
+  getTournamentTeamsCapacity,
+} from '@/views/event/tournamentTeamsCount';
 import {
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
@@ -141,6 +146,8 @@ import {
 } from './attendance/attendanceCallModel';
 import CancelSeriesSheet from './components/CancelSeriesSheet';
 import EventChatRow from './components/EventChatRow';
+import EventHeader from './components/EventHeader';
+import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
 } from './components/EventChildRegistration';
@@ -650,9 +657,12 @@ function EventDetails({ navigation, route }) {
   );
   // CORR-EVENEMENTS 130 (décision A) : un parent ne joue pas le tournoi ; ces deux gestes de
   // capitaine ne lui sont plus montrés (`offreAuxEnfants` : la règle du téléphone).
+  // IMPL-1-FICHE × IMPL-3 : inscriptions fermées par l'organisateur.
+  const inscriptionsFermees = isTournamentEvent && isTournamentRegistrationClosed(event);
   const canCreateCustomTournamentTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !offreAuxEnfants
     && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
@@ -676,6 +686,7 @@ function EventDetails({ navigation, route }) {
     !isSignedIn
     && isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !offreAuxEnfants
     && event?.tournamentConfig?.allowCustomTeams !== false,
   );
@@ -685,6 +696,7 @@ function EventDetails({ navigation, route }) {
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent
     && !tournoiClos
+    && !inscriptionsFermees
     && !offreAuxEnfants
     && !tropJeunePourLeTournoi
     && !currentUserTournamentTeam
@@ -2340,6 +2352,19 @@ function EventDetails({ navigation, route }) {
       ? { ok: false, texte: String(event.tournamentSection.name).trim() } : null,
     ageMinimumDuTournoi ? { ok: false, texte: t('tournamentUtils.fromAge', { minAge: ageMinimumDuTournoi }) } : null,
   ].filter(Boolean) : [];
+  // IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, écrans 6b et 6d) : le joueur lit le même bandeau
+  // que sur le téléphone (EventHeader) : l'image du tournoi, le nom, « Organisé par … · lieu
+  // court », puis TOURNOI, l'état et l'âge sur une ligne. « Mixte » passe dans le format.
+  let etatDuBandeau = null;
+  let tonDuBandeau = null;
+  if (equipeInscriteDuLecteur) etatDuBandeau = t('eventDetails.header.teamRegistered');
+  else if (inscriptionsFermees && !tournoiClos) {
+    etatDuBandeau = t('implFiche.registrationsClosed');
+    tonDuBandeau = 'warning';
+  } else if (inscriptionsOuvertes) etatDuBandeau = t('eventDetails.header.registrationOpen');
+  const bandeauDuTournoi = vueJoueurDuTournoi ? {
+    statusLabel: etatDuBandeau, ...(tonDuBandeau ? { statusTone: tonDuBandeau } : {}),
+  } : null;
   const erreurDeLaCarte = erreurEquipeTournoi || actionError;
   const carteDuTournoi = vueJoueurDuTournoi ? (
     <div data-testid="event-tournament-side" style={{ display: 'grid', gap: 16, minWidth: 0 }}>
@@ -2352,7 +2377,8 @@ function EventDetails({ navigation, route }) {
           ui={uiDeLaFiche}
         />
       ) : null}
-      {!equipeDuLecteur && !tournoiClos && !offreAuxEnfants ? (
+      {/* IMPL-1 × IMPL-3 : inscriptions fermées, plus de carte « Ton inscription ». */}
+      {!equipeDuLecteur && !tournoiClos && !offreAuxEnfants && !inscriptionsFermees ? (
         <TournamentSignUpCard
           canCreate={isSignedIn ? canCreateCustomTournamentTeam : inscrireMonEquipeVisiteur}
           canRegisterClubTeam={canRegisterTournamentSourceTeam}
@@ -2422,6 +2448,14 @@ function EventDetails({ navigation, route }) {
 
   // T-PAGES-3 : le bloc du tournoi, posé à droite pour l organisateur (comme avant) et dans la
   // colonne principale pour le joueur, sous le titre « Les équipes », sans les réglages.
+  // IMPL-1-FICHE (8a) : « Créer mon équipe » de l'onglet, le même geste que la carte « Ton
+  // inscription ».
+  let creerDepuisLOnglet = null;
+  if (isSignedIn && canCreateCustomTournamentTeam) {
+    creerDepuisLOnglet = handleCreateTournamentTeam;
+  } else if (!isSignedIn && inscrireMonEquipeVisiteur) {
+    creerDepuisLOnglet = ouvrirLInscriptionDuTournoi;
+  }
   const blocDuTournoi = isTournamentEvent ? (
     <div
       data-event-section="tournament"
@@ -2690,6 +2724,21 @@ function EventDetails({ navigation, route }) {
           {erreurEquipeTournoi}
         </div>
       ) : null}
+      {/* IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8, écrans 8a à 8e) : le joueur lit
+          l'onglet Équipes de la maquette, le même qu'au téléphone (seuil, cartes qui s'ouvrent, « Cherche N
+          joueurs », « Demander à rejoindre », aperçu sans le paiement de chacun). */}
+      {vueJoueurDuTournoi ? (
+        <TournamentTeamsPublic
+          belowThreshold={nombreDEquipesCache}
+          event={event}
+          onCreate={creerDepuisLOnglet}
+          onOpenTeamPage={handleOpenTournamentTeam}
+          teams={equipesDeLaListe}
+          threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
+          viewerRequested={roleDuLecteur === 'requested'}
+          viewerTeam={equipeDuLecteur}
+        />
+      ) : null}
       {tournamentTeams.length === 0 && !vueJoueurDuTournoi ? (
         <div style={{ color: mutedTextColor, fontSize: 14 }}>
           {t(
@@ -2699,7 +2748,7 @@ function EventDetails({ navigation, route }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 10 }}>
-          {equipesDeLaListe.map((team) => {
+          {(vueJoueurDuTournoi ? [] : equipesDeLaListe).map((team) => {
             const rosterSummary = getTournamentRosterSummary(team, tournamentConfig);
             const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
             const status = normalizeTournamentText(team?.status);
@@ -3195,73 +3244,91 @@ function EventDetails({ navigation, route }) {
 
               {hasEvent ? (
                 <>
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    {/* Le type en capitales reste pour un visiteur : le fil d'Ariane le porte
-                        pour un membre connecté. */}
-                    {!isSignedIn ? (
-                      <span style={{
-                        color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  {bandeauDuTournoi ? (
+                    <EventHeader event={event} tournamentHero={bandeauDuTournoi} />
+                  ) : (
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {/* Le type en capitales reste pour un visiteur : le fil d'Ariane le porte
+                          pour un membre connecté. */}
+                      {!isSignedIn ? (
+                        <span style={{
+                          color: accentColor,
+                          fontSize: 13,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                        }}
+                        >
+                          {event?.type?.name || t('eventDetails.eventFallback', 'Événement')}
+                        </span>
+                      ) : null}
+                      <h1 style={{
+                        color: textColor,
+                        fontFamily: 'Montserrat-Black, sans-serif',
+                        fontSize: isTablet ? 38 : 30,
+                        lineHeight: 1.1,
+                        margin: 0,
                       }}
                       >
-                        {event?.type?.name || t('eventDetails.eventFallback', 'Événement')}
-                      </span>
-                    ) : null}
-                    <h1 style={{
-                      color: textColor,
-                      fontFamily: 'Montserrat-Black, sans-serif',
-                      fontSize: isTablet ? 38 : 30,
-                      lineHeight: 1.1,
-                      margin: 0,
-                    }}
-                    >
-                      {headerTitle}
-                    </h1>
-                    {/* T-PAGES-3 : « Organisé par » (maquette (a)) remplace la ligne des Infos rapides. */}
-                    {vueJoueurDuTournoi && quickInfoOrganizerName ? (
-                      <span data-testid="event-tournament-organizer" style={{ color: softTextColor, fontSize: 15 }}>
-                        {t('tournamentFicheWeb.organizedBy', { name: quickInfoOrganizerName, ...SANS_ECHAPPEMENT })}
-                      </span>
-                    ) : null}
-                    {etiquettesDuTournoi.length ? (
-                      <div data-testid="event-tournament-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {etiquettesDuTournoi.map((etiquette) => (
-                          <span
-                            key={etiquette.texte}
-                            style={{
-                              background: pillSurfaceColor,
-                              border: `1px solid ${borderColor}`,
-                              borderRadius: 999,
-                              color: etiquette.ok ? Colors?.success200 : textColor,
-                              fontSize: 12,
-                              fontWeight: 700,
-                              padding: '5px 10px',
-                            }}
-                          >
-                            {etiquette.texte}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                    {eventInfoLine ? (
-                      <div style={{
-                        color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
-                      }}
-                      >
-                        <span data-testid="event-info-line">{eventInfoLine}</span>
-                      </div>
-                    ) : null}
-                    {/* ACCUEIL-JOUEUR (09/11/2026, point 4) — la fiche du site n'ouvrait aucun
-                        GPS : la ligne d'action, la carte dans un nouvel onglet. */}
-                    {eventMapTarget(event) ? (
-                      <OuvrirDansLeGps
-                        onPress={() => openExternalMap(eventMapTarget(event))}
-                        testID="event-web-ouvrir-gps"
-                      />
-                    ) : null}
-                  </div>
+                        {headerTitle}
+                      </h1>
+                      {/* T-PAGES-3 : « Organisé par » (maquette (a)) remplace la ligne des Infos
+                          rapides. */}
+                      {vueJoueurDuTournoi && quickInfoOrganizerName ? (
+                        <span
+                          data-testid="event-tournament-organizer"
+                          style={{ color: softTextColor, fontSize: 15 }}
+                        >
+                          {t('tournamentFicheWeb.organizedBy', {
+                            name: quickInfoOrganizerName, ...SANS_ECHAPPEMENT,
+                          })}
+                        </span>
+                      ) : null}
+                      {etiquettesDuTournoi.length ? (
+                        <div
+                          data-testid="event-tournament-tags"
+                          style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+                        >
+                          {etiquettesDuTournoi.map((etiquette) => (
+                            <span
+                              key={etiquette.texte}
+                              style={{
+                                background: pillSurfaceColor,
+                                border: `1px solid ${borderColor}`,
+                                borderRadius: 999,
+                                color: etiquette.ok ? Colors?.success200 : textColor,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                padding: '5px 10px',
+                              }}
+                            >
+                              {etiquette.texte}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      {eventInfoLine ? (
+                        <div style={{
+                          color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
+                        }}
+                        >
+                          <span data-testid="event-info-line">{eventInfoLine}</span>
+                        </div>
+                      ) : null}
+                      {/* ACCUEIL-JOUEUR (09/11/2026, point 4) — la fiche du site n'ouvrait aucun
+                          GPS : la ligne d'action, la carte dans un nouvel onglet. */}
+                      {eventMapTarget(event) ? (
+                        <OuvrirDansLeGps
+                          onPress={() => openExternalMap(eventMapTarget(event))}
+                          testID="event-web-ouvrir-gps"
+                        />
+                      ) : null}
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                    {event?.facility?.name ? (
+                    {/* IMPL-1-FICHE (6b) : « Terrain A » n'est plus montré au joueur
+                        (l'organisateur le garde) ; le lieu réel est dans le bandeau et « L'essentiel ». */}
+                    {event?.facility?.name && !vueJoueurDuTournoi ? (
                       <span style={{
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}
@@ -3643,7 +3710,22 @@ function EventDetails({ navigation, route }) {
                   {/* T-PAGES-3b (point 2) : au téléphone, « Mon équipe » passe AVANT l'essentiel
                       (maquette b) ; la carte d'inscription le suit (maquette a). */}
                   {!isDesktop && equipeDuLecteur ? carteDuTournoi : null}
-                  <TournamentEssentials items={essentielDuTournoi} />
+                  {/* IMPL-1-FICHE (6b) : une carte, une ligne par info, et « Ouvrir dans le GPS »
+                      sous l'adresse (il quitte l'en-tête, devenu bandeau). */}
+                  <TournamentEssentials
+                    actions={eventMapTarget(event) ? {
+                      place: (
+                        <OuvrirDansLeGps
+                          onPress={() => openExternalMap(eventMapTarget(event))}
+                          testID="tournament-essentials-itinerary"
+                        />
+                      ),
+                    } : undefined}
+                    formatPrefix={[event?.tournamentActivity?.name, event?.tournamentSection?.name]
+                      .map((nom) => String(nom || '').trim()).filter(Boolean).join(', ')}
+                    items={essentielDuTournoi}
+                    variant="liste"
+                  />
                   {!isDesktop && !equipeDuLecteur ? carteDuTournoi : null}
                   {equipeDuLecteur ? null : <TournamentHowItWorks event={event} ui={uiDeLaFiche} />}
                   <TournamentBeforeSignUp

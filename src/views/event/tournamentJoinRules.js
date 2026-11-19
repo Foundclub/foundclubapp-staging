@@ -1,5 +1,7 @@
 import i18next from 'i18next';
 
+import { getEventLocationText } from '@/utils/eventLocationText';
+
 import {
   getTournamentClosure,
   getTournamentMinAge,
@@ -16,6 +18,16 @@ import {
 // Une seule règle pour le site et le téléphone (les deux fiches lisent ce fichier).
 // Fichier à part de tournamentUtils.js : T-PARCOURS-2 et T-JOUEURS y écrivent en ce moment.
 // Témoin : __tests__/tournamentJoinRules.TREJOINDRE.test.js.
+
+/**
+ * IMPL-1-FICHE × IMPL-3 (chef, 18/11) — l'organisateur a fermé les inscriptions
+ * (`tournamentConfig.registrationsClosed === true`) ; absent ou autre valeur : ouvertes.
+ * @param {any} event - Le tournoi.
+ * @returns {boolean} Vrai si les inscriptions sont fermées.
+ */
+export const isTournamentRegistrationClosed = (event) => (
+  event?.tournamentConfig?.registrationsClosed === true
+);
 
 /**
  * Le nombre de joueurs d'une équipe, tel que la fiche peut le connaître.
@@ -119,6 +131,8 @@ export const canAskToJoinTournamentTeam = ({
 }) => {
   const userId = user?.documentId;
   if (!userId || accountRoleKey === 'parent') return false;
+  // IMPL-1-FICHE × IMPL-3 : inscriptions fermées par l'organisateur, plus de demande.
+  if (isTournamentRegistrationClosed(event)) return false;
   if (!normalizeTournamentText(event?.type?.name).includes('tournoi')) return false;
   if (getTournamentClosure(event).isClosed || event?.isActive === false) return false;
   if (isTooYoungForTournament(event, user)) return false;
@@ -186,3 +200,98 @@ export const getTournamentVisitorTeamsLine = (event) => {
     defaultValue_other: '{{count}} équipes attendues',
   });
 };
+
+// IMPL-1-FICHE (18/11/2026, pack T-DESIGN-TOURNOI, pages 6, 7 et 8) — les règles de la fiche
+// refaite et de la carte d'événement, partagées par le téléphone et le site.
+// Témoin : __tests__/IMPL-1-FICHE.regles.test.js.
+
+/**
+ * Le seuil d'affichage des équipes : 30 % de la capacité, arrondi au supérieur (8 pour 24).
+ * @param {number | null | undefined} capacite - Les équipes attendues.
+ * @returns {number | null} Le seuil, ou `null` sans capacité.
+ */
+export const getTournamentTeamsThreshold = (capacite) => {
+  const total = Math.round(Number(capacite));
+  if (!Number.isFinite(total) || total <= 0) return null;
+  return Math.ceil((total * TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT) / 100);
+};
+
+/**
+ * Le lieu court d'un tournoi : « AR Soccer · Montpellier » (le complexe, puis la ville), tiré du
+ * lieu écrit ; jamais le terrain (`facility.name`, « Terrain A »), qui n'est pas un lieu.
+ * @param {any} event - Le tournoi.
+ * @returns {string} Le lieu court, ou ''.
+ */
+export const getTournamentShortPlace = (event) => {
+  const morceaux = String(getEventLocationText(event) || '')
+    .split(',')
+    .map((morceau) => morceau.trim())
+    .filter(Boolean);
+  if (morceaux.length > 2 && /^france$/i.test(morceaux[morceaux.length - 1])) morceaux.pop();
+  const [nom] = morceaux;
+  if (!nom) return '';
+  if (morceaux.length < 2) return nom;
+  const ville = morceaux[morceaux.length - 1]
+    .replace(/^\d{4,5}\s+/, '')
+    .replace(/\s+\d{4,5}$/, '')
+    .trim();
+  return ville && ville !== nom ? `${nom} · ${ville}` : nom;
+};
+
+/**
+ * « Cherche N joueurs » : les places qui manquent pour atteindre le seuil des payés (5 par
+ * défaut), sur une équipe OUVERTE aux demandes seulement ; 0 sinon, ou si l'effectif est inconnu.
+ * @param {any} team - L'équipe du tournoi.
+ * @param {any} [tournamentConfig] - Le réglage du tournoi.
+ * @returns {number} Le nombre de joueurs cherchés.
+ */
+export const getTournamentTeamLookingFor = (team, tournamentConfig = {}) => {
+  if (!isTournamentTeamOpenToJoinRequests(team)) return 0;
+  const effectif = getTournamentTeamPlayerCount(team, tournamentConfig);
+  if (effectif === null) return 0;
+  const seuil = Math.round(Number(tournamentConfig?.paidMembersToValidate));
+  return Math.max(0, (seuil > 0 ? seuil : 5) - effectif);
+};
+
+/**
+ * « Prénom I. » depuis un prénom et un nom (ou une initiale).
+ * @param {unknown} prenom - Le prénom.
+ * @param {unknown} nom - Le nom, ou son initiale.
+ * @returns {string} Le libellé, ou ''.
+ */
+const prenomEtInitiale = (prenom, nom) => {
+  const premier = String(prenom || '').trim();
+  const initiale = String(nom || '').trim().charAt(0).toUpperCase();
+  if (!premier) return '';
+  return initiale ? `${premier} ${initiale}.` : premier;
+};
+
+/**
+ * Les joueurs d'une équipe vus de l'extérieur (aperçu 8e) : « Prénom I. », jamais le paiement de
+ * chacun ; un mineur (drapeau `isMinor` ou `minor` du serveur) sans prénom (`label: null`).
+ * @param {any} team - L'équipe du tournoi.
+ * @returns {{ label: string | null, minor: boolean }[]} Les joueurs.
+ */
+export const getTournamentTeamPublicPlayers = (team) => (
+  (Array.isArray(team?.membersSummary?.list) ? team.membersSummary.list : [])
+    .map((/** @type {any} */ joueur) => {
+      // Contrat d'IMPL-5 : dans un résumé masqué, un mineur arrive sans prénom ni initiale.
+      const videMasque = team?.membersSummary?.paidHidden === true
+        && !String(joueur?.firstName || '').trim() && !String(joueur?.lastInitial || '').trim();
+      const minor = joueur?.isMinor === true || joueur?.minor === true || videMasque;
+      const label = prenomEtInitiale(joueur?.firstName, joueur?.lastInitial) || null;
+      return { label: minor ? null : label, minor };
+    })
+);
+
+/**
+ * Le capitaine en « Prénom I. » : `captainDisplayName` du serveur (contrat d'IMPL-5), sinon tiré de
+ * `captainUser` ; '' quand le serveur ne le rend pas.
+ * @param {any} team - L'équipe du tournoi.
+ * @returns {string} Le libellé.
+ */
+export const getTournamentTeamCaptainShort = (team) => String(team?.captainDisplayName || '').trim()
+  || prenomEtInitiale(
+    team?.captainUser?.firstname || team?.captainUser?.firstName,
+    team?.captainUser?.lastname || team?.captainUser?.lastName || team?.captainUser?.lastInitial,
+  );

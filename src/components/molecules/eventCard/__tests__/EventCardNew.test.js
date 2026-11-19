@@ -330,7 +330,8 @@ describe('EventCardNew — déclinaison par type (handoff 3b)', () => {
         type: { name: 'Tournoi' },
       },
     });
-    expect(getChipColor(tree, 'TOURNOI')).toBe('couleur-rose500');
+    // IMPL-1-FICHE (6a) : plus de rose
+    expect(getChipColor(tree, 'TOURNOI')).toBe('couleur-primary500');
     expect(getBackgroundSource(tree)).toBe('image-eventCardTournament');
     const texts = textsOf(tree);
     expect(texts).toContain('Football • Masculine • Sénior');
