@@ -3,7 +3,8 @@ import { getPendingClubRequests, getProfileClubs } from '@/domains/auth/authUseC
 
 /**
  * INSCRIPTION-CODE-3 (19/11/2026, planche V2 B1-B5, validée « ok ») — quel « Bienvenue » montrer.
- * - `joueurAvecClub` (B1) : un joueur d'un sport de compétition qui a un club (demandé ou rejoint) ;
+ * - `joueurAvecClub` (B1) : un joueur d'un sport de compétition, avec un club (demandé ou
+ *   rejoint) ;
  * - `sansClub` (B2) : un joueur ou un pratiquant sans club ;
  * - `pratiquant` (B3) : loisir, nature ou culture (`estDeCompetition` faux), avec un club ;
  * - `coach` (B4) ; `parent` (B5).

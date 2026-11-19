@@ -8,7 +8,7 @@ import en from '@/theme/strings/translations/en';
 import fr from '@/theme/strings/translations/fr';
 
 describe('« Qui es-tu ? » · la phrase sous la date', () => {
-  test('fr : la raison, puis « Ta date n’est jamais affichée, seulement ton âge sur ta carte. »', () => {
+  test('fr : la raison, puis « Ta date n’est jamais affichée, seulement ton âge… »', () => {
     expect(fr.userName.birthdate.raison).toBe(
       'Elle sert à protéger les mineurs et à te proposer ta catégorie. '
         + 'Ta date n’est jamais affichée, seulement ton âge sur ta carte.',
