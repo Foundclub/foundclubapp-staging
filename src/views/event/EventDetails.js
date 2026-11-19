@@ -5911,7 +5911,13 @@ function EventDetails({ navigation, route }) {
       });
     }
 
-    if (canEdit) {
+    // ORGA-MINIS (19/11, réponse 6 A d'Adel appliquée au téléphone) : un tournoi s'annule dans
+    // Gérer le tournoi, sous Réglages (« Annuler l'événement », TournamentManagement.js) ; la
+    // journée de stage d'un tournoi n'a pas cet écran et le garde ici. Un tournoi n'a pas de
+    // série : la feuille des séries de handleCancelEvent ne perd rien. Le bandeau de fermeture
+    // du lieu (FacilityClosureBanner) garde son « Annuler », geste contextuel.
+    // Témoin : EventDetailsManagePanel « variante tournoi : 4 actions ».
+    if (canEdit && !(isTournamentEvent && !isStageDayEvent)) {
       chips.push({
         icon: 'close',
         isDestructive: true,

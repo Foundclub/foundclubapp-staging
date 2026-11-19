@@ -1095,16 +1095,37 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
     expect(boutonDeGestion()).toBeNull();
   });
 
-  test('variante tournoi : 5 actions, dont Reglages tournoi', () => {
+  // ORGA-MINIS (19/11, réponse 6 A d'Adel appliquée au téléphone) : « Annuler » d'un tournoi
+  // quitte ce panneau ; il est dans Gérer le tournoi sous Réglages (« Annuler l'événement »,
+  // TournamentManagement.js). Avant : 5 actions, dont « Annuler ».
+  test('variante tournoi : 4 actions, dont Reglages tournoi, sans Annuler', () => {
     const root = asTournamentOrganiser();
     ouvrirLaFeuilleDeGestion();
 
-    expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%', '100%']);
-    ['Modifier', 'À la une', 'Réglages tournoi', 'Annuler'].forEach((label) => {
+    expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%']);
+    ['Modifier', 'À la une', 'Réglages tournoi'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
+    expect(pressableWithText(root, 'Annuler')).toBeUndefined();
     // N4 (D1) : « Compo » est devenu « Convocation ». Meme rangee, meme porte.
     expect(libelleDeLaRangee(root, 'lineup')).toBe('Convocation');
+  });
+
+  // ORGA-MINIS : la journée de stage d'un tournoi n'a pas Gérer le tournoi pour l'annuler :
+  // « Annuler » reste dans son panneau.
+  test('journée de stage d un tournoi : Annuler reste dans le panneau', () => {
+    const root = mountScreen({
+      auth: {
+        canEditEvent: () => true,
+        canManageEvent: () => true,
+        userData: { documentId: 'user-1', role: { name: 'Entraineur' } },
+      },
+      event: buildEvent({ eventFormat: 'stage_day', type: { name: 'Tournoi' } }),
+    });
+    ouvrirLaFeuilleDeGestion();
+
+    expect(pressableWithText(root, 'Annuler')).toBeTruthy();
+    expect(pressableWithText(root, 'Réglages tournoi')).toBeUndefined();
   });
 
   test('variante tournoi : Reglages tournoi navigue en un seul tap', () => {
