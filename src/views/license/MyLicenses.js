@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -237,8 +238,8 @@ function AssignmentCard({ assignment, onPress }) {
           {t('myLicenses.card.transferred', {
             date: formatMemberDate(assignment.tournamentTransfer.at),
             from: assignment.tournamentTransfer.fromTeamName || '',
-            interpolation: { escapeValue: false },
             to: assignment.tournamentTransfer.toTeamName,
+            ...SANS_ECHAPPEMENT,
           })}
         </Text>
       ) : null}

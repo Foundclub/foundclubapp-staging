@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -28,7 +29,8 @@ function TournamentDeclinedTeamNotice({ team }) {
       testID="tournament-declined-team-notice"
     >
       <Text style={[Fonts.p3, { color: Colors.error700 }]}>
-        {t('tournamentUtils.ownTeamDeclined', { name: team?.name || '' })}
+        {/* DEUX-EQUIPES-2 : le nom vient du serveur, une apostrophe ne devient pas « &#39; » (FINITIONS3). */}
+        {t('tournamentUtils.ownTeamDeclined', { name: team?.name || '', ...SANS_ECHAPPEMENT })}
       </Text>
     </View>
   );
