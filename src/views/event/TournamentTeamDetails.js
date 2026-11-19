@@ -58,7 +58,7 @@ import TournamentTeamProgress, {
   getTournamentTeamProgress,
 } from './components/TournamentTeamProgress';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { hasTournamentTeamForUser } from './tournamentJoinRules';
+import { getTournamentNameAndShortDate, hasTournamentTeamForUser } from './tournamentJoinRules';
 import TournamentMemberConsent from './TournamentMemberConsent';
 import {
   CopyPaymentLinkButton, getPlaceSizeLabel, PlaceStatusTag, TournamentMemberPlace,
@@ -117,8 +117,6 @@ const dateEnMots = (value, options) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(localeDesFormats(), options);
 };
-/** @type {Intl.DateTimeFormatOptions} */
-const DATE_COURTE = { day: 'numeric', month: 'short', weekday: 'short' };
 /** @type {Intl.DateTimeFormatOptions} */
 const JOUR_ET_MOIS = { day: 'numeric', month: 'long' };
 
@@ -946,10 +944,12 @@ function TournamentTeamDetails({ navigation, route }) {
   // Règle d'Adel D276 (19/11) : sous le nom de l'équipe, « nom du tournoi · date courte », sans le
   // lieu ; le reste est sur la fiche (« Voir les infos du tournoi »).
   // T-FINITIONS2 (16/11) : le nom donné au tournoi (T-NOM) d'abord.
-  const eventHeader = [
-    resolveEventCustomName(team?.event) || team?.event?.name,
-    dateEnMots(team?.event?.date, DATE_COURTE),
-  ].filter(Boolean).join(' · ');
+  // RECOLTE-APP-50 (décision du chef Q1, 19/11) : une seule écriture de la date courte, celle de
+  // l'aperçu d'une équipe (tournamentJoinRules.js, FICHE-TOURNOI 5e212bef).
+  const eventHeader = getTournamentNameAndShortDate({
+    ...team?.event,
+    name: resolveEventCustomName(team?.event) || team?.event?.name,
+  });
   const openTournament = () => navigation.navigate(RouteNames.EventDetails, {
     eventId: tournamentEventId,
   });
@@ -1769,7 +1769,7 @@ function TournamentTeamDetails({ navigation, route }) {
               </Text>
             ) : null}
             <TouchableOpacity
-              accessibilityLabel={t('implEquipe.page.seeTournament')}
+              accessibilityLabel={t('ficheTournoi.seeTournamentInfo')}
               accessibilityRole="link"
               hitSlop={{
                 bottom: 12, left: 8, right: 8, top: 8,
@@ -1779,7 +1779,7 @@ function TournamentTeamDetails({ navigation, route }) {
               testID="tournament-team-see-tournament"
             >
               <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                {t('implEquipe.page.seeTournament')}
+                {t('ficheTournoi.seeTournamentInfo')}
               </Text>
             </TouchableOpacity>
           </View>

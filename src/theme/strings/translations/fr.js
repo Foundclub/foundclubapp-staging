@@ -29579,7 +29579,6 @@ export default {
       attendance: 'Seras-tu là le {{date}} ?',
       discussion_one: 'Discussion de l’équipe · {{count}} membre',
       discussion_other: 'Discussion de l’équipe · {{count}} membres',
-      seeTournament: 'Voir les infos du tournoi',
     },
     place: {
       dueTitle: 'Ta place n’est pas encore payée',

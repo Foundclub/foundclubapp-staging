@@ -27781,7 +27781,6 @@ export default {
       attendance: 'Will you be there on {{date}}?',
       discussion_one: 'Team chat · {{count}} member',
       discussion_other: 'Team chat · {{count}} members',
-      seeTournament: 'See the tournament details',
     },
     place: {
       dueTitle: 'Your spot is not paid yet',
