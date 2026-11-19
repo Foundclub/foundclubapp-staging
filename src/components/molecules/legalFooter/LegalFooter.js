@@ -13,12 +13,13 @@ import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
 
 /**
  * Mention legale partagee de toute surface d'achat (handoff design) :
- * « Prix TTC. Renouvellement automatique, résiliable à tout moment. »
+ * « TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment. »
+ * (IMPL-6, 18/11/2026, D261 : Found Club est en franchise en base de TVA ; avant : « Prix TTC. … »)
  * + les liens CGU et confidentialite (B4 / Apple 3.1.2, exiges DANS le binaire
  * la ou on vend) + lien « Restaurer mes achats » (restauration RevenueCat +
  * invalidation du contexte).
  * @param {object} props
- * @param {boolean} [props.pricesNotice] - Affiche « Prix TTC. Renouvellement automatique… »
+ * @param {boolean} [props.pricesNotice] - Affiche « TVA non applicable, art. 293 B du CGI. Renouvellement automatique… »
  *   (defaut true). Faux sous une offre qui ne se renouvelle pas (offerte, posee
  *   a la main) : la phrase y serait fausse (recette du 29/09, tournee 4).
  * @param {boolean} [props.restore] - Affiche le lien de restauration (defaut true) ;
@@ -86,7 +87,7 @@ function LegalFooter({ pricesNotice = true, restore = true, style }) {
         <Text style={[Fonts.p4, Fonts.neutral400, Fonts.textCenter]}>
           {t(
             'legalFooter.pricesNotice',
-            'Prix TTC. Renouvellement automatique, résiliable à tout moment.',
+            'TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment.',
           )}
         </Text>
       ) : null}
