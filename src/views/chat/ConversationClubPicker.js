@@ -68,18 +68,18 @@ function ConversationClubPicker({ navigation, route }) {
     });
   }, [chatId, navigation]);
 
-  const message = (cle, repli) => (
+  const message = (texte) => (
     <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-      {t(cle, repli)}
+      {texte}
     </Text>
   );
 
   let contenu = null;
   if (!rechercheActive) {
-    contenu = message(
+    contenu = message(t(
       'conversation.shareClub.hint',
       'Tape le nom ou la ville du club (2 lettres au moins).',
-    );
+    ));
   } else if (isLoading) {
     contenu = (
       <View style={{ alignItems: 'center', paddingTop: 20 }}>
@@ -87,7 +87,7 @@ function ConversationClubPicker({ navigation, route }) {
       </View>
     );
   } else if (clubs.length === 0) {
-    contenu = message('conversation.shareClub.empty', 'Aucun club trouvé.');
+    contenu = message(t('conversation.shareClub.empty', 'Aucun club trouvé.'));
   } else {
     contenu = (
       <ScrollView

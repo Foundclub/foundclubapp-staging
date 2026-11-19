@@ -28,7 +28,7 @@ export const compositionDuClubPartage = (club) => ({
 export const texteDuClubPartage = (t, nom) => t(
   'conversation.shareClub.messageText',
   'Club : {{name}}',
-  { name: String(nom || '').trim() },
+  { interpolation: { escapeValue: false }, name: String(nom || '').trim() },
 );
 
 /**

@@ -719,6 +719,8 @@ describe('MSG1A — §3.5 feuille « Ajouter »', () => {
       'document',
       'poll',
       'event',
+      // ASSISTANCE-MINEURS-CLUB (D271, 7b14c897) : « Envoyer un club » entre l'événement et le lieu.
+      'club',
       'location',
       'contact',
     ]);
