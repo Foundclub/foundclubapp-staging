@@ -154,6 +154,17 @@ jest.mock('@/services/activity/activityQueries', () => ({
 
 jest.mock('@/services/auth/authService', () => ({ updateMe: jest.fn() }));
 
+// Le filet « Ville seule » du site (COLL-ACCUEIL, 01/10) : les Villes et les demandes du compte.
+/** @type {any[]} */
+let mockVilles = [];
+/** @type {any[]} */
+let mockDemandesGestion = [];
+const mockReset = jest.fn();
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useMyCollectivites: () => ({ data: mockVilles }),
+  useMyManagerRequests: () => ({ data: mockDemandesGestion }),
+}));
+
 /** @type {any} */
 let mockUserData = null;
 const COMPTE_NEUF = {
@@ -183,7 +194,7 @@ const monter = async () => {
   await act(async () => {
     arbre = renderer.create(
       <QueryClientProvider client={client}>
-        <UserSport navigation={/** @type {any} */ ({ navigate: mockNavigate })} />
+        <UserSport navigation={/** @type {any} */ ({ navigate: mockNavigate, reset: mockReset })} />
       </QueryClientProvider>,
     );
   });
@@ -219,6 +230,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockComplexesGerant = false;
   mockUserData = COMPTE_NEUF;
+  mockVilles = [];
+  mockDemandesGestion = [];
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
@@ -375,5 +388,58 @@ describe('RESA-INSCRIPTION · interrupteur ALLUMÉ : « Pour un complexe » (E-G
     await appuyer(touche(arbre, CONTINUER));
     expect(mockNavigate).toHaveBeenCalledWith('CollectiviteSignup');
     expect(mockNavigate).not.toHaveBeenCalledWith('ComplexeDevenirGerant');
+  });
+});
+
+// INSCRIPTION-CODE-3 (19/11, décision du chef « Q2 : B ») — LE FILET « VILLE SEULE » DU SITE,
+// COPIÉ SUR LE PREMIER ÉCRAN. Avant : il n'était que sur l'écran du statut (UserRole, témoin
+// UserRole.FINITIONS5 « COLL-ACCUEIL · sur le site, un compte Ville seule saute le statut »).
+// Depuis que l'inscription commence par « Que pratiques-tu ? », un compte Ville seule y arrivait
+// d'abord : il doit retrouver l'accueil de sa Ville, ou l'écran de sa demande, dès cet écran.
+describe('COLL-ACCUEIL · sur le site, un compte Ville seule saute le premier écran', () => {
+  const surLeSite = async (/** @type {() => Promise<void>} */ corps) => {
+    const { Platform } = jest.requireActual('react-native');
+    const avant = Platform.OS;
+    Platform.OS = 'web';
+    try {
+      await corps();
+    } finally {
+      Platform.OS = avant;
+    }
+  };
+
+  test('il gère une Ville : l’accueil de SA Ville', async () => {
+    await surLeSite(async () => {
+      mockVilles = [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage' }];
+      await monter();
+      expect(mockReset).toHaveBeenCalledWith({
+        index: 0,
+        routes: [{ name: 'CollectiviteHome', params: { collectiviteId: 'ville-montrivage' } }],
+      });
+    });
+  });
+
+  test('il a demandé à en gérer une : l’écran de sa demande', async () => {
+    await surLeSite(async () => {
+      mockDemandesGestion = [{ documentId: 'dm-1', status: 'pending' }];
+      await monter();
+      expect(mockReset).toHaveBeenCalledWith({
+        index: 0, routes: [{ name: 'CollectiviteSignupStatus' }],
+      });
+    });
+  });
+
+  test('un compte neuf sans Ville ni demande reste sur « Que pratiques-tu ? »', async () => {
+    await surLeSite(async () => {
+      mockDemandesGestion = [{ documentId: 'dm-1', status: 'cancelled' }];
+      await monter();
+      expect(mockReset).not.toHaveBeenCalled();
+    });
+  });
+
+  test('au téléphone, le filet ne joue pas (la pile racine s’en charge)', async () => {
+    mockVilles = [{ documentId: 'ville-montrivage', name: 'Ville de Montrivage' }];
+    await monter();
+    expect(mockReset).not.toHaveBeenCalled();
   });
 });

@@ -19,6 +19,7 @@ import ChoixPourUnComplexe from '@/views/onboarding/components/ChoixPourUnComple
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
 import OnboardingStickyFooter from '@/views/onboarding/components/OnboardingStickyFooter';
+import useFiletVilleSeule from '@/views/onboarding/components/useFiletVilleSeule';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -32,8 +33,8 @@ import { COMPLEXES_GERANT, INSCRIPTION_PLUSIEURS_SPORTS } from '@/config/fonctio
 // les plus choisis, puis toute la liste de A à Z (le choix du sport de la recherche,
 // `ChoixDuSport`, sans préfiltre par famille). Obligatoire : plus de « Passer » à l'écran
 // (l'étape reste « facultative » pour la REPRISE d'un tunnel : authUseCases
-// OPTIONAL_ONBOARDING_ROUTES). Deux sorties en bas : « Je ne trouve pas mon activité », et la porte « mairie ou complexe ? », venue
-// de l'écran du statut avec les mêmes gestes.
+// OPTIONAL_ONBOARDING_ROUTES). Deux sorties en bas : « Je ne trouve pas mon activité », et la
+// porte « mairie ou complexe ? », venue de l'écran du statut avec les mêmes gestes.
 const MAX_SPORTS = INSCRIPTION_PLUSIEURS_SPORTS ? 3 : 1;
 
 const resolveAvailableRoute = (
@@ -88,6 +89,9 @@ function UserSport({ navigation }) {
   } = useGetActivities();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  // 🏛️ COLL-ACCUEIL (01/10), copié de l'écran du statut (INSCRIPTION-CODE-3) : sur le site, un
+  // compte « Ville seule » qui gère une Ville, ou l'a demandé, retrouve sa Ville ou sa demande.
+  useFiletVilleSeule(navigation, userData);
 
   const updateUserMutation = useMutation({
     mutationFn: updateMe,

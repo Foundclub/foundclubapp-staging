@@ -111,6 +111,13 @@ jest.mock('@/services/auth/authService', () => ({
   updateMe: (/** @type {any} */ payload) => mockUpdateMe(payload),
 }));
 
+// INSCRIPTION-CODE-3 : le filet « Ville seule » du site (useFiletVilleSeule) lit les Villes et les
+// demandes du compte ; ici, au téléphone, il ne joue pas (témoin : UserSport.PORTEMAIRIE).
+jest.mock('@/services/collectivite/collectiviteQueries', () => ({
+  useMyCollectivites: () => ({ data: [] }),
+  useMyManagerRequests: () => ({ data: [] }),
+}));
+
 jest.mock('@/components/atoms/button/Button', () => {
   const { Text: RNText, TouchableOpacity: RNTouchable } = jest.requireActual('react-native');
   return {

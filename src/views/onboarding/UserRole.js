@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Platform, RefreshControl, Text, View,
+  Alert, RefreshControl, Text, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +12,6 @@ import {
   getOnboardingViews, getRoleDocumentIdByKey, markOnboardingStarted, resolveNextOnboardingRoute,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { aUneDemandeDeGestion } from '@/domains/collectivite/collectiviteAccueil';
 import { lienDeLaVilleRetenu } from '@/domains/collectivite/lienDeLaVille';
 import useTheme from '@/theme/themeContext';
 
@@ -26,15 +25,12 @@ import {
 } from '@/views/onboarding/components/continuerOrdinateur';
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+import useFiletVilleSeule from '@/views/onboarding/components/useFiletVilleSeule';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetRoles } from '@/services/auth/authQueries';
 import { updateMe } from '@/services/auth/authService';
-import {
-  useMyCollectivites,
-  useMyManagerRequests,
-} from '@/services/collectivite/collectiviteQueries';
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 
@@ -76,34 +72,10 @@ function UserRole({ navigation }) {
     refetch: refetchRoles,
   } = useGetRoles();
 
-  // 🏛️ COLL-ACCUEIL (01/10) — SUR LE SITE, un compte « Ville seule » (aucun rôle sportif) qui
-  // gère une Ville, ou qui a déjà demandé à en gérer une, ne refait pas le choix du statut :
-  // l'accueil de sa Ville, ou l'écran de sa demande. Sur téléphone, la pile racine
-  // (PrivateNavigator) l'y emmène déjà au démarrage ; ici, c'est le filet du site, dont le
-  // parcours d'inscription vient de getOnboardingViews.
-  const sansRoleSportif = Platform.OS === 'web' && userData?.role?.type === 'authenticated';
+  // 🏛️ COLL-ACCUEIL (01/10) — le filet « Ville seule » du site (aussi sur le premier écran).
+  useFiletVilleSeule(navigation, userData);
   // FINITIONS16 21 (planche 8, P1-inscription-ordi) : sur ordinateur, « Continuer » à droite.
   const surOrdinateur = continuerSurOrdinateur(isDesktop);
-  const villes = useMyCollectivites({ enabled: sansRoleSportif });
-  const demandesDeGestion = useMyManagerRequests({ enabled: sansRoleSportif });
-  const villeGeree = Array.isArray(villes.data) ? villes.data[0] : null;
-  // REPRISE-102BIS (02/11) : une demande annulée ne compte plus, comme sur l'accueil du site et
-  // au téléphone ; sinon « Choisir mon statut », après l'annulation, ramenait à la demande.
-  const aDemande = aUneDemandeDeGestion(demandesDeGestion.data);
-  useEffect(() => {
-    if (!sansRoleSportif) return;
-    if (villeGeree?.documentId) {
-      navigation.reset({
-        index: 0,
-        routes: [{
-          name: RouteNames.CollectiviteHome,
-          params: { collectiviteId: villeGeree.documentId },
-        }],
-      });
-    } else if (aDemande) {
-      navigation.reset({ index: 0, routes: [{ name: RouteNames.CollectiviteSignupStatus }] });
-    }
-  }, [aDemande, navigation, sansRoleSportif, villeGeree?.documentId]);
 
   // FINITIONS18 · POINT 4 — une inscription NEUVE commence ici : elle est marquee sur cet appareil
   // (un compte deja affilie qui n'a jamais vu cet ecran ici n'est pas renvoye au tunnel).
