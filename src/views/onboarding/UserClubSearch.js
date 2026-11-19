@@ -154,7 +154,8 @@ function UserClubSearch({ navigation }) {
   };
 
   // INSCRIPTION-CODE (d) (reco de v2_07) : « Passer » enregistre ce qui est coché ; sinon « coché
-  // d'avance » ne voudrait rien dire. Rien de coché (un mineur) : comme avant, rien n'est enregistré.
+  // d'avance » ne voudrait rien dire. Rien de coché (un mineur) : comme avant, rien n'est
+  // enregistré.
   const handleSkip = () => (isLooking !== null && userData
     ? updateUserMutation.mutate({ isLookingForClub: isLooking })
     : continuerLeTunnel());

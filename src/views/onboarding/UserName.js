@@ -662,7 +662,7 @@ function UserName({ navigation }) {
                   )}
                 />
               </View>
-              {/* INSCRIPTION-CODE (19/11, V03 ; V1 « Qui es-tu ? » validé) : la raison de la date. */}
+              {/* INSCRIPTION-CODE (19/11, V03 ; V1 « Qui es-tu ? » validé) : pourquoi la date. */}
               <Text style={[Fonts.p2, Fonts.neutral300]} testID="raison-date-de-naissance">
                 {t(
                   'userName.birthdate.raison',

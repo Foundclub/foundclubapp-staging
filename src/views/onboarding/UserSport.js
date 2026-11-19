@@ -29,10 +29,10 @@ import { COMPLEXES_GERANT, INSCRIPTION_PLUSIEURS_SPORTS } from '@/config/fonctio
 
 // INSCRIPTION-CODE (19/11/2026, V01 + V02 validés, v2_01 et v2_02 « ok ») — LE PREMIER ÉCRAN DE
 // L'INSCRIPTION, pour tout le monde : « Que pratiques-tu ? ». La recherche d'abord (sans accents),
-// les plus choisis, puis toute la liste de A à Z (le choix du sport de la recherche, `ChoixDuSport`,
-// sans préfiltre par famille). Obligatoire : plus de « Passer » à l'écran (l'étape reste
-// « facultative » pour la REPRISE d'un tunnel : authUseCases OPTIONAL_ONBOARDING_ROUTES). Deux
-// sorties en bas : « Je ne trouve pas mon activité », et la porte « mairie ou complexe ? », venue
+// les plus choisis, puis toute la liste de A à Z (le choix du sport de la recherche,
+// `ChoixDuSport`, sans préfiltre par famille). Obligatoire : plus de « Passer » à l'écran
+// (l'étape reste « facultative » pour la REPRISE d'un tunnel : authUseCases
+// OPTIONAL_ONBOARDING_ROUTES). Deux sorties en bas : « Je ne trouve pas mon activité », et la porte « mairie ou complexe ? », venue
 // de l'écran du statut avec les mêmes gestes.
 const MAX_SPORTS = INSCRIPTION_PLUSIEURS_SPORTS ? 3 : 1;
 
@@ -53,6 +53,7 @@ const resolveAvailableRoute = (
 /**
  * Le premier écran de l'inscription : l'activité.
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
+ * @returns {import('react').ReactElement} L'écran.
  */
 function UserSport({ navigation }) {
   // Les activités cochées ; la première est la principale (`preferredSport`).
@@ -351,7 +352,10 @@ function UserSport({ navigation }) {
                 testID="statut-collectivite"
               />
               {COMPLEXES_GERANT ? (
-                <ChoixPourUnComplexe checked={gereUnComplexe} onPress={() => basculer('complexe')} />
+                <ChoixPourUnComplexe
+                  checked={gereUnComplexe}
+                  onPress={() => basculer('complexe')}
+                />
               ) : null}
             </View>
           ) : null}

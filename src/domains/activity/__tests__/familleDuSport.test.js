@@ -15,7 +15,8 @@ describe('familleDuSport', () => {
   it.each([
     ['Football', 'equipe'], ['Volley', 'equipe'], ['VOLLEY-BALL', 'equipe'], ['Padel', 'raquette'],
     ['Judo', 'combat'], ['Karaté', 'combat'], ['Natation', 'individuel'],
-    ['spéléologie', 'nature'], ['Randonnée', 'nature'], ['Danse', 'culture'], ['Musique', 'culture'],
+    ['spéléologie', 'nature'], ['Randonnée', 'nature'],
+    ['Danse', 'culture'], ['Musique', 'culture'],
   ])('%s → %s', (nom, famille) => {
     expect(familleDuSport(nom)).toBe(famille);
   });

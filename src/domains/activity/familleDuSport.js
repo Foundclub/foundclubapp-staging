@@ -169,7 +169,9 @@ export const ACTIVITES_PAR_FAMILLE = Object.freeze({
 });
 
 /** Les familles « de compétition » : section, catégorie, physique, recrutement, division. */
-export const FAMILLES_DE_COMPETITION = Object.freeze(['equipe', 'raquette', 'combat', 'individuel']);
+export const FAMILLES_DE_COMPETITION = Object.freeze([
+  'equipe', 'raquette', 'combat', 'individuel',
+]);
 
 const FAMILLE_PAR_CLE = new Map(
   Object.entries(ACTIVITES_PAR_FAMILLE).flatMap(([famille, noms]) => noms

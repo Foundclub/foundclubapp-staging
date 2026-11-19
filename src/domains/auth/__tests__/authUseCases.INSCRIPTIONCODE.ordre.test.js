@@ -2,7 +2,8 @@ import { getOnboardingViews, USER_ROLES } from '@/domains/auth/authUseCases';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-// INSCRIPTION-CODE (19/11/2026, V1 3.5 corrigée par la V2, v2_01 « ok ») — L'ORDRE DE L'INSCRIPTION,
+// INSCRIPTION-CODE (19/11/2026, V1 3.5 corrigée par la V2, v2_01 « ok ») — L'ORDRE DE
+// L'INSCRIPTION,
 // rôle par rôle, pour un compte NEUF (rien de rempli). Témoin caractérisant (E6) : il a d'abord
 // décrit l'ordre d'avant (Rôle › Qui es-tu ? › … › Sport), puis l'ordre voté :
 // Activité › Qui es-tu ? › Rôle, pour TOUS les parcours (« tout le monde commence par elle »).
@@ -31,14 +32,16 @@ describe('INSCRIPTION-CODE — Activité › Qui es-tu ? › Rôle en tête de t
       R.UserTrainedTeams]],
     ['president', [R.UserSport, R.UserAddress, R.UserAvatar, R.UserAffiliationGuide]],
     ['parent', [R.UserSport, R.UserAvatar, R.UserChild]],
-  ])('rôle %s posé, identité connue : le sport d\'abord, puis la suite d\'aujourd\'hui', (role, attendu) => {
+  ])('rôle %s posé, identité connue : le sport, puis la suite d’aujourd’hui', (role, attendu) => {
     expect(parcours(USER_ROLES[role], {
       birthdate: '1990-01-01', firstname: 'Lina', lastname: 'Morel',
     })).toEqual(attendu);
   });
 
   it('les numéros suivent l\'ordre, sans trou (le compteur « Étape n sur N »)', () => {
-    const { totalViews, views } = getOnboardingViews({ documentId: 'u1', role: { name: USER_ROLES.player } });
+    const { totalViews, views } = getOnboardingViews({
+      documentId: 'u1', role: { name: USER_ROLES.player },
+    });
     expect(views.map((v) => v.index)).toEqual(views.map((_, i) => i + 1));
     expect(totalViews).toBe(views.length);
   });
@@ -75,7 +78,7 @@ describe('INSCRIPTION-CODE (c) — le parcours du joueur suit la famille de son 
       R.UserTeamAffiliation]);
   });
 
-  it.each(['Spéléologie', 'Randonnée', 'Danse', 'Musique'])('%s : le niveau seulement', (activite) => {
+  it.each(['Spéléologie', 'Randonnée', 'Danse', 'Musique'])('%s : niveau seulement', (activite) => {
     expect(joueur(activite)).toEqual([R.UserAddress, R.UserAvatar, R.UserLevel,
       R.UserAffiliationGuide, R.UserTeamAffiliation]);
   });

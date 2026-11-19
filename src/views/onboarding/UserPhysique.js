@@ -248,8 +248,8 @@ function UserPhysique({ navigation }) {
               <Text style={[Fonts.p2, { color: Colors.neutral600, flex: 1 }]}>
                 {t(
                   'onboarding.physique.privacyNotice',
-                  'Qui voit ces deux chiffres ? Seulement si ton profil est public. Tu peux les retirer à tout '
-                    + 'moment depuis Mon profil.',
+                  'Qui voit ces deux chiffres ? Seulement si ton profil est public. '
+                    + 'Tu peux les retirer à tout moment depuis Mon profil.',
                 )}
               </Text>
             </View>

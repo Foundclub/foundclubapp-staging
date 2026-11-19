@@ -144,8 +144,8 @@ function UserRole({ navigation }) {
         // On navigue quand meme : les ecrans suivants refetchent le profil.
       }
       // INSCRIPTION-CODE (19/11) — l'activité et « Qui es-tu ? » viennent AVANT le rôle : la suite
-      // est la première étape due du parcours du rôle choisi (calculée sur ce rôle, pas sur l'ancien
-      // profil en mémoire). Plus rien de dû : la sortie habituelle.
+      // est la première étape due du parcours du rôle choisi (calculée sur ce rôle, pas sur
+      // l'ancien profil en mémoire). Plus rien de dû : la sortie habituelle.
       const roleChoisi = (Array.isArray(roles) ? roles : [])
         .find((r) => r?.documentId === role);
       const suite = getOnboardingViews({ ...userData, role: roleChoisi || userData?.role })
@@ -198,8 +198,9 @@ function UserRole({ navigation }) {
     ? t('userRole.mineur.aPartirDe18', 'À partir de 18 ans')
     : undefined;
 
-  // INSCRIPTION-CODE (b) (19/11, V04, V06 à V09, v2_03 « ok ») — les mots du rôle suivent la famille
-  // de l'activité choisie au premier écran. Activité inconnue ou absente : les mots d'avant.
+  // INSCRIPTION-CODE (b) (19/11, V04, V06 à V09, v2_03 « ok ») — les mots du rôle suivent la
+  // famille de l'activité choisie au premier écran. Activité inconnue ou absente : les mots
+  // d'avant.
   const activite = String(userData?.preferredSport || '').trim();
   const famille = familleDuSport(activite);
   const libelleDuRole = (/** @type {string} */ cle, /** @type {string} */ avant) => (famille
