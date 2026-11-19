@@ -32,7 +32,8 @@ describe('confirmerLeRefus', () => {
 
   test.each([
     'views/event/EventDetails.js',
-    'views/event/EventDetails.web.js',
+    // ORGA-MINIS (aa786bba) : la liste de l'organisateur du site était du code mort
+    // (ORGANISATEUR 8), retirée de EventDetails.web.js.
     'views/event/TournamentManagement.js',
     'views/event/components/EventTeamAudiencesSection.js',
     'views/friendlyMatch/components/FriendlyMatchApplicationCard.js',

@@ -78,8 +78,10 @@ describe('T-JOUEURS — la carte d\'une équipe de tournoi', () => {
     expect(getTournamentMembersSummaryLine(summary.membersSummary, payant)).toBeNull();
   });
 
-  test('les deux cartes (app et site) lisent ce même résumé', () => {
-    ['EventDetails.js', 'EventDetails.web.js'].forEach((fichier) => {
+  // ORGA-MINIS (aa786bba) : la carte du site était dans le code mort de l'organisateur
+  // (ORGANISATEUR 8), retirée ; le site montre les équipes par TournamentTeamsPublic.
+  test('la carte de l app lit ce résumé', () => {
+    ['EventDetails.js'].forEach((fichier) => {
       const source = fs.readFileSync(path.join(__dirname, fichier), 'utf8');
       expect(source).toMatch(/getTournamentMembersSummaryLine\(/);
       expect(source).toMatch(/formatTournamentPlayersShortList\(/);
