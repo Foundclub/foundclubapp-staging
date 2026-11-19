@@ -80,7 +80,7 @@ const monter = (/** @type {any} */ props = {}) => {
         onCreate={props.onCreate ?? null}
         onOpenTeamPage={props.onOpenTeamPage ?? jest.fn()}
         teams={props.teams ?? [RAUZE, PANTHERES]}
-        threshold={8}
+        threshold={props.threshold === undefined ? 8 : props.threshold}
         viewerRequested={props.viewerRequested ?? false}
         viewerTeam={props.viewerTeam ?? null}
       />,
@@ -164,5 +164,29 @@ describe('IMPL-1 · 8e — l aperçu d une équipe', () => {
     act(() => { parId(root, 'tournament-public-team-pantheres')[0].props.onPress(); });
     expect(ouvrirPage).toHaveBeenCalledWith('pantheres');
     expect(parId(root, 'feuille')).toHaveLength(0);
+  });
+});
+
+// IMPL-1C (19/11/2026, recette 48, point A) — tournoi 3444 : « dès 0 inscrites » avec 21 équipes
+// inscrites, et « Sois parmi les premiers » alors que les inscriptions sont fermées.
+describe('IMPL-1C · point A — le seuil et les inscriptions fermées', () => {
+  test('🔴 seuil inconnu (capacité absente) : pas de « dès 0 inscrites », les équipes s affichent', () => {
+    const root = monter({ belowThreshold: true, onCreate: jest.fn(), threshold: null });
+    expect(parId(root, 'tournament-teams-threshold')).toHaveLength(0);
+    expect(textes(root).join(' | ')).not.toContain('dès 0');
+    expect(parId(root, 'tournament-public-team-rauze')).toHaveLength(1);
+  });
+
+  test('🔴 inscriptions fermées : « Inscriptions fermées », ni « Créer mon équipe » ni « Sois parmi les premiers »', () => {
+    const root = monter({
+      belowThreshold: true,
+      event: { ...TOURNOI, tournamentConfig: { ...TOURNOI.tournamentConfig, registrationsClosed: true } },
+      onCreate: jest.fn(),
+    });
+    const tout = textes(root).join(' | ');
+    expect(parId(root, 'tournament-teams-closed')).toHaveLength(1);
+    expect(tout).toContain('Inscriptions fermées');
+    expect(tout).not.toMatch(/Créer mon équipe|Sois parmi les premiers|dès 8/);
+    expect(parId(root, 'tournament-public-team-rauze')).toHaveLength(1);
   });
 });
