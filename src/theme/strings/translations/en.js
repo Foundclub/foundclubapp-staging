@@ -18062,6 +18062,10 @@ export default {
       levelNeutral: 'Advanced',
       nationality: 'French',
       position: 'Point guard',
+      positionFootball: 'Central midfielder',
+      positionHandball: 'Centre back',
+      positionRugby: 'Fly-half',
+      positionVolleyball: 'Setter',
       subtitle: 'Photo, position, level, club, history: '
         + 'the more complete it is, the rarer it gets.',
       team: 'Women seniors',
