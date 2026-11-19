@@ -126,3 +126,34 @@ describe('IMPL-1 × IMPL-5 — le résumé masqué d une équipe', () => {
     expect(getTournamentTeamCaptainShort({ captainDisplayName: 'Yanis R.', captainUser: { documentId: 'c1' } })).toBe('Yanis R.');
   });
 });
+
+// IMPL-1-FICHE, commit de suite (chef, 19/11, Q4) — un tournoi ANONYMISÉ
+// (`participantIdentityVisibility: 'ANONYMIZED'`) rend lui aussi des champs vides : là, un joueur
+// sans prénom est « Joueur », jamais « Joueur (moins de 18 ans) ». Le drapeau `isMinor` explicite
+// du serveur sera un lot admin.
+describe('IMPL-1 — tournoi anonymisé : un joueur aux champs vides n est pas un mineur', () => {
+  const { formatTournamentPlayersShortList } = jest.requireActual('../tournamentUtils');
+  const MASQUE = {
+    count: 2, list: [{ firstName: 'Yanis', lastInitial: 'R' }, { firstName: '', lastInitial: '' }], paidCount: 1, paidHidden: true,
+  };
+  const ANONYME = { participantIdentityVisibility: 'ANONYMIZED' };
+
+  test('🔴 la liste courte dit « Joueur »', () => {
+    expect(formatTournamentPlayersShortList(MASQUE, { entryFeeCents: 2000 }, ANONYME).split('\n')).toEqual(['Yanis R.', 'Joueur']);
+  });
+
+  test('🔴 l aperçu : « Joueur », pas un mineur (la casse du réglage ne compte pas)', () => {
+    expect(getTournamentTeamPublicPlayers({ membersSummary: MASQUE }, { participantIdentityVisibility: 'anonymized' }))
+      .toEqual([{ label: 'Yanis R.', minor: false }, { label: 'Joueur', minor: false }]);
+  });
+
+  test('identités visibles : le mineur reste « Joueur (moins de 18 ans) »', () => {
+    expect(formatTournamentPlayersShortList(MASQUE, {}, { participantIdentityVisibility: 'VISIBLE' }).split('\n')[1]).toBe('Joueur (moins de 18 ans)');
+    expect(getTournamentTeamPublicPlayers({ membersSummary: MASQUE }, { participantIdentityVisibility: 'VISIBLE' })[1]).toEqual({ label: null, minor: true });
+  });
+
+  test('un drapeau isMinor du serveur l emporte, même anonymisé', () => {
+    expect(getTournamentTeamPublicPlayers({ membersSummary: { list: [{ firstName: '', isMinor: true }], paidHidden: true } }, ANONYME))
+      .toEqual([{ label: null, minor: true }]);
+  });
+});

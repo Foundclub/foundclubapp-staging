@@ -2877,6 +2877,7 @@ function EventDetails({ navigation, route }) {
                     {formatTournamentPlayersShortList(
                       rosterSummary.membersSummary,
                       tournamentConfig,
+                      event,
                     )}
                   </div>
                 ) : null}

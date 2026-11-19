@@ -232,10 +232,12 @@ const placesDeLEquipe = (team, tournamentConfig) => {
  * @param {() => void} props.onClose - Fermer.
  * @param {((team: any) => void) | null} [props.onAsk] - « Demander à rejoindre », si permis.
  * @param {boolean} [props.requested] - Le lecteur a déjà demandé à rejoindre cette équipe.
+ * @param {any} [props.event] - Le tournoi (lu pour l'anonymat des joueurs).
  * @returns {import('react').ReactElement | null} L'aperçu.
  */
 export function TournamentTeamPreviewSheet({
-  onAsk = null, onClose, requested = false, team, tournamentConfig = {}, tournamentName = '',
+  event = null, onAsk = null, onClose, requested = false, team, tournamentConfig = {},
+  tournamentName = '',
 }) {
   const { t } = useTranslation();
   const {
@@ -247,7 +249,7 @@ export function TournamentTeamPreviewSheet({
   const ouverte = isTournamentTeamOpenToJoinRequests(team);
   const validee = String(team?.status || '').toLowerCase() === 'accepted';
   const { payees, seuil } = placesDeLEquipe(team, tournamentConfig);
-  const joueurs = getTournamentTeamPublicPlayers(team);
+  const joueurs = getTournamentTeamPublicPlayers(team, event);
   const effectif = getTournamentTeamPlayerCount(team, tournamentConfig);
   const resteAPayer = payees === null ? 0 : Math.max(0, seuil - payees);
   const pied = ouverte && onAsk && !requested ? (

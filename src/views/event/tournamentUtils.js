@@ -111,10 +111,20 @@ export const getTournamentMembersSummaryLine = (membersSummary, tournamentConfig
 };
 
 /**
+ * Le tournoi masque l'identité des participants (`participantIdentityVisibility: 'ANONYMIZED'`).
+ * @param {any} event - L'événement.
+ * @returns {boolean} Vrai si anonymisé.
+ */
+export const isTournamentAnonymized = (event) => (
+  String(event?.participantIdentityVisibility || '').trim().toUpperCase() === 'ANONYMIZED'
+);
+
+/**
  * « Samir B. · payé » / « Lina D. · en attente » (payant), « Samir B. » sinon ; masqué : « Joueur »
  * @param {any} item - Un joueur du résumé.
  * @param {any} [tournamentConfig] - Le réglage du tournoi.
- * @param {{ paidHidden?: boolean }} [options] - Le résumé est masqué (lecteur hors de l'équipe).
+ * @param {{ anonymized?: boolean, paidHidden?: boolean }} [options] - Le résumé est masqué (lecteur
+ *   hors de l'équipe) ; le tournoi est anonymisé.
  * @returns {string} La ligne du joueur.
  */
 export const formatTournamentPlayerShortLine = (item, tournamentConfig = {}, options = {}) => {
@@ -123,8 +133,12 @@ export const formatTournamentPlayerShortLine = (item, tournamentConfig = {}, opt
   // IMPL-1-FICHE × IMPL-5 (contrat du chef, 18/11) : résumé masqué (`paidHidden`, lecteur hors de
   // l'équipe) : aucun état de paiement, et un joueur aux champs vides est un mineur.
   // Témoin : __tests__/IMPL-1-FICHE.regles.test.js.
+  // Tournoi anonymisé (chef, 19/11) : les champs vides n'y disent pas l'âge, c'est « Joueur ».
   if (options?.paidHidden === true) {
-    return prenom || i18next.t('implFiche.minorPlayerLong', 'Joueur (moins de 18 ans)');
+    if (prenom) return prenom;
+    return options?.anonymized === true
+      ? i18next.t('tournamentManagement.playerAnonymous', 'Joueur')
+      : i18next.t('implFiche.minorPlayerLong', 'Joueur (moins de 18 ans)');
   }
   const name = prenom || i18next.t('tournamentManagement.playerAnonymous', 'Joueur');
   if (!isPaidTournament(tournamentConfig)) return name;
@@ -138,11 +152,17 @@ export const formatTournamentPlayerShortLine = (item, tournamentConfig = {}, opt
  * Les lignes courtes de tous les joueurs du résumé, une par ligne (cartes de l'app et du site).
  * @param {any} membersSummary - Le résumé lu.
  * @param {any} [tournamentConfig] - Le réglage du tournoi.
+ * @param {any} [event] - L'événement (lu pour l'anonymat).
  * @returns {string} Le texte de la liste ('' sans joueur).
  */
-export const formatTournamentPlayersShortList = (membersSummary, tournamentConfig = {}) => (
+export const formatTournamentPlayersShortList = (
+  membersSummary,
+  tournamentConfig = {},
+  event = null,
+) => (
   (membersSummary?.list || [])
     .map((/** @type {any} */ player) => formatTournamentPlayerShortLine(player, tournamentConfig, {
+      anonymized: isTournamentAnonymized(event),
       paidHidden: membersSummary?.paidHidden === true,
     }))
     .join('\n')

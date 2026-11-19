@@ -76,7 +76,7 @@ const monter = (/** @type {any} */ props = {}) => {
     arbre = renderer.create(
       <TournamentTeamsPublic
         belowThreshold={props.belowThreshold ?? false}
-        event={TOURNOI}
+        event={props.event ?? TOURNOI}
         onCreate={props.onCreate ?? null}
         onOpenTeamPage={props.onOpenTeamPage ?? jest.fn()}
         teams={props.teams ?? [RAUZE, PANTHERES]}
@@ -147,6 +147,15 @@ describe('IMPL-1 · 8e — l aperçu d une équipe', () => {
     const boutons = parId(root, 'bouton-Demander à rejoindre');
     act(() => { boutons[boutons.length - 1].props.onPress(); });
     expect(textes(parId(root, 'declaration')[0])).toEqual(['Équipe choisie : FC Rauze.']);
+  });
+
+  test('🔴 tournoi anonymisé : le joueur aux champs vides est « Joueur », sans la note des mineurs', () => {
+    const masquee = { ...RAUZE, membersSummary: { ...RAUZE.membersSummary, list: [{ firstName: 'Yanis', lastInitial: 'R' }, { firstName: '', lastInitial: '' }], paidHidden: true } };
+    const root = monter({ event: { ...TOURNOI, participantIdentityVisibility: 'ANONYMIZED' }, teams: [masquee] });
+    act(() => { parId(root, 'tournament-public-team-rauze')[0].props.onPress(); });
+    const lu = textes(parId(root, 'feuille')[0]);
+    expect(lu).toEqual(expect.arrayContaining(['Yanis R.', 'Joueur']));
+    expect(lu.join(' | ')).not.toContain('moins de 18 ans');
   });
 
   test('🔴 sa propre équipe s ouvre sur sa page, pas sur l aperçu', () => {

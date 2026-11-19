@@ -353,6 +353,7 @@ function TournamentTeamsPublic({
       {/* Un témoin du site peut doubler la feuille d'équipe sans son export nommé. */}
       {apercu && TournamentTeamPreviewSheet ? (
         <TournamentTeamPreviewSheet
+          event={event}
           onAsk={viewerTeam ? null : demander}
           onClose={() => setApercu(null)}
           requested={aDemande(apercu)}
