@@ -25,6 +25,7 @@ const mockGenererRecu = jest.fn(async () => ({ pdfFile: { url: '/uploads/recu-ne
 
 jest.mock('@/services/license/licenseQueries', () => ({
   generateLicenseReceipt: (/** @type {any} */ ...args) => mockGenererRecu(...args),
+  useChildrenLicenses: () => ({ data: { 'u-enfant': mockMesCotisations?.data?.[0] }, isError: false, isLoading: false }),
   useMyLicenses: () => mockMesCotisations,
 }));
 // La fiche du tournoi (cle `['event', id]`), lue par `useTournamentTeamName`.
@@ -39,8 +40,12 @@ jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockCompte,
 }));
-jest.mock('@/services/parentLink/parentLinkQueries', () => ({}));
-jest.mock('@/services/declaredChild/declaredChildQueries', () => ({}));
+jest.mock('@/services/parentLink/parentLinkQueries', () => ({
+  useParentLinksAsParent: () => ({ data: { children: [{ documentId: 'u-enfant', firstname: 'Léo', lastname: 'Garnier' }] }, isError: false, isLoading: false }),
+}));
+jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
+  useGetMyDeclaredChildren: () => ({ data: [], isError: false, isLoading: false }),
+}));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: jest.fn(), navigate: jest.fn() }),
 }));
@@ -210,6 +215,15 @@ describe('PAIEMENTS-10E — la place du tournoi dans « Mes paiements » (planch
     monter([{
       ...PLACE, amountPaidCents: 0, amountRemainingCents: 2000, payments: [], status: 'pending',
     }]);
+    expect(textes()).not.toContain('Voir le reçu');
+  });
+});
+
+describe('PAIEMENTS-10E — la vue d’un parent (lecture seule, FIN-PARENT)', () => {
+  test('la place payée de l’enfant : « Place de Léo Garnier », mais pas de « Voir le reçu » (la carte ne s’ouvre pas)', () => {
+    mockCompte = { accountRoleKey: 'parent', userData: { documentId: 'u-parent', firstname: 'Paul', lastname: 'Garnier' } };
+    monter([PLACE]);
+    expect(textes()).toContain('Place de Léo Garnier');
     expect(textes()).not.toContain('Voir le reçu');
   });
 });

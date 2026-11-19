@@ -240,8 +240,8 @@ function AssignmentCard({
     ? placeSubtitleOf(assignment, personName, teamName)
     : cardSubtitleOf(assignment);
   // PAIEMENTS-10E : « Voir le reçu » seulement sur une place payée dont un paiement encaissé
-  // porte un reçu.
-  const receiptPayment = isPlace && assignment?.status === 'paid'
+  // porte un reçu, et sur une carte qui s ouvre (pas la lecture seule d un parent : FIN-PARENT).
+  const receiptPayment = onPress && isPlace && assignment?.status === 'paid'
     ? (assignment?.payments || [])
       .find((payment) => payment?.status === 'confirmed' && payment?.receipt)
     : null;

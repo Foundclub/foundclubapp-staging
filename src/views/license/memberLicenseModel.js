@@ -519,8 +519,8 @@ export const isTournamentPlace = (assignment) => (
  * @returns {string} une date ISO, ou une chaine vide
  */
 export const lastPaidAtOf = (assignment) => (assignment?.payments || [])
-  .filter((payment) => payment?.status === 'confirmed')
-  .map((payment) => String(payment?.paidAt || payment?.validatedAt || ''))
+  .filter((/** @type {any} */ payment) => payment?.status === 'confirmed')
+  .map((/** @type {any} */ payment) => String(payment?.paidAt || payment?.validatedAt || ''))
   .filter(Boolean)
   .sort()
   .pop() || String(assignment?.lastPaymentAt || '');

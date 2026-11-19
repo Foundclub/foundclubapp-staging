@@ -30,7 +30,8 @@ export default function useTournamentTeamName(eventId, viewerId) {
     refetchOnMount: false,
     staleTime: EVENT_DETAIL_STALE_MS,
   });
-  const teams = Array.isArray(event?.tournamentTeams) ? event.tournamentTeams : [];
+  const rows = event?.tournamentTeams;
+  const teams = Array.isArray(rows) ? rows : [];
   const team = teams.find((item) => (
     getTournamentViewerMember(item, viewerId, isTournamentActiveMemberStatus)
   ));
