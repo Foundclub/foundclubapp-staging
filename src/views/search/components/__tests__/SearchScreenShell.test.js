@@ -335,3 +335,82 @@ describe('CORR-RECHERCHE point 2 — l en-tete passe dans ce qui defile', () => 
     expect(placeChips).toBeLessThan(affiches.indexOf('temoin-contenu'));
   });
 });
+
+// IMPL-4-ACCUEIL, page 7 (planche T-DESIGN-TOURNOI 7a-7c, validée par Adel le 18/11) — UN SEUL
+// EN-TÊTE. Sur le téléphone, la pile de l'onglet dessine déjà la flèche et « Rechercher »
+// (enTeteRetourAccueil.js) ; le bandeau logo + cloche + avatar de la coque s'empilait dessous.
+// La coque le sait par `HeaderHeightContext`, la même source que `ScreenContainer`. Le site, dont
+// la pile ignore les en-têtes (web/src/shims/react-navigation/stack.tsx), ne pose aucune hauteur :
+// il garde son bandeau (les témoins ci-dessus, rendus hors navigateur).
+describe('IMPL-4 page 7 — sous l en-tete de la pile, un seul en-tete', () => {
+  const { HeaderHeightContext } = jest.requireActual('@react-navigation/elements');
+
+  const rendreSousEnTete = (/** @type {any} */ props = {}, /** @type {any} */ enfant = null) => {
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(createElement(
+        HeaderHeightContext.Provider,
+        { value: 56 },
+        createElement(
+          SearchScreenShell,
+          { activeType: 'events', navigation, ...props },
+          enfant || createElement(Text, null, 'temoin-contenu'),
+        ),
+      ));
+    });
+    return arbre;
+  };
+
+  it('ne repete ni le bandeau logo, ni la cloche, ni l avatar', () => {
+    const affiches = textesVisibles(rendreSousEnTete());
+    expect(affiches).not.toContain('temoin-bandeau-logo');
+    expect(affiches).not.toContain('temoin-cloche');
+    expect(affiches).not.toContain('temoin-avatar');
+  });
+
+  it('garde les onglets separes, puis le contenu, dans cet ordre (Adel 18/11)', () => {
+    const affiches = textesVisibles(rendreSousEnTete());
+    expect(affiches.indexOf('temoin-chips:events')).toBeGreaterThanOrEqual(0);
+    const rang = (/** @type {string} */ temoin) => affiches.indexOf(temoin);
+    expect(rang('temoin-chips:events')).toBeLessThan(rang('temoin-contenu'));
+  });
+
+  it('garde les onglets avec le tour guide actif', () => {
+    const affiches = textesVisibles(rendreSousEnTete({
+      tutorialSteps: {
+        switcher: {
+          description: 'd', id: 's', order: 1, title: 't',
+        },
+      },
+    }));
+    expect(affiches).toContain('temoin-chips:events');
+    expect(affiches).not.toContain('temoin-bandeau-logo');
+  });
+
+  it('une liste qui porte l en-tete n y recoit que les onglets', () => {
+    const { ScrollView } = jest.requireActual('react-native');
+    // eslint-disable-next-line global-require
+    const { useEnTeteDeRecherche } = require('../enTeteDeRecherche');
+    /**
+     * Une liste qui pose l'en-tête de la recherche dans ce qu'elle fait défiler.
+     * @returns {any} La liste rendue.
+     */
+    function ListePorteuse() {
+      const enTete = useEnTeteDeRecherche();
+      return createElement(ScrollView, { testID: 'ce-qui-defile' }, enTete);
+    }
+    const arbre = rendreSousEnTete({}, createElement(ListePorteuse));
+    const dansLaListe = arbre.root.findByProps({ testID: 'ce-qui-defile' })
+      .findAllByType(Text).map((/** @type {any} */ n) => n.props.children);
+    expect(dansLaListe).toContain('temoin-chips:events');
+    expect(dansLaListe).not.toContain('temoin-bandeau-logo');
+  });
+
+  it('📌 sans en-tete de pile (le site), le bandeau reste', () => {
+    const affiches = textesVisibles(rendre());
+    expect(affiches).toContain('temoin-bandeau-logo');
+    expect(affiches).toContain('temoin-cloche');
+    expect(affiches).toContain('temoin-avatar');
+  });
+});

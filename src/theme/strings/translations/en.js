@@ -13911,6 +13911,36 @@ export default {
       },
     },
   },
+  // IMPL-4-ACCUEIL (18/11) : accueil, pop-up billet, recherche.
+  implAccueil: {
+    billet: {
+      date: 'Date',
+      des: 'from {{heure}}',
+      fermer: 'Close',
+      heure: 'Time',
+      lieu: 'Venue',
+      parJoueur: 'per player',
+      plusTard: 'Later',
+    },
+    invitation: {
+      invite: 'invites you to their team',
+      payer: 'Pay for my spot ({{prix}})',
+      prevenu: '{{prenom}} has been told of your answer.',
+      prix: '{{prix}} per player',
+      prixMaillot: '{{prix}} per player · free jersey',
+      question: '“Do you want to join my team for this tournament?”',
+      rejoint: 'You joined the team {{team}}',
+      resteAPayer: 'Pay for your spot so it counts: {{prix}}.',
+      resteAPayerMaillot: 'Pay for your spot so it counts: {{prix}}, free jersey.',
+      titre: 'Tournament invitation',
+      valideeDes_one: 'The team is confirmed once {{count}} player has paid.',
+      valideeDes_other: 'The team is confirmed once {{count}} players have paid.',
+      voirEquipe: 'See the team',
+    },
+    formulaireBillet:
+      'With an « open_event » main action, the pop-up shows as a ticket: date, time, venue and price read from the event; « Eyebrow » as the small line, the title in large, the image on top.',
+    rechercheEffacer: 'Clear search',
+  },
   inputStepper: {
     decrement: 'One less',
     increment: 'One more',

@@ -12,6 +12,8 @@ import {
 
 import { useAppContext } from '@/store/appContext';
 
+import BilletTournoiModal from '@/components/organisms/popup/BilletTournoiModal';
+import estUnBillet from '@/components/organisms/popup/estUnBillet';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 
 import { getCurrentRouteName, navigate } from '@/navigation/navigationService';
@@ -317,7 +319,7 @@ function RemotePopupCampaignHost({
 
   if (!activeCampaign) return null;
 
-  return (
+  const fenetre = (
     <GlobalPromptModal
       body={activeCampaign?.body || ''}
       eyebrow={activeCampaign?.eyebrow || undefined}
@@ -341,6 +343,31 @@ function RemotePopupCampaignHost({
       supportingText={activeCampaign?.subtitle || undefined}
       title={activeCampaign?.title || activeCampaign?.internalName || 'Information'}
       tone={activeCampaign?.tone || 'primary'}
+      visible={isVisible}
+    />
+  );
+
+  if (!estUnBillet(activeCampaign, primaryAction)) return fenetre;
+  const campagne = /** @type {any} */ (activeCampaign);
+
+  return (
+    <BilletTournoiModal
+      body={campagne.body || ''}
+      eventId={String(primaryAction.eventId).trim()}
+      eyebrow={campagne.eyebrow || undefined}
+      imageUrl={imageUrl}
+      inlineOnAndroid
+      onRequestClose={handleDismiss}
+      primaryAction={{
+        label: primaryAction.label,
+        onPress: () => handleActionPress(primaryAction),
+      }}
+      repli={fenetre}
+      secondaryAction={secondaryAction ? {
+        label: secondaryAction.label,
+        onPress: () => handleActionPress(secondaryAction),
+      } : null}
+      title={campagne.title || campagne.internalName || undefined}
       visible={isVisible}
     />
   );

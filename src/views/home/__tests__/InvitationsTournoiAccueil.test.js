@@ -7,9 +7,11 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   getMyTournamentInvitations,
+  getTournamentTeamById,
   respondToTournamentInvitation,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
+import LinksPlatform from '@/platform/links';
 import { lisibles, pressable } from '@/testSupport/temoinComplexe';
 
 // T-INVITATION-ACCUEIL (18/11/2026, Adel D237 ; constat M1357 de la recette 46) — LA CARTE
@@ -19,13 +21,19 @@ import { lisibles, pressable } from '@/testSupport/temoinComplexe';
 // par l'action de la page d'équipe (`respondToTournamentInvitation`) ; le refus du serveur s'écrit
 // sur la carte.
 
+// IMPL-4-ACCUEIL : le premier rendu charge les modules de la carte (4 s seul, plus de 5 s en lot
+// avec deux workers) ; au-delà, un dépassement fait tomber les cas suivants en cascade.
+jest.setTimeout(20_000);
+
 const mockNavigate = jest.fn();
 let mockFocus = true;
 jest.mock('@react-navigation/native', () => ({ useIsFocused: () => mockFocus }));
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
   getMyTournamentInvitations: jest.fn(),
+  getTournamentTeamById: jest.fn(),
   respondToTournamentInvitation: jest.fn(),
 }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrlHere: jest.fn() } }));
 jest.mock('react-i18next', () => (
   jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
 ));
@@ -91,26 +99,72 @@ const monter = async () => {
   return arbre;
 };
 
+// IMPL-4-ACCUEIL (page 2) : la fiche d'équipe, telle que le serveur la rend à l'invité (prix,
+// maillot, seuil), puis au membre (son lien de paiement).
+const FICHE_INVITE = {
+  documentId: 'tt-a',
+  event: { tournamentConfig: { entryFeeCents: 2000, jerseySizeRequired: true } },
+  payment: { entryFeeCents: 2000, paidCount: 0, paidMembersToValidate: 5 },
+};
+const FICHE_MEMBRE = {
+  ...FICHE_INVITE,
+  payment: {
+    ...FICHE_INVITE.payment,
+    members: [
+      {
+        isSelf: false, memberDocumentId: 'mb-x', paymentUrl: null, status: 'paid',
+      },
+      {
+        isSelf: true, memberDocumentId: 'mb-a', paymentUrl: 'https://paiement.test/place', status: 'due',
+      },
+    ],
+  },
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockFocus = true;
   getMyTournamentInvitations.mockResolvedValue([invitation('a')]);
+  getTournamentTeamById.mockResolvedValue(FICHE_INVITE);
   respondToTournamentInvitation.mockResolvedValue({ documentId: 'tt-a' });
 });
 
 describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’accueil', () => {
-  it('qui invite, l’équipe, le tournoi, sa date, son lieu, la question, 3 gestes', async () => {
+  // IMPL-4-ACCUEIL, page 2 (planche 2a, 18/11) : titre « Invitation au tournoi », le nom de qui
+  // invite à part (avec la photo), le tournoi dans un encadré avec le lieu complet et le prix, la
+  // question dite par l'invitant (« mon équipe »). Remplace les textes de T-INVITATION-ACCUEIL.
+  it('qui invite, l’équipe, le tournoi, sa date, son lieu, son prix, la question', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
-      'Invitation en attente',
-      `Dorian Durand t’invite à rejoindre son équipe Les Lions pour le tournoi ${TOURNOI}.`,
-      'Veux-tu rejoindre son équipe pour ce tournoi ?',
+      'Invitation au tournoi',
+      'Dorian Durand',
+      't’invite dans son équipe Les Lions',
+      TOURNOI,
+      'AR Soccer, 12 avenue du Stade, Montpellier',
+      '20 € par joueur · maillot offert',
+      '« Veux-tu rejoindre mon équipe pour ce tournoi ? »',
       'Voir le tournoi',
     ]));
     expect(lisibles(arbre).some((texte) => /19 décembre · 19:00 – 23:00$/.test(texte))).toBe(true);
-    expect(lisibles(arbre)).toContain('12 avenue du Stade, Montpellier');
-    expect(pressable(arbre, 'Accepter')).toBeTruthy();
-    expect(pressable(arbre, 'Refuser')).toBeTruthy();
+    expect(arbre.root.findAllByProps({ testID: 'accueil-invitation-photo' }).length)
+      .toBeGreaterThan(0);
+    expect(pressable(arbre, 'Accepter').props.variant).toBe('Primary');
+    expect(pressable(arbre, 'Refuser').props.variant).toBe('Danger');
+  });
+
+  it('IMPL-4 — sans fiche d’équipe lisible, la ligne du prix n’est pas dessinée', async () => {
+    getTournamentTeamById.mockRejectedValue(new Error('Forbidden'));
+    const arbre = await monter();
+    expect(lisibles(arbre).some((texte) => texte.includes('€'))).toBe(false);
+    expect(lisibles(arbre)).toContain('Invitation au tournoi');
+  });
+
+  it('IMPL-4 — maillot non demandé : le prix seul', async () => {
+    getTournamentTeamById.mockResolvedValue({
+      ...FICHE_INVITE, event: { tournamentConfig: { entryFeeCents: 2000 } },
+    });
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('20 € par joueur');
   });
 
   it.each(['requested', 'present', 'declined', 'pending'])('rien pour « %s »', async (statut) => {
@@ -143,17 +197,64 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     });
   });
 
-  it('« Accepter » : l’action de l’équipe, la carte s’en va, la page d’équipe', async () => {
+  // IMPL-4-ACCUEIL, page 2 (planche 2b) : après « Accepter », la carte reste et enchaîne sur le
+  // paiement, au lieu d'ouvrir la page d'équipe (T-INVITATION-ACCUEIL).
+  it('« Accepter » : l’action, puis « Tu as rejoint » et « Payer ma place »', async () => {
     const arbre = await monter();
     getMyTournamentInvitations.mockResolvedValue([]);
+    getTournamentTeamById.mockResolvedValue(FICHE_MEMBRE);
     await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
     await vidanger();
     expect(respondToTournamentInvitation).toHaveBeenCalledWith('tt-a', 'accepted');
-    expect(arbre.toJSON()).toBeNull();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Tu as rejoint l’équipe Les Lions',
+      'Il te reste à payer ta place pour qu’elle compte : 20 €, maillot offert.',
+      'L’équipe est validée dès 5 joueurs payés. Dorian est prévenu de ta réponse.',
+    ]));
+    expect(lisibles(arbre)).not.toContain('Invitation au tournoi');
+    await act(async () => { pressable(arbre, 'Payer ma place (20 €)').props.onPress(); });
+    expect(LinksPlatform.openUrlHere).toHaveBeenCalledWith('https://paiement.test/place');
+    await act(async () => { pressable(arbre, 'Voir l’équipe').props.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventStack, {
       params: { eventId: 'evt-a', teamId: 'tt-a' },
       screen: RouteNames.TournamentTeamDetails,
     });
+  });
+
+  it('IMPL-4 — accepté sans lien de paiement : « Voir l’équipe » seulement', async () => {
+    const arbre = await monter();
+    getMyTournamentInvitations.mockResolvedValue([]);
+    await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
+    await vidanger();
+    expect(lisibles(arbre)).toContain('Tu as rejoint l’équipe Les Lions');
+    expect(() => pressable(arbre, 'Payer ma place')).toThrow();
+    expect(pressable(arbre, 'Voir l’équipe')).toBeTruthy();
+  });
+
+  it('IMPL-4 — tournoi gratuit : « Tu as rejoint », sans phrase de paiement', async () => {
+    getTournamentTeamById.mockResolvedValue({
+      documentId: 'tt-a', event: { tournamentConfig: {} },
+    });
+    const arbre = await monter();
+    getMyTournamentInvitations.mockResolvedValue([]);
+    await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
+    await vidanger();
+    expect(lisibles(arbre)).toContain('Tu as rejoint l’équipe Les Lions');
+    expect(lisibles(arbre).some((texte) => texte.includes('payer'))).toBe(false);
+  });
+
+  it('IMPL-4 — « Tu as rejoint » s’en va quand on quitte l’accueil', async () => {
+    const arbre = await monter();
+    getMyTournamentInvitations.mockResolvedValue([]);
+    await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
+    await vidanger();
+    expect(lisibles(arbre)).toContain('Tu as rejoint l’équipe Les Lions');
+    mockFocus = false;
+    await arbre.redessiner();
+    mockFocus = true;
+    await arbre.redessiner();
+    expect(arbre.toJSON()).toBeNull();
   });
 
   it('« Refuser » appelle la même action, la carte s’en va, on reste sur l’accueil', async () => {
@@ -172,13 +273,13 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
     await vidanger();
     expect(lisibles(arbre)).toContain(DEJA_PRIS);
-    expect(lisibles(arbre)).toContain('Invitation en attente');
+    expect(lisibles(arbre)).toContain('Invitation au tournoi');
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('répondue ailleurs (page d’équipe) : au retour sur l’accueil, la carte s’en va', async () => {
     const arbre = await monter();
-    expect(lisibles(arbre)).toContain('Invitation en attente');
+    expect(lisibles(arbre)).toContain('Invitation au tournoi');
     mockFocus = false; // l'accueil part sous la page d'équipe, où l'invité répond
     await arbre.redessiner();
     getMyTournamentInvitations.mockResolvedValue([]);
@@ -188,11 +289,11 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     expect(arbre.toJSON()).toBeNull();
   });
 
-  it('sans nom d’invitant : « Un joueur t’invite… »', async () => {
+  it('sans nom d’invitant : « Un joueur », t’invite dans son équipe', async () => {
     getMyTournamentInvitations.mockResolvedValue([invitation('a', { invitedBy: null })]);
     const arbre = await monter();
-    expect(lisibles(arbre)).toContain(
-      `Un joueur t’invite à rejoindre son équipe Les Lions pour le tournoi ${TOURNOI}.`,
-    );
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Un joueur', 't’invite dans son équipe Les Lions',
+    ]));
   });
 });

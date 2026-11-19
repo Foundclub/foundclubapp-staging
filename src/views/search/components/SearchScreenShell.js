@@ -20,6 +20,7 @@ import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SearchTypeSwitcher from '@/components/molecules/searchTypeSwitcher/SearchTypeSwitcher';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { EnTeteDeRechercheContext } from '@/views/search/components/enTeteDeRecherche';
+import useSousEnTeteDeLaPile from '@/views/search/components/sousEnTeteDeLaPile';
 import { getSearchHubGuidanceSignalKey } from '@/views/search/searchRouteHelpers';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -75,6 +76,12 @@ function SearchScreenShell({
     Spaces,
   } = useTheme();
   const { userData } = useAuth();
+  // IMPL-4-ACCUEIL, page 7 (planche 7a-7c, Adel 18/11 : « un seul en-tête ») — sur le téléphone, la
+  // pile de l'onglet dessine déjà la flèche et « Rechercher » (enTeteRetourAccueil.js) : le bandeau
+  // logo + cloche + avatar ne se répète plus dessous. Même source que `ScreenContainer`. Le site
+  // (pile sans en-tête) n'a aucune hauteur ici : il garde son bandeau. Logo, cloche et avatar
+  // restent sur l'accueil, à une flèche.
+  const sousEnTeteDeLaPile = useSousEnTeteDeLaPile();
   const switcherTargetRef = useRef(/** @type {import('react-native').View | null} */ (null));
   // CORR-RECHERCHE point 2 — combien de listes posent l'en-tête dans ce qu'elles font défiler.
   const [porteurs, setPorteurs] = useState(0);
@@ -144,27 +151,33 @@ function SearchScreenShell({
   );
 
   const enTete = useMemo(() => (
-    <View style={Spaces.paddingBottom[4]}>
-      <View style={[
-        Spaces.marginTop[16],
-        Spaces.marginBottom[16],
-        Alignments.row,
-        Alignments.alignCenter,
-        Alignments.justifySpaceBetween,
-      ]}
-      >
-        <LeagueHeaderSwitch />
-        <View
-          style={[
-            Alignments.row,
-            Alignments.alignCenter,
-            Spaces.gap[12],
-          ]}
+    <View
+      style={sousEnTeteDeLaPile
+        ? [Spaces.paddingTop[8], Spaces.paddingBottom[16]]
+        : Spaces.paddingBottom[4]}
+    >
+      {sousEnTeteDeLaPile ? null : (
+        <View style={[
+          Spaces.marginTop[16],
+          Spaces.marginBottom[16],
+          Alignments.row,
+          Alignments.alignCenter,
+          Alignments.justifySpaceBetween,
+        ]}
         >
-          <NotificationBadge />
-          <ProfileButton />
+          <LeagueHeaderSwitch />
+          <View
+            style={[
+              Alignments.row,
+              Alignments.alignCenter,
+              Spaces.gap[12],
+            ]}
+          >
+            <NotificationBadge />
+            <ProfileButton />
+          </View>
         </View>
-      </View>
+      )}
 
       {tutorialSteps?.switcher ? (
         <OnboardingWrapper
@@ -200,7 +213,10 @@ function SearchScreenShell({
         </View>
       )}
     </View>
-  ), [Alignments, Spaces, activeType, emitTutorialLayout, handleTypeChange, tutorialSteps, types]);
+  ), [
+    Alignments, Spaces, activeType, emitTutorialLayout, handleTypeChange, sousEnTeteDeLaPile,
+    tutorialSteps, types,
+  ]);
   const contexteEnTete = useMemo(() => ({ enTete, reclamer }), [enTete, reclamer]);
 
   if (annuaire) {

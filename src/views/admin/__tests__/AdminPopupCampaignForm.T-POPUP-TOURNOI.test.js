@@ -64,6 +64,16 @@ jest.mock(
     return null;
   },
 );
+// IMPL-4-ACCUEIL (18/11) : le billet doublé, ses props gardées (il lit son événement).
+/** @type {any} */
+let mockBilletApercu = null;
+jest.mock(
+  '@/components/organisms/popup/BilletTournoiModal',
+  () => function BilletMock(/** @type {any} */ props) {
+    mockBilletApercu = props;
+    return null;
+  },
+);
 jest.mock(
   '@/views/admin/components/AdminStateView',
   () => function AdminStateViewMock() { return null; },
@@ -317,4 +327,53 @@ test('ZONE-R2 — un brouillon relu garde ses départements', async () => {
   expect(champ(arbre, '34, 30').props.value).toBe('34');
   await enregistrer(arbre, 'Enregistrer le brouillon');
   expect(/** @type {any} */ (mockMaj.mock.calls[0])[0].data.targetDepartments).toEqual(['34']);
+});
+
+// IMPL-4-ACCUEIL, page 5 (variante B « billet », Adel 18/11) — le SuperAdmin choisit le billet par
+// le modèle `hero_image_modal` avec « Voir le tournoi » (open_event), le formulaire le lui dit, et
+// l'aperçu montre le billet. La maquette 5c est simplifiée : aucun champ n'est retiré.
+const BROUILLON_BILLET = {
+  actions: [{
+    actionType: 'open_event', eventId: 'evt-tournoi', label: 'Voir le tournoi', slot: 'primary',
+  }],
+  documentId: 'camp-1',
+  eyebrow: 'Tournoi de foot à 5',
+  status: 'draft',
+  templateKey: 'hero_image_modal',
+  title: 'FoundClub x AR Soccer',
+};
+
+test('BILLET-1 — avec hero_image_modal, le formulaire dit que la pop-up sera un billet', () => {
+  brouillon(BROUILLON_BILLET);
+  const arbre = monter();
+  const textes = arbre.root.findAllByType(Text).map((t) => [].concat(t.props.children).join(''));
+  expect(textes.some((texte) => /billet/i.test(texte))).toBe(true);
+});
+
+test('BILLET-2 — l aperçu montre le billet de CE tournoi, la fenêtre d avant en repli', () => {
+  mockBilletApercu = null;
+  brouillon(BROUILLON_BILLET);
+  const arbre = monter();
+  act(() => { arbre.root.findByProps({ testID: 'bouton-Prévisualiser' }).props.onPress(); });
+
+  expect(mockBilletApercu.visible).toBe(true);
+  expect(mockBilletApercu.eventId).toBe('evt-tournoi');
+  expect(mockBilletApercu.title).toBe('FoundClub x AR Soccer');
+  expect(mockBilletApercu.eyebrow).toBe('Tournoi de foot à 5');
+  expect(mockBilletApercu.repli).toBeTruthy();
+  act(() => { mockBilletApercu.primaryAction.onPress(); });
+  expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
+    params: { eventId: 'evt-tournoi' },
+    screen: 'EventDetails',
+  });
+});
+
+test('📌 BILLET-3 — modèle standard : l aperçu reste la fenêtre d avant, aucun champ retiré', () => {
+  mockBilletApercu = null;
+  brouillon({ ...BROUILLON_BILLET, templateKey: 'standard_modal' });
+  const arbre = monter();
+  act(() => { arbre.root.findByProps({ testID: 'bouton-Prévisualiser' }).props.onPress(); });
+  expect(mockBilletApercu).toBeNull();
+  expect(mockApercu.visible).toBe(true);
+  expect(champ(arbre, '34, 30')).toBeTruthy();
 });

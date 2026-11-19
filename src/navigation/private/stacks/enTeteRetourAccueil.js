@@ -83,9 +83,14 @@ export const revenirDansLaPile = (navigation) => {
  */
 export const optionsDeLaPileAccueil = ({ navigation, route }, titres = {}) => {
   if (SANS_EN_TETE.has(route.name)) return { headerShown: false };
+  const titre = titres[route.name] || '';
   return {
     ...EN_TETE_MAISON,
     headerLeft: () => <HeaderBackButton onPress={() => revenirDansLaPile(navigation)} />,
-    headerTitle: titres[route.name] || '',
+    headerTitle: titre,
+    // IMPL-4-ACCUEIL, page 7 (planche 7a-7c, Adel 18/11) : « Rechercher » collé à la flèche,
+    // au-dessus des onglets alignés à gauche ; c'est désormais le seul en-tête de la recherche
+    // (SearchScreenShell).
+    ...(titre ? { headerTitleAlign: /** @type {const} */ ('left') } : {}),
   };
 };
