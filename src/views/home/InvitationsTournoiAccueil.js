@@ -426,6 +426,12 @@ function CarteMonTournoi({ equipe, navigation }) {
     : '';
   const lieu = lieuCourt(equipe?.event);
   const aPayer = equipe?.myPlace?.status === 'due';
+  /**
+   * Une ligne « icône + texte » de la carte (jour, heures, lieu).
+   * @param {'calendar' | 'clock' | 'locationPin'} icone - Le glyphe.
+   * @param {string} texte - Le texte.
+   * @returns {import('react').ReactElement} La ligne.
+   */
   const ligne = (icone, texte) => (
     <View style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
       <GlyphIcon color={Colors.primary500} name={icone} size={16} />
