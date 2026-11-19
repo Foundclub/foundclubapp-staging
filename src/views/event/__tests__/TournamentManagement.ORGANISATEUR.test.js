@@ -89,6 +89,9 @@ jest.mock('@/components/atoms/button/Button', () => {
 });
 jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => (/** @type {any} */ { children }) => children);
 jest.mock('@/components/templates/ScreenContainer', () => (/** @type {any} */ { children }) => children);
+// Récolte train 16 : IMPL-1B-PHOTO (e3954b46) fait lire la fiche du tournoi à la page (photo du lieu,
+// carte 1a) ; ici, pas de photo (même doublure que les 3 autres témoins de TournamentManagement).
+jest.mock('@/services/event/eventQueries', () => ({ useGetEvent: () => ({ data: null }) }));
 jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
   useGetTournamentDashboard: () => ({
     data: mockDashboard, error: null, isLoading: false, refetch: jest.fn(),
