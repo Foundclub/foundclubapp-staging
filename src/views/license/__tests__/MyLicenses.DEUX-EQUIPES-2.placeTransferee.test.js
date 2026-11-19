@@ -49,8 +49,6 @@ jest.mock(
   () => function SkeletonLoaderMock() { return null; },
 );
 
-const Colors = jest.requireActual('@/theme/colors').default();
-
 const affectation = (/** @type {any} */ {
   campagne, club, documentId, etatCampagne = 'active', montant, saison, statut = 'paid', type = 'license',
 }) => ({

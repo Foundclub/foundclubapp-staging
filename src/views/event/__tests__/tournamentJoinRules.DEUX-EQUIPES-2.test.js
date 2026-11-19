@@ -32,7 +32,15 @@ const equipe = (/** @type {any} */ extra = {}) => ({
   status: 'pending',
   ...extra,
 });
-const ouverte = { captainUser: { documentId: 'u-autre' }, documentId: 'eq-32', isOpenToJoinRequests: true, members: [], name: 'Recette Site 333', sourceType: 'custom_team', status: 'accepted' };
+const ouverte = {
+  captainUser: { documentId: 'u-autre' },
+  documentId: 'eq-32',
+  isOpenToJoinRequests: true,
+  members: [],
+  name: 'Recette Site 333',
+  sourceType: 'custom_team',
+  status: 'accepted',
+};
 const peutRejoindre = (/** @type {any[]} */ teams) => canAskToJoinTournamentTeam({
   accountRoleKey: 'player', event: TOURNOI, teams, user: { birthdate: '1990-01-01', documentId: MOI },
 });
@@ -48,7 +56,10 @@ describe('DEUX-EQUIPES-2 — capitaine d’une équipe refusée ou archivée', (
   });
 
   test('🔴 la marque du serveur (`viewerMembership`) sur une équipe refusée ne bloque pas non plus', () => {
-    const teams = [{ ...ouverte, documentId: 'eq-33', status: 'declined', viewerMembership: { responseStatus: 'present' } }, ouverte];
+    const refusee = {
+      ...ouverte, documentId: 'eq-33', status: 'declined', viewerMembership: { responseStatus: 'present' },
+    };
+    const teams = [refusee, ouverte];
     expect(hasTournamentTeamForUser(teams, MOI)).toBe(false);
   });
 

@@ -9,8 +9,6 @@ let mockTeam = null;
 let mockAuth = {};
 const mockCopier = jest.fn(async () => true);
 const mockOpenUrl = jest.fn(async () => true);
-// T-PAGES-2 (R8) : « Payer ma place » passe par openUrlHere (même onglet sur le site) ; même espion.
-const mockOpenUrlInPlace = (...args) => mockOpenUrl(...args);
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ isPending: false, mutate: jest.fn() }),
@@ -56,6 +54,7 @@ jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({}));
 jest.mock('@/services/user/userService', () => ({ searchScopedUsers: jest.fn(), searchUsers: jest.fn() }));
 jest.mock('@/platform/share', () => ({ __esModule: true, copier: (...args) => mockCopier(...args), default: { copier: (...args) => mockCopier(...args) } }));
+jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: (...args) => mockOpenUrl(...args), openUrlHere: (...args) => mockOpenUrl(...args) } }));
 
 // ==========================================================================
 // DEUX-EQUIPES-2 (19/11/2026, point 5 du chef) — LA PAGE D'UNE ÉQUIPE REFUSÉE. Le serveur ne fait plus
@@ -78,8 +77,20 @@ const equipe = (/** @type {'declined' | 'pending'} */ status, /** @type {'capita
   },
   isOpenToJoinRequests: false,
   members: [
-    { documentId: 'mb-1', origin: 'external_addition', responseStatus: 'present', role: 'captain', user: { documentId: 'u-cap', firstname: 'Capi' } },
-    { documentId: 'mb-2', origin: 'invited', responseStatus: 'pending', role: 'member', user: { documentId: 'u-2', firstname: 'Deux' } },
+    {
+      documentId: 'mb-1',
+      origin: 'external_addition',
+      responseStatus: 'present',
+      role: 'captain',
+      user: { documentId: 'u-cap', firstname: 'Capi' },
+    },
+    {
+      documentId: 'mb-2',
+      origin: 'invited',
+      responseStatus: 'pending',
+      role: 'member',
+      user: { documentId: 'u-2', firstname: 'Deux' },
+    },
   ],
   name: 'EMU Test 002',
   // Le serveur rend encore un lien pour une place annulée (statut « due ») : la page ne doit pas l'offrir.
@@ -87,8 +98,18 @@ const equipe = (/** @type {'declined' | 'pending'} */ status, /** @type {'capita
     currency: 'EUR',
     entryFeeCents: 2000,
     members: [
-      { isSelf: lecteur === 'capitaine', memberDocumentId: 'mb-1', paymentUrl: LIEN_CAP, status: 'due' },
-      { isSelf: lecteur === 'joueur', memberDocumentId: 'mb-2', paymentUrl: LIEN_2, status: 'due' },
+      {
+        isSelf: lecteur === 'capitaine',
+        memberDocumentId: 'mb-1',
+        paymentUrl: LIEN_CAP,
+        status: 'due',
+      },
+      {
+        isSelf: lecteur === 'joueur',
+        memberDocumentId: 'mb-2',
+        paymentUrl: LIEN_2,
+        status: 'due',
+      },
     ],
     paidCount: 0,
     paidMembersToValidate: 5,
