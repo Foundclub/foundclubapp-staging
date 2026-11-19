@@ -169,10 +169,10 @@ function UserPhysique({ navigation }) {
           <View style={[Spaces.gap[16]]}>
             <OnboardingFacultatif onPress={handleSkip} />
             <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-              {t('onboarding.physique.title', 'Ton physique')}
+              {t('onboarding.physique.title', 'Ta taille et ton poids')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral00]}>
-              {t('onboarding.physique.subtitle', 'Facultatif — ces infos aident les recruteurs.')}
+              {t('onboarding.physique.subtitle', 'Pour ta carte de joueur.')}
             </Text>
           </View>
 
@@ -248,7 +248,8 @@ function UserPhysique({ navigation }) {
               <Text style={[Fonts.p2, { color: Colors.neutral600, flex: 1 }]}>
                 {t(
                   'onboarding.physique.privacyNotice',
-                  'Visible uniquement si ton profil est public.',
+                  'Qui voit ces deux chiffres ? Seulement si ton profil est public. Tu peux les retirer à tout '
+                    + 'moment depuis Mon profil.',
                 )}
               </Text>
             </View>

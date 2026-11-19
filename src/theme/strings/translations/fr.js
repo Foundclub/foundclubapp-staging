@@ -18281,9 +18281,11 @@ export default {
     optionalStepHint: 'Cette étape n\'est pas obligatoire, mais elle reste utile pour améliorer ton expérience FoundClub.',
     physique: {
       heightLabel: 'Taille (cm)',
-      privacyNotice: 'Visible uniquement si ton profil est public.',
-      subtitle: 'Facultatif — ces infos aident les recruteurs.',
-      title: 'Ton physique',
+      // INSCRIPTION-CODE (d) (19/11, V10, v2_04 « ok ») : le titre dit ce qu’on demande ; plus de
+      // « recruteurs » ; qui voit ces chiffres, écrit en clair.
+      privacyNotice: 'Qui voit ces deux chiffres ? Seulement si ton profil est public. Tu peux les retirer à tout moment depuis Mon profil.',
+      subtitle: 'Pour ta carte de joueur.',
+      title: 'Ta taille et ton poids',
       weightLabel: 'Poids (kg)',
     },
     position: {

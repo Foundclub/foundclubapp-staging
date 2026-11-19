@@ -17457,9 +17457,9 @@ export default {
     optionalStepHint: "This step isn't required, but it's still useful for improving your FoundClub experience.",
     physique: {
       heightLabel: 'Height (cm)',
-      privacyNotice: 'Only visible if your profile is public.',
-      subtitle: 'Optional — this information helps recruiters.',
-      title: 'Your build',
+      privacyNotice: 'Who sees these two figures? Only people who can see your public profile. You can remove them at any time from My profile.',
+      subtitle: 'For your player card.',
+      title: 'Your height and weight',
       weightLabel: 'Weight (kg)',
     },
     position: {
