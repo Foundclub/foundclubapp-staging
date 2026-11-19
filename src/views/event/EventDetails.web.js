@@ -68,6 +68,7 @@ import {
   getTournamentTeamsCapacity,
 } from '@/views/event/tournamentTeamsCount';
 import {
+  blocksAnotherTournamentTeam,
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
   getTournamentAgeNotice,
@@ -657,7 +658,8 @@ function EventDetails({ navigation, route }) {
     && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
-    && !currentUserTournamentTeam
+    // DEUX-EQUIPES-2 (19/11) : une équipe refusée ou archivée ne bloque plus (règle du serveur).
+    && !blocksAnotherTournamentTeam(currentUserTournamentTeam)
     && !currentUserPendingTournamentTeam,
   );
   // T-FICHE-2 (14/11, chef du tournoi) — un capitaine voyait d'abord « Participer », qui l'inscrit

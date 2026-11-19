@@ -3,6 +3,7 @@ import i18next from 'i18next';
 import { getEventLocationText } from '@/utils/eventLocationText';
 
 import {
+  blocksAnotherTournamentTeam,
   getTournamentClosure,
   getTournamentMinAge,
   getTournamentPendingMembershipForUser,
@@ -103,7 +104,9 @@ export const isTournamentOrganizer = (event, user) => {
 export const hasTournamentTeamForUser = (teams, userId) => {
   if (!userId) return false;
   const equipes = Array.isArray(teams) ? teams : [];
-  const dejaDansUneEquipe = equipes.some((team) => (
+  // DEUX-EQUIPES-2 (19/11) : une équipe refusée ou archivée ne compte plus (règle du serveur) ;
+  // une invitation ou une demande en attente, elle, garde le bouton caché, comme avant.
+  const dejaDansUneEquipe = equipes.filter(blocksAnotherTournamentTeam).some((team) => (
     team?.captainUser?.documentId === userId
     || (team?.adminUsers || []).some((/** @type {any} */ admin) => admin?.documentId === userId)
     || (team?.members || []).some((/** @type {any} */ member) => (

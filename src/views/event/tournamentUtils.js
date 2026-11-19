@@ -286,6 +286,16 @@ export const isTournamentTeamSetAside = (team) => Boolean(team?.archivedAt)
   || ['archived', 'declined'].includes(normalizeTournamentText(team?.status));
 
 /**
+ * DEUX-EQUIPES-2 (19/11, décision du chef) — une équipe du lecteur l'empêche-t-elle d'en rejoindre
+ * ou d'en créer une autre ? Seulement si elle n'est ni refusée ni archivée : la règle du serveur
+ * (`assertUserIsNotActiveInAnotherTournamentTeam`). Le capitaine d'une équipe refusée voit donc de
+ * nouveau « Rejoindre une équipe » et « Créer une équipe ».
+ * @param {any} team - Une équipe du lecteur (ou null).
+ * @returns {boolean} Vrai si elle compte encore.
+ */
+export const blocksAnotherTournamentTeam = (team) => Boolean(team) && !isTournamentTeamSetAside(team);
+
+/**
  * DEUX-EQUIPES (19/11, recette 49, M1362 / M1363) — LES ÉQUIPES DU LECTEUR DANS UN TOURNOI, une seule
  * règle pour la fiche de l'app et celle du site. Le capitaine d'une équipe refusée qui joue ou est
  * invité ailleurs ne voyait que l'équipe refusée (le choix « capitaine d'abord » ne regardait pas le

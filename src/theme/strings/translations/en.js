@@ -1945,6 +1945,13 @@ export default {
     MEMBER_ROLE_PROTECTED_ACCOUNT: 'This account’s role cannot be changed from this screen.',
     MEMBER_ROLE_SELF_DEMOTION: 'You cannot remove your own club manager role.',
     MEMBER_ROLE_TEAM_NOT_IN_CLUB: 'This team does not belong to the club.',
+    // DEUX-EQUIPES-2 (19/11) — server refusals on a tournament team (`details.code`).
+    TOURNAMENT_PAID_THRESHOLD_LEAVE:
+      'Your team would drop below 5 paid players. You can leave as soon as a 6th player has paid.',
+    TOURNAMENT_PAID_THRESHOLD_REMOVE:
+      'The team would drop below 5 paid players: remove this player once a 6th one has paid.',
+    TOURNAMENT_TEAM_CLOSED:
+      'This team was declined or withdrawn from the tournament: its place can no longer be paid.',
     MEMBERSHIP_REQUEST_ALREADY_PROCESSED: 'The membership request has already been processed.',
     MEMBERSHIP_REQUEST_NOT_PENDING: 'The membership request is not pending.',
     MEMBERSHIP_REQUEST_REFUSED: 'The membership request has been refused.',
@@ -16989,6 +16996,7 @@ export default {
     card: {
       instalments_one: '{{count}} instalment',
       instalments_other: '{{count}} instalments',
+      transferred: 'Place transferred from {{from}} to {{to}} on {{date}}',
     },
     children: {
       empty: 'No child declared yet.',

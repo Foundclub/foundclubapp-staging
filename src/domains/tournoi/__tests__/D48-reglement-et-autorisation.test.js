@@ -43,7 +43,8 @@ describe('D48 A — le règlement du tournoi', () => {
 
   test('les conditions ne bougent pas : même version, article 10 et CM2C en place', () => {
     // D247 (T-SANS-PLAFOND) : texte changé le 18/11
-    expect(VERSION_DES_CONDITIONS).toBe('Version du 18 novembre 2026');
+    // Avant : 'Version du 18 novembre 2026' (D247) ; DEUX-EQUIPES-2 (19/11) : D282 et D63, nouvelle date (chef du tournoi).
+    expect(VERSION_DES_CONDITIONS).toBe('Version du 19 novembre 2026');
     expect(PARAGRAPHES_DES_CONDITIONS).toContain('10. Réclamations et litiges');
     const conditions = PARAGRAPHES_DES_CONDITIONS.join('\n');
     expect(conditions).toContain('CM2C, 49 rue de Ponthieu, 75008 Paris');

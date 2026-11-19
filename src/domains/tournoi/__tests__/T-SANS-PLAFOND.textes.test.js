@@ -20,6 +20,7 @@ test('🔴 D247 : les conditions disent « (5 joueurs ou plus) », plus « (5 à
 });
 
 test('🔴 D247 : les deux textes changés portent la date du 18/11 (« version oui » du chef)', () => {
-  expect(VERSION_DES_CONDITIONS).toBe('Version du 18 novembre 2026');
+  // Avant : 'Version du 18 novembre 2026' (D247) ; DEUX-EQUIPES-2 (19/11) : D282 et D63, nouvelle date (chef du tournoi).
+  expect(VERSION_DES_CONDITIONS).toBe('Version du 19 novembre 2026');
   expect(EN_TETE_DU_REGLEMENT.endsWith('(v4, 18/11)')).toBe(true);
 });
