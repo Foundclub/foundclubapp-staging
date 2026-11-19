@@ -1,3 +1,5 @@
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+
 import { getZonedDateParts } from '@/utils/parisTime';
 
 // IMPL-2-EQUIPE (18/11/2026, planches 10c et 10d) — quitter l'équipe APRÈS avoir payé sa place :
@@ -11,8 +13,6 @@ import { getZonedDateParts } from '@/utils/parisTime';
 const JOUR = 86400000;
 export const JOURS_DE_REMBOURSEMENT = 14;
 export const JOURS_DE_CESSION = 2;
-const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre',
-  'octobre', 'novembre', 'décembre'];
 
 /**
  * Le jour de Paris d'un instant, compté en jours depuis 1970.
@@ -29,10 +29,11 @@ const jourDeParis = (instant) => {
  * @param {number} jour - Le numéro du jour.
  * @returns {string} Le jour et le mois.
  */
-const enMots = (jour) => {
-  const date = new Date(jour * JOUR);
-  return `${date.getUTCDate()} ${MOIS[date.getUTCMonth()]}`;
-};
+// Récolte 11 : le nom du mois vient de la langue de l'app (localeDesFormats), plus d'une liste
+// en français écrite ici (cliquet du français en dur, 0 → 2) : « 5 décembre », « 5 December ».
+const enMots = (jour) => new Date(jour * JOUR).toLocaleDateString(localeDesFormats(), {
+  day: 'numeric', month: 'long', timeZone: 'UTC',
+});
 
 /**
  * Où en est le joueur qui a payé et veut partir.
