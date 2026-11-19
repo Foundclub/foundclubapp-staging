@@ -26260,7 +26260,7 @@ export default {
     thisTemporaryTeamIsArchived: 'This temporary team is archived. The roster stays readable but can no longer be edited.',
     todo: {
       searchPlayer: 'Find a player',
-      shareLink: 'Share the invite link',
+      shareLink: 'Share the link',
       title: 'To do now',
     },
     tournamentCard: {
@@ -26281,7 +26281,7 @@ export default {
     unableToUpdateThisOption: 'Unable to update this option.',
     unableToUpdateYourAnswer: 'Unable to update your answer.',
     withdraw: {
-      button: 'Message FoundClub Support',
+      button: 'Message Support',
       error: 'The conversation did not open. Try again in a moment.',
       text: 'To withdraw or hand over your spot, message us: the FoundClub team takes care of it, under the registration terms.',
     },
@@ -27785,6 +27785,7 @@ export default {
       you: 'you',
     },
     recruit: {
+      forbidden: 'You can’t change this setting for now.',
       none: 'No pending request for now.',
       off: 'Nobody can ask to join; you invite players yourself.',
       on: 'Tournament players can ask to join your team.',

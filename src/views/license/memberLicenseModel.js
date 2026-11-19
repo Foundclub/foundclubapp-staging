@@ -472,6 +472,19 @@ export const getPaidRatio = (assignment) => {
 // ── Saison en cours / saisons passees ──────────────────────────────────────
 
 /**
+ * IMPL-2C (19/11, recette 48 écart 5) — UNE PLACE DE TOURNOI n a pas de saison de club :
+ * sa campagne porte l ANNEE du tournoi (`seasonLabel: '2026'`, admin tournament-payment.js
+ * `ensureCampaign`). Comparee en texte, « 2026 » < « 2026-2027 » : la place payee partait dans
+ * « Saisons passees ». Elle ne compte donc ni pour la saison en cours, ni dans la comparaison ;
+ * seule sa campagne fermee ou archivee la range dans le passe.
+ * @param {any} assignment une affectation
+ * @returns {boolean} vrai pour une place de tournoi
+ */
+export const isTournamentPlace = (assignment) => (
+  String(assignment?.campaign?.type || '') === 'tournament'
+);
+
+/**
  * LA SAISON EN COURS = la plus recente que le serveur ait rendue.
  *
  * ⛔ Pas de calcul de calendrier : « on est en aout, donc 2026-2027 » serait
@@ -481,6 +494,7 @@ export const getPaidRatio = (assignment) => {
  * @returns {string} le libelle de saison le plus recent, ou une chaine vide
  */
 export const getCurrentSeasonLabel = (assignments = []) => (assignments || [])
+  .filter((item) => !isTournamentPlace(item))
   .map((item) => String(item?.campaign?.seasonLabel || ''))
   .filter(Boolean)
   .sort()
@@ -499,6 +513,7 @@ export const getCurrentSeasonLabel = (assignments = []) => (assignments || [])
 export const isArchivedAssignment = (assignment, currentSeason) => {
   const campaignStatus = String(assignment?.campaign?.status || '');
   if (campaignStatus === 'closed' || campaignStatus === 'archived') return true;
+  if (isTournamentPlace(assignment)) return false;
   const season = String(assignment?.campaign?.seasonLabel || '');
   return Boolean(season && currentSeason && season < currentSeason);
 };

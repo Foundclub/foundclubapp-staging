@@ -108,7 +108,7 @@ function TotalCard({ assignments }) {
     }}
     >
       <View style={{ alignItems: 'baseline', flexDirection: 'row', gap: 8 }}>
-        <Text style={[type.totalAmount, isSettled ? Fonts.success500 : Fonts.neutral00]}>
+        <Text style={[type.totalAmount, isSettled ? Fonts.primary500 : Fonts.neutral00]}>
           {formatLicenseMoney(remaining, currency)}
         </Text>
         <Text style={[type.subtitle, Fonts.neutral300]}>
@@ -177,7 +177,8 @@ function AssignmentCard({ assignment, onPress }) {
 
   let amountStyle = Fonts.neutral00;
   if (isWaived || isCancelled) amountStyle = Fonts.neutral300;
-  else if (remaining <= 0) amountStyle = Fonts.success500;
+  // IMPL-2C : bleu, plus de vert (Adel 18/11).
+  else if (remaining <= 0) amountStyle = Fonts.primary500;
   const Carte = onPress ? Pressable : View;
 
   return (
@@ -528,7 +529,7 @@ function OwnLicenses({ navigation }) {
               </View>
               <Text style={[type.metaBold, group.remainingCents > 0
                 ? Fonts.neutral200
-                : Fonts.success500]}
+                : Fonts.primary500]}
               >
                 {group.remainingCents > 0
                   ? formatLicenseMoney(group.remainingCents, currencyOf(group.items[0]))

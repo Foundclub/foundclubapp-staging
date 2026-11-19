@@ -33,7 +33,11 @@ const mockCandidats = [{ documentId: 'u-cand', firstname: 'Candidat' }];
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ opts) => ({
     isPending: false,
-    mutate: (/** @type {any} */ v) => opts.mutationFn(v),
+    // IMPL-2C (19/11) : comme react-query, `mutate` ne lève jamais : un refus va à `onError`.
+    mutate: (/** @type {any} */ v) => Promise.resolve(opts.mutationFn(v)).catch((/** @type {any} */ e) => {
+      if (!opts.onError) throw e;
+      opts.onError(e, v);
+    }),
     mutateAsync: async (/** @type {any} */ v) => opts.mutationFn(v),
   }),
   useQuery: (/** @type {any} */ opts) => {
@@ -88,7 +92,15 @@ jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => {
     }, react.createElement(rn.Text, null, 'Envoyer ma demande'));
   };
 });
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => (/** @type {any} */ props) => (props.isVisible || props.visible ? props.children : null));
+// IMPL-2C (19/11) : la doublure compte ses montages (une fenêtre neuve = un montage de plus).
+const mockMontagesDeFenetre = { n: 0 };
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const { useEffect } = jest.requireActual('react');
+  return function BottomModalMock(/** @type {any} */ props) {
+    useEffect(() => { mockMontagesDeFenetre.n += 1; }, []);
+    return props.isVisible || props.visible ? props.children : null;
+  };
+});
 const mockOuvrirAssistance = jest.fn();
 jest.mock('@/views/chat/useOuvrirLAssistance', () => ({
   __esModule: true,
@@ -435,7 +447,8 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
     expect(contenu).toContain('L’équipe sera validée quand les 5 premières places seront payées.');
     expect(contenu).toContain('À faire maintenant');
     expect(contenu).toContain('Il te faut une autre place payée ?');
-    expect(combien(arbre, ['Partager le lien d’invitation'])).toBe(1);
+    // ATTENDU CHANGÉ PAR IMPL-2C (19/11, recette 48 point A) : « Partager le lien », coupé à 375 px sinon.
+    expect(combien(arbre, ['Partager le lien'])).toBe(1);
   });
 
   // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum, donc « 2 joueurs », plus « 2 joueurs sur 8 ».
@@ -535,10 +548,12 @@ describe('T-PAGES-2 — joueur qui n’est pas capitaine (R6, R8)', () => {
 
   // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (18/11, planches 9b et 10a) : la phrase « Pour te retirer… »
   // en double du bouton disparaît ; « Écrire à l’Assistance FoundClub » reste et ouvre l'Assistance.
-  test('🔴 9b, 10a : plus de « Pour te retirer ou céder ta place, écris-nous » ; « Écrire à l’Assistance FoundClub » ouvre l’Assistance', async () => {
+  // ATTENDU CHANGÉ PAR IMPL-2C (19/11, recette 48 point A) : « Écrire à l’Assistance » (planche 10c),
+  // « … FoundClub » était coupé à 375 px.
+  test('🔴 9b, 10a : plus de « Pour te retirer ou céder ta place, écris-nous » ; « Écrire à l’Assistance » ouvre l’Assistance', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
     expect(texte(arbre)).not.toContain('Pour te retirer ou céder ta place, écris-nous');
-    await appuyer(arbre, ['Écrire à l’Assistance FoundClub']);
+    await appuyer(arbre, ['Écrire à l’Assistance']);
     expect(mockOuvrirAssistance).toHaveBeenCalled();
   });
 
@@ -863,7 +878,8 @@ describe('IMPL-2-EQUIPE — quitter avec une place payée (10c, 10d)', () => {
     expect(texte(arbre)).toContain('20 € · maillot taille L');
     await appuyer(arbre, ['Quitter l’équipe']);
     expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, tu es remboursé en entier : 20 €, sous 14 jours.');
-    await appuyer(arbre, ['Écrire à l’Assistance']);
+    // IMPL-2C : le bouton de la page porte le même libellé ; on appuie dans la fenêtre.
+    await appuyer(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-paid-leave')[0], ['Écrire à l’Assistance']);
     // M1311 (chef, 19/11) : la conversation s'ouvre avec « je souhaite me retirer » prérempli.
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
       brouillon: expect.stringContaining('je souhaite me retirer de l’équipe'), chatId: 'chat-assistance',
@@ -912,7 +928,8 @@ describe('M1311 — le capitaine retire son équipe par l’Assistance', () => {
     const arbre = await monter(datee(), 'u-cap');
     await appuyer(arbre, ['Retirer mon équipe']);
     expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, chaque place payée est remboursée intégralement. Après, pas de remboursement, mais chaque joueur peut céder sa place jusqu’au 17 décembre.');
-    await appuyer(arbre, ['Écrire à l’Assistance']);
+    // IMPL-2C : le bouton de la page porte le même libellé ; on appuie dans la fenêtre.
+    await appuyer(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-withdraw-team')[0], ['Écrire à l’Assistance']);
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
       brouillon: expect.stringContaining('je souhaite retirer mon équipe'), chatId: 'chat-assistance',
     }));
@@ -943,5 +960,71 @@ describe('Contrat IMPL-5 — la page vue par un tiers', () => {
     expect(contenu).toContain('1 place payée sur 5');
     expect(contenu).not.toMatch(/À payer|n’a pas encore payé|n’ont pas encore payé/);
     expect(contenu).not.toMatch(/(^| \| )Payé( \| |$)/);
+  });
+});
+
+// IMPL-2C (19/11/2026, recette 48, bloquant de la tournée du site, compte 777) — le capitaine au rôle Joueur
+// touche « Ouverte aux demandes » : le serveur refuse (403, droit `toggleOpenRequests` absent, corrigé côté
+// serveur en recette 49), et l'écran affichait « Erreur — Forbidden ». Il dit une phrase lisible ; une phrase
+// française du serveur (refus métier) passe toujours.
+describe('IMPL-2C — un refus du serveur sur l’interrupteur se dit en français', () => {
+  const { toggleTournamentTeamOpenRequests } = jest.requireMock('@/services/tournamentTeam/tournamentTeamService');
+  const derniereAlerte = () => alerte.mock.calls[alerte.mock.calls.length - 1];
+
+  test('🔴 403 « Forbidden » : « Tu ne peux pas modifier ce réglage pour l’instant. », jamais « Forbidden »', async () => {
+    toggleTournamentTeamOpenRequests.mockRejectedValueOnce({
+      details: {}, message: 'Forbidden', name: 'ForbiddenError', status: 403,
+    });
+    const arbre = await monter(equipe(), 'u-cap');
+    await appuyer(arbre, ['Ouverte aux demandes']);
+    expect(derniereAlerte()?.[1]).toBe('Tu ne peux pas modifier ce réglage pour l’instant.');
+    expect(JSON.stringify(alerte.mock.calls)).not.toContain('Forbidden');
+  });
+
+  test('400 avec une phrase française du serveur : elle est gardée', async () => {
+    toggleTournamentTeamOpenRequests.mockRejectedValueOnce({
+      details: {}, message: 'Le tournoi est fermé.', name: 'ValidationError', status: 400,
+    });
+    const arbre = await monter(equipe(), 'u-cap');
+    await appuyer(arbre, ['Ouverte aux demandes']);
+    expect(derniereAlerte()?.[1]).toBe('Le tournoi est fermé.');
+  });
+});
+
+// IMPL-2C (19/11/2026, recette 48 point A, site à 375 px) — « Partager le lien d’invitati… » et « Écrire à
+// l’Assistance FoundC… » : un bouton tient sur une ligne (Button, ROLES2) et le site ne rétrécit pas la
+// police. Les libellés courts de la planche : « Partager le lien », « Écrire à l’Assistance » (10c).
+describe('IMPL-2C — des libellés de bouton qui tiennent à 375 px', () => {
+  const titres = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.title === 'string' && typeof n.props?.onPress === 'function')
+    .map((/** @type {any} */ n) => n.props.title);
+
+  test('🔴 capitaine d’une équipe non validée : « Partager le lien », plus « … d’invitation »', async () => {
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    expect(titres(arbre)).toContain('Partager le lien');
+    expect(titres(arbre)).not.toContain('Partager le lien d’invitation');
+  });
+
+  test('🔴 joueur : « Écrire à l’Assistance », plus « … FoundClub »', async () => {
+    const arbre = await monter(payante('joueur'), 'u-2');
+    expect(titres(arbre)).toContain('Écrire à l’Assistance');
+    expect(titres(arbre)).not.toContain('Écrire à l’Assistance FoundClub');
+  });
+});
+
+// IMPL-2C (19/11/2026, recette 48 écart 7, tournée Android) — après la disparition de la fenêtre au clavier,
+// « Chercher un joueur » et les « Inviter » des places libres ne faisaient PLUS RIEN : la feuille était
+// partie sans rendre la main (`onClose` jamais reçu), la page la croyait ouverte, et rouvrir mettait
+// « ouvert » sur « ouvert ». Chaque appui rouvre désormais une fenêtre NEUVE, quel que soit l'état gardé.
+describe('IMPL-2C — rouvrir la fenêtre marche même si elle est partie sans prévenir', () => {
+  const bouton = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === libelle && typeof n.props?.onPress === 'function' && n.type !== 'View')[0];
+
+  test('🔴 « Chercher un joueur » deux fois, sans fermeture entre les deux : une fenêtre neuve à chaque appui', async () => {
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    const avant = mockMontagesDeFenetre.n;
+    await act(async () => { bouton(arbre, 'Chercher un joueur').props.onPress(); });
+    expect(mockMontagesDeFenetre.n).toBe(avant + 1);
+    // La feuille disparaît à l'écran sans appeler `onClose` (index perdu au clavier) : rien ne change côté page.
+    await act(async () => { bouton(arbre, 'Chercher un joueur').props.onPress(); });
+    expect(mockMontagesDeFenetre.n).toBe(avant + 2);
   });
 });

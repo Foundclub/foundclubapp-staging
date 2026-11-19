@@ -47,6 +47,7 @@ import {
 import { searchScopedUsers, searchUsers } from '@/services/user/userService';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { getApiErrorTranslation, getErrorStatus } from '@/utils/errors/displayError';
 import { getEventLocationText } from '@/utils/eventLocationText';
 
 import useOuvrirLAssistance from '../chat/useOuvrirLAssistance';
@@ -212,6 +213,9 @@ function TournamentTeamDetails({ navigation, route }) {
     Spaces,
   });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  // IMPL-2C (19/11, écart 7 Android) : le numéro de l'ouverture, clé de la fenêtre
+  // (voir openInvite).
+  const [inviteOuverture, setInviteOuverture] = useState(0);
   // IMPL-2-EQUIPE (18/11, planche 3b) : la fenêtre « Inviter un joueur », son premier écran et la
   // place libre touchée ; (10c, 10d) la fenêtre « Ta place est payée » avant de quitter.
   const [inviteMode, setInviteMode] = useState(/** @type {'choice' | 'search'} */ ('choice'));
@@ -419,16 +423,23 @@ function TournamentTeamDetails({ navigation, route }) {
     queryKey: ['tournament-team-users', 'global', teamId, searchTerm],
   });
 
+  // IMPL-2C (19/11, recette 48) — une erreur se dit en français : la traduction standard d'un
+  // statut ou d'un code connu (403 « Forbidden » devenait « Erreur — Forbidden »), sinon la phrase
+  // du serveur (refus métier, rédigé en français), sinon le repli de l'écran.
+  const phraseDErreur = (/** @type {any} */ erreur, /** @type {string} */ repli) => (
+    getApiErrorTranslation(erreur) || erreur?.message || repli
+  );
+
   const respondMutation = useMutation({
     mutationFn: (responseStatus) => respondToTournamentTeam(teamId, responseStatus),
     onError: (mutationError) => {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToUpdateYourAnswer',
         'Impossible de mettre à jour ta réponse.',
-      ));
+      )));
     },
     onSuccess: invalidate,
   });
@@ -439,10 +450,10 @@ function TournamentTeamDetails({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToAnswerThisInvitation',
         'Impossible de répondre à cette invitation.',
-      ));
+      )));
     },
     onSuccess: invalidate,
   });
@@ -451,10 +462,10 @@ function TournamentTeamDetails({ navigation, route }) {
     mutationFn: ({ acceptRiskDeclaration }) => requestJoinTournamentTeam(teamId, { acceptRiskDeclaration }),
     onError: (mutationError) => {
       // T-REJOINDRE (17/11, fait de recette) : sans phrase du serveur, dire quoi faire.
-      setJoinRequestError(mutationError?.message || t(
+      setJoinRequestError(phraseDErreur(mutationError, t(
         'tournamentJoin.sendError',
         'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
-      ));
+      )));
     },
     onSuccess: async () => {
       setJoinRequestError('');
@@ -469,10 +480,10 @@ function TournamentTeamDetails({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToRemoveThisMember',
         'Impossible de retirer ce membre.',
-      ));
+      )));
     },
     onSuccess: invalidate,
   });
@@ -483,10 +494,10 @@ function TournamentTeamDetails({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToTransferTheCaptaincy',
         'Impossible de transférer le capitanat.',
-      ));
+      )));
     },
     onSuccess: invalidate,
   });
@@ -497,10 +508,10 @@ function TournamentTeamDetails({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToInviteThisPlayer',
         "Impossible d'inviter ce joueur.",
-      ));
+      )));
     },
     onSuccess: async () => {
       setMemberSearchQuery('');
@@ -514,10 +525,10 @@ function TournamentTeamDetails({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToProcessThisRequest',
         'Impossible de traiter cette demande.',
-      ));
+      )));
     },
     onSuccess: invalidate,
   });
@@ -525,13 +536,19 @@ function TournamentTeamDetails({ navigation, route }) {
   const toggleOpenRequestsMutation = useMutation({
     mutationFn: (isOpenToJoinRequests) => toggleTournamentTeamOpenRequests(teamId, isOpenToJoinRequests),
     onError: (mutationError) => {
+      // IMPL-2C : refusé (403), le réglage n'est pas « en panne » : il n'est pas ouvert à ce
+      // compte.
+      if (getErrorStatus(mutationError) === 403) {
+        Alert.alert(t('common.error', 'Erreur'), t('implEquipe.recruit.forbidden'));
+        return;
+      }
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToUpdateThisOption',
         'Impossible de mettre à jour cette option.',
-      ));
+      )));
     },
     onSuccess: invalidate,
   });
@@ -542,10 +559,10 @@ function TournamentTeamDetails({ navigation, route }) {
       Alert.alert(t(
         'common.error',
         'Erreur',
-      ), mutationError?.message || t(
+      ), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToLeaveThisTeam',
         'Impossible de quitter cette équipe.',
-      ));
+      )));
     },
     onSuccess: async () => {
       await invalidate();
@@ -907,6 +924,10 @@ function TournamentTeamDetails({ navigation, route }) {
     setInviteMode(mode);
     setInviteSlot(slot);
     setIsInviteOpen(true);
+    // IMPL-2C (19/11, recette 48 écart 7, Android) : une feuille partie au clavier sans
+    // `onClose` laissait la page « ouverte » ; rouvrir ne changeait rien et les boutons
+    // semblaient morts. Chaque appui monte une fenêtre NEUVE (clé), qui se présente à nouveau.
+    setInviteOuverture((n) => n + 1);
   };
   const openInviteSearch = () => openInvite('search', null);
   // IMPL-2-EQUIPE (3b) : le lien de l'équipe par WhatsApp, SMS ou copie (« share » = la feuille
@@ -959,7 +980,7 @@ function TournamentTeamDetails({ navigation, route }) {
             isLoading={inviteLinkState === 'pending'}
             onPress={() => shareInviteLink()}
             size="sm"
-            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien d’invitation')}
+            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien')}
             variant="Primary"
           />
           <Button
@@ -1060,7 +1081,7 @@ function TournamentTeamDetails({ navigation, route }) {
         onPress={assistance.ouvrir}
         size="sm"
         style={{ alignSelf: 'stretch', maxWidth: '100%' }}
-        title={t('tournamentTeamDetails.withdraw.button', 'Écrire à l’Assistance FoundClub')}
+        title={t('tournamentTeamDetails.withdraw.button', 'Écrire à l’Assistance')}
         variant="SecondaryLight"
       />
       {assistance.erreur ? (
@@ -1164,7 +1185,7 @@ function TournamentTeamDetails({ navigation, route }) {
             onPress={() => shareInviteLink()}
             size="sm"
             style={{ alignSelf: 'stretch' }}
-            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien d’invitation')}
+            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien')}
             variant="Secondary"
           />
           <Button
@@ -1667,6 +1688,7 @@ function TournamentTeamDetails({ navigation, route }) {
             isSharing={inviteLinkState === 'pending'}
             isVisible
             isWide={isWide}
+            key={inviteOuverture}
             onChangeQuery={setMemberSearchQuery}
             onClose={() => setIsInviteOpen(false)}
             onInvite={(/** @type {any} */ userId) => inviteMemberMutation.mutate(userId)}
@@ -1718,10 +1740,10 @@ function TournamentTeamDetails({ navigation, route }) {
                 acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
               });
             } catch (mutationError) {
-              setJoinRequestError(mutationError?.message || t(
+              setJoinRequestError(phraseDErreur(mutationError, t(
                 'tournamentJoin.sendError',
                 'La demande n’est pas partie. Vérifie ta connexion, puis réessaie.',
-              ));
+              )));
             }
           }}
         />

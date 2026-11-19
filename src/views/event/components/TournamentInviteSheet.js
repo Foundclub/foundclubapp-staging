@@ -23,6 +23,14 @@ import { createTournamentDesignSystem } from '../tournamentDesignSystem';
 // cette fenêtre ne fait aucun appel réseau, elle reçoit tout par ses propriétés.
 // Témoins : __tests__/T-PAGES-2.pageEquipe.test.js (T-SUITES repris) et T-PAGES-2.caracterisation.
 
+// IMPL-2C (19/11, recette 48 écart 7, Android) : le champ de recherche (`BottomModalTextInput`,
+// gorhom sur Android) se déclare lui-même au clavier. Comme les autres feuilles qui le portent
+// (AutocompleteSelect en recherche, PollCreationModal, EventTasksEditor) : `extend` et un cran
+// fixe, le même dans les deux modes. Sans quoi le cran changeait (choix → recherche) au moment où
+// le clavier s'ouvre, et la feuille se fermait (CLAVPOP-ANDROID, BottomModal.js). Le site garde sa
+// hauteur automatique : il n'a ni ce champ ni ce clavier.
+const CRANS_NATIFS = ['86%'];
+
 /**
  * @typedef {{ documentId: string, firstname?: string, lastname?: string, username?: string,
  *   avatar?: { url?: string }, club?: { name?: string } }} Candidat
@@ -226,14 +234,22 @@ function TournamentInviteSheet({
 
   return (
     <BottomModal
+      androidKeyboardBehavior="extend"
       close={onClose}
+      // IMPL-2C (19/11, recette 48 écart 6) : la croix « Fermer » (`common.close`),
+      // cachée par défaut.
+      hideCloseButton={false}
       isVisible={isVisible}
+      snapPoints={Platform.OS === 'web' ? undefined : CRANS_NATIFS}
       webPresentation={isWide ? 'dialog' : undefined}
     >
       <View testID="tournament-invite-sheet">
         {/* L'en-tête dans le contenu : visible dans la feuille comme dans la fenêtre du site. */}
         <View style={[Spaces.gap[4], Spaces.paddingBottom[12]]}>
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          {/* La place de la croix, en haut à droite : le titre ne passe pas dessous. */}
+          <View
+            style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { paddingRight: 40 }]}
+          >
             {mode === 'search' && initialMode === 'choice' ? (
               <TouchableOpacity
                 accessibilityLabel={t('implEquipe.invite.back')}
