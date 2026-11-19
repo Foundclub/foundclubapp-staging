@@ -249,11 +249,13 @@ import {
   getTournamentTeamsSeekingPlayers,
   getTournamentTeamsThreshold,
   isTournamentRegistrationClosed,
+  isTournamentRegistrationOpen,
 } from './tournamentJoinRules';
 import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
   getTournamentTeamsLine,
+  getTournamentTeamsTabLine,
   isTournamentTeamsCountShown,
 } from './tournamentTeamsCount';
 import {
@@ -1397,7 +1399,9 @@ function EventDetails({ navigation, route }) {
     // IMPL-1-FICHE × IMPL-3 : « Inscriptions fermées », en jaune.
     statutDuBandeau = t('implFiche.registrationsClosed');
     tonDuBandeau = 'warning';
-  } else if (!tournoiClos && tournamentConfig?.competitionState !== 'published') {
+  } else if (isTournamentRegistrationOpen(event)) {
+    // FICHE-TOURNOI (19/11) : la règle partagée avec la carte des listes (6a), la même qu'avant
+    // (ni clôturé, ni publié ; les inscriptions fermées sont prises juste au-dessus).
     statutDuBandeau = t('eventDetails.header.registrationOpen');
   }
   // T-SUITES-TOURNOI (18/11, point 9) : la pastille du terrain, pour l'organisateur seul (le
@@ -5929,6 +5933,21 @@ function EventDetails({ navigation, route }) {
   });
   // FIN-EVENEMENTS p131 : un tournoi clôturé se lit seulement, sur la fiche comme au pilotage.
   const hasManageActions = manageChips.length > 0 && !tournoiClos;
+  // FICHE-TOURNOI (19/11/2026, écrans 6b et 9f, maquette) — la fiche d'un tournoi : « Partager »
+  // en haut à droite, et « Signaler » passe dans le menu ⋯ (après les actions de gestion, s'il y
+  // en a).
+  // Les autres types d'événement gardent le drapeau. Témoin : EventDetails.T-PAGES-4.ficheTournoi
+  // « FICHE-TOURNOI · 6b ».
+  const ficheDuTournoi = isTournamentEvent && !isStageDayEvent;
+  const menuChips = ficheDuTournoi
+    ? [...(hasManageActions ? manageChips : []), {
+      icon: 'flag',
+      key: 'report',
+      label: t('eventDetails.a11y.reportEvent', 'Signaler l’événement'),
+      onPress: () => setIsReportModalVisible(true),
+    }]
+    : manageChips;
+  const hasMenuSheet = hasManageActions || ficheDuTournoi;
 
   // ───────────────────────────────────────────────────────────────────────────
   // L4-A — LES ONGLETS DU MATCH (maquette planche 04, cadres 4A et 4B).
@@ -6027,14 +6046,22 @@ function EventDetails({ navigation, route }) {
     }
 
     if (isTournamentEvent && !isStageDayEvent) {
+      let nombreDEquipesDeLOnglet = NaN;
+      if (canEdit) {
+        nombreDEquipesDeLOnglet = Number(getTournamentRegisteredTeamsCount({ tournamentTeams }));
+      } else if (isTournamentTeamsCountShown(event)) {
+        nombreDEquipesDeLOnglet = Number(getTournamentRegisteredTeamsCount(event));
+      }
       return [
         overviewTab,
         {
           // T-SUITES-TOURNOI (18/11, point 11) : en attente + validées, comme le pilotage
           // (TournamentManagement), sans les refusées ni les archivées.
+          // FICHE-TOURNOI (19/11, 8b) : « Équipes · 9 » aussi pour qui n'organise pas, dès le seuil
+          // des 30 % (« 4- A »), au nombre du résumé du serveur ; sous le seuil, aucun nombre.
           label: withTabCount(
             t('eventDetails.tabs.teams', 'Équipes'),
-            canEdit ? Number(getTournamentRegisteredTeamsCount({ tournamentTeams })) : NaN,
+            nombreDEquipesDeLOnglet,
           ),
           value: 'tournamentTeams',
         },
@@ -6052,6 +6079,7 @@ function EventDetails({ navigation, route }) {
   }, [
     acceptedPeopleCount,
     canEdit,
+    event,
     isDetectionEvent,
     isMatchEvent,
     isStageDayEvent,
@@ -7101,7 +7129,13 @@ function EventDetails({ navigation, route }) {
       // ⛔ La largeur est `100%` : la grille a deux colonnes de l'accordeon
       // laisse place aux rangees pleine largeur de la maquette 04 · 4C — une
       // demi-chip ne peut pas porter un libelle ET sa destination.
-      <View key={chip.key} style={{ width: '100%' }} testID="event-manage-chip">
+      <View
+        key={chip.key}
+        style={{ width: '100%' }}
+        // FICHE-TOURNOI : « Signaler » n'est pas une action de gestion (les témoins comptent
+        // celles-ci par `event-manage-chip`).
+        testID={chip.key === 'report' ? 'event-menu-report' : 'event-manage-chip'}
+      >
         {/* 🚪 EVEDIT-2 (D2) — LE POINT DE SORTIE COMMUN DES SIX ACTIONS.
             La rangee n execute plus au toucher : elle ARME l action et
             demande la fermeture de la feuille. C est ici, et nulle part
@@ -7208,7 +7242,7 @@ function EventDetails({ navigation, route }) {
   // a montrer. Et le corriger ici ne touche PAS `BottomModal`, donc aucun de ses
   // 69 autres appelants ne bouge.
   const renderManageSheet = () => {
-    if (!hasManageActions) return null;
+    if (!hasMenuSheet) return null;
 
     // S2-bis — LE PLAFOND SE MESURE SUR LA HAUTEUR UTILISABLE, PAS SUR LA DALLE.
     //
@@ -7250,7 +7284,9 @@ function EventDetails({ navigation, route }) {
           style={[Fonts.h5Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[16]]}
           testID="event-manage-title"
         >
-          {t('eventDetails.managePanel.title', "Gérer l'événement")}
+          {hasManageActions
+            ? t('eventDetails.managePanel.title', "Gérer l'événement")
+            : t('ficheTournoi.moreActions', 'Plus d’actions')}
         </Text>
         {/* S2-ter — L AIR SOUS LA DERNIERE RANGEE.
             Retour de recette : « Annuler » est visible, mais la feuille colle
@@ -7272,9 +7308,9 @@ function EventDetails({ navigation, route }) {
           ]}
           testID="event-manage-sheet"
         >
-          {manageChips.map((chip, index) => renderManageRow(
+          {menuChips.map((chip, index) => renderManageRow(
             chip,
-            index === manageChips.length - 1,
+            index === menuChips.length - 1,
           ))}
         </View>
 
@@ -8086,7 +8122,10 @@ function EventDetails({ navigation, route }) {
                 style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}
                 testID="event-tournament-teams-summary"
               >
-                {canEdit ? teamsSummary : ligneEquipesDuTournoi}
+                {/* FICHE-TOURNOI (8b) : « 9 équipes inscrites · 15 places libres » au seuil. */}
+                {canEdit
+                  ? teamsSummary
+                  : (getTournamentTeamsTabLine(event) || ligneEquipesDuTournoi)}
               </Text>
             </View>
             {canEdit && tournamentTeamCounters.warning > 0 ? (
@@ -8120,7 +8159,13 @@ function EventDetails({ navigation, route }) {
               }
               return null;
             })()}
+            // FICHE-TOURNOI (8a) : le visiteur sans compte « rejoint » par la connexion du tournoi.
+            onJoinSignedOut={!userData?.documentId && !tournoiClos && !inscriptionsFermees
+              ? ouvrirLaConnexionDuTournoi
+              : null}
             onOpenTeamPage={handleOpenTournamentTeam}
+            // FICHE-TOURNOI (8e) : « Voir les infos du tournoi » de l'aperçu ramène à Aperçu.
+            onSeeTournament={() => setDetailsTab('overview')}
             teams={equipesMontreesDuTournoi}
             threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
             viewerRequested={roleDuLecteurAuTournoi === 'requested'}
@@ -8604,17 +8649,30 @@ function EventDetails({ navigation, route }) {
   const renderHeaderRight = useCallback(
     () => (
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], Spaces.marginRight[16]]}>
-        <Button
-          // FINITIONS7 — tournee 8 : un drapeau sans nom pour le lecteur d ecran.
-          accessibilityLabel={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
-          icon="flag"
-          isOption
-          onPress={() => setIsReportModalVisible(true)}
-          variant="Secondary"
-        />
-        {hasManageActions ? (
+        {ficheDuTournoi ? (
+          // FICHE-TOURNOI (6b) : « Partager » à la place du drapeau ; « Signaler » est dans le ⋯.
+          <Button
+            accessibilityLabel={t('eventDetails.share', 'Partager')}
+            icon="share"
+            isOption
+            onPress={() => setIsShareModalVisible(true)}
+            variant="Secondary"
+          />
+        ) : (
+          <Button
+            // FINITIONS7 — tournee 8 : un drapeau sans nom pour le lecteur d ecran.
+            accessibilityLabel={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
+            icon="flag"
+            isOption
+            onPress={() => setIsReportModalVisible(true)}
+            variant="Secondary"
+          />
+        )}
+        {hasMenuSheet ? (
           <TouchableOpacity
-            accessibilityLabel={t('eventDetails.managePanel.title', "Gérer l'événement")}
+            accessibilityLabel={hasManageActions
+              ? t('eventDetails.managePanel.title', "Gérer l'événement")
+              : t('ficheTournoi.moreActions', 'Plus d’actions')}
             accessibilityRole="button"
             activeOpacity={0.7}
             onPress={openManageSheet}
@@ -8630,7 +8688,10 @@ function EventDetails({ navigation, route }) {
         ) : null}
       </View>
     ),
-    [Alignments, Colors.neutral00, hasManageActions, openManageSheet, Spaces, t],
+    [
+      Alignments, Colors.neutral00, ficheDuTournoi, hasManageActions, hasMenuSheet, openManageSheet,
+      Spaces, t,
+    ],
   );
 
   useLayoutEffect(() => {
@@ -8927,23 +8988,28 @@ function EventDetails({ navigation, route }) {
             ) : null}
             {/* T-PAGES-4 (17/11) : L'essentiel, puis l'inscription (a) ; « Mon équipe » est
                 sous le bandeau (T-PAGES-4b). */}
-            {renderTournamentEssentials()}
-            {renderTournamentActionsPanel()}
+            {/* FICHE-TOURNOI (19/11, 6b et 9f, maquette) : sur un tournoi, les onglets juste
+                sous le bandeau et « Mon équipe » ; l'essentiel, l'inscription, « Rejoindre une équipe »,
+                « Comment ça marche » et « Avant de t'inscrire » restent, dans l'onglet Aperçu
+                (l'onglet Équipes s'ouvre sur la liste). */}
+            {ficheDuTournoi ? renderDetailsTabs() : null}
+            {ficheDuTournoi && !showOverviewTab ? null : renderTournamentEssentials()}
+            {ficheDuTournoi && !showOverviewTab ? null : renderTournamentActionsPanel()}
             {/* T-REJOINDRE (17/11, D50) : le joueur seul rejoint une équipe ouverte.
                 T-PAGES-4 (point 5, tranché C) : jamais pour l'organisateur du tournoi ;
                 récolte du train 12 (chef, 17/11) : la règle partagée isTournamentOrganizer
                 (tournamentJoinRules.js, T-PAGES-6) décide, dans canAskToJoinTournamentTeam du
                 panneau, comme sur le site. */}
-            {isTournamentEvent && !isStageDayEvent ? (
+            {ficheDuTournoi && showOverviewTab ? (
               <TournamentJoinTeamPanel
                 event={event}
                 onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
                 teams={tournamentTeams}
               />
             ) : null}
-            {renderTournamentPlayerGuide()}
+            {ficheDuTournoi && !showOverviewTab ? null : renderTournamentPlayerGuide()}
             {renderViewerConvocationLine()}
-            {renderDetailsTabs()}
+            {ficheDuTournoi ? null : renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>
               {/* 🚪 N5 (D4) — LA PROCHAINE ACTION PASSE EN PREMIER, juste sous
                   l entete, comme la maquette 2A la dessine. Elle ne renverse pas

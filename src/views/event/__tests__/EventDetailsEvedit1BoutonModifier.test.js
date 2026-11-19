@@ -609,7 +609,9 @@ describe('FIN-EVENEMENTS p131 — un tournoi clôturé, sur le téléphone', () 
     const racine = mountScreen({ auth: AUTH, event: TOURNOI_CLOS() });
 
     expect(leBandeau(racine).length).toBeGreaterThan(0);
-    expect(boutonDeGestion()).toBeNull();
+    // FICHE-TOURNOI (19/11, 6b) : le ⋯ d'un tournoi reste, pour « Signaler » seul : il ne gère
+    // plus rien (« Plus d’actions », pas « Gérer l’événement »).
+    expect(boutonDeGestion()?.props.accessibilityLabel).toBe('Plus d’actions');
   });
 
   test('protégé : un tournoi en cours garde son menu, sans bandeau', () => {

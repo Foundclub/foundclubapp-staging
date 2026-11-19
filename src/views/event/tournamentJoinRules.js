@@ -1,4 +1,8 @@
+import { format } from 'date-fns';
+import { enGB, fr } from 'date-fns/locale';
 import i18next from 'i18next';
+
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 
 import { getEventLocationText } from '@/utils/eventLocationText';
 
@@ -29,6 +33,19 @@ import {
 export const isTournamentRegistrationClosed = (event) => (
   event?.tournamentConfig?.registrationsClosed === true
 );
+
+/**
+ * FICHE-TOURNOI (19/11/2026, écran 6a) — « Inscriptions ouvertes » : ni fermées par
+ * l'organisateur, ni tournoi clôturé, ni compétition publiée. La règle du bandeau de la fiche du
+ * téléphone (EventDetails.js), partagée avec la carte des listes (EventCardNew.js).
+ * Témoin : __tests__/FICHE-TOURNOI.regles.test.js.
+ * @param {any} event - Le tournoi.
+ * @returns {boolean} Vrai si on peut encore s'inscrire.
+ */
+export const isTournamentRegistrationOpen = (event) => Boolean(event)
+  && !isTournamentRegistrationClosed(event)
+  && !getTournamentClosure(event).isClosed
+  && event?.tournamentConfig?.competitionState !== 'published';
 
 /**
  * Le nombre de joueurs d'une équipe, tel que la fiche peut le connaître.
@@ -215,6 +232,24 @@ export const getTournamentTeamsThreshold = (capacite) => {
   const total = Math.round(Number(capacite));
   if (!Number.isFinite(total) || total <= 0) return null;
   return Math.ceil((total * TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT) / 100);
+};
+
+/**
+ * FICHE-TOURNOI (19/11/2026, règle d'Adel D276, écran 8e) — la ligne sous le nom d'une équipe :
+ * « nom du tournoi · date courte » (« FoundClub x AR Soccer · sam. 19 déc. »), sans lieu ni prix.
+ * Une seule écriture pour l'aperçu d'une équipe (TournamentTeamSheet.js) et la page d'équipe
+ * (lot PAGE-EQUIPE).
+ * Témoin : __tests__/FICHE-TOURNOI.regles.test.js.
+ * @param {any} event - Le tournoi (`name`, `date`).
+ * @returns {string} La ligne, ou ''.
+ */
+export const getTournamentNameAndShortDate = (event) => {
+  const nom = String(event?.name || '').trim();
+  const date = event?.date ? new Date(event.date) : null;
+  const jour = date && !Number.isNaN(date.getTime())
+    ? format(date, 'EEE d MMM', { locale: localeDesFormats() === 'en-GB' ? enGB : fr })
+    : '';
+  return [nom, jour].filter(Boolean).join(' · ');
 };
 
 /**

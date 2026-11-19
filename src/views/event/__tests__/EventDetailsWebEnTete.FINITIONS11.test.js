@@ -287,9 +287,11 @@ describe('FINITIONS11 · point 1 — l en-tête des pages d événement du site'
     expect(mockNavigate).toHaveBeenCalledWith('MyEventList');
   });
 
+  // FICHE-TOURNOI (19/11/2026, 6b) : au téléphone, la fiche d'un TOURNOI n'a plus ni fil ni drapeau
+  // (« Signaler » dans le menu ⋯) ; sur un ordinateur, elle les garde. Témoin :
+  // EventDetailsWeb.FICHE-TOURNOI.test.js.
   test.each([
     ['Entrainement', 'Entrainement du mardi'],
-    ['Tournoi', 'Tournoi de printemps'],
     ['Stage', 'Stage de Pâques'],
   ])('4 · %s : le même fil, le nom en titre, le drapeau « Signaler »', (typeName, nom) => {
     const root = mountScreen({ event: buildEvent({ name: nom, type: { name: typeName } }) });

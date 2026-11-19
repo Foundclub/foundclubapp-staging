@@ -35,13 +35,16 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureCardTag from '@/components/molecules/facilityClosure/FacilityClosureCardTag';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
-import { getTournamentShortPlace } from '@/views/event/tournamentJoinRules';
+import {
+  getTournamentShortPlace,
+  isTournamentRegistrationOpen,
+} from '@/views/event/tournamentJoinRules';
 import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
   getTournamentTeamsLine,
 } from '@/views/event/tournamentTeamsCount';
-import { getTournamentCategoryLabel } from '@/views/event/tournamentUtils';
+import { getTournamentCategoryLabel, getTournamentMinAge } from '@/views/event/tournamentUtils';
 
 import {
   resolveExternalMatchDisplay,
@@ -49,6 +52,7 @@ import {
 } from '@/utils/externalMatchDisplay';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getShortAddress } from '@/utils/location';
+import texteInsecable from '@/utils/texteInsecable';
 
 /**
  * Normalise un nom de type (casse et accents) pour comparaison.
@@ -561,6 +565,9 @@ function EventCardNew({
   // IMPL-1-FICHE (18/11, 6a/7a) : un tournoi dit son complexe et sa ville (« AR Soccer ·
   // Montpellier »), jamais le terrain (« Terrain A », réglage de l'organisateur).
   const lieuDuTournoi = isTournamentEvent ? getTournamentShortPlace(item) : '';
+  // FICHE-TOURNOI (19/11, 6a) : sans adresse lisible, le terrain (« Terrain A », étiquette interne
+  // de l'organisateur) ne remplace pas le lieu pour le public ; l'organisateur le garde.
+  const terrainDuLieu = isTournamentEvent && !canManageEvent?.(item) ? null : item?.facility?.name;
   // Location - check facility first (club installation), then other options
   const locationText = lieuDuTournoi || (isImportedExternalMatch
     ? (
@@ -571,7 +578,7 @@ function EventCardNew({
       || t('eventDetails.locationUnknown', 'Lieu à confirmer')
     )
     : (
-      item?.facility?.name
+      terrainDuLieu
       || getShortAddress(item?.locationDetails)
       || getShortAddress(item?.club?.addressDetails)
       || getShortAddress(item?.team?.club?.addressDetails)
@@ -588,12 +595,17 @@ function EventCardNew({
 
   const clubName = item?.team?.club?.name || item?.club?.name || 'FoundClub';
   const clubLogo = item?.team?.club?.logo?.url || item?.club?.logo?.url;
+  // FICHE-TOURNOI (19/11, 6a) : un tournoi à âge minimum le dit dans la pastille « Dès 16 ans »
+  // (sous le lieu) ; il ne le redit plus sous le titre (« À partir de 16 ans », T-FINITIONS-3).
+  const ageMinimumDuTournoi = isTournamentEvent ? getTournamentMinAge(item) : null;
   const tournamentMetaName = [
     getDisplayLabel(item?.tournamentActivity),
     getDisplayLabel(item?.tournamentSection),
     // T-FINITIONS-3 (16/11) : « À partir de {minAge} ans » remplace l'âge de la catégorie d'un
     // tournoi à âge minimum.
-    getTournamentCategoryLabel(item, getDisplayLabel(item?.tournamentCategory)),
+    ageMinimumDuTournoi
+      ? ''
+      : getTournamentCategoryLabel(item, getDisplayLabel(item?.tournamentCategory)),
   ].filter(Boolean).join(' • ');
   // ORGANISATEUR-VISIBLE (19/11) : la personne qui propose l'événement, en « Prénom N. ».
   const proposedByLabel = libelleOrganisateur(item);
@@ -617,9 +629,24 @@ function EventCardNew({
   const nomDeCategorie = getDisplayLabel(
     item?.team?.category || item?.tournamentCategory || item?.category,
   );
-  const teamCategory = isTournamentEvent
-    ? getTournamentCategoryLabel(item, nomDeCategorie)
-    : nomDeCategorie;
+  let teamCategory = nomDeCategorie;
+  if (isTournamentEvent) {
+    teamCategory = ageMinimumDuTournoi ? '' : getTournamentCategoryLabel(item, nomDeCategorie);
+  }
+  // FICHE-TOURNOI (19/11, 6a) : les pastilles de la carte d'un tournoi, sous le lieu.
+  const pastillesDuTournoi = isTournamentEvent ? [
+    isTournamentRegistrationOpen(item)
+      ? { cle: 'etat', texte: t('eventDetails.header.registrationOpen', 'Inscriptions ouvertes') }
+      : null,
+    ageMinimumDuTournoi
+      ? {
+        cle: 'age',
+        texte: i18next.t('implFiche.fromAge', 'Dès {{minAge}} ans', {
+          minAge: ageMinimumDuTournoi,
+        }),
+      }
+      : null,
+  ].filter(Boolean) : [];
   const defaultTeamMetaLine = [teamCategory, teamSection, teamLevel]
     .filter((value) => !!value)
     .join(' • ');
@@ -959,7 +986,8 @@ function EventCardNew({
             />
             <View style={styles.clubTextContainer}>
               <Text
-                numberOfLines={showClubHeader ? 2 : 1}
+                // FICHE-TOURNOI (19/11, 6a) : le nom d'un tournoi en entier, sur deux lignes.
+                numberOfLines={showClubHeader || isTournamentEvent ? 2 : 1}
                 style={[
                   styles.clubName,
                   { color: Colors.neutral00 },
@@ -1021,6 +1049,37 @@ function EventCardNew({
               </Text>
             ) : null}
           </View>
+
+          {/* FICHE-TOURNOI (19/11, 6a) : « Inscriptions ouvertes » et « Dès 16 ans » sous le lieu ;
+              « 24 équipes attendues » reste dessous. */}
+          {pastillesDuTournoi.length ? (
+            <View style={styles.tournamentTags} testID="event-card-tournament-tags">
+              {pastillesDuTournoi.map((/** @type {any} */ pastille) => (
+                <View
+                  key={pastille.cle}
+                  style={[
+                    styles.tournamentTag,
+                    pastille.cle === 'etat'
+                      ? {
+                        backgroundColor: withAlpha(Colors.primary500, 0.16),
+                        borderColor: 'transparent',
+                      }
+                      : { borderColor: withAlpha(Colors.neutral00, 0.24) },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      Fonts.p4Bold,
+                      { color: pastille.cle === 'etat' ? Colors.primary500 : Colors.neutral00 },
+                    ]}
+                  >
+                    {/* Pastille en gras : espaces insécables (piège Android 16). */}
+                    {texteInsecable(pastille.texte)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {/* Badges d'état des réservations (données réelles conservées) */}
           {isReservation && (isLastMinuteAlert || isShared || isBooked) ? (
@@ -1136,6 +1195,9 @@ function EventCardNew({
             accessibilityRole="text"
             style={[
               styles.attente,
+              // FICHE-TOURNOI (19/11, 7a) : sur la carte d'un tournoi, la marque se réduit en
+              // pastille (mêmes mots, même ton) ; ailleurs, l'encadré de MARQUE-MAIRIE reste.
+              isTournamentEvent ? styles.attentePastille : null,
               {
                 backgroundColor: withAlpha(Colors.warning500, 0.12),
                 borderColor: withAlpha(Colors.warning500, 0.45),
@@ -1143,8 +1205,21 @@ function EventCardNew({
             ]}
             testID="carte-seance-en-attente"
           >
-            <SvgIcon color={Colors.warning500} height={15} name="clock-two-thirty" width={15} />
-            <Text style={[Fonts.p3Bold, { color: Colors.warning400, flex: 1 }]}>{attente}</Text>
+            <SvgIcon
+              color={Colors.warning500}
+              height={isTournamentEvent ? 12 : 15}
+              name="clock-two-thirty"
+              width={isTournamentEvent ? 12 : 15}
+            />
+            <Text
+              style={[
+                isTournamentEvent ? Fonts.p4Bold : Fonts.p3Bold,
+                { color: Colors.warning400 },
+                isTournamentEvent ? { flexShrink: 1 } : { flex: 1 },
+              ]}
+            >
+              {isTournamentEvent ? texteInsecable(attente) : attente}
+            </Text>
           </View>
         ) : null}
 
@@ -1213,6 +1288,14 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  attentePastille: {
+    alignSelf: 'flex-start',
+    borderRadius: 100,
+    gap: 6,
+    minHeight: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   backgroundImage: {
     borderRadius: 20,
@@ -1387,6 +1470,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     height: 7,
     width: 7,
+  },
+  // FICHE-TOURNOI (19/11, 6a) : les pastilles d'un tournoi, comme celles du bandeau de la fiche.
+  tournamentTag: {
+    borderRadius: 100,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  tournamentTags: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   typeInfoBox: {
     borderRadius: 10,

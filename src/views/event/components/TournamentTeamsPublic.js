@@ -15,6 +15,8 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 
 import { requestJoinTournamentTeam } from '@/services/tournamentTeam/tournamentTeamService';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import {
   canAskToJoinTournamentTeam,
   getTournamentJoinBlockingNotice,
@@ -171,28 +173,35 @@ export function TournamentPublicTeamCard({
         </View>
         {validee ? <Pastille color={Colors.primary500} text={t('implFiche.validated')} /> : null}
       </View>
-      <View style={{
-        alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-      }}
-      >
-        {cherche > 0 ? (
-          <Pastille
-            color={Colors.primary200}
-            testID="tournament-public-team-looking-for"
-            text={t('implFiche.lookingFor', { count: cherche })}
-          />
-        ) : null}
-        {/* D239 (pas de limite de joueurs) : une équipe ouverte qui a déjà ses 5 le dit. */}
-        {ouverte && cherche === 0 ? (
-          <Pastille color={Colors.primary500} text={t('implFiche.openToRequests')} />
-        ) : null}
-        {effectif !== null ? (
-          <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {t('implFiche.players', { count: effectif })}
-          </Text>
-        ) : null}
-        <View style={{ flex: 1 }} />
-        <Text style={[Fonts.p3Bold, Fonts.primary200]}>{t('implFiche.seeTeam')}</Text>
+      {/* FICHE-TOURNOI (19/11, 8b) : « Voir l'équipe » s'affichait « Voir » sur Android (recette
+          48, tournoi 3444) : le piège du gras Android 16 (le dernier mot d'un texte gras perdu
+          dans une boîte à sa largeur). Parade prouvée : espaces insécables ; et le lien sort de
+          la rangée qui passe à la ligne, à sa largeur (flexShrink 0). */}
+      <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+        <View style={{
+          alignItems: 'center', flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+        }}
+        >
+          {cherche > 0 ? (
+            <Pastille
+              color={Colors.primary200}
+              testID="tournament-public-team-looking-for"
+              text={t('implFiche.lookingFor', { count: cherche })}
+            />
+          ) : null}
+          {/* D239 (pas de limite de joueurs) : une équipe ouverte qui a déjà ses 5 le dit. */}
+          {ouverte && cherche === 0 ? (
+            <Pastille color={Colors.primary500} text={t('implFiche.openToRequests')} />
+          ) : null}
+          {effectif !== null ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('implFiche.players', { count: effectif })}
+            </Text>
+          ) : null}
+        </View>
+        <Text style={[Fonts.p3Bold, Fonts.primary200, { flexShrink: 0 }]}>
+          {texteInsecable(t('implFiche.seeTeam'))}
+        </Text>
       </View>
       {ouverte && requested ? (
         <Pastille
@@ -287,12 +296,17 @@ export function useTournamentJoinRequest({ event, onRequested }) {
  * @param {any} [props.viewerTeam] - L'équipe du lecteur (capitaine, membre, invité, demandeur).
  * @param {boolean} [props.viewerRequested] - Le lecteur a demandé à rejoindre `viewerTeam`.
  * @param {(() => void) | null} [props.onCreate] - « Créer mon équipe », si le lecteur le peut.
+ * @param {(() => void) | null} [props.onJoinSignedOut] - FICHE-TOURNOI (8a) : « Rejoindre une
+ *   équipe » d'un visiteur sans compte (la connexion du tournoi) ; `null` si les inscriptions ne
+ *   le permettent pas.
  * @param {(teamId: string) => void} props.onOpenTeamPage - Ouvrir la page d'une équipe (la sienne).
+ * @param {() => void} [props.onSeeTournament] - FICHE-TOURNOI (8e) : « Voir les infos du
+ *   tournoi » de l'aperçu (l'onglet Aperçu au téléphone) ; l'aperçu se ferme dans tous les cas.
  * @returns {import('react').ReactElement} L'onglet.
  */
 function TournamentTeamsPublic({
-  belowThreshold, event, onCreate = null, onOpenTeamPage, teams, threshold,
-  viewerRequested = false, viewerTeam = null,
+  belowThreshold, event, onCreate = null, onJoinSignedOut = null, onOpenTeamPage,
+  onSeeTournament = undefined, teams, threshold, viewerRequested = false, viewerTeam = null,
 }) {
   const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
@@ -330,6 +344,11 @@ function TournamentTeamsPublic({
     viewerRequested && viewerTeam?.documentId && viewerTeam.documentId === team?.documentId,
   );
   // La sienne reste visible sous le seuil ; les autres, après « Rejoindre une équipe ».
+  // FICHE-TOURNOI (19/11, 8a) : le visiteur sans compte trouve aussi « Rejoindre une équipe » ;
+  // le bouton ouvre la connexion du tournoi, comme « Créer mon équipe ».
+  let rejoindre = null;
+  if (!viewerTeam && demander) rejoindre = () => setListeOuverte(true);
+  else if (!viewerTeam && !userData?.documentId && onJoinSignedOut) rejoindre = onJoinSignedOut;
   const visibles = listeOuverte
     ? teams
     : teams.filter((team) => team?.documentId && team.documentId === viewerTeam?.documentId);
@@ -343,7 +362,7 @@ function TournamentTeamsPublic({
       {sousLeSeuil ? (
         <TournamentTeamsThresholdCard
           onCreate={viewerTeam ? null : onCreate}
-          onJoin={demander && !viewerTeam ? () => setListeOuverte(true) : null}
+          onJoin={rejoindre}
           threshold={threshold}
         />
       ) : null}
@@ -368,6 +387,10 @@ function TournamentTeamsPublic({
           event={event}
           onAsk={viewerTeam ? null : demander}
           onClose={() => setApercu(null)}
+          onSeeTournament={() => {
+            setApercu(null);
+            if (onSeeTournament) onSeeTournament();
+          }}
           requested={aDemande(apercu)}
           team={apercu}
           tournamentConfig={config}
