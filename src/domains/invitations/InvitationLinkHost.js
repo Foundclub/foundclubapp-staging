@@ -45,7 +45,11 @@ import Button from '@/components/atoms/button/Button';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import { openTournamentTerms } from '@/views/event/components/tournamentTerms';
 import { formatEventWhenLine } from '@/views/event/eventInfoLines';
-import { getTournamentEntryFeeLabel } from '@/views/event/tournamentUtils';
+import {
+  getTournamentEntryFeeLabel,
+  getTournamentViewerMember,
+  isTournamentActiveMemberStatus,
+} from '@/views/event/tournamentUtils';
 
 import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { navigate, navigationRef } from '@/navigation/navigationService';
@@ -318,6 +322,33 @@ const describeTournamentAgeNotice = (preview, t) => {
 };
 
 /**
+ * T-LIEN-MEMBRE (18/11/2026, M1319 point 12) — le compte connecté est-il DÉJÀ dans cette équipe ?
+ * L'aperçu ne le dit pas toujours : rien sur un tournoi clos, et un verdict de refus quand le
+ * serveur lit une ancienne ligne retirée du compte. On relit la fiche de l'équipe, avec la règle
+ * de la fiche du tournoi (getTournamentViewerMember : `members`, ou la ligne du lecteur seule).
+ * @param {string} teamDocumentId - L'équipe du lien.
+ * @param {string} userDocumentId - Le compte connecté.
+ * @param {(teamId: string) => Promise<any>} [readTeam] - La lecture de la fiche. Le site passe
+ *   `getTournamentTeamById` importé : `require` n'existe pas dans son navigateur (modules ESM).
+ * @returns {Promise<boolean>} Vrai s'il y a une ligne active ; faux sinon, ou si la lecture échoue.
+ */
+export const isActiveMemberOfTournamentTeam = async (teamDocumentId, userDocumentId, readTeam) => {
+  const teamId = String(teamDocumentId || '').trim();
+  const userId = String(userDocumentId || '').trim();
+  if (!teamId || !userId) return false;
+  try {
+    const read = readTeam
+      // eslint-disable-next-line global-require -- chargé à la demande, comme l'aperçu (plus bas)
+      || require('@/services/tournamentTeam/tournamentTeamService').getTournamentTeamById;
+    const team = await read(teamId);
+    return Boolean(getTournamentViewerMember(team, userId, isTournamentActiveMemberStatus));
+  } catch (_error) {
+    // Une fiche refusée (403 : pas membre) ou injoignable : on garde le verdict de l'aperçu.
+    return false;
+  }
+};
+
+/**
  * T-INVITE (15/11/2026, Adel D37 « B ») — Decision PURE : la fenetre d'un lien d'EQUIPE DE TOURNOI
  * (`/i/tournament/<tournoi>?c=<code>`). Connecte : « Rejoindre l'equipe » (le serveur verifie club,
  * age,
@@ -333,8 +364,12 @@ const describeTournamentAgeNotice = (preview, t) => {
  *   primaryDisabled?: boolean, secondary: string, secondaryAction: 'dismiss' | 'openTeam',
  *   showTerms: boolean, title: string }} la fenetre (`primaryDisabled` : T-FINITIONS-3 ;
  *   `action`, `ageNotice`, `showTerms` : T-PAGES-6).
+ * @param {boolean} [params.isMember] - T-LIEN-MEMBRE : la relecture de l'équipe trouve le compte
+ *   dedans (isActiveMemberOfTournamentTeam).
  */
-export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
+export const describeCodedTournamentInvite = ({
+  isMember = false, isSignedIn, preview, t,
+}) => {
   const teamName = String(preview?.team?.name || '').trim();
   const eventName = String(preview?.event?.name || '').trim();
   const title = teamName
@@ -342,7 +377,39 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       ...SANS_ECHAPPEMENT, team: teamName,
     })
     : t('invitationLink.tournament.title', 'Invitation à un tournoi');
-  if (preview?.status === 'closed') {
+  const closed = preview?.status === 'closed';
+  // T-PAGES-6 : sous le texte, l'âge, et le lien des conditions pour un tournoi payant.
+  const notes = closed ? { ageNotice: '', showTerms: false } : {
+    ageNotice: describeTournamentAgeNotice(preview, t),
+    showTerms: Number(preview?.entryFeeCents) > 0,
+  };
+  // T-LIEN-MEMBRE (18/11, M1319 point 12) : le joueur déjà dedans (verdict de l'aperçu, ou
+  // relecture de l'équipe) va droit à son équipe, tournoi clos compris ; avant, « Voir le
+  // tournoi ». Le capitaine d'un tournoi ouvert garde « Envoyer le lien » (planche 4, plus bas).
+  // T-PAGES-6 (R5, planche 4) : la place s'y paie.
+  if (isSignedIn && preview?.viewer?.isCaptain !== true
+    && (isMember === true || preview?.viewer?.alreadyMember === true)) {
+    return {
+      ...notes,
+      action: 'openTeam',
+      body: t(
+        'invitationLink.tournamentTeam.memberBody',
+        'Ta place se paie sur la page de ton équipe.',
+      ),
+      closed,
+      primary: t('invitationLink.tournamentTeam.openTeam', 'Voir mon équipe'),
+      secondary: t('invitationLink.later', 'Plus tard'),
+      secondaryAction: 'dismiss',
+      title: teamName
+        ? t(
+          'invitationLink.tournamentTeam.memberTitleTeam',
+          "Tu fais déjà partie de l'équipe {{team}}",
+          { ...SANS_ECHAPPEMENT, team: teamName },
+        )
+        : t('invitationLink.tournamentTeam.memberTitle', "Tu fais déjà partie de l'équipe"),
+    };
+  }
+  if (closed) {
     return {
       action: 'openTournament',
       ageNotice: '',
@@ -361,11 +428,6 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
   // T-PAGES-6 (décision « 4a A ») : qui invite, en prénom et initiale (le serveur ne rend rien de
   // plus).
   const captainName = String(preview?.captainName || '').trim();
-  // T-PAGES-6 : sous le texte, l'âge, et le lien des conditions pour un tournoi payant.
-  const notes = {
-    ageNotice: describeTournamentAgeNotice(preview, t),
-    showTerms: Number(preview?.entryFeeCents) > 0,
-  };
   const withTeam = teamName && eventName
     ? t(
       'invitationLink.tournamentTeam.intro',
@@ -407,7 +469,7 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
     };
   }
   // T-PAGES-6 (R5, planche 4) : le capitaine qui ouvre son lien ne se voit plus proposer de
-  // rejoindre sa propre équipe ; le joueur déjà dedans va droit à son équipe (la place s'y paie).
+  // rejoindre sa propre équipe (le joueur déjà dedans : plus haut, T-LIEN-MEMBRE).
   if (preview?.viewer?.isCaptain === true) {
     return {
       ...notes,
@@ -421,21 +483,6 @@ export const describeCodedTournamentInvite = ({ isSignedIn, preview, t }) => {
       secondary: t('invitationLink.tournamentTeam.openTeam', 'Voir mon équipe'),
       secondaryAction: 'openTeam',
       title: t('invitationLink.tournamentTeam.captainTitle', "C'est ton équipe"),
-    };
-  }
-  if (preview?.viewer?.alreadyMember === true) {
-    return {
-      ...notes,
-      action: 'openTeam',
-      body: t(
-        'invitationLink.tournamentTeam.memberBody',
-        'Ta place se paie sur la page de ton équipe.',
-      ),
-      closed: false,
-      primary: t('invitationLink.tournamentTeam.openTeam', 'Voir mon équipe'),
-      secondary: t('invitationLink.later', 'Plus tard'),
-      secondaryAction: 'dismiss',
-      title: t('invitationLink.tournamentTeam.memberTitle', "Tu es déjà dans l'équipe"),
     };
   }
   // T-FINITIONS-3 (16/11, chef d'orchestre) : le serveur dit d'avance si rejoindre est impossible
@@ -643,6 +690,23 @@ function InvitationLinkHost({ userId } = {}) {
     };
     // T-PAGES-6 : relu quand le compte arrive, pour recevoir le verdict du compte connecté.
   }, [codedTournamentInvite?.code, isSignedIn]);
+
+  // T-LIEN-MEMBRE (18/11) : connecté, et l'aperçu ne dit pas « membre » : on relit l'équipe.
+  // `null` : relecture en cours (« Rejoindre l'équipe » attend sa réponse, grisé).
+  const [tournamentMember, setTournamentMember] = useState(/** @type {boolean | null} */ (false));
+  const previewTeamId = String(tournamentPreview?.team?.documentId || '');
+  const previewSaysMember = tournamentPreview?.viewer?.alreadyMember === true;
+  useEffect(() => {
+    setTournamentMember(false);
+    if (!isSignedIn || !previewTeamId || previewSaysMember) return undefined;
+    setTournamentMember(null);
+    let isCurrent = true;
+    isActiveMemberOfTournamentTeam(previewTeamId, String(userId || ''))
+      .then((member) => { if (isCurrent) setTournamentMember(member); });
+    return () => {
+      isCurrent = false;
+    };
+  }, [isSignedIn, previewSaysMember, previewTeamId, userId]);
 
   const closeWindow = useCallback(() => {
     setPendingInvite(null);
@@ -918,7 +982,10 @@ function InvitationLinkHost({ userId } = {}) {
   }
 
   if (codedTournamentInvite) {
-    const coded = describeCodedTournamentInvite({ isSignedIn, preview: tournamentPreview, t });
+    const coded = describeCodedTournamentInvite({
+      isMember: tournamentMember === true, isSignedIn, preview: tournamentPreview, t,
+    });
+    const rereadingMembership = coded.action === 'join' && tournamentMember === null;
     /** @type {() => (void | Promise<void>)} */
     let onPrimary = handleTournamentPrimary;
     if (coded.action === 'openTeam') onPrimary = openOwnTournamentTeam;
@@ -930,7 +997,7 @@ function InvitationLinkHost({ userId } = {}) {
         eyebrow={t('invitationLink.eyebrow', 'Invitation')}
         onRequestClose={closeWindow}
         primaryAction={coded.primary ? {
-          disabled: coded.primaryDisabled === true,
+          disabled: coded.primaryDisabled === true || rereadingMembership,
           label: coded.primary,
           onPress: onPrimary,
         } : undefined}
