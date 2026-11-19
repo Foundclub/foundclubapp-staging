@@ -74,6 +74,18 @@ export const getMyTournamentInvitations = async () => {
   return body?.meta?.view === 'invitations' && Array.isArray(body?.data) ? body.data : [];
 };
 
+/**
+ * ACCUEIL-TOURNOI (19/11/2026, écran 9e) — MES équipes de tournoi à venir, pour « Tes prochains
+ * événements » de l'accueil (admin : `listViewerTeams`, tournament-competition.js). Même garde
+ * qu'au-dessus : sans `meta.view === 'mine'` (ancien serveur), rien n'en sort.
+ * @returns {Promise<any[]>} Les équipes (`team`, `event`, `myPlace`), par date.
+ */
+export const getMyTournamentTeams = async () => {
+  const response = await client.get('/tournament-teams', { params: { view: 'mine' } });
+  const body = response?.data;
+  return body?.meta?.view === 'mine' && Array.isArray(body?.data) ? body.data : [];
+};
+
 export const reviewTournamentJoinRequest = async (teamId, memberId, status) => {
   const response = await client.post(`/tournament-teams/${teamId}/review-request`, {
     data: { memberId, status },

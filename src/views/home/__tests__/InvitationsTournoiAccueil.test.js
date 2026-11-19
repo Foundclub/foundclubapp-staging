@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { colors } from '@/theme/colors';
+
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import InvitationsTournoiAccueil from '@/views/home/InvitationsTournoiAccueil';
 
@@ -9,6 +11,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   getMyTournamentInvitations,
+  getMyTournamentTeams,
   getTournamentTeamById,
   respondToTournamentInvitation,
 } from '@/services/tournamentTeam/tournamentTeamService';
@@ -32,6 +35,7 @@ let mockFocus = true;
 jest.mock('@react-navigation/native', () => ({ useIsFocused: () => mockFocus }));
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
   getMyTournamentInvitations: jest.fn(),
+  getMyTournamentTeams: jest.fn(),
   getTournamentTeamById: jest.fn(),
   respondToTournamentInvitation: jest.fn(),
 }));
@@ -127,6 +131,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockFocus = true;
   getMyTournamentInvitations.mockResolvedValue([invitation('a')]);
+  getMyTournamentTeams.mockResolvedValue([]);
   getTournamentTeamById.mockResolvedValue(FICHE_INVITE);
   respondToTournamentInvitation.mockResolvedValue({ documentId: 'tt-a' });
 });
@@ -135,7 +140,9 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
   // IMPL-4-ACCUEIL, page 2 (planche 2a, 18/11) : titre « Invitation au tournoi », le nom de qui
   // invite à part (avec la photo), le tournoi dans un encadré avec le lieu complet et le prix, la
   // question dite par l'invitant (« mon équipe »). Remplace les textes de T-INVITATION-ACCUEIL.
-  it('qui invite, l’équipe, le tournoi, sa date, son lieu, son prix, la question', async () => {
+  // ACCUEIL-TOURNOI (19/11, Adel, écrans 2a, 2c, 2e) : la carte raccourcie, sans la question ni
+  // « Voir le tournoi » ; c'est la carte entière qui ouvre le tournoi.
+  it('qui invite, l’équipe, le tournoi, date, lieu, prix ; ni question ni lien', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'Invitation au tournoi',
@@ -144,9 +151,9 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
       TOURNOI,
       'AR Soccer, 12 avenue du Stade, Montpellier',
       '20 € par joueur · maillot offert',
-      '« Veux-tu rejoindre mon équipe pour ce tournoi ? »',
-      'Voir le tournoi',
     ]));
+    expect(lisibles(arbre)).not.toContain('« Veux-tu rejoindre mon équipe pour ce tournoi ? »');
+    expect(lisibles(arbre)).not.toContain('Voir le tournoi');
     expect(lisibles(arbre).some((texte) => /19 décembre · 19:00 – 23:00$/.test(texte))).toBe(true);
     expect(arbre.root.findAllByProps({ testID: 'accueil-invitation-photo' }).length)
       .toBeGreaterThan(0);
@@ -190,13 +197,40 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     expect(arbre.toJSON()).toBeNull();
   });
 
-  it('« Voir le tournoi » ouvre la fiche du tournoi (EventDetails)', async () => {
+  it('ACCUEIL-TOURNOI — toucher la carte ouvre la fiche du tournoi (EventDetails)', async () => {
     const arbre = await monter();
-    await act(async () => { pressable(arbre, 'Voir le tournoi').props.onPress(); });
+    const zone = arbre.root.findByProps({ testID: 'accueil-invitation-ouvrir-tt-a' });
+    expect(zone.props.accessibilityRole).toBe('button');
+    await act(async () => { zone.props.onPress(); });
     expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventStack, {
       params: { eventId: 'evt-a' },
       screen: RouteNames.EventDetails,
     });
+  });
+
+  it('ACCUEIL-TOURNOI — « Refuser » et « Accepter » hors de la zone touchable', async () => {
+    const arbre = await monter();
+    const zone = arbre.root.findByProps({ testID: 'accueil-invitation-ouvrir-tt-a' });
+    const dansLaZone = (libelle) => zone.findAll((n) => n.props?.title === libelle).length > 0;
+    expect(dansLaZone('Refuser')).toBe(false);
+    expect(dansLaZone('Accepter')).toBe(false);
+  });
+
+  it('ACCUEIL-TOURNOI — pile de deux invitations : carte courte, chacune touchable', async () => {
+    getMyTournamentInvitations.mockResolvedValue([invitation('a'), invitation('b')]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).not.toContain('Voir le tournoi');
+    expect(lisibles(arbre)).not.toContain('« Veux-tu rejoindre mon équipe pour ce tournoi ? »');
+    await act(async () => {
+      arbre.root.findByProps({ testID: 'accueil-invitation-ouvrir-tt-b' }).props.onPress();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventStack, {
+      params: { eventId: 'evt-b' },
+      screen: RouteNames.EventDetails,
+    });
+    const boutons = arbre.root.findAll((n) => n.props?.title === 'Accepter'
+      && n.props?.variant === 'Primary');
+    expect(boutons).toHaveLength(2);
   });
 
   // IMPL-4-ACCUEIL, page 2 (planche 2b) : après « Accepter », la carte reste et enchaîne sur le
@@ -339,5 +373,139 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'Un joueur', 't’invite dans son équipe Les Lions',
     ]));
+  });
+});
+
+// ACCUEIL-TOURNOI (19/11/2026, écran 9e, Adel « On suit ta reco ») — LE TOURNOI DU JOUEUR INSCRIT
+// EN HAUT DE L'ACCUEIL, dans « Tes prochains événements » : le nom du tournoi, son équipe, la date,
+// les heures, le lieu, et « 1 place à payer » si sa place n'est pas payée ; la carte ouvre sa page
+// d'équipe. Le serveur rend `GET /tournament-teams?view=mine` (admin : listViewerTeams).
+const monEquipe = (cle, extra = {}) => ({
+  event: {
+    date: '2026-12-19T00:00:00.000Z',
+    documentId: `evt-${cle}`,
+    endTime: '23:00:00.000',
+    location: { address: '12 avenue du Stade, Montpellier', name: 'AR Soccer' },
+    locationDetails: null,
+    name: TOURNOI,
+    startTime: '19:00:00.000',
+  },
+  myPlace: { status: 'due' },
+  team: { documentId: `tt-${cle}`, name: 'Les Panthères', status: 'pending' },
+  ...extra,
+});
+
+describe('ACCUEIL-TOURNOI — le tournoi dans « Tes prochains événements »', () => {
+  beforeEach(() => {
+    getMyTournamentInvitations.mockResolvedValue([]);
+  });
+
+  it('inscrit, place due : titre, tournoi, équipe, date, lieu, « 1 place à payer »', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Tes prochains événements',
+      'Tournoi',
+      TOURNOI,
+      'Ton équipe : Les Panthères',
+      '19:00 – 23:00',
+      'AR Soccer · Montpellier',
+      '1 place à payer',
+    ]));
+    expect(lisibles(arbre).some((texte) => /19 décembre/.test(texte))).toBe(true);
+  });
+
+  it('place payée, ou tournoi gratuit (`myPlace` nul) : pas de « place à payer »', async () => {
+    getMyTournamentTeams.mockResolvedValue([
+      monEquipe('p', { myPlace: { status: 'paid' } }),
+      monEquipe('g', { myPlace: null }),
+    ]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Tes prochains événements');
+    expect(lisibles(arbre).some((texte) => /place à payer/.test(texte))).toBe(false);
+  });
+
+  it('toucher la carte ouvre SA page d’équipe (TournamentTeamDetails)', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
+    const arbre = await monter();
+    const carte = arbre.root.findByProps({ testID: 'accueil-mon-tournoi-tt-p' });
+    expect(carte.props.accessibilityRole).toBe('button');
+    await act(async () => { carte.props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.EventStack, {
+      params: { eventId: 'evt-p', teamId: 'tt-p' },
+      screen: RouteNames.TournamentTeamDetails,
+    });
+  });
+
+  it('sans équipe, ancien serveur (liste vide) ou lecture en panne : rien', async () => {
+    let arbre = await monter();
+    expect(arbre.toJSON()).toBeNull();
+    getMyTournamentTeams.mockRejectedValue(Object.assign(new Error('Forbidden'), { status: 403 }));
+    arbre = await monter();
+    expect(arbre.toJSON()).toBeNull();
+  });
+
+  it('plusieurs tournois : trois cartes au plus, dans l’ordre du serveur (par date)', async () => {
+    getMyTournamentTeams.mockResolvedValue(['a', 'b', 'c', 'd'].map((cle) => monEquipe(cle)));
+    const arbre = await monter();
+    const cartes = arbre.root.findAll((n) => typeof n.type === 'string'
+      && String(n.props?.testID || '').startsWith('accueil-mon-tournoi-'));
+    expect(cartes.map((n) => n.props.testID)).toEqual([
+      'accueil-mon-tournoi-tt-a', 'accueil-mon-tournoi-tt-b', 'accueil-mon-tournoi-tt-c',
+    ]);
+  });
+
+  it('avec une invitation : l’invitation d’abord, puis « Tes prochains événements »', async () => {
+    getMyTournamentInvitations.mockResolvedValue([invitation('a')]);
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
+    const arbre = await monter();
+    const textes = lisibles(arbre);
+    expect(textes.indexOf('Invitation au tournoi')).toBeGreaterThanOrEqual(0);
+    expect(textes.indexOf('Invitation au tournoi'))
+      .toBeLessThan(textes.indexOf('Tes prochains événements'));
+  });
+
+  // Chef d'orchestre, 19/11 : la consigne d'Adel « tout en bleu » ne vise que le vert ; l'ambre
+  // de la maquette reste, par le jeton « avertissement » du thème.
+  it('« 1 place à payer » en ambre (jeton warning400), sur un fond ambre léger', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
+    const arbre = await monter();
+    const texte = arbre.root.findAll((n) => typeof n.type === 'string'
+      && n.props?.children === '1 place à payer')[0];
+    expect(StyleSheet.flatten(texte.props.style).color).toBe(colors.warning400);
+  });
+
+  it('le sport du tournoi devant l’équipe : « Football à 5 · Ton équipe : … »', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p', {
+      event: { ...monEquipe('p').event, tournamentActivity: { name: 'Football à 5' } },
+    })]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Football à 5 · Ton équipe : Les Panthères');
+  });
+
+  it('« Tout voir » ouvre l’onglet Planning (MyEventList)', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
+    const arbre = await monter();
+    await act(async () => { pressable(arbre, 'Tout voir').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
+      screen: RouteNames.MyEventList,
+    });
+  });
+
+  it('juste après « Accepter » : l’équipe rejointe ne s’affiche qu’une fois', async () => {
+    getMyTournamentInvitations.mockResolvedValue([invitation('a')]);
+    const arbre = await monter();
+    const lecturesAvant = getMyTournamentTeams.mock.calls.length;
+    getMyTournamentInvitations.mockResolvedValue([]);
+    getMyTournamentTeams.mockResolvedValue([
+      monEquipe('a', { team: { documentId: 'tt-a', name: 'Les Lions' } }),
+    ]);
+    await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
+    await vidanger();
+    // La liste « mes équipes » est relue après la réponse...
+    expect(getMyTournamentTeams.mock.calls.length).toBeGreaterThan(lecturesAvant);
+    // ... mais la carte « Tu as rejoint » garde la place : pas de doublon de la même équipe.
+    expect(lisibles(arbre)).toContain('Tu as rejoint l’équipe Les Lions');
+    expect(arbre.root.findAllByProps({ testID: 'accueil-mon-tournoi-tt-a' })).toHaveLength(0);
   });
 });

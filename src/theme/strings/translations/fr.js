@@ -14799,11 +14799,11 @@ export default {
       + 'le titre en grand, l’image en haut.',
     invitation: {
       invite: 't’invite dans son équipe',
+      ouvrir: 'Ouvre la fiche du tournoi',
       payer: 'Payer ma place ({{prix}})',
       prevenu: '{{prenom}} est prévenu de ta réponse.',
       prix: '{{prix}} par joueur',
       prixMaillot: '{{prix}} par joueur · maillot offert',
-      question: '« Veux-tu rejoindre mon équipe pour ce tournoi ? »',
       rejoint: 'Tu as rejoint l’équipe {{team}}',
       resteAPayer: 'Il te reste à payer ta place pour qu’elle compte : {{prix}}.',
       resteAPayerMaillot:
@@ -14812,6 +14812,14 @@ export default {
       valideeDes_one: 'L’équipe est validée dès {{count}} joueur payé.',
       valideeDes_other: 'L’équipe est validée dès {{count}} joueurs payés.',
       voirEquipe: 'Voir l’équipe',
+    },
+    prochains: {
+      badge: 'Tournoi',
+      ouvrir: 'Ouvre la page de ton équipe',
+      placeAPayer: '1 place à payer',
+      titre: 'Tes prochains événements',
+      tonEquipe: 'Ton équipe : {{team}}',
+      toutVoir: 'Tout voir',
     },
     rechercheEffacer: 'Effacer la recherche',
     rechercheVide: 'Rien ne correspond à « {{q}} »',
@@ -27031,7 +27039,6 @@ export default {
     error: 'Ta réponse n’est pas partie. Vérifie ta connexion, puis réessaie.',
     pending: 'Invitation en attente',
     question: 'Veux-tu rejoindre son équipe pour ce tournoi ?',
-    seeTournament: 'Voir le tournoi',
     sentence:
       '{{inviter}} t’invite à rejoindre son équipe {{team}} pour le tournoi {{tournament}}.',
     someone: 'Un joueur',
