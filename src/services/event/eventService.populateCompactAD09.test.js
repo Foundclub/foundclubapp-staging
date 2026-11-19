@@ -98,6 +98,8 @@ describe('AD09 - le populate compact des cartes d evenement', () => {
       'invitedTeams',
       'league_match',
       'missings',
+      // ORGANISATEUR-VISIBLE (D258, d43f7c9a) : « Proposé par Prénom N. », trois champs nommés.
+      'organizer',
       'parentEvent',
       'participationRequests',
       'participations',
@@ -111,5 +113,6 @@ describe('AD09 - le populate compact des cartes d evenement', () => {
     expect(populate?.invitedTeams?.fields).toEqual(['documentId', 'name']);
     expect(populate?.league_match?.fields).toEqual(['documentId']);
     expect(populate?.parentEvent?.fields).toEqual(['documentId']);
+    expect(populate?.organizer?.fields).toEqual(['documentId', 'firstname', 'lastname']);
   });
 });
