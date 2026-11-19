@@ -99,9 +99,10 @@ describe('Etape Poste — tant que le sport n`est pas repondu (D23 (2), la vraie
     expect(views.find((view) => view.route === RouteNames.UserPosition)?.canShow).toBe(true);
   });
 
-  it('le total du parcours joueur ne bouge pas : toujours 13', () => {
-    expect(getOnboardingViews(joueur({ preferredSport: null })).totalViews).toBe(13);
-    expect(getOnboardingViews(joueur({ preferredSport: 'Rugby' })).totalViews).toBe(13);
+  // INSCRIPTION-CODE-2 — Avant : 13 (le tronc commun ajoute le rôle au joueur : 14).
+  it('le total du parcours joueur ne bouge pas avec le sport : toujours 14', () => {
+    expect(getOnboardingViews(joueur({ preferredSport: null })).totalViews).toBe(14);
+    expect(getOnboardingViews(joueur({ preferredSport: 'Rugby' })).totalViews).toBe(14);
   });
 });
 

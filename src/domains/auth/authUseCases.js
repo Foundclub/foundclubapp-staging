@@ -869,6 +869,15 @@ export const getOnboardingViews = ({
     if (view.route === RouteNames.UserSport && preferredSport) {
       return Object.assign(view, { canShow: false });
     }
+    // INSCRIPTION-CODE-2 (19/11/2026) — l'activité vient AVANT le rôle : un compte qui a déjà un
+    // rôle de coach, de dirigeant ou de parent l'a déjà passée (ou a dit « Je ne trouve pas »). Ces
+    // parcours ne demandaient pas l'activité avant le lot : un ancien compte (Karim, dirigeant sans
+    // date, AGE-OBLIGATOIRE-3 ; un coach invité par son club, TUNNELREPRISE) ne doit pas se la voir
+    // demander à sa prochaine ouverture. Elle reste COMPTÉE (le numéro « Étape n sur N » ne bouge
+    // pas d'un écran à l'autre). Le joueur la garde : elle était déjà dans son parcours.
+    if (view.route === RouteNames.UserSport && ['coach', 'parent', 'president'].includes(roleKey)) {
+      return Object.assign(view, { canShow: false });
+    }
     // Skip position if sport does not expose dedicated positions in the app.
     if (view.route === RouteNames.UserPosition) {
       // D23 (a) - un poste deja enregistre ne se redemande pas, SAUF s'il ne

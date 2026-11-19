@@ -251,12 +251,20 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-describe('RESA-INSCRIPTION · interrupteur ÉTEINT : l’écran de staging', () => {
+// INSCRIPTION-CODE-2 (19/11/2026) — « POUR UN COMPLEXE » A DÉMÉNAGÉ AU PREMIER ÉCRAN (V02 validé,
+// INSCRIPTION-CODE (a) 0e24eef92) : derrière « Tu représentes une mairie ou un complexe ? », en bas
+// de « Que pratiques-tu ? ». Les 7 témoins de ce fichier y sont portés, MÊMES ASSERTIONS, dans
+// `UserSport.PORTEMAIRIE.test.js` (« RESA-INSCRIPTION · interrupteur ÉTEINT / ALLUMÉ »). Ici ne
+// reste que ce que l'écran du rôle doit encore garantir : ni mairie ni complexe, dans les deux
+// états
+// de l'interrupteur, et le rôle sportif part seul.
+describe('RESA-INSCRIPTION · interrupteur ÉTEINT', () => {
   test('l’interrupteur du dépôt est allumé, RESA-OUVERTURE', () => {
     expect(jest.requireActual('@/config/fonctionsMasquees').COMPLEXES_GERANT).toBe(true);
   });
 
-  test('5 rangées (4 rôles + la mairie), un seul intertitre, aucun complexe', async () => {
+  // Avant : « 5 rangées (4 rôles + la mairie), un seul intertitre, aucun complexe ».
+  test('4 rangées (les 4 rôles), ni mairie ni complexe', async () => {
     const arbre = await monter();
 
     expect(rangees(arbre).map(libelleDe)).toEqual([
@@ -264,105 +272,63 @@ describe('RESA-INSCRIPTION · interrupteur ÉTEINT : l’écran de staging', () 
       'Coach / Prof',
       'Dirigeant·e',
       'Parent',
-      'Je représente une collectivité',
     ]);
     const lus = textes(arbre);
-    expect(lus).toContain('POUR UNE MAIRIE');
+    expect(lus).not.toContain('POUR UNE MAIRIE');
     expect(lus).not.toContain('POUR UN COMPLEXE');
     expect(lus).not.toContain('Je gère un complexe');
   });
 });
 
-describe('RESA-INSCRIPTION · interrupteur ALLUMÉ : « Pour un complexe » (E-G01 état 0)', () => {
+describe('RESA-INSCRIPTION · interrupteur ALLUMÉ', () => {
   beforeEach(() => {
     mockComplexesGerant = true;
   });
 
-  test('« POUR UN COMPLEXE » SOUS « POUR UNE MAIRIE », puis « Je gère un complexe »', async () => {
+  // Avant : « POUR UN COMPLEXE » SOUS « POUR UNE MAIRIE », puis « Je gère un complexe » (6
+  // rangées).
+  test('toujours les 4 rôles seuls : le complexe est au premier écran', async () => {
     const arbre = await monter();
-    const lus = textes(arbre);
-
-    expect(lus.indexOf('POUR UNE MAIRIE')).toBeGreaterThan(-1);
-    expect(lus.indexOf('POUR UN COMPLEXE')).toBeGreaterThan(lus.indexOf('POUR UNE MAIRIE'));
     expect(rangees(arbre).map(libelleDe)).toEqual([
       'Pratiquant·e / Joueur·se',
       'Coach / Prof',
       'Dirigeant·e',
       'Parent',
-      'Je représente une collectivité',
-      'Je gère un complexe',
     ]);
-    const complexe = rangee(arbre, 'Je gère un complexe');
-    expect(complexe.findAllByType(Text).map((/** @type {any} */ n) => n.props.children))
-      .toEqual(['Je gère un complexe', 'Foot à 5, padel, tennis…']);
-    expect(complexe.props.accessibilityState).toEqual({ checked: false });
+    expect(textes(arbre)).not.toContain('POUR UN COMPLEXE');
+    expect(rangee(arbre, 'Je gère un complexe')).toBeUndefined();
   });
 
-  // GERANT-INSCRIPTION (10/11, décision 3 A) : l'identité d'abord, comme les autres rôles.
-  // Le choix est gardé par le mode complexe (stockage local, par compte) : « Qui es-tu ? »
-  // mène ensuite à la fiche du complexe.
-  test('sans identité : « Qui es-tu ? » d’abord, le choix gardé en mode complexe', async () => {
-    const { storage } = jest.requireMock('@/store/appContext');
+  test('rien de coché : « Continuer » inactif, aucun tunnel du complexe', async () => {
     const arbre = await monter();
-    await appuyer(rangee(arbre, 'Je gère un complexe'));
-    await appuyer(bouton(arbre, CONTINUER));
-
-    expect(updateMe).not.toHaveBeenCalled();
-    expect(storage.set).toHaveBeenCalledWith('user.complexe_mode.u-neuf', 'on');
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith('UserName');
-  });
-
-  test('le choisir mène au tunnel du complexe, sans rôle posé ni question de sport', async () => {
-    mockUserData = {
-      ...COMPTE_NEUF, birthdate: '1990-05-12', firstname: 'Gérant', lastname: 'Recette',
-    };
-    const arbre = await monter();
-
     expect(bouton(arbre, CONTINUER).props.disabled).toBe(true);
-    await appuyer(rangee(arbre, 'Je gère un complexe'));
-    expect(rangee(arbre, 'Je gère un complexe').props.accessibilityState)
-      .toEqual({ checked: true });
-    expect(bouton(arbre, CONTINUER).props.disabled).toBe(false);
     await appuyer(bouton(arbre, CONTINUER));
-
     expect(updateMe).not.toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith('ComplexeDevenirGerant');
+    expect(mockNavigate).not.toHaveBeenCalledWith('ComplexeDevenirGerant');
   });
 
-  test('le décocher rend « Continuer » inactif', async () => {
-    const arbre = await monter();
-    await appuyer(rangee(arbre, 'Je gère un complexe'));
-    await appuyer(rangee(arbre, 'Je gère un complexe'));
-    expect(bouton(arbre, CONTINUER).props.disabled).toBe(true);
-  });
-
-  test('un rôle sportif choisi ensuite décoche le complexe : le rôle part', async () => {
+  // Avant : « un rôle sportif choisi ensuite décoche le complexe : le rôle part ».
+  test('un rôle sportif choisi : le rôle part, sans tunnel du complexe', async () => {
     /** @type {any} */ (updateMe).mockResolvedValue({});
     const arbre = await monter();
-    await appuyer(rangee(arbre, 'Je gère un complexe'));
     await appuyer(rangee(arbre, 'Dirigeant·e'));
-
-    expect(rangee(arbre, 'Je gère un complexe').props.accessibilityState)
-      .toEqual({ checked: false });
     await appuyer(bouton(arbre, CONTINUER));
     expect(/** @type {any} */ (updateMe).mock.calls[0][0]).toEqual({ role: 'role-dirigeant' });
     expect(mockNavigate).not.toHaveBeenCalledWith('ComplexeDevenirGerant');
+    expect(mockNavigate).not.toHaveBeenCalledWith('CollectiviteSignup');
   });
 
-  test('la mairie et le complexe s’excluent, dans les deux sens', async () => {
-    const arbre = await monter();
-    await appuyer(rangee(arbre, 'Je représente une collectivité'));
-    await appuyer(rangee(arbre, 'Je gère un complexe'));
-    expect(rangee(arbre, 'Je représente une collectivité').props.accessibilityState)
-      .toEqual({ checked: false });
-    await appuyer(rangee(arbre, 'Je représente une collectivité'));
-    expect(rangee(arbre, 'Je gère un complexe').props.accessibilityState)
-      .toEqual({ checked: false });
-    await appuyer(bouton(arbre, CONTINUER));
-
-    expect(mockNavigate).toHaveBeenCalledWith('CollectiviteSignup');
-    expect(mockNavigate).not.toHaveBeenCalledWith('ComplexeDevenirGerant');
+  test('le porteur des 7 témoins déménagés existe', () => {
+    const fs = jest.requireActual('fs');
+    const path = jest.requireActual('path');
+    const porte = fs.readFileSync(path.join(__dirname, 'UserSport.PORTEMAIRIE.test.js'), 'utf8');
+    [
+      '« POUR UN COMPLEXE » SOUS « POUR UNE MAIRIE », puis « Je gère un complexe »',
+      'sans identité : « Qui es-tu ? » d’abord, le choix gardé en mode complexe',
+      'le choisir mène au tunnel du complexe, sans rien enregistrer',
+      'le décocher rend « Continuer » inactif',
+      'un sport choisi ensuite décoche le complexe : le sport part',
+      'la mairie et le complexe s’excluent, dans les deux sens',
+    ].forEach((titre) => expect(porte).toContain(titre));
   });
 });

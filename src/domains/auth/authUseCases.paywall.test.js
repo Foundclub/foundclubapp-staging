@@ -174,7 +174,10 @@ describe('D89 ④ — les gardes de D23 ne bougent pas d\'un pouce', () => {
     expect(sortieDeTunnel(USER_ROLES.coach, { userDocumentId: undefined })).toBeUndefined();
   });
 
-  it('les 5 totaux de parcours restent 13 / 5 / 4 / 3 / 13', () => {
+  // INSCRIPTION-CODE-2 (19/11/2026) — le tronc commun (activité, « Qui es-tu ? », rôle) en tête de
+  // chaque parcours. Avant : 13 · 5 · 4 · 3 · 13. Joueur +1 (le rôle), coach et dirigeant +2,
+  // super-admin inchangé, compte neuf inchangé (le sport monte en tête).
+  it('les 5 totaux de parcours restent 14 / 7 / 6 / 3 / 13', () => {
     // L'offre est un SAS, pas une etape : elle ne doit apparaitre dans aucun
     // compteur. C'est le meme temoin que D16/D23 pour la bienvenue.
     const totaux = [
@@ -185,7 +188,7 @@ describe('D89 ④ — les gardes de D23 ne bougent pas d\'un pouce', () => {
       USER_ROLES.new,
     ].map((role) => getOnboardingViews({ documentId: 'x', role: { name: role } }).totalViews);
 
-    expect(totaux).toEqual([13, 5, 4, 3, 13]);
+    expect(totaux).toEqual([14, 7, 6, 3, 13]);
   });
 
   it('l\'offre n\'est une etape comptee d\'AUCUN parcours', () => {
@@ -212,13 +215,15 @@ describe('D89 ⑤ — le temoin de D66 : un dirigeant finit son inscription', ()
       .toBe(RouteNames.Welcome);
   });
 
-  it('son parcours compte toujours 4 etapes, et la 1re reste « Qui es-tu ? »', () => {
+  // INSCRIPTION-CODE-2 — Avant : totalViews 4 et views[0] = UserName. Le tronc ajoute l'activité
+  // et le rôle (masqués pour un dirigeant) : 6, et la 1re étape MONTRÉE reste « Qui es-tu ? ».
+  it('son parcours compte 6 etapes, et la 1re montree reste « Qui es-tu ? »', () => {
     const { totalViews, views } = getOnboardingViews({
       documentId: 'x',
       role: { name: USER_ROLES.president },
     });
 
-    expect(totalViews).toBe(4);
-    expect(views[0].route).toBe(RouteNames.UserName);
+    expect(totalViews).toBe(6);
+    expect(views.find((view) => view.canShow)?.route).toBe(RouteNames.UserName);
   });
 });

@@ -97,7 +97,11 @@ describe('TUNNELREPRISE — une reouverture ne ramene plus aux etapes qui se pas
 
   it('🔒 role pas encore choisi : l ecran du statut reste du', () => {
     const resultat = getOnboardingViews({ documentId: IDENTITE.documentId, role: { name: USER_ROLES.new } });
-    expect(etapes(resultat)[0]).toBe(RouteNames.UserRole);
+    // INSCRIPTION-CODE-2 (19/11) — Avant : etapes(resultat)[0] === UserRole. Le tronc commence par
+    // l'activité puis « Qui es-tu ? » : le statut reste dû, en 3e.
+    expect(etapes(resultat).slice(0, 3)).toEqual([
+      RouteNames.UserSport, RouteNames.UserName, RouteNames.UserRole,
+    ]);
   });
 
   it('🔒 inscription jamais commencee sur cet appareil (compte cree par un club, 1re ouverture) : le tunnel', () => {

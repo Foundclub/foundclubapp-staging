@@ -251,11 +251,14 @@ describe('D33 — les parcours staff ne bougent pas', () => {
 // il corrige un ENCHAINEMENT. Le prompt annoncait un changement de totaux ; la
 // mesure le contredit, et ce test fige les chiffres pour qu'un lot suivant ne
 // les fasse pas glisser en silence.
-describe('D33 — les 5 totaux restent 13 · 5 · 4 · 3 · 13', () => {
+// INSCRIPTION-CODE-2 (19/11/2026) — le tronc commun (activité, « Qui es-tu ? », rôle) en tête de
+// chaque parcours. Avant : 13 · 5 · 4 · 3 · 13. Joueur +1 (le rôle), coach et dirigeant +2,
+// super-admin inchangé, compte neuf inchangé (le sport monte en tête).
+describe('D33 — les 5 totaux restent 14 · 7 · 6 · 3 · 13', () => {
   it.each([
-    [USER_ROLES.player, 13],
-    [USER_ROLES.coach, 5],
-    [USER_ROLES.president, 4],
+    [USER_ROLES.player, 14],
+    [USER_ROLES.coach, 7],
+    [USER_ROLES.president, 6],
     [USER_ROLES.superAdmin, 3],
     [USER_ROLES.new, 13],
   ])('role %s : %i etapes', (roleName, total) => {

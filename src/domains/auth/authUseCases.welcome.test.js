@@ -128,7 +128,10 @@ describe('Welcome ne porte AUCUN numero d`etape (D23 ⑤)', () => {
     },
   );
 
-  it('les totaux du parcours restent 13 / 5 / 4 / 3 / 13', () => {
+  // INSCRIPTION-CODE-2 (19/11/2026) — le tronc commun (activité, « Qui es-tu ? », rôle) en tête de
+  // chaque parcours. Avant : 13 · 5 · 4 · 3 · 13. Joueur +1 (le rôle), coach et dirigeant +2,
+  // super-admin inchangé, compte neuf inchangé (le sport monte en tête).
+  it('les totaux du parcours restent 14 / 7 / 6 / 3 / 13', () => {
     const totaux = [
       USER_ROLES.player,
       USER_ROLES.coach,
@@ -137,6 +140,6 @@ describe('Welcome ne porte AUCUN numero d`etape (D23 ⑤)', () => {
       USER_ROLES.new,
     ].map((role) => getOnboardingViews({ documentId: 'x', role: { name: role } }).totalViews);
 
-    expect(totaux).toEqual([13, 5, 4, 3, 13]);
+    expect(totaux).toEqual([14, 7, 6, 3, 13]);
   });
 });

@@ -87,12 +87,18 @@ jest.mock('react-native-safe-area-context', () => ({
 
 jest.mock('@/components/templates/FormScreenContainer', () => {
   const { View } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ { children }) => <View>{children}</View> };
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <View>{children}</View>,
+  };
 });
 
 jest.mock('@/views/onboarding/components/OnboardingStickyFooter', () => {
   const { View } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ { children }) => <View>{children}</View> };
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <View>{children}</View>,
+  };
 });
 
 // La rangée-radio rend son libellé ET sa précision : la planche nomme les deux.
@@ -195,7 +201,8 @@ const touche = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbr
   ),
 )[0];
 const porte = (/** @type {any} */ arbre) => arbre.root.findAll(
-  (/** @type {any} */ n) => n.type === TouchableOpacity && n.props.testID === 'porte-mairie-complexe',
+  (/** @type {any} */ n) => n.type === TouchableOpacity
+    && n.props.testID === 'porte-mairie-complexe',
 )[0];
 const rangee = (/** @type {any} */ arbre, /** @type {string} */ testID) => arbre.root.findAll(
   (/** @type {any} */ n) => n.type === TouchableOpacity && n.props.testID === testID,
@@ -221,7 +228,7 @@ afterEach(async () => {
 });
 
 describe('la porte, fermée par défaut, en bas du premier écran', () => {
-  test('« Tu représentes une mairie ? » (interrupteur éteint) ; rien d’autre avant de l’ouvrir', async () => {
+  test('« Tu représentes une mairie ? » (éteint) ; rien d’autre avant de l’ouvrir', async () => {
     const arbre = await monter();
     expect(textes(arbre)).toContain('Tu représentes une mairie ?');
     expect(porte(arbre).props.accessibilityState).toEqual({ expanded: false });
@@ -242,7 +249,8 @@ describe('COLL-ACCUEIL · la mairie, derrière la porte', () => {
     await ouvrirLaPorte(arbre);
     const lus = textes(arbre);
     expect(lus).toContain('POUR UNE MAIRIE');
-    expect(lus.indexOf('Je représente une collectivité')).toBeGreaterThan(lus.indexOf('POUR UNE MAIRIE'));
+    expect(lus.indexOf('Je représente une collectivité'))
+      .toBeGreaterThan(lus.indexOf('POUR UNE MAIRIE'));
     expect(lus).toContain('Mairie, intercommunalité, département, région.');
   });
 
@@ -264,7 +272,8 @@ describe('COLL-ACCUEIL · la mairie, derrière la porte', () => {
     await ouvrirLaPorte(arbre);
     await appuyer(rangee(arbre, 'statut-collectivite'));
     await appuyer(touche(arbre, 'Football'));
-    expect(rangee(arbre, 'statut-collectivite').props.accessibilityState).toEqual({ checked: false });
+    expect(rangee(arbre, 'statut-collectivite').props.accessibilityState)
+      .toEqual({ checked: false });
     await appuyer(touche(arbre, CONTINUER));
     expect(/** @type {any} */ (updateMe).mock.calls[0][0]).toEqual({ preferredSport: 'Football' });
     expect(mockNavigate).not.toHaveBeenCalledWith('CollectiviteSignup');
@@ -317,7 +326,7 @@ describe('RESA-INSCRIPTION · interrupteur ALLUMÉ : « Pour un complexe » (E-G
     expect(mockNavigate).toHaveBeenCalledWith('UserName');
   });
 
-  test('le choisir mène au tunnel du complexe, sans rien enregistrer ni question d’activité', async () => {
+  test('le choisir mène au tunnel du complexe, sans rien enregistrer', async () => {
     mockUserData = {
       ...COMPTE_NEUF, birthdate: '1990-05-12', firstname: 'Gérant', lastname: 'Recette',
     };
@@ -359,7 +368,8 @@ describe('RESA-INSCRIPTION · interrupteur ALLUMÉ : « Pour un complexe » (E-G
     await ouvrirLaPorte(arbre);
     await appuyer(rangee(arbre, 'statut-collectivite'));
     await appuyer(rangee(arbre, 'statut-complexe'));
-    expect(rangee(arbre, 'statut-collectivite').props.accessibilityState).toEqual({ checked: false });
+    expect(rangee(arbre, 'statut-collectivite').props.accessibilityState)
+      .toEqual({ checked: false });
     await appuyer(rangee(arbre, 'statut-collectivite'));
     expect(rangee(arbre, 'statut-complexe').props.accessibilityState).toEqual({ checked: false });
     await appuyer(touche(arbre, CONTINUER));

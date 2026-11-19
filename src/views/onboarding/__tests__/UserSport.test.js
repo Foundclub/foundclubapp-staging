@@ -55,16 +55,25 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
+// INSCRIPTION-CODE-2 (19/11) — Avant : un thème en Proxy (chaque style = {}). Le premier écran
+// rend désormais le VRAI choix du sport (`ChoixDuSport`), qui lit des clés précises du thème
+// (`Images.search`…) : le vrai thème, comme UserRole.RESAINSCR.
 jest.mock('@/theme/themeContext', () => {
-  const styleLeaf = {};
-  const makeRamp = () => new Proxy({}, { get: () => styleLeaf });
+  const genererCouleurs = jest.requireActual('@/theme/colors').default;
+  const genererPolices = jest.requireActual('@/theme/fonts').default;
+  const genererStyles = jest.requireActual('@/theme/applicationStyle').default;
+  const alignements = jest.requireActual('@/theme/alignements').default;
+  const espaces = jest.requireActual('@/theme/spaces').default;
+  const couleurs = genererCouleurs();
   return {
     __esModule: true,
     default: () => ({
-      Alignments: makeRamp(),
-      Colors: new Proxy({}, { get: (_target, key) => `couleur-${String(key)}` }),
-      Fonts: makeRamp(),
-      Spaces: new Proxy({}, { get: () => makeRamp() }),
+      Alignments: alignements,
+      ApplicationStyle: genererStyles(couleurs),
+      Colors: couleurs,
+      Fonts: genererPolices(couleurs),
+      Images: {},
+      Spaces: espaces,
     }),
   };
 });
@@ -193,44 +202,73 @@ beforeEach(() => {
   mockUserData.current = joueur();
 });
 
-describe('UserSport — le sport choisi conduit a l`etape Poste (D23 (2))', () => {
+// INSCRIPTION-CODE-2 (19/11/2026) — L'ACTIVITÉ EST LE PREMIER ÉCRAN (INSCRIPTION-CODE (a),
+// 0e24eef92, V1 3.5 + v2_01). Avant : le sport venait juste avant le poste, et ces témoins
+// disaient « la suite est l'étape Poste ». Le poste est maintenant plus loin (après section,
+// ville, photo) : ce qui reste à garantir de D23 (2), c'est que la suite se calcule sur le sport
+// NEUF, et que le poste est bien dans le parcours de ce sport-là (canShow vrai).
+const parcoursAvec = (/** @type {string} */ sport) => getOnboardingViews({
+  ...mockUserData.current, preferredSport: sport,
+}).views;
+const posteMonte = (/** @type {string} */ sport) => parcoursAvec(sport)
+  .find((view) => view.route === RouteNames.UserPosition)?.canShow;
+
+describe('UserSport — le sport choisi met l`etape Poste dans le parcours (D23 (2))', () => {
+  // Avant : expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserPosition, {
+  // selectedSport: sport })
   it.each(['Rugby', 'Football', 'Basketball', 'Handball', 'Volleyball'])(
-    '%s : la suite est l`etape Poste, pas Physique',
+    '%s : enregistré, l`etape Poste est dans son parcours, la suite est la Section',
     async (sport) => {
       const { navigation, tree } = rendre();
       await choisirPuisContinuer(tree, sport);
 
       expect(mockUpdateMe).toHaveBeenCalledWith({ preferredSport: sport });
-      expect(navigation.navigate).toHaveBeenCalledWith(
-        RouteNames.UserPosition,
-        { selectedSport: sport },
-      );
+      expect(posteMonte(sport)).toBe(true);
+      expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserSection, undefined);
     },
   );
 
-  it('le sport voyage en parametre : l`ecran Poste n`attend pas le rafraichissement', async () => {
+  // Avant : « le sport voyage en parametre » vers Poste. Le paramètre ne sert que si Poste suit
+  // IMMÉDIATEMENT (UserSport.js, `nextRoute === RouteNames.UserPosition`) : la règle est gardée.
+  it('compte neuf : la suite est « Qui es-tu ? », sans parametre', async () => {
+    mockUserData.current = { documentId: 'user-neuf', role: { type: 'authenticated' } };
     const { navigation, tree } = rendre();
     await choisirPuisContinuer(tree, 'Rugby');
 
-    // `get-me` n'est pas encore revenu quand on navigue : sans ce parametre,
-    // l'ecran Poste ne saurait pas quel sport afficher.
-    expect(navigation.navigate.mock.calls[0][1]).toEqual({ selectedSport: 'Rugby' });
+    expect(mockUpdateMe).toHaveBeenCalledWith({ preferredSport: 'Rugby' });
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserName, undefined);
   });
 
-  it('un sport sans postes va directement a l`etape Physique', async () => {
+  // Avant : « un sport sans postes va directement a l`etape Physique ».
+  it('un sport sans postes : pas d`etape Poste dans son parcours', async () => {
     const { navigation, tree } = rendre();
+    await act(async () => { pressable(tree, 'Toutes les activités, de A à Z').props.onPress(); });
     await choisirPuisContinuer(tree, 'Tennis');
 
-    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserPhysique, undefined);
+    expect(mockUpdateMe).toHaveBeenCalledWith({ preferredSport: 'Tennis' });
+    expect(posteMonte('Tennis')).toBe(false);
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserSection, undefined);
   });
 });
 
-describe('UserSport — « Passer » saute aussi l`etape Poste (D23 (2))', () => {
-  it('sans sport, on ne traverse pas l`ecran Poste : on va a Physique', async () => {
-    const { navigation, tree } = rendre();
-    await act(async () => { pressable(tree, 'Passer').props.onPress(); });
+// Avant : « Passer » (bandeau Facultatif) sautait le sport ET le poste, vers Physique. V01 : plus
+// de
+// « Passer » ; « Je ne trouve pas mon activité » (V02) prend son chemin : rien d'enregistré, et
+// jamais l'écran Poste (D23 : sans sport, Poste n'a rien à proposer).
+describe('UserSport — « Je ne trouve pas mon activité » saute aussi l`etape Poste (D23)', () => {
+  it('pas de « Passer » a l`ecran', () => {
+    const { tree } = rendre();
+    expect(pressable(tree, 'Passer')).toBeUndefined();
+  });
 
-    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserPhysique);
+  it('sans sport, rien n`est enregistre et on ne traverse pas l`ecran Poste', async () => {
+    const { navigation, tree } = rendre();
+    await act(async () => { pressable(tree, 'Je ne trouve pas mon activité').props.onPress(); });
+
+    expect(mockUpdateMe).not.toHaveBeenCalled();
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserSection);
+    expect(navigation.navigate)
+      .not.toHaveBeenCalledWith(RouteNames.UserPosition, expect.anything());
   });
 });
 

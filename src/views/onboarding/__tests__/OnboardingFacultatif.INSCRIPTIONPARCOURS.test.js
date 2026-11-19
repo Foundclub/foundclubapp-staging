@@ -57,12 +57,15 @@ const FACULTATIVES = {
   UserPhysique: 'handleSkip',
   UserPosition: 'handleSkip',
   UserSection: 'handleSkip',
-  UserSport: 'handleSkip',
+  // INSCRIPTION-CODE-2 (19/11/2026) — Avant : UserSport: 'handleSkip' (bandeau « Facultatif » +
+  // « Passer »). L'activité est le PREMIER écran, obligatoire (V01 validé) : elle passe dans
+  // OBLIGATOIRES ; son ancien saut reste sur « Je ne trouve pas mon activité » (témoin plus bas).
   UserSportHistory: 'handleSkip',
   UserTrainedTeams: 'goToNextStep',
 };
 const OBLIGATOIRES = [
-  'UserName', 'UserParentalDeclaration', 'UserParentAccountRequired', 'UserRole', 'Welcome',
+  'UserName', 'UserParentalDeclaration', 'UserParentAccountRequired', 'UserRole', 'UserSport',
+  'Welcome',
 ];
 
 describe('INSCRIPTION-PARCOURS A3 — les étapes facultatives le disent, en haut', () => {
@@ -94,6 +97,14 @@ describe('INSCRIPTION-PARCOURS A3 — les étapes facultatives le disent, en hau
     );
     expect(bandeau).toBeGreaterThan(-1);
     expect(bandeau).toBeLessThan(source.indexOf('Fonts.h3Bold'));
+  });
+
+  it('UserSport : le saut d’avant (handleSkip) est sur « Je ne trouve pas mon activité »', () => {
+    const source = lire('UserSport');
+    const lien = source.indexOf('testID="sport-pas-dans-la-liste"');
+    expect(lien).toBeGreaterThan(-1);
+    const bouton = source.lastIndexOf('<TouchableOpacity', lien);
+    expect(source.lastIndexOf('onPress={handleSkip}', lien)).toBeGreaterThan(bouton);
   });
 
   it.each(OBLIGATOIRES)('%s (obligatoire) : pas de bandeau', (ecran) => {

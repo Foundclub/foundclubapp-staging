@@ -485,7 +485,8 @@ describe('authUseCases', () => {
         });
 
         expect(result.isEntryCheckpoint).toBeUndefined();
-        expect(result.totalViews).toBe(13);
+        // INSCRIPTION-CODE-2 — Avant : 13 (joueur ; le tronc ajoute le rôle).
+        expect(result.totalViews).toBe(14);
       });
     });
 
@@ -496,7 +497,10 @@ describe('authUseCases', () => {
       });
 
       expect(result.totalViews).toBe(13);
-      expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserRole });
+      // INSCRIPTION-CODE-2 — Avant : views[0] = { canShow: true, index: 1, route: UserRole } ;
+      // l'activité ouvre le parcours, le rôle est 3e (tronc commun).
+      expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserSport });
+      expect(result.views[2]).toEqual({ canShow: true, index: 3, route: RouteNames.UserRole });
       expect(result.views[result.views.length - 1]).toEqual({
         canShow: true,
         index: 13,
@@ -509,9 +513,12 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(5);
+      // INSCRIPTION-CODE-2 — Avant : 5 étapes, sans activité ni rôle en tête.
+      expect(result.totalViews).toBe(7);
       expect(result.views.map((v) => v.route)).toEqual([
+        RouteNames.UserSport,
         RouteNames.UserName,
+        RouteNames.UserRole,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserAffiliationGuide,
@@ -525,8 +532,11 @@ describe('authUseCases', () => {
         role: { name: 'Coach' },
       });
 
+      // INSCRIPTION-CODE-2 — Avant : sans activité ni rôle en tête.
       expect(result.views.map((v) => v.route)).toEqual([
+        RouteNames.UserSport,
         RouteNames.UserName,
+        RouteNames.UserRole,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
         RouteNames.UserAffiliationGuide,
@@ -542,9 +552,11 @@ describe('authUseCases', () => {
 
       expect(result.views.map((view) => view.route)).toContain(RouteNames.UserParentalDeclaration);
       const parentalStep = result.views.find((view) => view.route === RouteNames.UserParentalDeclaration);
+      // INSCRIPTION-CODE-2 — Avant : index 2 (juste après « Qui es-tu ? », 1re étape). Toujours
+      // juste après « Qui es-tu ? », qui est 2e derrière l'activité.
       expect(parentalStep).toEqual({
         canShow: true,
-        index: 2,
+        index: 3,
         route: RouteNames.UserParentalDeclaration,
       });
     });
@@ -602,11 +614,15 @@ describe('authUseCases', () => {
         section: { documentId: 'section-doc', id: 2, name: 'Masculine' },
       });
 
+      // INSCRIPTION-CODE-2 — Avant : Déclaration, Ville, Photo, Sport, Poste… L'activité ouvre le
+      // tronc (Sport › Qui es-tu › Déclaration › Rôle) : elle passe devant la déclaration, qui
+      // reste
+      // la 1re étape d'après « Qui es-tu ? » et avant tout le reste.
       expect(result.views.filter((view) => view.canShow).map((view) => view.route)).toEqual([
+        RouteNames.UserSport,
         RouteNames.UserParentalDeclaration,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
-        RouteNames.UserSport,
         // D23 (2) - « Poste » reste au programme tant que « Sport » est devant :
         // sans elle ici, `PrivateNavigator` ne la monte pas et le tunnel la
         // saute pour les 5 sports a postes.
@@ -627,13 +643,16 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.player },
       });
 
-      expect(result.totalViews).toBe(13);
+      // INSCRIPTION-CODE-2 — Avant : 13, Name, Section, Address, Avatar, Sport, Position… (le sport
+      // en 5e). Le tronc ouvre le parcours : Sport, Name, Role, puis les étapes du joueur.
+      expect(result.totalViews).toBe(14);
       expect(result.views.map((v) => v.route)).toEqual([
+        RouteNames.UserSport,
         RouteNames.UserName,
+        RouteNames.UserRole,
         RouteNames.UserSection,
         RouteNames.UserAddress,
         RouteNames.UserAvatar,
-        RouteNames.UserSport,
         RouteNames.UserPosition,
         RouteNames.UserPhysique,
         RouteNames.UserLevel,
@@ -650,9 +669,12 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.president },
       });
 
-      expect(result.totalViews).toBe(4);
+      // INSCRIPTION-CODE-2 — Avant : 4, sans activité ni rôle en tête.
+      expect(result.totalViews).toBe(6);
       expect(result.views.map((v) => v.route)).toEqual([
+        RouteNames.UserSport,
         RouteNames.UserName,
+        RouteNames.UserRole,
         // D16 - la ville entre AVANT le club (elle alimente ses suggestions),
         // et `Welcome` a quitte le compteur : le total reste 4, mais ce ne
         // sont plus les memes 4 etapes.
@@ -670,9 +692,13 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(5);
-      expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
-      expect(result.views[1]).toEqual({ canShow: true, index: 2, route: RouteNames.UserAddress });
+      // INSCRIPTION-CODE-2 — Avant : 5 ; views[0] = Name (index 1, masqué), views[1] = Address
+      // (index 2). Le tronc (Sport, Name, Role) décale tout de 2 ; Sport et Rôle masqués pour un
+      // coach.
+      expect(result.totalViews).toBe(7);
+      expect(result.views[1]).toEqual({ canShow: false, index: 2, route: RouteNames.UserName });
+      expect(result.views[3]).toEqual({ canShow: true, index: 4, route: RouteNames.UserAddress });
+      expect(result.views.find((v) => v.canShow)?.route).toBe(RouteNames.UserAddress);
     });
 
     // D15 - l'ecran fusionne ne se saute que si les TROIS champs sont connus.
@@ -686,7 +712,10 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserName });
+      // INSCRIPTION-CODE-2 — Avant : views[0], index 1 ; « Qui es-tu ? » est 2e, derrière
+      // l'activité.
+      expect(result.views[1]).toEqual({ canShow: true, index: 2, route: RouteNames.UserName });
+      expect(result.views.find((v) => v.canShow)?.route).toBe(RouteNames.UserName);
     });
 
     // AGE-OBLIGATOIRE ① (02/10, decision d'Adel « 3- C ») - ce test figeait
@@ -701,7 +730,10 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.president },
       });
 
-      expect(result.views[0]).toEqual({ canShow: true, index: 1, route: RouteNames.UserName });
+      // INSCRIPTION-CODE-2 — Avant : views[0], index 1 ; « Qui es-tu ? » est 2e, derrière
+      // l'activité.
+      expect(result.views[1]).toEqual({ canShow: true, index: 2, route: RouteNames.UserName });
+      expect(result.views.find((v) => v.canShow)?.route).toBe(RouteNames.UserName);
     });
 
     it('AGE-OBLIGATOIRE ① saute l ecran du dirigeant une fois nom, prenom ET date connus', () => {
@@ -712,7 +744,8 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.president },
       });
 
-      expect(result.views[0]).toEqual({ canShow: false, index: 1, route: RouteNames.UserName });
+      // INSCRIPTION-CODE-2 — Avant : views[0], index 1.
+      expect(result.views[1]).toEqual({ canShow: false, index: 2, route: RouteNames.UserName });
     });
 
     it('AGE-OBLIGATOIRE ① le dirigeant donne sa date ; le super-admin reste dispense', () => {
@@ -736,7 +769,8 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: false, index: 6, route: RouteNames.UserPosition });
+      // INSCRIPTION-CODE-2 — Avant : index 6 (le tronc : +1, le rôle).
+      expect(positionStep).toEqual({ canShow: false, index: 7, route: RouteNames.UserPosition });
     });
 
     // L44 — la liste des sports « qui ont des postes » etait derivee de
@@ -750,7 +784,8 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: true, index: 6, route: RouteNames.UserPosition });
+      // INSCRIPTION-CODE-2 — Avant : index 6 (le tronc : +1, le rôle).
+      expect(positionStep).toEqual({ canShow: true, index: 7, route: RouteNames.UserPosition });
     });
 
     // `UserSport.js` enregistre `activity.name` tel que Strapi le nomme : la
@@ -762,7 +797,8 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: true, index: 6, route: RouteNames.UserPosition });
+      // INSCRIPTION-CODE-2 — Avant : index 6 (le tronc : +1, le rôle).
+      expect(positionStep).toEqual({ canShow: true, index: 7, route: RouteNames.UserPosition });
     });
 
     // D23 (2) - CE TEST DISAIT L'INVERSE, ET IL FIGEAIT LE DEFAUT.
@@ -779,7 +815,8 @@ describe('authUseCases', () => {
       });
 
       const positionStep = result.views.find((v) => v.route === RouteNames.UserPosition);
-      expect(positionStep).toEqual({ canShow: true, index: 6, route: RouteNames.UserPosition });
+      // INSCRIPTION-CODE-2 — Avant : index 6 (le tronc : +1, le rôle).
+      expect(positionStep).toEqual({ canShow: true, index: 7, route: RouteNames.UserPosition });
     });
 
     it('keeps club visibility step visible even with default isLookingForClub value', () => {
@@ -791,7 +828,8 @@ describe('authUseCases', () => {
       const clubSearchStep = result.views.find((v) => v.route === RouteNames.UserClubSearch);
       expect(clubSearchStep).toEqual({
         canShow: true,
-        index: 11,
+        // INSCRIPTION-CODE-2 — Avant : index 11.
+        index: 12,
         route: RouteNames.UserClubSearch,
       });
     });
@@ -810,7 +848,8 @@ describe('authUseCases', () => {
         role: { name: USER_ROLES.coach },
       });
 
-      expect(result.totalViews).toBe(5);
+      // INSCRIPTION-CODE-2 — Avant : 5 (le tronc ajoute l'activité et le rôle, masqués ici).
+      expect(result.totalViews).toBe(7);
       const visibleRoutes = result.views.filter((v) => v.canShow).map((v) => v.route);
       expect(visibleRoutes).toEqual([RouteNames.UserTrainedTeams]);
     });
@@ -822,9 +861,10 @@ describe('authUseCases', () => {
       });
 
       const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
+      // INSCRIPTION-CODE-2 — Avant : index 4 (+2 : l'activité et le rôle en tête).
       expect(affiliationStep).toEqual({
         canShow: false,
-        index: 4,
+        index: 6,
         route: RouteNames.UserAffiliationGuide,
       });
     });
@@ -839,8 +879,8 @@ describe('authUseCases', () => {
       expect(affiliationStep).toEqual({
         canShow: false,
         // D16 - l'etape club recule d'un cran chez le dirigeant : la ville
-        // vient de s'inserer devant elle.
-        index: 4,
+        // vient de s'inserer devant elle. INSCRIPTION-CODE-2 — Avant : 4 (+2 : activité et rôle).
+        index: 6,
         route: RouteNames.UserAffiliationGuide,
       });
     });
@@ -854,7 +894,8 @@ describe('authUseCases', () => {
       const affiliationStep = result.views.find((v) => v.route === RouteNames.UserAffiliationGuide);
       expect(affiliationStep).toEqual({
         canShow: false,
-        index: 12,
+        // INSCRIPTION-CODE-2 — Avant : 12 (+1 : le rôle ; le sport y était déjà).
+        index: 13,
         route: RouteNames.UserAffiliationGuide,
       });
     });
@@ -886,15 +927,26 @@ describe('authUseCases', () => {
       // `superAdmin` et le parcours `new` gardent `Welcome` dans leur liste :
       // le premier est hors pack, le second a ete explicitement laisse tel
       // quel (decision n3). C'est une asymetrie assumee, pas un oubli.
+      // INSCRIPTION-CODE-2 (19/11/2026) — LE TRONC COMMUN (INSCRIPTION-CODE (a), V1 3.5, v2_01) :
+      // tous les parcours commencent par l'activité, « Qui es-tu ? », puis le rôle. Les étapes
+      // propres à chaque rôle suivent, dans leur ordre d'avant. Totaux : joueur 13 → 14 (le rôle ;
+      // le sport y était déjà), coach 5 → 7, dirigeant 4 → 6, parent 3 → 5 (sport et rôle),
+      // compte neuf 13 → 13 (le sport monte en tête). Le compte d'un coach, d'un dirigeant ou d'un
+      // parent ne VOIT pas l'activité (canShow faux, témoin plus bas) mais elle reste comptée.
+      // Avant (ordres) : joueur Name, Section, Address, Avatar, Sport, Position, Physique, Level,
+      // Category, SportHistory, ClubSearch, AffiliationGuide, TeamAffiliation (13) ; coach Name,
+      // Address, Avatar, AffiliationGuide, TrainedTeams (5) ; dirigeant Name, Address, Avatar,
+      // AffiliationGuide (4) ; parent Name, Avatar, Child (3) ; neuf Role, Name, Section, Address,
+      // Avatar, Sport, Position, Physique, Level, Category, SportHistory, ClubSearch, Welcome (13).
+      const TRONC = [RouteNames.UserSport, RouteNames.UserName, RouteNames.UserRole];
       const PARCOURS = [
         {
           roleName: USER_ROLES.player,
           routes: [
-            RouteNames.UserName,
+            ...TRONC,
             RouteNames.UserSection,
             RouteNames.UserAddress,
             RouteNames.UserAvatar,
-            RouteNames.UserSport,
             RouteNames.UserPosition,
             RouteNames.UserPhysique,
             RouteNames.UserLevel,
@@ -905,26 +957,26 @@ describe('authUseCases', () => {
             // D16 - « Equipe (demande envoyee au coach) », juste apres le club.
             RouteNames.UserTeamAffiliation,
           ],
-          totalViews: 13,
-          totalViewsMineur: 14,
+          totalViews: 14,
+          totalViewsMineur: 15,
         },
         {
           roleName: USER_ROLES.coach,
           routes: [
-            RouteNames.UserName,
+            ...TRONC,
             RouteNames.UserAddress,
             RouteNames.UserAvatar,
             RouteNames.UserAffiliationGuide,
             // D16 - « Equipes entrainees », la ou la branche staff se dedouble.
             RouteNames.UserTrainedTeams,
           ],
-          totalViews: 5,
-          totalViewsMineur: 6,
+          totalViews: 7,
+          totalViewsMineur: 8,
         },
         {
           roleName: USER_ROLES.president,
           routes: [
-            RouteNames.UserName,
+            ...TRONC,
             // D16 - « Ville » : elle alimente les suggestions de club, elle
             // doit donc arriver AVANT l'etape club.
             RouteNames.UserAddress,
@@ -934,8 +986,8 @@ describe('authUseCases', () => {
           // AGE-OBLIGATOIRE (02/10, decision d'Adel « 3- C ») - le dirigeant
           // donne sa date de naissance comme les autres roles : sous 15 ans,
           // la declaration parentale s'insere donc aussi dans SON parcours.
-          totalViews: 4,
-          totalViewsMineur: 5,
+          totalViews: 6,
+          totalViewsMineur: 7,
         },
         {
           roleName: USER_ROLES.superAdmin,
@@ -950,12 +1002,10 @@ describe('authUseCases', () => {
         {
           roleName: USER_ROLES.new,
           routes: [
-            RouteNames.UserRole,
-            RouteNames.UserName,
+            ...TRONC,
             RouteNames.UserSection,
             RouteNames.UserAddress,
             RouteNames.UserAvatar,
-            RouteNames.UserSport,
             RouteNames.UserPosition,
             RouteNames.UserPhysique,
             RouteNames.UserLevel,
@@ -967,28 +1017,33 @@ describe('authUseCases', () => {
           totalViews: 13,
           totalViewsMineur: 14,
         },
-        // PARENT (2026-09-02) — le parcours du parent : son identite (avec sa
-        // date de naissance : un parent est un adulte CONNU, et le garde-fou
-        // tchat traite un age inconnu comme un enfant), puis sa photo. Rien
-        // d autre : ni section, ni sport, ni club — ce sont les etapes de son
-        // enfant, pas les siennes. `Welcome` reste le sas de sortie.
-        //
-        // PARENT P2 (10/09, decision d Adel) — « declare ton enfant » REJOINT le
-        // tunnel, en DERNIER : on ne demande pas les donnees d un enfant avant
-        // que le parent ait fini de se declarer lui-meme. Elle porte un
-        // « plus tard » (C8 du plan : un parent peut s inscrire juste pour
-        // CHERCHER un club avant de decider).
+        // PARENT (2026-09-02) — son identite (avec sa date de naissance), puis sa photo.
+        // PARENT P2 (10/09) — « declare ton enfant » en DERNIER, avec un « plus tard » (C8).
+        // INSCRIPTION-CODE : l'activité du tronc est celle de son enfant (V1 3.5).
         {
           roleName: USER_ROLES.parent,
           routes: [
-            RouteNames.UserName,
+            ...TRONC,
             RouteNames.UserAvatar,
             RouteNames.UserChild,
           ],
-          totalViews: 3,
-          totalViewsMineur: 4,
+          totalViews: 5,
+          totalViewsMineur: 6,
         },
       ];
+
+      // INSCRIPTION-CODE-2 (19/11) — l'activité, comptée, n'est montrée qu'avant le rôle : un
+      // coach,
+      // un dirigeant, un parent (ancien compte, ou passé par « Je ne trouve pas ») ne la revoit
+      // pas.
+      it.each([
+        [USER_ROLES.coach, false], [USER_ROLES.president, false], [USER_ROLES.parent, false],
+        [USER_ROLES.player, true], [USER_ROLES.new, true],
+      ])('role %s : l activite montree = %s', (roleName, montree) => {
+        const result = getOnboardingViews({ role: { name: roleName } });
+        const sport = result.views.find((view) => view.route === RouteNames.UserSport);
+        expect(sport?.canShow).toBe(montree);
+      });
 
       it.each(PARCOURS)(
         'role $roleName : $totalViews etapes, dans cet ordre exact',

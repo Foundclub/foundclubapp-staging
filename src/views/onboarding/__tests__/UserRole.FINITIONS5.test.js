@@ -232,7 +232,12 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-test('caracterisation — choisir « Pratiquant·e / Joueur·se » puis « Continuer » envoie CE role et passe au nom', async () => {
+// INSCRIPTION-CODE-2 (19/11/2026) — « Qui es-tu ? » vient AVANT le rôle (INSCRIPTION-CODE (a),
+// v2_01) ; après le rôle, l'étape SUIVANTE de son parcours (f799e2022) : la section du joueur.
+// Avant : expect(mockNavigate).toHaveBeenCalledWith('UserName');
+const CARACTERISATION = 'caracterisation — choisir « Pratiquant·e / Joueur·se » puis « Continuer » '
+  + 'envoie CE role et passe à l’étape suivante';
+test(CARACTERISATION, async () => {
   /** @type {any} */ (updateMe).mockResolvedValue({});
   const arbre = await monter();
 
@@ -241,7 +246,9 @@ test('caracterisation — choisir « Pratiquant·e / Joueur·se » puis « Conti
 
   expect(updateMe).toHaveBeenCalledTimes(1);
   expect(/** @type {any} */ (updateMe).mock.calls[0][0]).toEqual({ role: 'role-joueur' });
-  expect(mockNavigate).toHaveBeenCalledWith('UserName');
+  expect(mockNavigate).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).toHaveBeenCalledWith('UserSection');
+  expect(mockNavigate).not.toHaveBeenCalledWith('UserName');
 });
 
 test('FINITIONS5-8 · compte neuf, rien de coché : « Continuer » est INACTIF et rien ne part', async () => {
@@ -282,33 +289,28 @@ test('FINITIONS5-8 · un refus du serveur se dit UNE fois, en français', async 
   expect(mockNavigate).not.toHaveBeenCalled();
 });
 
-// 🏛️ COLL-ACCUEIL (01/10/2026) — PLANCHE 5, état 1 (`P1-inscription-tel`) : « Quel est ton
-// statut ? » gagne une 5e rangée, SÉPARÉE des rôles sportifs, sous « Pour une mairie ».
-// La choisir saute toutes les questions de sport : aucun rôle n'est posé, on va à
-// l'inscription de la mairie. ROUGE avant le lot : la rangée n'existait pas.
-test('COLL-ACCUEIL · « Je représente une collectivité », sous « Pour une mairie »', async () => {
+// 🏛️ COLL-ACCUEIL (01/10/2026) — PLANCHE 5, état 1 (`P1-inscription-tel`) : « Pour une mairie »,
+// SÉPARÉE des rôles sportifs. INSCRIPTION-CODE-2 (19/11) : la rangée a DÉMÉNAGÉ au premier écran
+// (V02 validé), derrière « Tu représentes une mairie ou un complexe ? ». Les 3 témoins d'ici
+// (« sous Pour une mairie », « mène à l'inscription de la mairie sans rôle posé », « un rôle
+// sportif ensuite décoche la mairie ») sont portés, mêmes assertions, dans
+// `UserSport.PORTEMAIRIE.test.js` (describe « COLL-ACCUEIL · la mairie, derrière la porte »).
+// Avant : expect(textes).toContain('POUR UNE MAIRIE') ; expect(rangee(arbre, 'Je représente une
+// collectivité')).toBeDefined();
+test('COLL-ACCUEIL · la mairie n’est plus sur l’écran du rôle (premier écran)', async () => {
   const arbre = await monter();
   const textes = arbre.root.findAllByType(Text).map((/** @type {any} */ n) => n.props.children);
-  expect(textes).toContain('POUR UNE MAIRIE');
-  expect(rangee(arbre, 'Je représente une collectivité')).toBeDefined();
+  expect(textes).not.toContain('POUR UNE MAIRIE');
+  expect(rangee(arbre, 'Je représente une collectivité')).toBeUndefined();
+  expect(rangee(arbre, 'Je gère un complexe')).toBeUndefined();
 });
 
-test('COLL-ACCUEIL · la choisir mène à l inscription de la mairie, sans rôle posé', async () => {
-  const arbre = await monter();
-  await appuyer(rangee(arbre, 'Je représente une collectivité'));
-  expect(bouton(arbre, CONTINUER).props.disabled).toBe(false);
-  await appuyer(bouton(arbre, CONTINUER));
-  expect(updateMe).not.toHaveBeenCalled();
-  expect(mockNavigate).toHaveBeenCalledWith('CollectiviteSignup');
-});
-
-test('COLL-ACCUEIL · choisir ensuite un rôle sportif décoche la mairie', async () => {
-  /** @type {any} */ (updateMe).mockResolvedValue({});
-  const arbre = await monter();
-  await appuyer(rangee(arbre, 'Je représente une collectivité'));
-  await appuyer(rangee(arbre, 'Dirigeant·e'));
-  await appuyer(bouton(arbre, CONTINUER));
-  expect(mockNavigate).not.toHaveBeenCalledWith('CollectiviteSignup');
+test('COLL-ACCUEIL · le porteur du témoin déménagé existe', () => {
+  const fs = jest.requireActual('fs');
+  const path = jest.requireActual('path');
+  const porte = fs.readFileSync(path.join(__dirname, 'UserSport.PORTEMAIRIE.test.js'), 'utf8');
+  expect(porte).toContain('la choisir mène à l’inscription de la mairie, sans rien enregistrer');
+  expect(porte).toContain('choisir ensuite un sport décoche la mairie : le sport part');
 });
 
 // COLL-ACCUEIL (01/10) — SUR LE SITE, un compte « Ville seule » ne refait pas le choix du statut.
