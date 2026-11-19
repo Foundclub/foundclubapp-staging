@@ -134,7 +134,8 @@ export const getMemberStatusTone = (Colors, status) => ({
   cancelled: Colors.neutral400,
   manual_review: Colors.warning500,
   overdue: Colors.error500,
-  paid: Colors.success500,
+  // PAIEMENTS-10E : bleu, plus de vert (Adel 19/11, « tout le vert passe en bleu, cotisations comprises »).
+  paid: Colors.primary500,
   partial: Colors.primary500,
   pending: Colors.primary500,
   waived: Colors.neutral300,
@@ -177,10 +178,14 @@ export const clubNameOf = (assignment) => assignment?.club?.name
  * @param {any} assignment une affectation de cotisation
  * @returns {string} le titre de la carte
  */
-export const campaignTitleOf = (assignment) => assignment?.campaign?.name || i18next.t(
-  'memberLicenseModel.fallbacks.campaignTitle',
-  'Cotisation',
-);
+export const campaignTitleOf = (assignment) => {
+  const name = String(assignment?.campaign?.name || '');
+  // PAIEMENTS-10E (19/11, planche 10e) : une PLACE porte le nom du tournoi. Sa campagne s'appelle
+  // « Inscription - <tournoi> » (admin tournament-payment.js `ensureCampaign`) ; même retrait que
+  // l'avis de paiement (admin license.ts `tournamentPlaceData`). Liste, détail et archive.
+  const title = isTournamentPlace(assignment) ? name.replace(/^Inscription - /, '') : name;
+  return title || i18next.t('memberLicenseModel.fallbacks.campaignTitle', 'Cotisation');
+};
 
 /**
  * LE DISCRIMINANT — ce qui distingue deux cotisations du MEME club.
@@ -369,23 +374,37 @@ export const groupAssignmentsByClub = (assignments = []) => {
  * @returns {string} la sous-ligne
  */
 export const describeTotalsLine = (assignments = []) => {
-  const count = (assignments || []).length;
-  const clubs = groupAssignmentsByClub(assignments).length;
+  // PAIEMENTS-10E (19/11, planche 10e) : une PLACE de tournoi se compte à part (« 1 place de
+  // tournoi ») ; elle n'est ni une cotisation, ni un club, et son « 2026 » n'est pas une saison.
+  const fees = (assignments || []).filter((item) => !isTournamentPlace(item));
+  const places = (assignments || []).length - fees.length;
+  const count = fees.length;
+  const clubs = groupAssignmentsByClub(fees).length;
   const seasons = [...new Set(
-    (assignments || []).map((item) => String(item?.campaign?.seasonLabel || '')).filter(Boolean),
+    fees.map((item) => String(item?.campaign?.seasonLabel || '')).filter(Boolean),
   )];
-  const parts = [
-    i18next.t('memberLicenseModel.totals.fees', {
+  const parts = [];
+  if (count || !places) {
+    parts.push(i18next.t('memberLicenseModel.totals.fees', {
       count,
       defaultValue_one: '{{count}} cotisation',
       defaultValue_other: '{{count}} cotisations',
-    }),
-    i18next.t('memberLicenseModel.totals.clubs', {
+    }));
+  }
+  if (places) {
+    parts.push(i18next.t('memberLicenseModel.totals.places', {
+      count: places,
+      defaultValue_one: '{{count}} place de tournoi',
+      defaultValue_other: '{{count}} places de tournoi',
+    }));
+  }
+  if (count) {
+    parts.push(i18next.t('memberLicenseModel.totals.clubs', {
       count: clubs,
       defaultValue_one: '{{count}} club',
       defaultValue_other: '{{count}} clubs',
-    }),
-  ];
+    }));
+  }
   if (seasons.length === 1) {
     parts.push(i18next.t(
       'memberLicenseModel.totals.season',
@@ -425,7 +444,13 @@ export const describeAssignmentContext = (assignment) => {
       'Annulée par le club',
     );
   }
-  if (status === 'paid') return i18next.t('memberLicenseModel.context.paid', 'soldée');
+  if (status === 'paid') {
+    // PAIEMENTS-10E (planche 10e, « Payé le 24/11/2026 ») : une place dit le jour de son paiement.
+    const paidOn = isTournamentPlace(assignment) ? formatMemberDate(lastPaidAtOf(assignment)) : '';
+    return paidOn
+      ? i18next.t('memberLicenseModel.context.placePaidOn', 'payée le {{date}}', { date: paidOn, ...SANS_ECHAPPEMENT })
+      : i18next.t('memberLicenseModel.context.paid', 'soldée');
+  }
   if (status === 'manual_review') {
     return i18next.t(
       'memberLicenseModel.context.manualReview',
@@ -483,6 +508,18 @@ export const getPaidRatio = (assignment) => {
 export const isTournamentPlace = (assignment) => (
   String(assignment?.campaign?.type || '') === 'tournament'
 );
+
+/**
+ * PAIEMENTS-10E — le jour du dernier paiement encaissé (`paidAt`, sinon `validatedAt`).
+ * @param {any} assignment une affectation
+ * @returns {string} une date ISO, ou une chaine vide
+ */
+export const lastPaidAtOf = (assignment) => (assignment?.payments || [])
+  .filter((payment) => payment?.status === 'confirmed')
+  .map((payment) => String(payment?.paidAt || payment?.validatedAt || ''))
+  .filter(Boolean)
+  .sort()
+  .pop() || String(assignment?.lastPaymentAt || '');
 
 /**
  * LA SAISON EN COURS = la plus recente que le serveur ait rendue.

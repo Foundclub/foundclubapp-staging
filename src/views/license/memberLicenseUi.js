@@ -234,8 +234,9 @@ export function MemberProgressBar({ height = 8, ratio }) {
         width: '100%',
       }}
     >
+      {/* PAIEMENTS-10E : bleu, plus de vert (Adel 19/11). */}
       <View style={{
-        backgroundColor: Colors.success500,
+        backgroundColor: Colors.primary500,
         borderRadius: memberRadius.pill,
         height: '100%',
         width: `${safeRatio * 100}%`,

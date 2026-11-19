@@ -106,7 +106,8 @@ const couleursDe = (/** @type {string} */ contenu) => arbre.root.findAll((/** @t
 describe('IMPL-2C — la place du tournoi dans « Mes paiements »', () => {
   test('cas du compte 444 : licence 2026-2027 (1 €) + place 2026 (20 €) : les deux dans la liste, rien d’archivé', () => {
     const rendu = monter([LICENCE_1_EURO, PLACE_20_EUROS]);
-    expect(rendu).toContain('Inscription - Tournoi FoundClub x AR Soccer');
+    // PAIEMENTS-10E (19/11) : le titre d'une place est le tournoi, sans « Inscription - ».
+    expect(rendu).toContain('Tournoi FoundClub x AR Soccer');
     expect(rendu).toContain('AR Soccer');
     expect(rendu).toContain('FC Recette');
     expect(rendu).not.toContain('archivée');
@@ -136,13 +137,13 @@ describe('IMPL-2C — la place du tournoi dans « Mes paiements »', () => {
 
   test('une place de tournoi dont la campagne est fermée part dans les saisons passées', () => {
     const rendu = monter([LICENCE_1_EURO, { ...PLACE_20_EUROS, campaign: { ...PLACE_20_EUROS.campaign, status: 'closed' } }]);
-    expect(rendu).not.toContain('Inscription - Tournoi FoundClub x AR Soccer');
+    expect(rendu).not.toContain('Tournoi FoundClub x AR Soccer');
     expect(rendu).toContain('1 saison archivée');
   });
 
   test('plus de vert sur ce que MyLicenses.js dessine (Adel : « tout ce qui est vert, en bleu ») : total réglé, montants réglés, « à jour »', () => {
-    // Hors de ce fichier, donc hors de ce témoin : la pastille « Payé » (`getMemberStatusTone`) et la
-    // barre (`MemberProgressBar`) restent vertes, listées au chef.
+    // La pastille « Payé » (`getMemberStatusTone`) et la barre (`MemberProgressBar`) sont passées au
+    // bleu à leur tour (PAIEMENTS-10E) : témoin MyLicenses.PAIEMENTS10E.placeDeTournoi.
     monter([LICENCE_1_EURO, PLACE_20_EUROS]);
     expect(couleursDe('0,00 €')).toEqual([Colors.primary500]);
     expect(couleursDe('1,00 €')).toEqual([Colors.primary500]);

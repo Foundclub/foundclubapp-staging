@@ -15,13 +15,15 @@
 // cotisations restent ATTEIGNABLES. Le temoin
 // `MyLicenses.AA07.plusieursCotisations.test.js` l observe.
 
+import i18next from 'i18next';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Pressable, ScrollView, Text, View,
+  Alert, Pressable, ScrollView, Text, View,
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT_PLACE from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -35,10 +37,13 @@ import useAuth from '@/domains/auth/useAuth';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
-import { useChildrenLicenses, useMyLicenses } from '@/services/license/licenseQueries';
+import {
+  generateLicenseReceipt, useChildrenLicenses, useMyLicenses,
+} from '@/services/license/licenseQueries';
 import { useParentLinksAsParent } from '@/services/parentLink/parentLinkQueries';
 
 import { getErrorStatus } from '@/utils/errors/displayError';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import { formatLicenseMoney, LicenseEmptyState } from './licenseDesignSystem';
 import {
@@ -50,6 +55,7 @@ import {
   getMemberStatusTone,
   getPaidRatio,
   groupAssignmentsByClub,
+  isTournamentPlace,
   licenseKeyOf,
   splitSeasons,
   sumRemainingCents,
@@ -144,6 +150,60 @@ function TotalCard({ assignments }) {
 }
 
 /**
+ * PAIEMENTS-10E (19/11, planche 10e) — LA LIGNE SOUS LE TITRE D UNE PLACE DE TOURNOI :
+ * « Place de Prénom Nom · équipe Les Panthères ». Ce qui manque se tait : jamais « équipe » à vide.
+ * Ni nom ni équipe : la ligne d une cotisation (le club), comme avant.
+ * @param {any} assignment la place
+ * @param {string} [personName] la personne de la carte (le compte, ou l enfant pour un parent)
+ * @param {string} [teamName] son équipe dans le tournoi
+ * @returns {string} la ligne
+ */
+const placeSubtitleOf = (assignment, personName = '', teamName = '') => {
+  const name = String(personName || '').trim();
+  const team = String(teamName || '').trim();
+  if (name && team) {
+    return i18next.t('myLicenses.place.subtitle', 'Place de {{name}} · équipe {{team}}', { name, team, ...SANS_ECHAPPEMENT_PLACE });
+  }
+  if (name) return i18next.t('myLicenses.place.subtitleNoTeam', 'Place de {{name}}', { name, ...SANS_ECHAPPEMENT_PLACE });
+  if (team) return i18next.t('myLicenses.place.subtitleTeamOnly', 'Équipe {{team}}', { team, ...SANS_ECHAPPEMENT_PLACE });
+  return cardSubtitleOf(assignment);
+};
+
+/**
+ * PAIEMENTS-10E — « VOIR LE REÇU » SUR LA CARTE (planche 10e) : le même geste que « Télécharger le
+ * reçu » du détail (`MyLicenseDetail.downloadReceipt`, qui reste) : un reçu sans fichier est fabriqué
+ * (`generateReceipt`), puis téléchargé ; sans fichier au bout, « Document indisponible ».
+ * @param {any} payment le paiement encaissé qui porte le reçu
+ * @returns {Promise<void>} le geste
+ */
+const downloadPlaceReceipt = async (payment) => {
+  let receipt = payment?.receipt || null;
+  if (!receipt?.pdfFile?.url) {
+    receipt = await Promise.resolve(generateLicenseReceipt(licenseKeyOf(payment))).catch(() => null);
+  }
+  const url = resolveMediaUrl(receipt?.pdfFile?.url || '');
+  if (!url) {
+    Alert.alert(
+      i18next.t('myLicenseDetail.alerts.documentUnavailable.title', 'Document indisponible'),
+      i18next.t('myLicenseDetail.alerts.documentUnavailable.message', 'Aucun fichier exploitable n est rattaché à ce dépôt.'),
+    );
+    return;
+  }
+  try {
+    // ponytail: chargé au geste, pas à l'import — la version téléphone tire react-native-blob-util, que
+    // les témoins de « Mes paiements » ne savent pas charger (même pratique : TournamentOrganizerBoard).
+    // Sortie : un mock commun de `downloadRemoteFile` dans le setup jest.
+    const { downloadRemoteFile } = require('@/platform/media/downloadRemoteFile'); // eslint-disable-line global-require
+    await downloadRemoteFile({ fileName: `recu-${receipt?.receiptNumber || payment?.receipt?.receiptNumber || ''}`, url });
+  } catch (error) {
+    Alert.alert(
+      i18next.t('myLicenseDetail.alerts.downloadFailed.title', 'Téléchargement impossible'),
+      /** @type {any} */ (error)?.message || i18next.t('myLicensesArchive.alerts.downloadFailed.fallback', 'Le reçu n’a pas pu être enregistré sur ton téléphone.'),
+    );
+  }
+};
+
+/**
  * UNE CARTE DE COTISATION — la carte ENTIERE est la cible tactile.
  *
  * 🧨 Defaut 3 du pack : le bouton « Voir la cotisation STADE MARS… » etait
@@ -158,10 +218,18 @@ function TotalCard({ assignments }) {
  * @param {() => void} [props.onPress] Sans geste, la carte se lit seulement (FIN-PARENT).
  * @returns {import('react').ReactElement}
  */
-function AssignmentCard({ assignment, onPress }) {
+function AssignmentCard({
+  assignment, onPress, personName = '', teamName = '',
+}) {
   const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
+  const isPlace = isTournamentPlace(assignment);
+  const subtitle = isPlace ? placeSubtitleOf(assignment, personName, teamName) : cardSubtitleOf(assignment);
+  // PAIEMENTS-10E : « Voir le reçu » seulement sur une place payée dont un paiement encaissé porte un reçu.
+  const receiptPayment = isPlace && assignment?.status === 'paid'
+    ? (assignment?.payments || []).find((payment) => payment?.status === 'confirmed' && payment?.receipt)
+    : null;
   const tone = getMemberStatusTone(Colors, assignment.status);
   const currency = currencyOf(assignment);
   const installmentCount = (assignment?.installments || []).length;
@@ -183,9 +251,11 @@ function AssignmentCard({ assignment, onPress }) {
 
   return (
     <Carte
-      accessibilityLabel={`${campaignTitleOf(assignment)} — ${cardSubtitleOf(assignment)}`}
+      accessibilityLabel={`${campaignTitleOf(assignment)} — ${subtitle}`}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessible
+      // PAIEMENTS-10E : avec « Voir le reçu », la carte n est plus un seul bloc pour le lecteur
+      // d ecran, sinon le lien dedans serait muet ; la carte reste tout entiere la cible tactile.
+      accessible={!receiptPayment}
       onPress={onPress}
       style={{
         backgroundColor: Colors.primary700,
@@ -205,8 +275,8 @@ function AssignmentCard({ assignment, onPress }) {
           <Text numberOfLines={2} style={[type.title, Fonts.neutral00]}>
             {campaignTitleOf(assignment)}
           </Text>
-          <Text numberOfLines={1} style={[type.meta, Fonts.neutral300]}>
-            {cardSubtitleOf(assignment)}
+          <Text numberOfLines={isPlace ? 2 : 1} style={[type.meta, Fonts.neutral300]}>
+            {subtitle}
           </Text>
         </View>
         <MemberStatusPill status={assignment.status} />
@@ -238,7 +308,56 @@ function AssignmentCard({ assignment, onPress }) {
           })}
         </Text>
       ) : null}
+      {receiptPayment ? (
+        <Pressable
+          accessibilityRole="link"
+          hitSlop={8}
+          onPress={() => downloadPlaceReceipt(receiptPayment)}
+          style={{
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            flexDirection: 'row',
+            gap: 6,
+            minHeight: 32,
+          }}
+          testID="my-licenses-place-receipt"
+        >
+          <GlyphIcon color={Colors.primary500} name="receiptAlt" size={18} />
+          <Text style={[type.keyValue, Fonts.primary500]}>
+            {t('myLicenses.place.receipt', 'Voir le reçu')}
+          </Text>
+        </Pressable>
+      ) : null}
     </Carte>
+  );
+}
+
+/**
+ * PAIEMENTS-10E — UNE PLACE DE TOURNOI DU COMPTE CONNECTE : son équipe se lit sur la fiche du
+ * tournoi (`campaign.targetConfig.eventId`, l équipe ACTIVE du lecteur), la même requête que la
+ * fiche (cache `['event', id]`). `/licenses/me` ne rend pas l équipe d une place.
+ * ⛔ Monté seulement quand la place nomme son tournoi : la requête ne part jamais pour une cotisation.
+ * @param {object} props
+ * @param {any} props.assignment
+ * @param {string} props.eventId
+ * @param {string} [props.personName]
+ * @param {string} [props.viewerId]
+ * @param {() => void} [props.onPress]
+ * @returns {import('react').ReactElement}
+ */
+function TournamentPlaceCard({
+  assignment, eventId, onPress, personName = '', viewerId = '',
+}) {
+  // ponytail: chargé au rendu d'une place qui nomme son tournoi, pas à l'import (voir le fichier).
+  const useTournamentTeamName = require('./useTournamentTeamName').default; // eslint-disable-line global-require
+  const teamName = useTournamentTeamName(eventId, viewerId);
+  return (
+    <AssignmentCard
+      assignment={assignment}
+      onPress={onPress}
+      personName={personName}
+      teamName={teamName}
+    />
   );
 }
 
@@ -398,7 +517,12 @@ function ChildrenLicenses({ navigation }) {
             <MemberOverline
               title={[personne?.firstname, personne?.lastname].filter(Boolean).join(' ')}
             />
-            {cotisation ? <AssignmentCard assignment={cotisation} /> : (
+            {cotisation ? (
+              <AssignmentCard
+                assignment={cotisation}
+                personName={[personne?.firstname, personne?.lastname].filter(Boolean).join(' ')}
+              />
+            ) : (
               <Text style={[type.meta, Fonts.neutral300]}>
                 {t('myLicenses.children.none', 'Aucune cotisation pour l’instant.')}
               </Text>
@@ -420,6 +544,8 @@ function OwnLicenses({ navigation }) {
   const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
+  const { userData } = useAuth();
+  const personName = [userData?.firstname, userData?.lastname].filter(Boolean).join(' ');
   const query = useMyLicenses();
   const assignments = useMemo(() => query.data || [], [query.data]);
   const { active, archived } = useMemo(() => splitSeasons(assignments), [assignments]);
@@ -537,13 +663,28 @@ function OwnLicenses({ navigation }) {
               </Text>
             </View>
             <View style={{ gap: memberSpacing.cardGap }}>
-              {group.items.map((assignment) => (
-                <AssignmentCard
-                  assignment={assignment}
-                  key={licenseKeyOf(assignment)}
-                  onPress={() => openAssignment(assignment)}
-                />
-              ))}
+              {group.items.map((assignment) => {
+                const eventId = isTournamentPlace(assignment)
+                  ? String(assignment?.campaign?.targetConfig?.eventId || '')
+                  : '';
+                return eventId ? (
+                  <TournamentPlaceCard
+                    assignment={assignment}
+                    eventId={eventId}
+                    key={licenseKeyOf(assignment)}
+                    onPress={() => openAssignment(assignment)}
+                    personName={personName}
+                    viewerId={String(userData?.documentId || '')}
+                  />
+                ) : (
+                  <AssignmentCard
+                    assignment={assignment}
+                    key={licenseKeyOf(assignment)}
+                    onPress={() => openAssignment(assignment)}
+                    personName={personName}
+                  />
+                );
+              })}
             </View>
           </View>
         ))}

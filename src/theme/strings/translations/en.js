@@ -15907,6 +15907,7 @@ export default {
       overdue: 'overdue',
       paid: 'settled',
       partial: '{{paidAmount}} paid of {{dueAmount}}',
+      placePaidOn: 'paid on {{date}}',
       waived: '{{amount}} covered by the club',
     },
     fallbacks: {
@@ -15950,6 +15951,8 @@ export default {
       clubs_other: '{{count}} clubs',
       fees_one: '{{count}} fee',
       fees_other: '{{count}} fees',
+      places_one: '{{count}} tournament spot',
+      places_other: '{{count}} tournament spots',
       season: 'season {{season}}',
     },
   },
@@ -16963,6 +16966,10 @@ export default {
       title: 'Payments',
       titleFallback: 'Payment',
     },
+    place: {
+      paidOverline: 'SPOT PAID',
+      title: 'My spot',
+    },
     receipt: {
       download: 'Download the receipt',
       generate: 'Generate my receipt',
@@ -17008,6 +17015,12 @@ export default {
     },
     group: {
       upToDate: 'up to date',
+    },
+    place: {
+      receipt: 'View receipt',
+      subtitle: '{{name}}’s spot · team {{team}}',
+      subtitleNoTeam: '{{name}}’s spot',
+      subtitleTeamOnly: 'Team {{team}}',
     },
     title: 'My payments',
     total: {
