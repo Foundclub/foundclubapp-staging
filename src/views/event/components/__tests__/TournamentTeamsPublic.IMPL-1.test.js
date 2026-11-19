@@ -91,7 +91,8 @@ const monter = (/** @type {any} */ props = {}) => {
   return arbre.root;
 };
 afterEach(() => { act(() => arbre?.unmount()); });
-const textes = (/** @type {any} */ noeud) => noeud.findAllByType(Text).map((/** @type {any} */ n) => [].concat(n.props.children).join(''));
+// FICHE-TOURNOI : les pastilles et liens en gras portent des espaces insécables (piège Android 16).
+const textes = (/** @type {any} */ noeud) => noeud.findAllByType(Text).map((/** @type {any} */ n) => [].concat(n.props.children).join('').replace(/\u00a0/g, ' '));
 const parId = (/** @type {any} */ root, /** @type {string} */ id) => root.findAll((/** @type {any} */ n) => n.props?.testID === id, { deep: false });
 
 describe('IMPL-1 · 8a — sous le seuil', () => {
@@ -224,7 +225,7 @@ describe('FICHE-TOURNOI · 8a — « Rejoindre une équipe » pour le visiteur s
 describe('FICHE-TOURNOI · 8b — « Voir l’équipe » en entier', () => {
   test('🔴 le lien n est plus dans la rangée qui passe à la ligne : il garde sa largeur (Android le coupait en « Voir »)', () => {
     const [carte] = parId(monter(), 'tournament-public-team-pantheres');
-    const [lien] = carte.findAll((/** @type {any} */ n) => n.type === Text && n.props.children === 'Voir l’équipe');
+    const [lien] = carte.findAll((/** @type {any} */ n) => n.type === Text && n.props.children === 'Voir\u00a0l’équipe');
     const style = Object.assign({}, ...[].concat(lien.props.style).flat(Infinity).filter(Boolean));
     expect(style.flexShrink).toBe(0);
     const { parent } = lien;

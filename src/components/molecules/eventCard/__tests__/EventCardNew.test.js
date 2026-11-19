@@ -411,7 +411,7 @@ describe('EventCardNew — T-FINITIONS-3, âge minimum du tournoi', () => {
   it('🔴 minAge posé : « Dès 16 ans » (pastille) remplace « Sénior (+18 ans) »', () => {
     const texts = textsOf(renderCard({ item: tournoi({ minAge: 16 }) }));
     expect(texts).toContain('Football • Masculine');
-    expect(texts).toContain('Dès 16 ans');
+    expect(texts).toContain('Dès\u00a016\u00a0ans');
     expect(texts).not.toContain('À partir de 16 ans');
     expect(texts).not.toContain('Sénior (+18 ans)');
   });

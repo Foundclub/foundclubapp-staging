@@ -83,7 +83,8 @@ jest.mock('@/domains/event/useEvent', () => ({
 const collectTexts = (node, acc = []) => {
   if (node === null || node === undefined) return acc;
   if (typeof node === 'string') {
-    acc.push(node);
+    // FICHE-TOURNOI : les pastilles portent des espaces insécables (piège Android 16).
+    acc.push(node.replace(/\u00a0/g, ' '));
     return acc;
   }
   if (Array.isArray(node)) {

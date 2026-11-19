@@ -12,6 +12,8 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import {
   getTournamentNameAndShortDate,
   getTournamentTeamCaptainShort,
@@ -287,8 +289,9 @@ export function TournamentTeamPreviewSheet({
             style={{ alignSelf: 'flex-start', minHeight: 24 }}
             testID="tournament-team-preview-see-tournament"
           >
+            {/* Gras dans une boîte à sa largeur : espaces insécables (piège Android 16). */}
             <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-              {t('ficheTournoi.seeTournamentInfo')}
+              {texteInsecable(t('ficheTournoi.seeTournamentInfo'))}
             </Text>
           </Pressable>
         </View>

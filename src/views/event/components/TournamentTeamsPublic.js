@@ -15,6 +15,8 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 
 import { requestJoinTournamentTeam } from '@/services/tournamentTeam/tournamentTeamService';
 
+import texteInsecable from '@/utils/texteInsecable';
+
 import {
   canAskToJoinTournamentTeam,
   getTournamentJoinBlockingNotice,
@@ -171,9 +173,10 @@ export function TournamentPublicTeamCard({
         </View>
         {validee ? <Pastille color={Colors.primary500} text={t('implFiche.validated')} /> : null}
       </View>
-      {/* FICHE-TOURNOI (19/11, 8b) : « Voir l'équipe » hors de la rangée qui passe à la ligne, à
-          sa largeur (flexShrink 0) : sur Android, après un ressort dans une rangée en `wrap`, il
-          s'affichait coupé en « Voir » (recette 48, tournoi 3444). */}
+      {/* FICHE-TOURNOI (19/11, 8b) : « Voir l'équipe » s'affichait « Voir » sur Android (recette
+          48, tournoi 3444) : le piège du gras Android 16 (le dernier mot d'un texte gras perdu
+          dans une boîte à sa largeur). Parade prouvée : espaces insécables ; et le lien sort de
+          la rangée qui passe à la ligne, à sa largeur (flexShrink 0). */}
       <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
         <View style={{
           alignItems: 'center', flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8,
@@ -197,7 +200,7 @@ export function TournamentPublicTeamCard({
           ) : null}
         </View>
         <Text style={[Fonts.p3Bold, Fonts.primary200, { flexShrink: 0 }]}>
-          {t('implFiche.seeTeam')}
+          {texteInsecable(t('implFiche.seeTeam'))}
         </Text>
       </View>
       {ouverte && requested ? (

@@ -298,6 +298,8 @@ describe('FICHE-TOURNOI · 6b — l en-tête de la fiche d un tournoi, site', ()
     expect(bouton).toBeTruthy();
     expect(bouton.props['aria-label']).toBe('Plus d’actions');
     act(() => { bouton.props.onClick(); });
+    const [menuOuvert] = root.findAll((/** @type {any} */ n) => n.type === 'div' && n.props.role === 'menu');
+    expect(menuOuvert.props['aria-label']).toBe('Plus d’actions');
     const signaler = root.findAll((/** @type {any} */ n) => n.type === 'button' && n.props.role === 'menuitem' && textOf(n).includes('Signaler l’événement'));
     expect(signaler).toHaveLength(1);
   });

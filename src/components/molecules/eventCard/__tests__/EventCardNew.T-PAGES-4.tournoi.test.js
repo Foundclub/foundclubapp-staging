@@ -191,7 +191,7 @@ describe('EventCardNew — T-PAGES-4, la carte d un tournoi (recette 44)', () =>
     // FICHE-TOURNOI (19/11/2026, 6a) : l'âge n'est plus sous le titre, il est dans la pastille
     // « Dès 16 ans » (une fois).
     expect(fois(texte, 'À partir de 16 ans')).toBe(0);
-    expect(fois(texte, 'Dès 16 ans')).toBe(1);
+    expect(fois(texte, 'Dès\u00a016\u00a0ans')).toBe(1);
     expect(fois(texte, 'Mixte')).toBe(2);
   });
 });

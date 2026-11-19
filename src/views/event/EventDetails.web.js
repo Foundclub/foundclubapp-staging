@@ -3195,7 +3195,9 @@ function EventDetails({ navigation, route }) {
                         </button>
                         {isManageMenuOpen ? (
                           <div
-                            aria-label={t('eventDetails.managePanel.title', 'Gérer l’événement')}
+                            aria-label={showManageMenu
+                              ? t('eventDetails.managePanel.title', 'Gérer l’événement')
+                              : t('ficheTournoi.moreActions', 'Plus d’actions')}
                             ref={manageMenuRef}
                             role="menu"
                             style={{

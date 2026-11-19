@@ -51,6 +51,7 @@ import {
 } from '@/utils/externalMatchDisplay';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import { getShortAddress } from '@/utils/location';
+import texteInsecable from '@/utils/texteInsecable';
 
 /**
  * Normalise un nom de type (casse et accents) pour comparaison.
@@ -1058,7 +1059,8 @@ function EventCardNew({
                       { color: pastille.cle === 'etat' ? Colors.primary500 : Colors.neutral00 },
                     ]}
                   >
-                    {pastille.texte}
+                    {/* Pastille en gras : espaces insécables (piège Android 16). */}
+                    {texteInsecable(pastille.texte)}
                   </Text>
                 </View>
               ))}
@@ -1202,7 +1204,7 @@ function EventCardNew({
                 isTournamentEvent ? { flexShrink: 1 } : { flex: 1 },
               ]}
             >
-              {attente}
+              {isTournamentEvent ? texteInsecable(attente) : attente}
             </Text>
           </View>
         ) : null}
