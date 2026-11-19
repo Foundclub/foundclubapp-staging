@@ -14781,6 +14781,10 @@ export default {
       parJoueur: 'par joueur',
       plusTard: 'Plus tard',
     },
+    formulaireBillet:
+      'Avec une action principale « open_event », la pop-up s’affiche en billet : '
+      + 'date, heure, lieu et prix lus sur l’événement ; « Eyebrow » en petite ligne, '
+      + 'le titre en grand, l’image en haut.',
     invitation: {
       invite: 't’invite dans son équipe',
       payer: 'Payer ma place ({{prix}})',
@@ -14790,14 +14794,13 @@ export default {
       question: '« Veux-tu rejoindre mon équipe pour ce tournoi ? »',
       rejoint: 'Tu as rejoint l’équipe {{team}}',
       resteAPayer: 'Il te reste à payer ta place pour qu’elle compte : {{prix}}.',
-      resteAPayerMaillot: 'Il te reste à payer ta place pour qu’elle compte : {{prix}}, maillot offert.',
+      resteAPayerMaillot:
+        'Il te reste à payer ta place pour qu’elle compte : {{prix}}, maillot offert.',
       titre: 'Invitation au tournoi',
       valideeDes_one: 'L’équipe est validée dès {{count}} joueur payé.',
       valideeDes_other: 'L’équipe est validée dès {{count}} joueurs payés.',
       voirEquipe: 'Voir l’équipe',
     },
-    formulaireBillet:
-      'Avec une action principale « open_event », la pop-up s’affiche en billet : date, heure, lieu et prix lus sur l’événement ; « Eyebrow » en petite ligne, le titre en grand, l’image en haut.',
     rechercheEffacer: 'Effacer la recherche',
   },
   inputStepper: {

@@ -13922,6 +13922,10 @@ export default {
       parJoueur: 'per player',
       plusTard: 'Later',
     },
+    formulaireBillet:
+      'With an « open_event » main action, the pop-up shows as a ticket: '
+      + 'date, time, venue and price read from the event; « Eyebrow » as the small line, '
+      + 'the title in large, the image on top.',
     invitation: {
       invite: 'invites you to their team',
       payer: 'Pay for my spot ({{prix}})',
@@ -13937,8 +13941,6 @@ export default {
       valideeDes_other: 'The team is confirmed once {{count}} players have paid.',
       voirEquipe: 'See the team',
     },
-    formulaireBillet:
-      'With an « open_event » main action, the pop-up shows as a ticket: date, time, venue and price read from the event; « Eyebrow » as the small line, the title in large, the image on top.',
     rechercheEffacer: 'Clear search',
   },
   inputStepper: {
