@@ -9,6 +9,7 @@ import {
   getTournamentRosterSummary,
   isTooYoungForTournament,
   isTournamentActiveMemberStatus,
+  isTournamentAnonymized,
   isTournamentPendingMembershipStatus,
   isTournamentTeamOpenToJoinRequests,
   normalizeTournamentText,
@@ -270,19 +271,23 @@ const prenomEtInitiale = (prenom, nom) => {
  * Les joueurs d'une équipe vus de l'extérieur (aperçu 8e) : « Prénom I. », jamais le paiement de
  * chacun ; un mineur (drapeau `isMinor` ou `minor` du serveur) sans prénom (`label: null`).
  * @param {any} team - L'équipe du tournoi.
+ * @param {any} [event] - Le tournoi (lu pour l'anonymat).
  * @returns {{ label: string | null, minor: boolean }[]} Les joueurs.
  */
-export const getTournamentTeamPublicPlayers = (team) => (
-  (Array.isArray(team?.membersSummary?.list) ? team.membersSummary.list : [])
+export const getTournamentTeamPublicPlayers = (team, event = null) => {
+  const anonyme = isTournamentAnonymized(event);
+  return (Array.isArray(team?.membersSummary?.list) ? team.membersSummary.list : [])
     .map((/** @type {any} */ joueur) => {
-      // Contrat d'IMPL-5 : dans un résumé masqué, un mineur arrive sans prénom ni initiale.
+      // Contrat d'IMPL-5 : dans un résumé masqué, un mineur arrive sans prénom ni initiale ; sauf
+      // dans un tournoi anonymisé, où tout le monde arrive ainsi (chef, 19/11).
       const videMasque = team?.membersSummary?.paidHidden === true
         && !String(joueur?.firstName || '').trim() && !String(joueur?.lastInitial || '').trim();
-      const minor = joueur?.isMinor === true || joueur?.minor === true || videMasque;
-      const label = prenomEtInitiale(joueur?.firstName, joueur?.lastInitial) || null;
+      const minor = joueur?.isMinor === true || joueur?.minor === true || (videMasque && !anonyme);
+      const label = prenomEtInitiale(joueur?.firstName, joueur?.lastInitial)
+        || (anonyme ? i18next.t('tournamentManagement.playerAnonymous', 'Joueur') : null);
       return { label: minor ? null : label, minor };
-    })
-);
+    });
+};
 
 /**
  * Le capitaine en « Prénom I. » : `captainDisplayName` du serveur (contrat d'IMPL-5), sinon tiré de
