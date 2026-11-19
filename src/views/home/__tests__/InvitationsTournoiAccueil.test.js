@@ -140,7 +140,7 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
   // question dite par l'invitant (« mon équipe »). Remplace les textes de T-INVITATION-ACCUEIL.
   // ACCUEIL-TOURNOI (19/11, Adel, écrans 2a, 2c, 2e) : la carte raccourcie, sans la question ni
   // « Voir le tournoi » ; c'est la carte entière qui ouvre le tournoi.
-  it('qui invite, l’équipe, le tournoi, sa date, son lieu, son prix ; ni question, ni lien', async () => {
+  it('qui invite, l’équipe, le tournoi, date, lieu, prix ; ni question ni lien', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'Invitation au tournoi',
@@ -206,7 +206,7 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     });
   });
 
-  it('ACCUEIL-TOURNOI — « Refuser » et « Accepter » restent hors de la zone touchable', async () => {
+  it('ACCUEIL-TOURNOI — « Refuser » et « Accepter » hors de la zone touchable', async () => {
     const arbre = await monter();
     const zone = arbre.root.findByProps({ testID: 'accueil-invitation-ouvrir-tt-a' });
     const dansLaZone = (libelle) => zone.findAll((n) => n.props?.title === libelle).length > 0;
@@ -214,7 +214,7 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     expect(dansLaZone('Accepter')).toBe(false);
   });
 
-  it('ACCUEIL-TOURNOI — la pile de deux invitations : même carte courte, chacune touchable', async () => {
+  it('ACCUEIL-TOURNOI — pile de deux invitations : carte courte, chacune touchable', async () => {
     getMyTournamentInvitations.mockResolvedValue([invitation('a'), invitation('b')]);
     const arbre = await monter();
     expect(lisibles(arbre)).not.toContain('Voir le tournoi');
@@ -398,7 +398,7 @@ describe('ACCUEIL-TOURNOI — le tournoi dans « Tes prochains événements »',
     getMyTournamentInvitations.mockResolvedValue([]);
   });
 
-  it('inscrit, place à payer : le titre, le tournoi, son équipe, la date, le lieu, « 1 place à payer »', async () => {
+  it('inscrit, place due : titre, tournoi, équipe, date, lieu, « 1 place à payer »', async () => {
     getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([

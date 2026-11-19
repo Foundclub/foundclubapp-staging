@@ -201,7 +201,8 @@ function CarteInvitationTournoi({ invitation, navigation, onAcceptee }) {
   return (
     <CadreDeCarte testID={`accueil-invitation-tournoi-${teamId}`}>
       {/* ACCUEIL-TOURNOI (19/11, Adel, écrans 2a, 2c, 2e) : le haut de la carte ouvre le tournoi
-          (plus de « Voir le tournoi ») ; « Refuser » et « Accepter » restent hors de cette zone. */}
+          (plus de « Voir le tournoi ») ; « Refuser » et « Accepter » restent hors de la
+          zone. */}
       <TouchableOpacity
         accessibilityHint={t('implAccueil.invitation.ouvrir', 'Ouvre la fiche du tournoi')}
         accessibilityRole="button"
@@ -419,7 +420,9 @@ function CarteMonTournoi({ equipe, navigation }) {
     ? caseDate.value.charAt(0).toUpperCase() + caseDate.value.slice(1) : '';
   const jour = equipe?.event?.date ? new Date(equipe.event.date) : null;
   const jourCourt = jour && !Number.isNaN(jour.getTime())
-    ? jour.toLocaleDateString(localeDesFormats(), { day: '2-digit', month: '2-digit', weekday: 'short' })
+    ? jour.toLocaleDateString(localeDesFormats(), {
+      day: '2-digit', month: '2-digit', weekday: 'short',
+    })
     : '';
   const lieu = lieuCourt(equipe?.event);
   const aPayer = equipe?.myPlace?.status === 'due';
@@ -475,7 +478,9 @@ function CarteMonTournoi({ equipe, navigation }) {
             backgroundColor: Colors.primary500, borderRadius: 22, height: 44, width: 44,
           }]}
         >
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{initialesDuTournoi(nomTournoi)}</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.primary900 }]}>
+            {initialesDuTournoi(nomTournoi)}
+          </Text>
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{nomTournoi}</Text>
