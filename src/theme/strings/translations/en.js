@@ -13942,6 +13942,7 @@ export default {
       voirEquipe: 'See the team',
     },
     rechercheEffacer: 'Clear search',
+    rechercheVide: 'Nothing matches “{{q}}”',
   },
   implFiche: {
     askToJoin: 'Ask to join',

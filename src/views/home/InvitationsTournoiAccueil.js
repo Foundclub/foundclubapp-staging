@@ -11,6 +11,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import { getTournamentEssentials } from '@/views/event/components/TournamentEssentials';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -23,6 +24,7 @@ import {
 import { respondToTournamentInvitation } from '@/services/tournamentTeam/tournamentTeamService';
 
 import { getEventLocationText } from '@/utils/eventLocationText';
+import { formatNotificationRelativeTime } from '@/utils/notifications/notificationPresentation';
 import texteInsecable from '@/utils/texteInsecable';
 
 import LinksPlatform from '@/platform/links';
@@ -181,6 +183,9 @@ function CarteInvitationTournoi({ invitation, navigation, onAcceptee }) {
   const enCours = reponse.isPending;
   const date = ligneDate(invitation?.event);
   const lieu = lieuComplet(invitation?.event);
+  // IMPL-4B (planches 2a, 2e) : « Il y a 5 min », le format de la cloche. Le serveur rend la date
+  // de l'invitation depuis IMPL-5C ; sans date lisible (serveur d'avant), rien ne s'affiche.
+  const quand = formatNotificationRelativeTime(invitation?.createdAt);
   let lignePrix = null;
   if (prix) {
     lignePrix = maillot
@@ -190,9 +195,13 @@ function CarteInvitationTournoi({ invitation, navigation, onAcceptee }) {
 
   return (
     <CadreDeCarte testID={`accueil-invitation-tournoi-${teamId}`}>
-      <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-        {t('implAccueil.invitation.titre', 'Invitation au tournoi')}
-      </Text>
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+        {/* `flex: 1` : le titre gras garde toute la largeur (Android 16, dernier mot perdu). */}
+        <Text style={[Fonts.p3Bold, Fonts.primary200, { flex: 1 }]}>
+          {t('implAccueil.invitation.titre', 'Invitation au tournoi')}
+        </Text>
+        {quand ? <Text style={[Fonts.p3, Fonts.neutral300]}>{quand}</Text> : null}
+      </View>
       <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
         <Image
           accessibilityIgnoresInvertColors
@@ -231,9 +240,17 @@ function CarteInvitationTournoi({ invitation, navigation, onAcceptee }) {
         )}
       </Text>
       {erreur ? (
-        <Text accessibilityLiveRegion="polite" style={[Fonts.p3, { color: Colors.error500 }]}>
-          {erreur}
-        </Text>
+        // IMPL-4B (planche 2c) : l'icône « ! » devant le message (motif de
+        // PlayerMatchResponseScreen) ; sans libellé, seul le texte est annoncé.
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+          <GlyphIcon color={Colors.error500} name="triangleExclamation" size={16} />
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[Fonts.p3, { color: Colors.error500, flex: 1 }]}
+          >
+            {erreur}
+          </Text>
+        </View>
       ) : null}
       <LienDeCarte
         libelle={t('tournamentHomeInvitation.seeTournament', 'Voir le tournoi')}

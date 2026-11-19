@@ -498,11 +498,12 @@ let montes = [];
 
 /**
  * Monte la liste de Rechercher › Événement, telle que `SearchHubScreen` la pose.
- * @param {{ auth?: any, filtres?: any, liste?: any, annuaire?: boolean }} [options] Le décor.
+ * IMPL-4B : `champPlein` pose `champDeRecherchePlein`, comme Rechercher hors annuaire.
+ * @param {Record<string, any>} [options] Le décor : auth, filtres, liste, annuaire, champPlein.
  * @returns {Promise<any>} L'arbre.
  */
 const monter = async ({
-  annuaire = false, auth = JOUEUR, filtres = {}, liste = LISTE_PLEINE,
+  annuaire = false, auth = JOUEUR, champPlein = false, filtres = {}, liste = LISTE_PLEINE,
 } = {}) => {
   mockAuth.valeur = auth;
   mockListe.valeur = liste;
@@ -515,6 +516,7 @@ const monter = async ({
       <EventListContent
         additionalFilters={{ excludeType: 'Réservation', sessionStatus: 'open' }}
         annuaire={annuaire}
+        champDeRecherchePlein={champPlein}
         enableMapMode
         screenActive
         showFilters
@@ -592,6 +594,44 @@ describe('E6 — ce qui marchait AVANT le lot (caractérisation)', () => {
     const tree = await monter({ liste: LISTE_VIDE });
     expect(texteVisible(tree)).toContain('VIDE eventList.noData');
   });
+});
+
+// IMPL-4B-ACCUEIL (19/11/2026, planche 7c) — dans Rechercher, une recherche sans résultat le dit
+// avec les mots tapés : « Rien ne correspond à « xqz » ». Le TITRE seul change, et seulement depuis
+// Rechercher (`champDeRecherchePlein`, que SearchHubScreen pose hors annuaire) quand le champ n'est
+// pas vide. Tout ce que l'état vide offrait reste : la carte « Me prévenir », la feuille d'alerte.
+describe('IMPL-4B — « Rien ne correspond à « xqz » » sur l onglet Événements de Rechercher', () => {
+  beforeEach(() => { propositionDejaVue('u-1'); });
+
+  it('🔴 Rechercher, « xqz », aucun événement : le titre la cite, l alerte reste', async () => {
+    const tree = await monter({
+      champPlein: true, filtres: { city: MONTRIVAGE, q: ' xqz ' }, liste: LISTE_VIDE,
+    });
+    const texte = texteVisible(tree);
+
+    expect(texte).toContain('Me prévenir des nouveaux événements comme ceux-ci');
+    expect(texte).toContain('Ne rate plus aucun événement');
+    expect(texte).toContain('VIDE Rien ne correspond à « xqz »');
+    expect(texte).not.toContain('eventList.noData');
+  });
+
+  it('📌 hors de Rechercher (sans la prop), même recherche : le titre d avant', async () => {
+    const tree = await monter({ filtres: { q: 'xqz' }, liste: LISTE_VIDE });
+    expect(texteVisible(tree)).toContain('VIDE eventList.noData');
+    expect(texteVisible(tree)).not.toContain('Rien ne correspond');
+  });
+
+  it.each([[undefined], [''], ['   ']])(
+    '📌 Rechercher, champ vide (%p) : le titre d avant, l alerte toujours là',
+    async (q) => {
+      const tree = await monter({
+        champPlein: true, filtres: { city: MONTRIVAGE, q }, liste: LISTE_VIDE,
+      });
+      const texte = texteVisible(tree);
+      expect(texte).toContain('VIDE eventList.noData');
+      expect(texte).toContain('Me prévenir des nouveaux événements comme ceux-ci');
+    },
+  );
 });
 
 describe('A20.1 — sous les résultats : « Me prévenir des nouveaux événements »', () => {

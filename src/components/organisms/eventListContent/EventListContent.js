@@ -40,6 +40,7 @@ import {
 import useAlerteEvenement from '@/domains/searchAlert/useAlerteEvenement';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import { useAppContext } from '@/store/appContext';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
@@ -180,7 +181,8 @@ function EventListSeparator() {
  *   « Événements de la Ville » de la recherche). Sans lui, rien ne change.
  * @param {boolean} [props.champDeRecherchePlein] - IMPL-4-ACCUEIL (page 7, 18/11) : posé par la
  *   recherche du téléphone seulement ; le champ pleine largeur, les filtres dedans
- *   (`SearchComponent.filtresDansLeChamp`). Absent, rien ne change.
+ *   (`SearchComponent.filtresDansLeChamp`). IMPL-4B (planche 7c, 19/11) : avec lui, le titre de
+ *   l'état vide cite la recherche (« Rien ne correspond à « xqz » »). Absent, rien ne change.
  * @returns {import('react').ReactElement} Event list content component
  */
 function EventListContent({
@@ -1440,7 +1442,12 @@ function EventListContent({
           description={!showFilters ? t('eventList.emptyDesc', 'Essaie de modifier tes filtres ou lance une nouvelle recherche.') : undefined}
           icon={Images.search}
           onAction={!showFilters ? handleFindEvent : undefined}
-          title={t('eventList.noData')}
+          // IMPL-4B (planche 7c) : dans Rechercher, le titre cite les mots tapés ; rien d'autre.
+          title={champDeRecherchePlein && activeSearchText
+            ? t('implAccueil.rechercheVide', 'Rien ne correspond à « {{q}} »', {
+              q: activeSearchText, ...SANS_ECHAPPEMENT,
+            })
+            : t('eventList.noData')}
         />
       )
     )
