@@ -27377,11 +27377,12 @@ export default {
     birthdate: {
       dayPlaceholder: 'DD',
       monthPlaceholder: 'MM',
+      raison: 'It is used to protect minors and to suggest your category. It is never displayed.',
       yearPlaceholder: 'YYYY',
     },
     gerantMineur: {
       message: 'You must be 18 or older to manage a venue on FoundClub.',
-      retour: 'Back to status choice',
+      retour: 'Back to the first screen',
       titre: '18 and over only',
     },
     loadError: {

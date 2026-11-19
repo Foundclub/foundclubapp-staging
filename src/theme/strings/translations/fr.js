@@ -29143,11 +29143,12 @@ export default {
     birthdate: {
       dayPlaceholder: 'JJ',
       monthPlaceholder: 'MM',
+      raison: 'Elle sert à protéger les mineurs et à te proposer ta catégorie. Elle n’est jamais affichée.',
       yearPlaceholder: 'AAAA',
     },
     gerantMineur: {
       message: 'Il faut avoir 18 ans pour gérer un complexe sur FoundClub.',
-      retour: 'Revenir au choix du statut',
+      retour: 'Revenir au premier écran',
       titre: 'Réservé aux 18 ans et plus',
     },
     loadError: {

@@ -901,10 +901,11 @@ describe('UserName — 18 ans pour gérer un complexe (GERANT-INSCRIPTION, 224 B
     const [titre, message, boutons] = alerte.mock.calls[0];
     expect(titre).toBe('Réservé aux 18 ans et plus');
     expect(message).toBe('Il faut avoir 18 ans pour gérer un complexe sur FoundClub.');
-    expect(boutons.map((/** @type {any} */ b) => b.text)).toEqual(['Revenir au choix du statut']);
+    // INSCRIPTION-CODE (19/11) : la porte « mairie ou complexe ? » est au premier écran.
+    expect(boutons.map((/** @type {any} */ b) => b.text)).toEqual(['Revenir au premier écran']);
     await act(async () => { boutons[0].onPress(); });
     expect(storage.delete).toHaveBeenCalledWith('user.complexe_mode.user-1');
-    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserRole');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserSport');
     expect(mockNavigation.navigate).not.toHaveBeenCalledWith('ComplexeDevenirGerant');
     alerte.mockRestore();
   });
