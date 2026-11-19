@@ -1,3 +1,4 @@
+import { estDeCompetition } from '@/domains/activity/familleDuSport';
 import { sanitizeUser } from '@/domains/auth/authSanitizer';
 import { storage } from '@/store/appContext';
 import {
@@ -605,6 +606,13 @@ const OPTIONAL_ONBOARDING_ROUTES = [
   RouteNames.UserAffiliationGuide, RouteNames.UserTeamAffiliation, RouteNames.UserTrainedTeams,
 ];
 
+// INSCRIPTION-CODE (c) — les étapes qui n'ont de sens que pour un sport de compétition.
+/** @type {string[]} */
+const ETAPES_DE_COMPETITION = [
+  RouteNames.UserSection, RouteNames.UserPosition, RouteNames.UserPhysique,
+  RouteNames.UserCategory, RouteNames.UserSportHistory, RouteNames.UserClubSearch,
+];
+
 // TUNNELREPRISE (29/10/2026, decision d'Adel « 1- A ») — les etapes qui ont un « Passer » sans
 // etre dans la liste ci-dessus : section, ville, photo, « ton enfant ». Seules « Quel est ton
 // statut ? », « Qui es-tu ? » et la declaration parentale ne se passent pas.
@@ -892,6 +900,14 @@ export const getOnboardingViews = ({
       return Object.assign(view, { canShow: false });
     }
     if (view.route === RouteNames.UserCategory && category) {
+      return Object.assign(view, { canShow: false });
+    }
+    // INSCRIPTION-CODE (c) (19/11, V2 2.1 « Écrans de l'inscription », v2_03 « ok ») — loisir,
+    // nature et culture : « Niveau (Débutant à Expert) seulement ; pas de section, de postes, de
+    // catégorie, de recrutement » ; le physique et le parcours sportif sont réservés aux sports de
+    // compétition (v2_04, v2_06). Une activité inconnue garde le parcours de compétition.
+    if (ETAPES_DE_COMPETITION.includes(view.route) && preferredSport
+      && !estDeCompetition(preferredSport)) {
       return Object.assign(view, { canShow: false });
     }
     if (view.route === RouteNames.UserSportHistory && sportsHistory) {

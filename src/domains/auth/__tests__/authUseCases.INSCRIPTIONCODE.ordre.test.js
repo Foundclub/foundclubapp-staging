@@ -56,3 +56,31 @@ describe('INSCRIPTION-CODE — Activité › Qui es-tu ? › Rôle en tête de t
     expect(parcours(USER_ROLES.new, { preferredSport: 'Judo' })[0]).toBe(R.UserName);
   });
 });
+
+// INSCRIPTION-CODE (c) — un parcours par famille (V2 2.1, v2_03, v2_04, v2_06).
+describe('INSCRIPTION-CODE (c) — le parcours du joueur suit la famille de son activité', () => {
+  const joueur = (activite) => parcours(USER_ROLES.player, {
+    birthdate: '1990-01-01', firstname: 'Lina', lastname: 'Morel', preferredSport: activite,
+  });
+
+  it('football : section, postes, physique, niveau, catégorie, parcours, recrutement', () => {
+    expect(joueur('Football')).toEqual([R.UserSection, R.UserAddress, R.UserAvatar, R.UserPosition,
+      R.UserPhysique, R.UserLevel, R.UserCategory, R.UserSportHistory, R.UserClubSearch,
+      R.UserAffiliationGuide, R.UserTeamAffiliation]);
+  });
+
+  it('judo (combat) : la même chose, sans les postes', () => {
+    expect(joueur('Judo')).toEqual([R.UserSection, R.UserAddress, R.UserAvatar, R.UserPhysique,
+      R.UserLevel, R.UserCategory, R.UserSportHistory, R.UserClubSearch, R.UserAffiliationGuide,
+      R.UserTeamAffiliation]);
+  });
+
+  it.each(['Spéléologie', 'Randonnée', 'Danse', 'Musique'])('%s : le niveau seulement', (activite) => {
+    expect(joueur(activite)).toEqual([R.UserAddress, R.UserAvatar, R.UserLevel,
+      R.UserAffiliationGuide, R.UserTeamAffiliation]);
+  });
+
+  it('sans activité (« je ne trouve pas ») : le parcours d’avant', () => {
+    expect(joueur(undefined)).toContain(R.UserSection);
+  });
+});
