@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TextInput, View } from 'react-native';
+import {
+  Pressable, Text, TextInput, View,
+} from 'react-native';
 
 import { formatEuros } from '@/domains/complexe/complexeTerrain';
 import { withAlpha } from '@/theme/colors';
@@ -11,6 +13,7 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 import {
+  getTournamentNameAndShortDate,
   getTournamentTeamCaptainShort,
   getTournamentTeamLookingFor,
   getTournamentTeamPlayerCount,
@@ -232,12 +235,13 @@ const placesDeLEquipe = (team, tournamentConfig) => {
  * @param {() => void} props.onClose - Fermer.
  * @param {((team: any) => void) | null} [props.onAsk] - « Demander à rejoindre », si permis.
  * @param {boolean} [props.requested] - Le lecteur a déjà demandé à rejoindre cette équipe.
- * @param {any} [props.event] - Le tournoi (lu pour l'anonymat des joueurs).
+ * @param {any} [props.event] - Le tournoi (lu pour l'anonymat des joueurs, son nom et sa date).
+ * @param {() => void} [props.onSeeTournament] - « Voir les infos du tournoi » (sinon : fermer).
  * @returns {import('react').ReactElement | null} L'aperçu.
  */
 export function TournamentTeamPreviewSheet({
-  event = null, onAsk = null, onClose, requested = false, team, tournamentConfig = {},
-  tournamentName = '',
+  event = null, onAsk = null, onClose, onSeeTournament = undefined, requested = false, team,
+  tournamentConfig = {}, tournamentName = '',
 }) {
   const { t } = useTranslation();
   const {
@@ -265,17 +269,28 @@ export function TournamentTeamPreviewSheet({
       close={onClose}
       footerComponent={pied}
       headerComponent={(
+        // FICHE-TOURNOI (19/11, règle d'Adel D276, passe avant la maquette 8e) : en haut, le nom
+        // de l'équipe, « nom du tournoi · date courte » et le petit lien « Voir les infos du
+        // tournoi » ; aucune autre info du tournoi (ni lieu, ni prix, ni format).
         <View style={Spaces.gap[4]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            {tournamentName
-              ? t('implFiche.teamPreviewSubtitle', {
-                tournament: tournamentName, ...SANS_ECHAPPEMENT,
-              })
-              : t('implFiche.tournamentTeam')}
+            {getTournamentNameAndShortDate({ ...event, name: tournamentName || event?.name })
+              || t('implFiche.tournamentTeam')}
           </Text>
+          <Pressable
+            accessibilityRole="link"
+            hitSlop={12}
+            onPress={onSeeTournament || onClose}
+            style={{ alignSelf: 'flex-start', minHeight: 24 }}
+            testID="tournament-team-preview-see-tournament"
+          >
+            <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+              {t('ficheTournoi.seeTournamentInfo')}
+            </Text>
+          </Pressable>
         </View>
       )}
       isVisible
@@ -308,6 +323,12 @@ export function TournamentTeamPreviewSheet({
             <Pastille color={Colors.primary500} text={t('implFiche.requestSent')} />
           ) : null}
         </View>
+        {/* FICHE-TOURNOI (19/11, 8e) : une équipe fermée le dit avec des mots simples. */}
+        {ouverte ? null : (
+          <Text style={[Fonts.p3, Fonts.neutral200]} testID="tournament-team-preview-no-requests">
+            {t('ficheTournoi.noRequests')}
+          </Text>
+        )}
         {payees !== null ? (
           <View style={Spaces.gap[8]}>
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>

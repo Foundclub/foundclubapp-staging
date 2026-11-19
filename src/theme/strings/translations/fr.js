@@ -13599,6 +13599,16 @@ export default {
     noLocation: 'Lieu non défini',
     sport: 'Sport',
   },
+  // FICHE-TOURNOI (19/11/2026) — la carte du tournoi, la fiche et l'onglet Équipes.
+  ficheTournoi: {
+    freePlaces_one: '{{count}} place libre',
+    freePlaces_other: '{{count}} places libres',
+    moreActions: 'Plus d’actions',
+    noRequests: 'Cette équipe ne prend pas de demandes',
+    seeTournamentInfo: 'Voir les infos du tournoi',
+    teamsRegistered_one: '{{count}} équipe inscrite',
+    teamsRegistered_other: '{{count}} équipes inscrites',
+  },
   fidelite: {
     bonus: {
       partie: 'Partie offerte ({{part}})',

@@ -188,7 +188,10 @@ describe('EventCardNew — T-PAGES-4, la carte d un tournoi (recette 44)', () =>
     const texte = textsOf(renderCard({ item: TOURNOI() }));
     // 2 = la ligne sous le titre + la sonde de mesure invisible de MarqueeText (même texte,
     // hors flux). Avant : 4 (sous-titre, sa sonde, la ligne de catégorie, l'encart).
-    expect(fois(texte, 'À partir de 16 ans')).toBe(2);
+    // FICHE-TOURNOI (19/11/2026, 6a) : l'âge n'est plus sous le titre, il est dans la pastille
+    // « Dès 16 ans » (une fois).
+    expect(fois(texte, 'À partir de 16 ans')).toBe(0);
+    expect(fois(texte, 'Dès 16 ans')).toBe(1);
     expect(fois(texte, 'Mixte')).toBe(2);
   });
 });

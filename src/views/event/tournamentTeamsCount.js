@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import {
   getTournamentVisitorTeamsLine,
   TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT,
@@ -76,3 +78,30 @@ export const getTournamentTeamsLine = (event) => getTournamentVisitorTeamsLine({
     registeredCount: getTournamentRegisteredTeamsCount(event),
   },
 });
+
+/**
+ * FICHE-TOURNOI (19/11/2026, écran 8b) — la tête de l'onglet Équipes pour qui n'organise pas le
+ * tournoi : « 9 équipes inscrites · 15 places libres », dès le seuil des 30 % seulement (règle
+ * « 4- A ») ; sous le seuil, ou sans nombre connu : `null` (la ligne d'avant reste). Les nombres
+ * viennent du résumé que le serveur rend à toute fiche (`tournamentTeamsSummary`).
+ * Témoin : __tests__/FICHE-TOURNOI.regles.test.js.
+ * @param {any} event - Le tournoi.
+ * @returns {string | null} La ligne, ou `null`.
+ */
+export const getTournamentTeamsTabLine = (event) => {
+  if (!isTournamentTeamsCountShown(event)) return null;
+  const inscrites = Number(getTournamentRegisteredTeamsCount(event));
+  const libres = Math.max(0, Number(getTournamentTeamsCapacity(event)) - inscrites);
+  return [
+    i18next.t('ficheTournoi.teamsRegistered', {
+      count: inscrites,
+      defaultValue_one: '{{count}} équipe inscrite',
+      defaultValue_other: '{{count}} équipes inscrites',
+    }),
+    i18next.t('ficheTournoi.freePlaces', {
+      count: libres,
+      defaultValue_one: '{{count}} place libre',
+      defaultValue_other: '{{count}} places libres',
+    }),
+  ].join(' · ');
+};

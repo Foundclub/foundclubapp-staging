@@ -12799,6 +12799,16 @@ export default {
     noLocation: 'Location not set',
     sport: 'Sport',
   },
+  // FICHE-TOURNOI (19/11/2026) — the tournament card, page and Teams tab.
+  ficheTournoi: {
+    freePlaces_one: '{{count}} spot left',
+    freePlaces_other: '{{count}} spots left',
+    moreActions: 'More actions',
+    noRequests: 'This team is not taking requests',
+    seeTournamentInfo: 'See the tournament info',
+    teamsRegistered_one: '{{count}} team registered',
+    teamsRegistered_other: '{{count}} teams registered',
+  },
   fidelite: {
     bonus: {
       partie: 'Free game ({{part}})',

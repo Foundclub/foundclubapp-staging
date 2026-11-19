@@ -593,7 +593,8 @@ const RELEVE_DU_LECTEUR = {
     messageAge: 0,
     ongletEquipes: {
       aucuneEquipe: 0,
-      conditions: 1,
+      // FICHE-TOURNOI (19/11, 6b) : les conditions vivent dans Aperçu, plus sous l'onglet Équipes.
+      conditions: 0,
       creerUneEquipe: 0,
       resume: [
         '24 équipes attendues',
@@ -622,7 +623,8 @@ const RELEVE_DU_LECTEUR = {
     messageAge: 0,
     ongletEquipes: {
       aucuneEquipe: 0,
-      conditions: 1,
+      // FICHE-TOURNOI (19/11, 6b) : les conditions vivent dans Aperçu, plus sous l'onglet Équipes.
+      conditions: 0,
       creerUneEquipe: 0,
       resume: [
         '24 équipes attendues',
@@ -651,7 +653,8 @@ const RELEVE_DU_LECTEUR = {
     messageAge: 0,
     ongletEquipes: {
       aucuneEquipe: 0,
-      conditions: 1,
+      // FICHE-TOURNOI (19/11, 6b) : les conditions vivent dans Aperçu, plus sous l'onglet Équipes.
+      conditions: 0,
       creerUneEquipe: 0,
       resume: [
         '24 équipes attendues',
@@ -680,7 +683,8 @@ const RELEVE_DU_LECTEUR = {
     messageAge: 0,
     ongletEquipes: {
       aucuneEquipe: 0,
-      conditions: 1,
+      // FICHE-TOURNOI (19/11, 6b) : les conditions vivent dans Aperçu, plus sous l'onglet Équipes.
+      conditions: 0,
       creerUneEquipe: 0,
       resume: [
         '1 validée · 1 en attente',
@@ -709,7 +713,8 @@ const RELEVE_DU_LECTEUR = {
     messageAge: 0,
     ongletEquipes: {
       aucuneEquipe: 0,
-      conditions: 1,
+      // FICHE-TOURNOI (19/11, 6b) : les conditions vivent dans Aperçu, plus sous l'onglet Équipes.
+      conditions: 0,
       creerUneEquipe: 0,
       resume: [
         '24 équipes attendues',
@@ -738,7 +743,8 @@ const RELEVE_DU_LECTEUR = {
     messageAge: 1,
     ongletEquipes: {
       aucuneEquipe: 0,
-      conditions: 1,
+      // FICHE-TOURNOI (19/11, 6b) : les conditions vivent dans Aperçu, plus sous l'onglet Équipes.
+      conditions: 0,
       creerUneEquipe: 0,
       resume: [
         '24 équipes attendues',
@@ -768,7 +774,8 @@ const RELEVE_DU_LECTEUR = {
     messageAge: 0,
     ongletEquipes: {
       aucuneEquipe: 0,
-      conditions: 1,
+      // FICHE-TOURNOI (19/11, 6b) : les conditions vivent dans Aperçu, plus sous l'onglet Équipes.
+      conditions: 0,
       creerUneEquipe: 0,
       resume: [
         '24 équipes attendues',
@@ -852,14 +859,16 @@ beforeEach(() => {
 describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
   test('🔴 (a) sans équipe : essentiel, inscription, rejoindre, conditions, onglets', () => {
     const root = monter(LECTEURS.sansEquipe());
+    // FICHE-TOURNOI (19/11, 6b) : les onglets passent juste sous le bandeau ; les blocs suivent,
+    // dans Aperçu.
     expect(ordreDe(root)).toEqual([
+      'doublure-onglets',
       'tournament-essentials',
       'tournament-registration-card',
       'tournament-join-team-panel',
       'tournament-how-it-works',
       'tournament-before-sign-up',
       'event-tournament-terms-link',
-      'doublure-onglets',
     ]);
     const [carte] = parTestID(root, 'tournament-registration-card');
     expect(textes(carte)).toEqual(expect.arrayContaining([
@@ -888,12 +897,13 @@ describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
 
   test('🔴 (b) capitaine : « Mon équipe » d abord, puis l essentiel ; en bas « Voir mon équipe »', () => {
     const root = monter(LECTEURS.capitaine());
+    // FICHE-TOURNOI (19/11, 9f) : « Mon équipe », puis les onglets, puis Aperçu.
     expect(ordreDe(root)).toEqual([
       'tournament-fiche-my-team',
+      'doublure-onglets',
       'tournament-essentials',
       'tournament-before-sign-up',
       'event-tournament-terms-link',
-      'doublure-onglets',
     ]);
     expect(textes(parTestID(root, 'tournament-before-sign-up')[0])[0]).toBe('Avant le match');
     const [carte] = parTestID(root, 'tournament-fiche-my-team');
@@ -939,11 +949,15 @@ describe('T-PAGES-4 · point 1 — écrans (a) et (b) au téléphone', () => {
     expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(0);
   });
 
-  test('🔴 inscription et conditions montées une seule fois (plus dans l onglet Équipes)', () => {
+  // FICHE-TOURNOI (19/11, 6b) : l'inscription et les conditions vivent dans Aperçu ; l'onglet
+  // Équipes ne les monte plus (ni une, ni deux fois).
+  test('🔴 inscription et conditions montées une seule fois, dans Aperçu (plus dans l onglet Équipes)', () => {
     const root = monter(LECTEURS.sansEquipe());
-    allerSurLOnglet(root, 'tournamentTeams');
     expect(parTestID(root, 'tournament-registration-card')).toHaveLength(1);
     expect(parTestID(root, 'event-tournament-terms-link')).toHaveLength(1);
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-registration-card')).toHaveLength(0);
+    expect(parTestID(root, 'event-tournament-terms-link')).toHaveLength(0);
   });
 
   test('🔴 l essentiel en cases pour tous les lecteurs', () => {
@@ -1538,5 +1552,127 @@ describe('IMPL-1 × IMPL-3 — inscriptions fermées', () => {
   test('absent : ouvertes, comme avant', () => {
     mockTeamQuery.data = null;
     expect(proprietesDeLEnTete(monter(LECTEURS.sansEquipe())).tournamentHero).toEqual({ statusLabel: 'Inscriptions ouvertes' });
+  });
+});
+
+// ============================================================================================
+// FICHE-TOURNOI (19/11/2026, liste de travail d'Adel, écrans 6b, 9f, 8a, 8b) — la fiche au
+// téléphone : « Partager » en haut à droite et « Signaler » dans un menu ; les onglets juste sous
+// le bandeau (et « Mon équipe ») ; les blocs d'inscription dans Aperçu ; les compteurs d'équipes.
+// ============================================================================================
+const chercherElement = (/** @type {any} */ element, /** @type {(n: any) => boolean} */ predicat) => {
+  if (!element || typeof element !== 'object') return null;
+  if (Array.isArray(element)) {
+    return element.reduce((/** @type {any} */ trouve, /** @type {any} */ enfant) => trouve || chercherElement(enfant, predicat), null);
+  }
+  if (element.props && predicat(element)) return element;
+  return chercherElement(element.props?.children, predicat);
+};
+const enteteDroite = () => {
+  const appels = mockSetOptions.mock.calls.filter((/** @type {any} */ appel) => appel[0]?.headerRight);
+  return appels[appels.length - 1][0].headerRight();
+};
+const doublureDe = (/** @type {any} */ root, /** @type {string} */ nom) => root.findAll(
+  (/** @type {any} */ n) => typeof n.type === 'function' && n.type.name === 'TextDouble'
+    && n.findAllByType(Text).some((/** @type {any} */ t) => t.props.children === nom),
+)[0];
+const ordreDes = (/** @type {any} */ root, /** @type {string[]} */ ids) => root
+  .findAll((/** @type {any} */ n) => ids.includes(n.props?.testID), { deep: true })
+  .map((/** @type {any} */ n) => n.props.testID)
+  .filter((/** @type {string} */ id, /** @type {number} */ i, /** @type {string[]} */ liste) => liste.indexOf(id) === i);
+
+describe('FICHE-TOURNOI · 6b — « Partager » en haut à droite, « Signaler » dans un menu', () => {
+  test('🔴 joueur sans équipe : « Partager » et « ⋯ », plus de drapeau ; « Partager » ouvre la feuille de partage', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    const entete = enteteDroite();
+    expect(chercherElement(entete, (n) => n.props.icon === 'flag')).toBeNull();
+    const partager = chercherElement(entete, (n) => n.props.icon === 'share');
+    expect(partager?.props.accessibilityLabel).toBe('Partager');
+    expect(chercherElement(entete, (n) => n.props.testID === 'event-actions-menu-button')).toBeTruthy();
+    act(() => { partager.props.onPress(); });
+    const feuille = root.findAll((/** @type {any} */ n) => typeof n.props?.onSelectChat === 'function' && 'isVisible' in n.props)[0];
+    expect(feuille.props.isVisible).toBe(true);
+  });
+
+  test('🔴 « ⋯ » ouvre « Plus d’actions » avec « Signaler l’événement », qui ouvre la feuille de signalement', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    act(() => { chercherElement(enteteDroite(), (n) => n.props.testID === 'event-actions-menu-button').props.onPress(); });
+    expect(textes(root)).toContain('Plus d’actions');
+    expect(parTestID(root, 'event-manage-chip')).toHaveLength(0);
+    const [rangee] = parTestID(root, 'event-menu-report');
+    expect(textes(rangee)).toContain('Signaler l’événement');
+    act(() => { rangee.findAllByType(TouchableOpacity)[0].props.onPress(); });
+    expect(doublureDe(root, 'DOUBLURE_ReportEventModal').props.isVisible).toBe(true);
+  });
+
+  test('🔴 organisateur : la feuille « Gérer l’événement » garde ses actions, « Signaler » en dernier', () => {
+    const root = monter(LECTEURS.organisateur());
+    act(() => { chercherElement(enteteDroite(), (n) => n.props.testID === 'event-actions-menu-button').props.onPress(); });
+    expect(textes(root).join(' | ')).toMatch(/Gérer l.événement/);
+    expect(parTestID(root, 'event-manage-chip').length).toBeGreaterThan(0);
+    expect(parTestID(root, 'event-menu-report')).toHaveLength(1);
+  });
+});
+
+describe('FICHE-TOURNOI · 6b / 9f — les onglets juste sous le bandeau, les blocs dans Aperçu', () => {
+  test('🔴 sans équipe : les onglets avant l essentiel, l inscription, « Rejoindre », « Comment ça marche »', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(ordreDes(root, ['doublure-onglets', 'tournament-essentials', 'tournament-registration-card', 'tournament-join-team-panel']))
+      .toEqual(['doublure-onglets', 'tournament-essentials', 'tournament-registration-card', 'tournament-join-team-panel']);
+    const lu = textes(root);
+    expect(lu.indexOf('Aperçu')).toBeLessThan(lu.indexOf('Comment ça marche'));
+  });
+
+  test('🔴 capitaine : « Mon équipe » d abord, puis les onglets', () => {
+    const root = monter(LECTEURS.capitaine());
+    expect(ordreDes(root, ['tournament-fiche-my-team-progress', 'doublure-onglets', 'tournament-essentials']))
+      .toEqual(['tournament-fiche-my-team-progress', 'doublure-onglets', 'tournament-essentials']);
+  });
+
+  test('🔴 onglet Équipes : la liste tout de suite, sans l essentiel ni les blocs d inscription', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-essentials')).toHaveLength(0);
+    expect(parTestID(root, 'tournament-registration-card')).toHaveLength(0);
+    expect(parTestID(root, 'tournament-join-team-panel')).toHaveLength(0);
+    expect(textes(root)).not.toContain('Comment ça marche');
+    expect(parTestID(root, 'tournament-teams-public')).toHaveLength(1);
+  });
+});
+
+describe('FICHE-TOURNOI · 8b — « Équipes · N » et « N équipes inscrites · M places libres »', () => {
+  const auSeuil = () => ({ auth: compte('joueur-seul'), event: TOURNOI({ tournamentTeamsSummary: { expectedCount: 24, registeredCount: 9 } }) });
+
+  test('🔴 au seuil des 30 % : l onglet compte les équipes, la tête dit les places libres', () => {
+    const root = monter(auSeuil());
+    expect(ongletsDe(root)).toEqual(['Aperçu', 'Équipes · 9', 'Personnes']);
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'event-tournament-teams-summary').map(textOf)).toEqual(['9 équipes inscrites · 15 places libres']);
+  });
+
+  test('sous le seuil (« 4- A ») : ni compte sur l onglet, ni places libres', () => {
+    const root = monter(LECTEURS.sansEquipe());
+    expect(ongletsDe(root)).toEqual(['Aperçu', 'Équipes', 'Personnes']);
+  });
+});
+
+describe('FICHE-TOURNOI · 8a — « Rejoindre une équipe » du visiteur, dans le bloc du seuil', () => {
+  test('🔴 visiteur : le bouton est dans le bloc et ouvre la connexion du tournoi', () => {
+    const root = monter(LECTEURS.visiteur());
+    allerSurLOnglet(root, 'tournamentTeams');
+    const [bloc] = parTestID(root, 'tournament-teams-threshold');
+    const bouton = bloc.findAllByType(TouchableOpacity).find((/** @type {any} */ n) => textOf(n) === 'Rejoindre une équipe');
+    expect(bouton).toBeTruthy();
+    mockNavigate.mockClear();
+    act(() => { bouton.props.onPress(); });
+    expect(mockNavigate.mock.calls[0]?.[0]).toBe('PublicAuthStack');
+  });
+
+  test('visiteur, inscriptions fermées : pas de bouton', () => {
+    const lecteur = LECTEURS.visiteur();
+    lecteur.event.tournamentConfig = { ...lecteur.event.tournamentConfig, registrationsClosed: true };
+    const root = monter(lecteur);
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(textes(root)).not.toContain('Rejoindre une équipe');
   });
 });

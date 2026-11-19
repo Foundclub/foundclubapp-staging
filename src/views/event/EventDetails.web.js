@@ -66,6 +66,7 @@ import {
 import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
+  getTournamentTeamsTabLine,
 } from '@/views/event/tournamentTeamsCount';
 import {
   canRegisterSourceTeamToTournament,
@@ -2318,6 +2319,22 @@ function EventDetails({ navigation, route }) {
     )?.responseStatus) === 'invited' ? 'invited' : 'requested';
   }
   // T-PAGES-6b : l'écran du numéro et celui du rôle rappelleront ce tournoi.
+  // FICHE-TOURNOI (19/11/2026, 6b, site sur téléphone) : sur la fiche d'un tournoi, le fil
+  // « Planning › … » est retiré et « Signaler » passe dans un menu (« ⋯ », ou après les actions de
+  // « Gérer l'événement ») ; sur un ordinateur, rien ne change (6d : « garder le réel »).
+  // Témoin : __tests__/EventDetailsWeb.FICHE-TOURNOI.test.js.
+  const ficheDuTournoiAuTelephone = isTournamentEvent && !isTablet;
+  const filDuTournoiMasque = ficheDuTournoiAuTelephone;
+  const signalerDansLeMenu = ficheDuTournoiAuTelephone && isSignedIn;
+  const menuDuHautItems = signalerDansLeMenu
+    ? [...(showManageMenu ? manageMenuItems : []), {
+      disabled: reportEventMutation.isPending,
+      icon: 'flag',
+      key: 'report',
+      label: t('eventDetails.a11y.reportEvent', 'Signaler l’événement'),
+      onPress: handleReportEvent,
+    }]
+    : manageMenuItems;
   const ouvrirLaConnexionDuTournoi = () => {
     retenirLInscriptionAuTournoi({ event });
     openPublicAuthFlow(navigation, {
@@ -2530,7 +2547,8 @@ function EventDetails({ navigation, route }) {
           data-testid="event-tournament-visitor-teams"
           style={{ color: textColor, fontSize: 14 }}
         >
-          {ligneEquipesDuVisiteur}
+          {/* FICHE-TOURNOI (8b) : « 9 équipes inscrites · 15 places libres » dès le seuil. */}
+          {getTournamentTeamsTabLine(event) || ligneEquipesDuVisiteur}
         </div>
       ) : null}
       {/* T-PAGES-3 point 3 : les compteurs d'équipes (le vrai nombre) restent à l'organisateur ;
@@ -2732,6 +2750,10 @@ function EventDetails({ navigation, route }) {
           belowThreshold={nombreDEquipesCache}
           event={event}
           onCreate={creerDepuisLOnglet}
+          // FICHE-TOURNOI (8a) : le visiteur sans compte « rejoint » par la connexion du tournoi.
+          onJoinSignedOut={!isSignedIn && !tournoiClos && !inscriptionsFermees
+            ? ouvrirLaConnexionDuTournoi
+            : null}
           onOpenTeamPage={handleOpenTournamentTeam}
           teams={equipesDeLaListe}
           threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
@@ -3063,7 +3085,10 @@ function EventDetails({ navigation, route }) {
                 {/* 🧭 FINITIONS11 · point 1 (planche P3-match-ordi) — le fil d'Ariane
                     « Planning › Match » remplace « Retour » pour un membre connecté ; un
                     visiteur, qui n'a pas de planning, garde « Retour ». */}
-                {isSignedIn && hasEvent ? (
+                {/* FICHE-TOURNOI (19/11, 6b, site) : sur un téléphone, la fiche d'un tournoi n'a plus
+                    le fil « Planning › … » (une ligne de plus avant le titre) ; « Partager » reste à
+                    droite. Sur un ordinateur, le fil reste (6d). */}
+                {isSignedIn && hasEvent && !filDuTournoiMasque ? (
                   <nav
                     aria-label={t('eventDetails.breadcrumb.label', 'Fil d’Ariane')}
                     data-testid="event-breadcrumb"
@@ -3098,7 +3123,8 @@ function EventDetails({ navigation, route }) {
                         || t('eventDetails.eventFallback', 'Événement')}
                     </span>
                   </nav>
-                ) : (
+                ) : null}
+                {!(isSignedIn && hasEvent) ? (
                   <button
                     onClick={() => navigation.goBack()}
                     style={{ ...outlineButtonStyle, padding: '10px 14px' }}
@@ -3106,9 +3132,13 @@ function EventDetails({ navigation, route }) {
                   >
                     {t('common.back', 'Retour')}
                   </button>
-                )}
+                ) : null}
                 {hasEvent ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  <div
+                    style={{
+                      display: 'flex', flexWrap: 'wrap', gap: 10, marginLeft: 'auto',
+                    }}
+                  >
                     <button
                       onClick={handleShare}
                       style={{ ...outlineButtonStyle, padding: '10px 14px' }}
@@ -3120,7 +3150,7 @@ function EventDetails({ navigation, route }) {
                     </button>
                     {/* 🚩 FINITIONS11 · point 1 — le drapeau « Signaler » de la planche (carré de
                         44, bord et icône bleus), à côté de « Gérer l'événement ». */}
-                    {isSignedIn ? (
+                    {isSignedIn && !signalerDansLeMenu ? (
                       <button
                         aria-label={t('eventDetails.a11y.reportEvent', 'Signaler l’événement')}
                         disabled={reportEventMutation.isPending}
@@ -3143,17 +3173,23 @@ function EventDetails({ navigation, route }) {
                         <SvgIcon color={accentColor} height={20} name="flag" width={20} />
                       </button>
                     ) : null}
-                    {showManageMenu ? (
+                    {showManageMenu || signalerDansLeMenu ? (
                       <div style={{ position: 'relative' }}>
                         <button
                           aria-expanded={isManageMenuOpen}
                           aria-haspopup="menu"
+                          aria-label={showManageMenu
+                            ? undefined
+                            : t('ficheTournoi.moreActions', 'Plus d’actions')}
+                          data-testid="event-more-menu-button"
                           onClick={toggleManageMenu}
                           ref={manageButtonRef}
-                          style={primaryButtonStyle}
+                          style={showManageMenu
+                            ? primaryButtonStyle
+                            : { ...outlineButtonStyle, minWidth: 44, padding: '10px 14px' }}
                           type="button"
                         >
-                          {t('eventDetails.managePanel.title', 'Gérer l’événement')}
+                          {showManageMenu ? t('eventDetails.managePanel.title', 'Gérer l’événement') : '⋯'}
                         </button>
                         {isManageMenuOpen ? (
                           <div
@@ -3176,7 +3212,7 @@ function EventDetails({ navigation, route }) {
                               zIndex: 20,
                             }}
                           >
-                            {manageMenuItems.map((item) => (
+                            {menuDuHautItems.map((item) => (
                               <button
                                 aria-disabled={Boolean(item.disabled)}
                                 disabled={Boolean(item.disabled)}
