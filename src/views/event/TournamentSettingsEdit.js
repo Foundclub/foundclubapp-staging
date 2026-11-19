@@ -190,6 +190,11 @@ function TournamentSettingsEdit({ navigation, route }) {
   const lectureDesReglesPayantes = lireReglesPayantes(reglesPayantes);
   const isPaidWithoutClub = lectureDesReglesPayantes.config.entryFeeCents > 0
     && !event?.club?.documentId;
+  // Le prix SAISI fait foi (il peut changer dans cet écran) ; seuil par défaut 5, comme le serveur.
+  const tournoiPayant = lectureDesReglesPayantes.config.entryFeeCents > 0;
+  const seuilDesPayes = Number(lectureDesReglesPayantes.config.paidMembersToValidate) > 0
+    ? Number(lectureDesReglesPayantes.config.paidMembersToValidate)
+    : 5;
   const hasInvalidSettings = isKnockoutSizeInvalid
     || isMinRosterTooLow || isGroupCountTooHigh
     || lectureDesReglesPayantes.hasError || isPaidWithoutClub;
@@ -361,7 +366,7 @@ function TournamentSettingsEdit({ navigation, route }) {
         <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
           <View style={tournamentDs.styles.screenIntro}>
             <Text style={[Fonts.h2, Fonts.neutral00]}>
-              {t('tournamentSettingsEdit.tournamentSettings', 'Paramètres du tournoi')}
+              {t('tournamentSettingsEdit.tournamentSettings', 'Réglages du tournoi')}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {t(
@@ -396,7 +401,7 @@ function TournamentSettingsEdit({ navigation, route }) {
                   {t('tournamentSettingsEdit.tournamentFrame', 'Cadre du tournoi')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('tournamentSettingsEdit.theNumberOfTeamsAnd', 'Le nombre d équipes et la fourchette d effectif s appliquent à toutes les équipes éphémères de ce tournoi.')}
+                  {t('tournamentSettingsEdit.theNumberOfTeamsAnd', 'Le nombre d’équipes et la fourchette d’effectif s’appliquent à toutes les équipes créées par les joueurs pour ce tournoi.')}
                 </Text>
               </View>
 
@@ -473,7 +478,7 @@ function TournamentSettingsEdit({ navigation, route }) {
                   {t('tournamentSettingsEdit.sportsStructure', 'Structure sportive')}
                 </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t('tournamentSettingsEdit.theseSettingsDriveTheGroups', 'Ces réglages pilotent les poules, la phase finale et le calcul du classement. Après modification, resynchronise la compétition depuis le cockpit organisateur.')}
+                  {t('tournamentSettingsEdit.theseSettingsDriveTheGroups', 'Ces réglages pilotent les poules, la phase finale et le calcul du classement. Après une modification, touche « Synchroniser la structure » dans Gérer le tournoi, ligne Poules.')}
                 </Text>
               </View>
 
@@ -699,7 +704,7 @@ function TournamentSettingsEdit({ navigation, route }) {
 
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{t('tournamentSettingsEdit.allowTemporaryTeams', 'Autoriser les équipes éphémères')}</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{t('tournamentSettingsEdit.allowTemporaryTeams', 'Autoriser les équipes créées par les joueurs')}</Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {t(
                       'tournamentSettingsEdit.playersCanCreateTheirOwn',
@@ -710,7 +715,7 @@ function TournamentSettingsEdit({ navigation, route }) {
                 <Switch
                   accessibilityLabel={t(
                     'tournamentSettingsEdit.allowTemporaryTeams',
-                    'Autoriser les équipes éphémères',
+                    'Autoriser les équipes créées par les joueurs',
                   )}
                   onValueChange={setAllowCustomTeams}
                   thumbColor={Colors.neutral00}
@@ -749,32 +754,49 @@ function TournamentSettingsEdit({ navigation, route }) {
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
                   {t('tournamentSettingsEdit.teamApproval', 'Validation des équipes')}
                 </Text>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  {t(
-                    'tournamentSettingsEdit.inManualModeOnlyThe',
-                    'En mode manuel, seul l organisateur valide les équipes inscrites.',
-                  )}
-                </Text>
+                {tournoiPayant ? null : (
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t(
+                      'tournamentSettingsEdit.inManualModeOnlyThe',
+                      'En mode manuel, seul l organisateur valide les équipes inscrites.',
+                    )}
+                  </Text>
+                )}
               </View>
 
-              <View style={[Spaces.gap[12]]}>
-                {renderRegistrationModeCard(
-                  'manual',
-                  'Validation manuelle',
-                  t(
-                    'tournamentSettingsEdit.eachTeamStaysPendingUntil',
-                    'Chaque équipe reste en attente tant que le dirigeant ne l a pas acceptée.',
-                  ),
-                )}
-                {renderRegistrationModeCard(
-                  'auto',
-                  'Validation automatique',
-                  t(
-                    'tournamentSettingsEdit.compatibleTeamsAreAcceptedDirectly',
-                    'Les équipes compatibles sont acceptées directement a l inscription.',
-                  ),
-                )}
-              </View>
+              {/* ORGANISATEUR 6 (19/11, carte 11c) : un tournoi payant valide l'équipe au
+                  seuil des payés quel que soit le mode (serveur : tournament-payment.js
+                  recountTeam, `pending` -> `accepted`) ; la case « Validation manuelle » y
+                  mentait. L'écran dit la règle ; le mode enregistré n'est pas réécrit. Un
+                  tournoi gratuit garde son choix (recountTeam ne joue pas sans prix). */}
+              {tournoiPayant ? (
+                <Text style={[Fonts.p2Bold, Fonts.primary100]} testID="reglages-validation-payee">
+                  {t('tournamentSettingsEdit.paidApproval', {
+                    count: seuilDesPayes,
+                    defaultValue_one: 'À {{count}} joueur payé, l’équipe se valide seule.',
+                    defaultValue_other: 'À {{count}} joueurs payés, l’équipe se valide seule.',
+                  })}
+                </Text>
+              ) : (
+                <View style={[Spaces.gap[12]]}>
+                  {renderRegistrationModeCard(
+                    'manual',
+                    t('tournamentSettingsEdit.manualApproval', 'Validation manuelle'),
+                    t(
+                      'tournamentSettingsEdit.eachTeamStaysPendingUntil',
+                      'Chaque équipe reste en attente tant que le dirigeant ne l a pas acceptée.',
+                    ),
+                  )}
+                  {renderRegistrationModeCard(
+                    'auto',
+                    t('tournamentSettingsEdit.autoApproval', 'Validation automatique'),
+                    t(
+                      'tournamentSettingsEdit.compatibleTeamsAreAcceptedDirectly',
+                      'Les équipes compatibles sont acceptées directement a l inscription.',
+                    ),
+                  )}
+                </View>
+              )}
             </View>
           ) : null}
 

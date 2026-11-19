@@ -11,6 +11,9 @@ import TournamentManagement from '../TournamentManagement';
 // toutes les équipes à un tiers (tournament-competition.js:544, lot serveur IMPL-5) : l'app ne les
 // montre plus.
 
+// Le premier rendu charge tout l écran (jusqu à 7 s sous charge, rouge par délai le 19/11) : délai large.
+jest.setTimeout(30000);
+
 /** @type {any} */
 let mockDashboard = null;
 const mockGerant = { value: false };

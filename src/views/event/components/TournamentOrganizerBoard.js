@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  ImageBackground,
   Modal,
   Switch,
   Text,
@@ -32,10 +33,14 @@ import {
 import { reviewTournamentTeamRegistration } from '@/services/tournamentTeam/tournamentTeamService';
 
 import { withAlpha } from '../tournamentDesignSystem';
-import {
-  isTournamentTeamNonCompliant,
-  normalizeTournamentText,
-} from '../tournamentUtils';
+import { getTournamentShortPlace } from '../tournamentJoinRules';
+import { normalizeTournamentText } from '../tournamentUtils';
+
+// 🪤 R7-d (EventParticipants.js) : `import/order` veut l'alias avant le relatif, `perfectionist`
+// l'inverse ;
+// l'image du tournoi (la même que le bandeau de la fiche, EventHeader) suit les relatifs.
+// eslint-disable-next-line import/order
+import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
 
 // IMPL-3-ORGA (18/11/2026, page 1 des planches T-DESIGN-TOURNOI, Adel D261 « 1- A »)
 // LE TABLEAU DE BORD DE L ORGANISATEUR : le tournoi et l'interrupteur des inscriptions (1a, 1e),
@@ -45,6 +50,15 @@ import {
 // reste le geste manuel d'Adel (REMBOURSEMENTS.md, cas F, D233) : la fenêtre dit la règle des
 // CGV (§ 5), elle ne rembourse rien.
 // Témoin : src/views/event/__tests__/TournamentManagement.IMPL3ORGA.test.js.
+// ORGANISATEUR (19/11, décisions d'Adel, cartes 1a-1f et 11b) : « Archiver » confirmé, « Refuser »
+// aussi pour une
+// équipe validée (le serveur l'accepte et prévient les SuperAdmins : tournament-team.js
+// reviewRegistration →
+// alertRefundDue), la photo et le lieu court dans la carte du tournoi, « 1 payé sur 5 », plus d'«
+// Effectif à revoir »
+// sur les cartes (le filtre reste), un trait avant l'action rouge, des lignes serrées au bureau, la
+// règle des payés
+// et « ton équipe ». Témoin : TournamentManagement.ORGANISATEUR.test.js.
 
 const SEUIL_PAR_DEFAUT = 5;
 const CIBLE = 44;
@@ -91,6 +105,8 @@ const seuilDesPayes = (summary, tournamentConfig) => {
 /**
  * Le tableau de bord de l'organisateur d'un tournoi ouvert.
  * @param {object} props
+ * @param {boolean} [props.compact] - Bureau (1024 px et plus) : une ligne serrée par équipe
+ *   (planche 1f).
  * @param {any} props.event - Le tournoi (tableau de bord).
  * @param {string} props.eventId - Son documentId.
  * @param {any} props.navigation - La navigation.
@@ -108,6 +124,7 @@ const seuilDesPayes = (summary, tournamentConfig) => {
  * @returns {import('react').ReactElement} Le tableau de bord.
  */
 function TournamentOrganizerBoard({
+  compact = false,
   event,
   eventId,
   filters = null,
@@ -299,6 +316,29 @@ function TournamentOrganizerBoard({
     }
   };
 
+  // O9 (Adel 19/11) : archiver retire l'équipe des listes ; le geste se confirme, comme le refus.
+  const confirmerLArchivage = (/** @type {any} */ equipe) => {
+    Alert.alert(
+      t('implOrga.archiveTitle', {
+        defaultValue: 'Archiver {{name}} ?',
+        name: equipe?.name || '',
+        ...SANS_ECHAPPEMENT,
+      }),
+      t(
+        'implOrga.archiveBody',
+        'L’équipe sort de la liste des équipes inscrites. Tu la retrouves dans « Archivées ».',
+      ),
+      [
+        { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
+        {
+          onPress: () => revue.mutate({ equipe, status: 'archived' }),
+          style: 'destructive',
+          text: t('implOrga.archiveConfirm', 'Archiver'),
+        },
+      ],
+    );
+  };
+
   const etatDeLEquipe = (/** @type {string} */ statut) => {
     if (statut === 'accepted') {
       return { couleur: Colors.primary500, texte: t('tournamentUtils.approved', 'Validée') };
@@ -425,19 +465,25 @@ function TournamentOrganizerBoard({
         libelle: t('implOrga.menuApprove', 'Valider l’équipe'),
         testID: `orga-valider-${id}`,
       } : null,
-      // CGV partie I § 3 : une équipe validée ne se refuse pas (planche 1b).
-      statut === 'pending' ? {
+      // Avant : « Refuser » passait avant « Archiver ». Planche 1b : l'action rouge ferme le menu,
+      // sous un trait.
+      statut !== 'archived' ? {
+        action: fermerPuis(() => confirmerLArchivage(equipe)),
+        icone: 'boxArchive',
+        libelle: t('implOrga.menuArchive', 'Archiver l’équipe'),
+        testID: `orga-archiver-${id}`,
+      } : null,
+      // Avant : une équipe validée ne se refusait pas (CGV partie I § 3, planche 1b). Décision
+      // d'Adel du 19/11 :
+      // « Refuser » aussi pour une équipe validée ; la fenêtre rouge dit les places à rembourser,
+      // le serveur prévient
+      // les SuperAdmins (alertRefundDue).
+      ['accepted', 'pending'].includes(statut) ? {
         action: fermerPuis(() => setEquipeARefuser({ ...equipe, ligne })),
         danger: true,
         icone: 'xmark',
         libelle: t('implOrga.menuDecline', 'Refuser l’équipe'),
         testID: `orga-refuser-${id}`,
-      } : null,
-      statut !== 'archived' ? {
-        action: fermerPuis(() => revue.mutate({ equipe, status: 'archived' })),
-        icone: 'boxArchive',
-        libelle: t('implOrga.menuArchive', 'Archiver l’équipe'),
-        testID: `orga-archiver-${id}`,
       } : null,
     ].filter(Boolean);
   };
@@ -447,8 +493,12 @@ function TournamentOrganizerBoard({
       ? t('implOrga.paidAndPlayers', {
         count: joueurs, defaultValue: '{{paid}} payés · {{count}} joueurs', paid: payes,
       })
+      // « 1 payé sur 5 » (O2) : le pluriel suit le nombre de payés.
       : t('implOrga.paidOn', {
-        defaultValue: '{{paid}} payés sur {{threshold}}', paid: payes, threshold: seuil,
+        count: payes,
+        defaultValue_one: '{{count}} payé sur {{threshold}}',
+        defaultValue_other: '{{count}} payés sur {{threshold}}',
+        threshold: seuil,
       })
   );
 
@@ -498,30 +548,138 @@ function TournamentOrganizerBoard({
     </>
   );
 
-  const carteDEquipe = (/** @type {any} */ equipe) => {
+  /**
+   * Ce que lisent la carte (téléphone) et la ligne serrée (bureau) d'une équipe.
+   * @param {any} equipe - L'équipe du tableau de bord.
+   * @returns {any} Les morceaux de la carte.
+   */
+  const lectureDeLEquipe = (equipe) => {
     const id = String(equipe?.documentId || '');
     const ligne = ligneParEquipe.get(id) || null;
     const statut = normalizeTournamentText(equipe?.status) || 'pending';
-    const etat = etatDeLEquipe(statut);
     const nomDuCapitaine = [ligne?.captain?.firstName, ligne?.captain?.lastName]
       .filter(Boolean).join(' ');
-    const payes = Number(ligne?.paidCount) || 0;
-    const joueurs = Number(ligne?.count) || 0;
-    const actif = !['archived', 'declined'].includes(statut);
-    const menuEstOuvert = menuOuvert === id;
-    const menu = lignesDuMenu(equipe, ligne);
-    const nomDeLEquipe = equipe?.name || t('tournamentManagement.tournamentTeam', 'Équipe tournoi');
+    // 11b : l'organisateur capitaine d'une équipe la reconnaît (« · ton équipe »).
+    const laSienne = Boolean(viewerDocumentId)
+      && String(ligne?.captain?.documentId || '') === viewerDocumentId;
+    return {
+      actif: !['archived', 'declined'].includes(statut),
+      etat: etatDeLEquipe(statut),
+      id,
+      joueurs: Number(ligne?.count) || 0,
+      laSienne,
+      ligne,
+      menu: lignesDuMenu(equipe, ligne),
+      menuEstOuvert: menuOuvert === id,
+      nomDeLEquipe: equipe?.name || t('tournamentManagement.tournamentTeam', 'Équipe tournoi'),
+      nomDuCapitaine,
+      payes: Number(ligne?.paidCount) || 0,
+    };
+  };
+
+  const suffixeDuCapitaine = (/** @type {boolean} */ laSienne) => (
+    laSienne ? ` · ${t('implOrga.yourTeam', 'ton équipe')}` : ''
+  );
+
+  const lienVoirLEquipe = (/** @type {string} */ id) => (
+    <TouchableOpacity
+      accessibilityRole="link"
+      onPress={() => navigation.navigate(RouteNames.TournamentTeamDetails, {
+        eventId, teamId: id,
+      })}
+      style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], { minHeight: CIBLE }]}
+      testID={`orga-voir-${id}`}
+    >
+      {compact ? null : <GlyphIcon color={Colors.primary500} name="chevronRight" size={16} />}
+      <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+        {t('implOrga.seeTeam', 'Voir l’équipe')}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const boutonDuMenu = (/** @type {any} */ lu) => (lu.menu.length ? (
+    <TouchableOpacity
+      accessibilityLabel={t('implOrga.moreActions', {
+        defaultValue: 'Plus d’actions pour {{name}}',
+        name: lu.nomDeLEquipe,
+        ...SANS_ECHAPPEMENT,
+      })}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: lu.menuEstOuvert }}
+      onPress={() => setMenuOuvert(lu.menuEstOuvert ? '' : lu.id)}
+      style={{
+        alignItems: 'center', height: CIBLE, justifyContent: 'center', width: CIBLE,
+      }}
+      testID={`orga-menu-${lu.id}`}
+    >
+      <GlyphIcon color={Colors.neutral00} name="dotsVertical" size={20} />
+    </TouchableOpacity>
+  ) : null);
+
+  // Le menu ouvert, puis l'avis de relance : le même sous la carte et sous la ligne serrée.
+  const menuEtAvis = (/** @type {any} */ lu) => (
+    <>
+      {lu.menuEstOuvert ? (
+        <View
+          accessibilityRole="menu"
+          style={{
+            alignSelf: compact ? 'flex-end' : 'stretch',
+            backgroundColor: Colors.chatMenu,
+            borderRadius: 16,
+            minWidth: compact ? 360 : undefined,
+            overflow: 'hidden',
+            paddingVertical: 4,
+          }}
+        >
+          {lu.menu.flatMap((/** @type {any} */ entree, /** @type {number} */ index) => [
+            // Planche 1b : un trait avant l'action rouge.
+            entree.danger && index > 0 ? (
+              <View
+                key={`trait-${lu.id}`}
+                style={{ backgroundColor: Colors.primary700, height: 1, marginVertical: 4 }}
+                testID={`orga-menu-trait-${lu.id}`}
+              />
+            ) : null,
+            ligneDeMenu(entree),
+          ])}
+        </View>
+      ) : null}
+
+      {avis?.equipe === lu.id ? (
+        <View
+          accessibilityLiveRegion="polite"
+          style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], {
+            backgroundColor: Colors.neutral00, borderRadius: 12, padding: 12,
+          }]}
+        >
+          <GlyphIcon color={Colors.primary600} name="check" size={18} />
+          <Text style={[Fonts.p3Bold, { color: Colors.primary900, flex: 1 }]}>{avis.texte}</Text>
+        </View>
+      ) : null}
+    </>
+  );
+
+  // Avant : une pastille jaune « Effectif à revoir » sur la carte (1a, retirée le 19/11) ; le
+  // filtre
+  // « Effectifs à revoir » reste au-dessus de la liste.
+  const carteDEquipe = (/** @type {any} */ equipe) => {
+    const lu = lectureDeLEquipe(equipe);
+    const {
+      actif, etat, id, joueurs, ligne, payes,
+    } = lu;
 
     return (
       <View key={id || equipe?.name} style={[carte, Spaces.gap[12]]} testID={`orga-equipe-${id}`}>
         <View style={[Alignments.row, Spaces.gap[8], { alignItems: 'flex-start' }]}>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[Fonts.h5Bold, Fonts.neutral00]}>{nomDeLEquipe}</Text>
-            {nomDuCapitaine ? (
+            <Text style={[Fonts.h5Bold, Fonts.neutral00]}>{lu.nomDeLEquipe}</Text>
+            {lu.nomDuCapitaine ? (
               <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {t('implOrga.captainLine', {
-                  defaultValue: 'Capitaine : {{name}}', name: nomDuCapitaine, ...SANS_ECHAPPEMENT,
-                })}
+                {`${t('implOrga.captainLine', {
+                  defaultValue: 'Capitaine : {{name}}',
+                  name: lu.nomDuCapitaine,
+                  ...SANS_ECHAPPEMENT,
+                })}${suffixeDuCapitaine(lu.laSienne)}`}
               </Text>
             ) : null}
           </View>
@@ -541,70 +699,65 @@ function TournamentOrganizerBoard({
           </Text>
         ) : null}
         {actif ? null : placesDUneEquipeSortie(ligne)}
-        {isTournamentTeamNonCompliant(equipe, tournamentConfig) ? pastille(
-          t('tournamentManagement.rosterToReview', 'Effectif à revoir'),
-          Colors.gold500,
-        ) : null}
 
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-          <TouchableOpacity
-            accessibilityRole="link"
-            onPress={() => navigation.navigate(RouteNames.TournamentTeamDetails, {
-              eventId, teamId: id,
-            })}
-            style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], { minHeight: CIBLE }]}
-            testID={`orga-voir-${id}`}
-          >
-            <GlyphIcon color={Colors.primary500} name="chevronRight" size={16} />
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-              {t('implOrga.seeTeam', 'Voir l’équipe')}
-            </Text>
-          </TouchableOpacity>
-          {menu.length ? (
-            <TouchableOpacity
-              accessibilityLabel={t('implOrga.moreActions', {
-                defaultValue: 'Plus d’actions pour {{name}}',
-                name: nomDeLEquipe,
-                ...SANS_ECHAPPEMENT,
-              })}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: menuEstOuvert }}
-              onPress={() => setMenuOuvert(menuEstOuvert ? '' : id)}
-              style={{
-                alignItems: 'center', height: CIBLE, justifyContent: 'center', width: CIBLE,
-              }}
-              testID={`orga-menu-${id}`}
-            >
-              <GlyphIcon color={Colors.neutral00} name="dotsVertical" size={20} />
-            </TouchableOpacity>
-          ) : null}
+          {lienVoirLEquipe(id)}
+          {boutonDuMenu(lu)}
         </View>
 
-        {menuEstOuvert ? (
-          <View
-            accessibilityRole="menu"
-            style={{
-              backgroundColor: Colors.chatMenu,
-              borderRadius: 16,
-              overflow: 'hidden',
-              paddingVertical: 4,
-            }}
-          >
-            {menu.map((/** @type {any} */ entree) => ligneDeMenu(entree))}
-          </View>
-        ) : null}
+        {menuEtAvis(lu)}
+      </View>
+    );
+  };
 
-        {avis?.equipe === id ? (
-          <View
-            accessibilityLiveRegion="polite"
-            style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], {
-              backgroundColor: Colors.neutral00, borderRadius: 12, padding: 12,
-            }]}
-          >
-            <GlyphIcon color={Colors.primary600} name="check" size={18} />
-            <Text style={[Fonts.p3Bold, { color: Colors.primary900, flex: 1 }]}>{avis.texte}</Text>
+  // Planche 1f : au bureau, une ligne serrée par équipe (nom et capitaine, paiements, état, « Voir
+  // l'équipe », ⋯) dans un seul cadre ; plusieurs équipes se lisent sans défiler.
+  const ligneSerree = (/** @type {any} */ equipe) => {
+    const lu = lectureDeLEquipe(equipe);
+    const {
+      actif, etat, id, joueurs, ligne, payes,
+    } = lu;
+    let milieu = null;
+    if (!actif) {
+      milieu = placesDUneEquipeSortie(ligne);
+    } else if (estPayant && ligne) {
+      milieu = barreDesPaiements(payes, libelleDesPaiements(payes, joueurs));
+    } else if (ligne) {
+      milieu = (
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('tournamentManagement.rosterTotal', {
+            count: joueurs,
+            defaultValue_one: '{{count}} joueur',
+            defaultValue_other: '{{count}} joueurs',
+          })}
+        </Text>
+      );
+    }
+    return (
+      <View
+        key={id || equipe?.name}
+        style={[Spaces.gap[8], { paddingVertical: 8 }]}
+        testID={`orga-ligne-${id}`}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+          <View style={{ flex: 3, minWidth: 0 }}>
+            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{lu.nomDeLEquipe}</Text>
+            {lu.nomDuCapitaine ? (
+              <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300]}>
+                {`${t('implOrga.captainShort', {
+                  defaultValue: 'Cap. {{name}}', name: lu.nomDuCapitaine, ...SANS_ECHAPPEMENT,
+                })}${suffixeDuCapitaine(lu.laSienne)}`}
+              </Text>
+            ) : null}
           </View>
-        ) : null}
+          <View style={{ flex: 2, minWidth: 0 }}>{milieu}</View>
+          <View style={{ alignItems: 'flex-end', flex: 2, minWidth: 0 }}>
+            {pastille(etat.texte, etat.couleur)}
+          </View>
+          {lienVoirLEquipe(id)}
+          {boutonDuMenu(lu) || <View style={{ width: CIBLE }} />}
+        </View>
+        {menuEtAvis(lu)}
       </View>
     );
   };
@@ -697,6 +850,17 @@ function TournamentOrganizerBoard({
                 )}
               </Text>
             ) : null}
+            {/* ORGANISATEUR 3 (19/11) : le serveur prévient les SuperAdmins d'une équipe
+                refusée avec des places payées (tournament-organizer.js alertRefundDue) ; le
+                remboursement reste leur geste. */}
+            {payees > 0 || !connu ? (
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {t(
+                  'implOrga.declineRefundNotified',
+                  'FoundClub est prévenu et s’occupe du remboursement.',
+                )}
+              </Text>
+            ) : null}
             <Button
               onPress={refuser}
               title={t('implOrga.menuDecline', 'Refuser l’équipe')}
@@ -714,7 +878,10 @@ function TournamentOrganizerBoard({
   };
 
   const enTete = () => {
-    const lieu = String(summary?.place || '').trim();
+    // 1a : le lieu court (« AR Soccer · Montpellier »), comme le bandeau de la fiche ; sans lieu
+    // court, l'adresse.
+    const adresse = String(summary?.place || '').trim();
+    const lieu = getTournamentShortPlace({ location: adresse }) || adresse;
     const dateDuTournoi = ligneDeDate(event);
     // Sans résumé, l'état des inscriptions n'est pas connu : jamais affiché comme « ouvertes ».
     let etatDesInscriptions = t('implOrga.registrationsUnknown', 'Inscriptions');
@@ -725,6 +892,18 @@ function TournamentOrganizerBoard({
     }
     return (
       <View style={[carte, Spaces.gap[8], { borderColor: withAlpha(Colors.primary500, '66') }]}>
+        {/* 1a (Adel 19/11) : la photo du tournoi, la même que le bandeau de la fiche
+            (EventHeader). ponytail: c'est l'image du TYPE (card-tournoi.png), comme la fiche ;
+            la photo du complexe arrivera avec les photos du lieu (serveur IMPL-5B,
+            `facility.photos`), ici et sur la fiche ensemble. */}
+        <ImageBackground
+          accessibilityIgnoresInvertColors
+          imageStyle={{ borderRadius: 12 }}
+          resizeMode="cover"
+          source={/** @type {any} */ (BG_TOURNAMENT)}
+          style={{ borderRadius: 12, height: 120, overflow: 'hidden' }}
+          testID="orga-photo-tournoi"
+        />
         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
           {pastille(t('implOrga.tagTournament', 'TOURNOI'), Colors.primary500, true)}
           {connu
@@ -872,7 +1051,21 @@ function TournamentOrganizerBoard({
               )}
             </Text>
           </View>
-        ) : teams.map(carteDEquipe)}
+        ) : null}
+        {teams.length > 0 && compact ? (
+          <View style={[carte, { paddingVertical: 4 }]}>
+            {teams.flatMap((equipe, index) => [
+              index > 0 ? (
+                <View
+                  key={`trait-${equipe?.documentId || index}`}
+                  style={{ backgroundColor: Colors.primary700, height: 1 }}
+                />
+              ) : null,
+              ligneSerree(equipe),
+            ])}
+          </View>
+        ) : null}
+        {teams.length > 0 && !compact ? teams.map(carteDEquipe) : null}
       </View>
     );
   };
@@ -915,6 +1108,16 @@ function TournamentOrganizerBoard({
             : t('implOrga.noneRegistered', 'aucune')}
         </Text>
       </View>
+      {/* 11b : la règle des payés, dite une fois au-dessus des équipes (tournoi payant). */}
+      {estPayant ? (
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t('implOrga.paidRule', {
+            count: seuil,
+            defaultValue_one: 'Une équipe se valide seule dès {{count}} joueur payé.',
+            defaultValue_other: 'Une équipe se valide seule dès {{count}} joueurs payés.',
+          })}
+        </Text>
+      ) : null}
       {invites}
       {listeDesEquipes()}
 
