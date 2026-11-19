@@ -26346,6 +26346,7 @@ export default {
     league: 'League',
     openFromAge: 'This tournament is open from {{minAge}} years old.',
     openToRequests: 'Open to requests',
+    ownTeamDeclined: 'Your team {{name}} was declined by the organizer.',
     pending: 'Pending',
     readyToPlay: 'Ready to play',
     scheduled: 'Scheduled',

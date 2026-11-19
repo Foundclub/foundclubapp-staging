@@ -276,6 +276,57 @@ export const getTournamentPendingMembershipForUser = (teams = [], userDocumentId
   )) || null;
 };
 
+/**
+ * Une équipe refusée par l'organisateur ou archivée : le serveur ne la compte plus (le joueur peut
+ * en rejoindre une autre, `assertUserIsNotActiveInAnotherTournamentTeam`).
+ * @param {any} team - L'équipe du tournoi.
+ * @returns {boolean}
+ */
+export const isTournamentTeamSetAside = (team) => Boolean(team?.archivedAt)
+  || ['archived', 'declined'].includes(normalizeTournamentText(team?.status));
+
+/**
+ * DEUX-EQUIPES (19/11, recette 49, M1362 / M1363) — LES ÉQUIPES DU LECTEUR DANS UN TOURNOI, une seule
+ * règle pour la fiche de l'app et celle du site. Le capitaine d'une équipe refusée qui joue ou est
+ * invité ailleurs ne voyait que l'équipe refusée (le choix « capitaine d'abord » ne regardait pas le
+ * statut). L'équipe active passe avant l'équipe refusée ou archivée ; celle-ci ne reste « son équipe »
+ * que s'il n'en a pas d'autre (comportement d'avant), et `declinedTeam` permet de la signaler.
+ * @param {any[] | undefined} teams - Les équipes du tournoi.
+ * @param {string | undefined} userId - Le compte connecté.
+ * @param {{ managementClosed?: boolean }} [options] - Tournoi clos : plus d'équipe à gérer.
+ * @returns {{ managedTeam: any, memberTeam: any, pendingTeam: any, declinedTeam: any }}
+ */
+export const getViewerTournamentTeams = (teams, userId, { managementClosed = false } = {}) => {
+  if (!userId) {
+    return {
+      declinedTeam: null, managedTeam: null, memberTeam: null, pendingTeam: null,
+    };
+  }
+  const list = Array.isArray(teams) ? teams : [];
+  const ordered = [
+    ...list.filter((team) => !isTournamentTeamSetAside(team)),
+    ...list.filter(isTournamentTeamSetAside),
+  ];
+  const gere = (/** @type {any} */ team) => team?.captainUser?.documentId === userId
+    || (team?.adminUsers || []).some((/** @type {any} */ admin) => admin?.documentId === userId);
+  const joue = (/** @type {any} */ team) => Boolean(
+    getTournamentViewerMember(team, userId, isTournamentActiveMemberStatus),
+  );
+  let managedTeam = managementClosed ? null : (ordered.find(gere) || null);
+  let memberTeam = ordered.find(joue) || null;
+  const pendingTeam = getTournamentPendingMembershipForUser(ordered, userId);
+  const activeAilleurs = (/** @type {any} */ team) => [managedTeam, memberTeam, pendingTeam]
+    .some((autre) => autre && autre !== team && !isTournamentTeamSetAside(autre));
+  if (managedTeam && isTournamentTeamSetAside(managedTeam) && activeAilleurs(managedTeam)) managedTeam = null;
+  if (memberTeam && isTournamentTeamSetAside(memberTeam) && activeAilleurs(memberTeam)) memberTeam = null;
+  const declinedTeam = ordered.find((team) => (
+    normalizeTournamentText(team?.status) === 'declined' && (gere(team) || joue(team))
+  )) || null;
+  return {
+    declinedTeam, managedTeam, memberTeam, pendingTeam,
+  };
+};
+
 export const getTournamentFormatLabel = (formatMode) => {
   const normalized = normalizeTournamentText(formatMode);
   if (normalized === 'groups_to_knockout') {

@@ -27553,6 +27553,7 @@ export default {
     league: 'Championnat',
     openFromAge: 'Ce tournoi est ouvert à partir de {{minAge}} ans.',
     openToRequests: 'Ouverte aux demandes',
+    ownTeamDeclined: 'Ton équipe {{name}} a été refusée par l’organisateur.',
     pending: 'En attente',
     readyToPlay: 'Prêt à jouer',
     scheduled: 'Programmé',

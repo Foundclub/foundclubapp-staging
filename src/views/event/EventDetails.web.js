@@ -76,12 +76,11 @@ import {
   getTournamentMembersSummaryLine,
   getTournamentMinAge,
   getTournamentPaidValidationLabel,
-  getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
   getTournamentViewerMember,
+  getViewerTournamentTeams,
   isTooYoungForTournament,
-  isTournamentActiveMemberStatus,
   isTournamentTeamNonCompliant,
   isTournamentTeamOpenToJoinRequests,
   normalizeTournamentText,
@@ -147,6 +146,7 @@ import {
 import CancelSeriesSheet from './components/CancelSeriesSheet';
 import EventChatRow from './components/EventChatRow';
 import EventHeader from './components/EventHeader';
+import TournamentDeclinedTeamNotice from './components/TournamentDeclinedTeamNotice';
 import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
@@ -616,30 +616,20 @@ function EventDetails({ navigation, route }) {
       .sort((left, right) => String(left?.name || '').localeCompare(String(right?.name || ''))),
     [event?.tournamentTeams],
   );
-  const currentUserTournamentTeam = useMemo(() => {
-    const currentUserId = userData?.documentId;
-    if (!currentUserId) return null;
-    // T-PARCOURS-2 (point 3) : `members`, ou la ligne du lecteur rendue par le serveur.
-    return tournamentTeams.find((team) => (
-      getTournamentViewerMember(team, currentUserId, isTournamentActiveMemberStatus)
-    )) || null;
-  }, [tournamentTeams, userData?.documentId]);
-  const currentUserPendingTournamentTeam = useMemo(
-    () => getTournamentPendingMembershipForUser(tournamentTeams, userData?.documentId || ''),
-    [tournamentTeams, userData?.documentId],
-  );
   // REPRISE-EVENEMENTS 131 : un tournoi clôturé se lit seulement (la règle du pilotage) ;
   // son équipe archivée ne se gère plus.
   const clotureDuTournoi = getTournamentClosure(event);
   const tournoiClos = isTournamentEvent && clotureDuTournoi.isClosed;
-  const managedTournamentTeam = useMemo(() => {
-    const currentUserId = userData?.documentId;
-    if (!currentUserId || tournoiClos) return null;
-    return tournamentTeams.find((team) => (
-      team?.captainUser?.documentId === currentUserId
-      || (team?.adminUsers || []).some((adminUser) => adminUser?.documentId === currentUserId)
-    )) || null;
-  }, [tournamentTeams, tournoiClos, userData?.documentId]);
+  // DEUX-EQUIPES (19/11, M1362) : capitaine, membre, invité ou demandeur — l'équipe active passe
+  // avant l'équipe refusée ou archivée (même règle que le téléphone, tournamentUtils.js).
+  // T-PARCOURS-2 (point 3) : `members`, ou la ligne du lecteur rendue par le serveur.
+  const equipesDuLecteur = useMemo(
+    () => getViewerTournamentTeams(tournamentTeams, userData?.documentId, { managementClosed: tournoiClos }),
+    [tournamentTeams, tournoiClos, userData?.documentId],
+  );
+  const currentUserTournamentTeam = equipesDuLecteur.memberTeam;
+  const currentUserPendingTournamentTeam = equipesDuLecteur.pendingTeam;
+  const managedTournamentTeam = equipesDuLecteur.managedTeam;
   const registeredTournamentSourceTeamIds = useMemo(
     () => new Set(
       tournamentTeams
@@ -2368,6 +2358,10 @@ function EventDetails({ navigation, route }) {
   const erreurDeLaCarte = erreurEquipeTournoi || actionError;
   const carteDuTournoi = vueJoueurDuTournoi ? (
     <div data-testid="event-tournament-side" style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+      {/* DEUX-EQUIPES : l'équipe refusée reste dite, au-dessus de son équipe d'aujourd'hui. */}
+      {equipesDuLecteur.declinedTeam ? (
+        <TournamentDeclinedTeamNotice team={equipesDuLecteur.declinedTeam} />
+      ) : null}
       {equipeDuLecteur ? (
         <TournamentMyTeamCard
           onOpenTeam={handleOpenTournamentTeam}
