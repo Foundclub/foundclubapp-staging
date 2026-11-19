@@ -65,6 +65,19 @@ describe('T-NOTIFS-TOURNOI — destinations', () => {
     }));
   });
 
+  // IMPL-3-ORGA (19/11, Q2 du chef) : les SuperAdmins apprennent qu une equipe refusee a des places payees a
+  // rembourser ; le clic ouvre la page de l organisateur du tournoi.
+  it('🔴 (Q2) le type « places a rembourser » : meme chaine que le serveur, ouvre la page de l organisateur', () => {
+    expect(NOTIFICATION_TYPES.TOURNAMENT_TEAM_REFUND_DUE).toBe('tournamentTeamRefundDue');
+    expect(resolveNotificationDestination({
+      eventId: 'tournoi-1912', teamId: 'equipe-a', type: 'tournamentTeamRefundDue',
+    })).toEqual({
+      params: { params: { eventId: 'tournoi-1912' }, screen: RouteNames.TournamentManagement },
+      route: RouteNames.EventStack,
+    });
+    expect(getNotificationIcon('tournamentTeamRefundDue')).toBe('users');
+  });
+
   it('(f) icone « equipe »', () => {
     expect(getNotificationIcon('tournamentTeamRegistered')).toBe('users');
   });

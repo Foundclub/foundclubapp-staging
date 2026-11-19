@@ -1174,6 +1174,8 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
       return eventDetailsDestination(payload.eventId);
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_JOIN_REQUEST:
       return tournamentTeamDestination(payload.eventId, payload.teamId, 'requests');
+    // IMPL-3-ORGA (19/11, Q2) : aux SuperAdmins, places payees d une equipe refusee.
+    case NOTIFICATION_TYPES.TOURNAMENT_TEAM_REFUND_DUE:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_REGISTERED:
     case NOTIFICATION_TYPES.TOURNAMENT_TEAM_ROSTER_WARNING:
       return {
