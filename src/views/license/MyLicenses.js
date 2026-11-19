@@ -161,44 +161,55 @@ function TotalCard({ assignments }) {
 const placeSubtitleOf = (assignment, personName = '', teamName = '') => {
   const name = String(personName || '').trim();
   const team = String(teamName || '').trim();
+  const values = { name, team, ...SANS_ECHAPPEMENT };
   if (name && team) {
-    return i18next.t('myLicenses.place.subtitle', 'Place de {{name}} · équipe {{team}}', { name, team, ...SANS_ECHAPPEMENT });
+    return i18next.t('myLicenses.place.subtitle', 'Place de {{name}} · équipe {{team}}', values);
   }
-  if (name) return i18next.t('myLicenses.place.subtitleNoTeam', 'Place de {{name}}', { name, ...SANS_ECHAPPEMENT });
-  if (team) return i18next.t('myLicenses.place.subtitleTeamOnly', 'Équipe {{team}}', { team, ...SANS_ECHAPPEMENT });
+  if (name) return i18next.t('myLicenses.place.subtitleNoTeam', 'Place de {{name}}', values);
+  if (team) return i18next.t('myLicenses.place.subtitleTeamOnly', 'Équipe {{team}}', values);
   return cardSubtitleOf(assignment);
 };
 
 /**
- * PAIEMENTS-10E — « VOIR LE REÇU » SUR LA CARTE (planche 10e) : le même geste que « Télécharger le
- * reçu » du détail (`MyLicenseDetail.downloadReceipt`, qui reste) : un reçu sans fichier est fabriqué
- * (`generateReceipt`), puis téléchargé ; sans fichier au bout, « Document indisponible ».
+ * PAIEMENTS-10E — « VOIR LE REÇU » SUR LA CARTE (planche 10e) : le même geste que
+ * « Télécharger le reçu » du détail (`MyLicenseDetail.downloadReceipt`, qui reste) : un reçu
+ * sans fichier est fabriqué (`generateReceipt`), puis téléchargé ; sans fichier au bout,
+ * « Document indisponible ».
  * @param {any} payment le paiement encaissé qui porte le reçu
  * @returns {Promise<void>} le geste
  */
 const downloadPlaceReceipt = async (payment) => {
   let receipt = payment?.receipt || null;
   if (!receipt?.pdfFile?.url) {
-    receipt = await Promise.resolve(generateLicenseReceipt(licenseKeyOf(payment))).catch(() => null);
+    receipt = await Promise.resolve(generateLicenseReceipt(licenseKeyOf(payment)))
+      .catch(() => null);
   }
   const url = resolveMediaUrl(receipt?.pdfFile?.url || '');
   if (!url) {
     Alert.alert(
       i18next.t('myLicenseDetail.alerts.documentUnavailable.title', 'Document indisponible'),
-      i18next.t('myLicenseDetail.alerts.documentUnavailable.message', 'Aucun fichier exploitable n est rattaché à ce dépôt.'),
+      i18next.t(
+        'myLicenseDetail.alerts.documentUnavailable.message',
+        'Aucun fichier exploitable n est rattaché à ce dépôt.',
+      ),
     );
     return;
   }
   try {
-    // ponytail: chargé au geste, pas à l'import — la version téléphone tire react-native-blob-util, que
-    // les témoins de « Mes paiements » ne savent pas charger (même pratique : TournamentOrganizerBoard).
-    // Sortie : un mock commun de `downloadRemoteFile` dans le setup jest.
-    const { downloadRemoteFile } = require('@/platform/media/downloadRemoteFile'); // eslint-disable-line global-require
-    await downloadRemoteFile({ fileName: `recu-${receipt?.receiptNumber || payment?.receipt?.receiptNumber || ''}`, url });
+    // ponytail: chargé au geste, pas à l'import — la version téléphone tire
+    // react-native-blob-util, que les témoins de « Mes paiements » ne savent pas charger (même
+    // pratique : TournamentOrganizerBoard). Sortie : un mock commun dans le setup jest.
+    // eslint-disable-next-line global-require
+    const { downloadRemoteFile } = require('@/platform/media/downloadRemoteFile');
+    const receiptNumber = receipt?.receiptNumber || payment?.receipt?.receiptNumber || '';
+    await downloadRemoteFile({ fileName: `recu-${receiptNumber}`, url });
   } catch (error) {
     Alert.alert(
       i18next.t('myLicenseDetail.alerts.downloadFailed.title', 'Téléchargement impossible'),
-      /** @type {any} */ (error)?.message || i18next.t('myLicensesArchive.alerts.downloadFailed.fallback', 'Le reçu n’a pas pu être enregistré sur ton téléphone.'),
+      /** @type {any} */ (error)?.message || i18next.t(
+        'myLicensesArchive.alerts.downloadFailed.fallback',
+        'Le reçu n’a pas pu être enregistré sur ton téléphone.',
+      ),
     );
   }
 };
@@ -216,6 +227,8 @@ const downloadPlaceReceipt = async (payment) => {
  * @param {object} props
  * @param {any} props.assignment
  * @param {() => void} [props.onPress] Sans geste, la carte se lit seulement (FIN-PARENT).
+ * @param {string} [props.personName] Une place : la personne (« Place de … »).
+ * @param {string} [props.teamName] Une place : son équipe dans le tournoi.
  * @returns {import('react').ReactElement}
  */
 function AssignmentCard({
@@ -225,10 +238,14 @@ function AssignmentCard({
   const { Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const isPlace = isTournamentPlace(assignment);
-  const subtitle = isPlace ? placeSubtitleOf(assignment, personName, teamName) : cardSubtitleOf(assignment);
-  // PAIEMENTS-10E : « Voir le reçu » seulement sur une place payée dont un paiement encaissé porte un reçu.
+  const subtitle = isPlace
+    ? placeSubtitleOf(assignment, personName, teamName)
+    : cardSubtitleOf(assignment);
+  // PAIEMENTS-10E : « Voir le reçu » seulement sur une place payée dont un paiement encaissé
+  // porte un reçu.
   const receiptPayment = isPlace && assignment?.status === 'paid'
-    ? (assignment?.payments || []).find((payment) => payment?.status === 'confirmed' && payment?.receipt)
+    ? (assignment?.payments || [])
+      .find((payment) => payment?.status === 'confirmed' && payment?.receipt)
     : null;
   const tone = getMemberStatusTone(Colors, assignment.status);
   const currency = currencyOf(assignment);
@@ -336,7 +353,7 @@ function AssignmentCard({
  * PAIEMENTS-10E — UNE PLACE DE TOURNOI DU COMPTE CONNECTE : son équipe se lit sur la fiche du
  * tournoi (`campaign.targetConfig.eventId`, l équipe ACTIVE du lecteur), la même requête que la
  * fiche (cache `['event', id]`). `/licenses/me` ne rend pas l équipe d une place.
- * ⛔ Monté seulement quand la place nomme son tournoi : la requête ne part jamais pour une cotisation.
+ * ⛔ Monté seulement quand la place nomme son tournoi : pas de requête pour une cotisation.
  * @param {object} props
  * @param {any} props.assignment
  * @param {string} props.eventId
@@ -349,7 +366,8 @@ function TournamentPlaceCard({
   assignment, eventId, onPress, personName = '', viewerId = '',
 }) {
   // ponytail: chargé au rendu d'une place qui nomme son tournoi, pas à l'import (voir le fichier).
-  const useTournamentTeamName = require('./useTournamentTeamName').default; // eslint-disable-line global-require
+  // eslint-disable-next-line global-require
+  const useTournamentTeamName = require('./useTournamentTeamName').default;
   const teamName = useTournamentTeamName(eventId, viewerId);
   return (
     <AssignmentCard

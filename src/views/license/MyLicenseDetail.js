@@ -198,7 +198,7 @@ function AmountCard({ assignment, footer }) {
         <MemberStatusPill status={assignment.status} />
       </View>
       <Text style={[type.overline, { color: Colors.neutral500 }]}>
-        {/* PAIEMENTS-10E (planche 10e) : une place payée dit « PLACE RÉGLÉE », pas « COTISATION RÉGLÉE ». */}
+        {/* PAIEMENTS-10E (planche 10e) : une place payée dit « PLACE RÉGLÉE ». */}
         {isTournamentPlace(assignment) && status === 'paid'
           ? t('myLicenseDetail.place.paidOverline', 'PLACE RÉGLÉE')
           : getMemberStatusOverline(assignment.status)}

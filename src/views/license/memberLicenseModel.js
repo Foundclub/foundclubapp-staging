@@ -134,7 +134,7 @@ export const getMemberStatusTone = (Colors, status) => ({
   cancelled: Colors.neutral400,
   manual_review: Colors.warning500,
   overdue: Colors.error500,
-  // PAIEMENTS-10E : bleu, plus de vert (Adel 19/11, « tout le vert passe en bleu, cotisations comprises »).
+  // PAIEMENTS-10E : bleu, plus de vert (Adel 19/11, « tout en bleu, cotisations comprises »).
   paid: Colors.primary500,
   partial: Colors.primary500,
   pending: Colors.primary500,
@@ -448,7 +448,11 @@ export const describeAssignmentContext = (assignment) => {
     // PAIEMENTS-10E (planche 10e, « Payé le 24/11/2026 ») : une place dit le jour de son paiement.
     const paidOn = isTournamentPlace(assignment) ? formatMemberDate(lastPaidAtOf(assignment)) : '';
     return paidOn
-      ? i18next.t('memberLicenseModel.context.placePaidOn', 'payée le {{date}}', { date: paidOn, ...SANS_ECHAPPEMENT })
+      ? i18next.t(
+        'memberLicenseModel.context.placePaidOn',
+        'payée le {{date}}',
+        { date: paidOn, ...SANS_ECHAPPEMENT },
+      )
       : i18next.t('memberLicenseModel.context.paid', 'soldée');
   }
   if (status === 'manual_review') {
