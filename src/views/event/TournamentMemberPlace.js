@@ -56,6 +56,85 @@ export function TournamentPlacesSummary({ payment }) {
 }
 
 /**
+ * PAGE-EQUIPE (19/11) — l'étiquette « Payé » / « À payer » (courte) ou « Place payée » /
+ * « Place à payer », seule à droite d'une ligne de joueur (maquette 3a), ou dans
+ * `TournamentMemberPlace`.
+ * IMPL-2 (Adel 18/11, « plus aucun vert ») : « payée » en bleu primaire.
+ * @param {object} props - Les propriétés.
+ * @param {MemberPlace | undefined} props.place - La place du membre.
+ * @param {boolean} [props.compact] - La pastille courte.
+ * @returns {import('react').ReactElement | null} L'étiquette, ou rien.
+ */
+export function PlaceStatusTag({ compact = false, place }) {
+  const { t } = useTranslation();
+  const { Colors } = useTheme();
+  if (!place) return null;
+  const isPaid = place.status === 'paid';
+  const statusTone = isPaid ? Colors.primary500 : Colors.warning500;
+  let texte = isPaid
+    ? t('tournamentTeamDetails.places.paid', 'Place payée')
+    : t('tournamentTeamDetails.places.due', 'Place à payer');
+  if (compact) texte = isPaid ? t('implEquipe.roster.paid') : t('implEquipe.roster.due');
+  return (
+    <Tag
+      style={tagStyle(statusTone)}
+      text={texte}
+      textColor="neutral00"
+      textStyle={{ color: statusTone }}
+    />
+  );
+}
+
+/**
+ * PAGE-EQUIPE (19/11) — la taille de maillot d'une place, en mots (T-PAGES-5), ou ''.
+ * @param {MemberPlace | undefined} place - La place du membre.
+ * @param {(key: string, options?: any) => string} t - La traduction.
+ * @returns {string} « Taille choisie : M », « Taille : au paiement », ou ''.
+ */
+export const getPlaceSizeLabel = (place, t) => {
+  if (!place) return '';
+  const hasSize = Object.prototype.hasOwnProperty.call(place, 'jerseySize');
+  if (hasSize && place.jerseySize) {
+    return t('tournamentTeamProgress.sizeChosen', { size: place.jerseySize, ...SANS_ECHAPPEMENT });
+  }
+  if (hasSize && place.status !== 'paid') {
+    return t('tournamentTeamDetails.places.sizeAtPayment', 'Taille : au paiement');
+  }
+  return '';
+};
+
+/**
+ * PAGE-EQUIPE (19/11) — « Copier le lien de paiement » de la place d'un autre joueur (qui gère
+ * l'équipe), rangé dans le menu de la ligne ou sous elle.
+ * @param {object} props - Les propriétés.
+ * @param {string} props.paymentUrl - Le lien de paiement de la place.
+ * @returns {import('react').ReactElement} Le bouton.
+ */
+export function CopyPaymentLinkButton({ paymentUrl }) {
+  const { t } = useTranslation();
+  const copyLink = useCallback(async () => {
+    const ok = await SharePlatform.copier(paymentUrl);
+    Alert.alert(
+      ok
+        ? t('tournamentTeamDetails.places.copied', 'Lien copié')
+        : t('tournamentTeamDetails.places.copyFailed', 'Copie impossible'),
+      ok
+        ? t('tournamentTeamDetails.places.copiedHint', 'Envoie-le au joueur ou à son parent.')
+        : paymentUrl,
+    );
+  }, [paymentUrl, t]);
+  return (
+    <Button
+      onPress={copyLink}
+      size="sm"
+      style={{ alignSelf: 'stretch', maxWidth: '100%' }}
+      title={t('tournamentTeamDetails.places.copyLink', 'Copier le lien de paiement')}
+      variant="Secondary"
+    />
+  );
+}
+
+/**
  * « Place payée » / « Place à payer », la taille de maillot (T-PAGES-5), puis « Copier le lien de
  * paiement » (qui gère l'équipe) ou « Payer ma place » (le joueur lui-même).
  * T-PAGES-2 (17/11) : « Payer ma place » ouvre la page de paiement dans le MÊME onglet sur le site
@@ -69,55 +148,25 @@ export function TournamentPlacesSummary({ payment }) {
  *   « À payer »
  *   d'une ligne de l'effectif.
  * @param {string} [props.payLabel] - IMPL-2 (9a) : le libellé du bouton, avec le prix.
+ * @param {boolean} [props.payFullWidth] - PAGE-EQUIPE (9a) : « Payer ma place » sur toute la
+ *   largeur, à la taille ordinaire.
  * @returns {import('react').ReactElement | null} La ligne, ou rien.
  */
 export function TournamentMemberPlace({
-  compact = false, payLabel = '', place, showSelfPay = true,
+  compact = false, payFullWidth = false, payLabel = '', place, showSelfPay = true,
 }) {
   const { t } = useTranslation();
   const { Colors, Spaces } = useTheme();
   const paymentUrl = place?.paymentUrl || '';
-
-  const copyLink = useCallback(async () => {
-    const ok = await SharePlatform.copier(paymentUrl);
-    Alert.alert(
-      ok
-        ? t('tournamentTeamDetails.places.copied', 'Lien copié')
-        : t('tournamentTeamDetails.places.copyFailed', 'Copie impossible'),
-      ok
-        ? t('tournamentTeamDetails.places.copiedHint', 'Envoie-le au joueur ou à son parent.')
-        : paymentUrl,
-    );
-  }, [paymentUrl, t]);
   const payMine = useCallback(() => LinksPlatform.openUrlHere(paymentUrl), [paymentUrl]);
 
   if (!place) return null;
   const isPaid = place.status === 'paid';
-  // IMPL-2 (Adel 18/11, « plus aucun vert ») : « payée » en bleu primaire.
-  const statusTone = isPaid ? Colors.primary500 : Colors.warning500;
-  const hasSize = Object.prototype.hasOwnProperty.call(place, 'jerseySize');
-  let sizeLabel = null;
-  if (hasSize && place.jerseySize) {
-    sizeLabel = t('tournamentTeamProgress.sizeChosen', {
-      size: place.jerseySize, ...SANS_ECHAPPEMENT,
-    });
-  } else if (hasSize && !isPaid) {
-    sizeLabel = t('tournamentTeamDetails.places.sizeAtPayment', 'Taille : au paiement');
-  }
+  const sizeLabel = getPlaceSizeLabel(place, t);
   return (
     <View style={Spaces.gap[8]}>
       <View style={[Spaces.gap[8], { flexDirection: 'row', flexWrap: 'wrap' }]}>
-        <Tag
-          style={tagStyle(statusTone)}
-          text={(() => {
-            if (compact) return isPaid ? t('implEquipe.roster.paid') : t('implEquipe.roster.due');
-            return isPaid
-              ? t('tournamentTeamDetails.places.paid', 'Place payée')
-              : t('tournamentTeamDetails.places.due', 'Place à payer');
-          })()}
-          textColor="neutral00"
-          textStyle={{ color: statusTone }}
-        />
+        <PlaceStatusTag compact={compact} place={place} />
         {sizeLabel ? (
           <Tag
             style={tagStyle(Colors.neutral300)}
@@ -130,20 +179,16 @@ export function TournamentMemberPlace({
       {!isPaid && paymentUrl && place.isSelf && showSelfPay ? (
         <Button
           onPress={payMine}
-          size="sm"
-          style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
+          size={payFullWidth ? undefined : 'sm'}
+          style={payFullWidth
+            ? { alignSelf: 'stretch', maxWidth: '100%' }
+            : { alignSelf: 'flex-start', maxWidth: '100%' }}
           title={payLabel || t('tournamentTeamDetails.places.payMine', 'Payer ma place')}
           variant="Primary"
         />
       ) : null}
       {!isPaid && paymentUrl && !place.isSelf ? (
-        <Button
-          onPress={copyLink}
-          size="sm"
-          style={{ alignSelf: 'stretch', maxWidth: '100%' }}
-          title={t('tournamentTeamDetails.places.copyLink', 'Copier le lien de paiement')}
-          variant="Secondary"
-        />
+        <CopyPaymentLinkButton paymentUrl={paymentUrl} />
       ) : null}
     </View>
   );

@@ -589,13 +589,15 @@ describe('T-PAGES-2 — les états de l’équipe', () => {
   test('18. discussion de l’équipe : le bouton ouvre la conversation', async () => {
     // Le serveur (team-chat.js) rend `chat` comme un identifiant (chaîne), voir T-FIL-EQUIPE.discussion.
     const arbre = await monter(equipe({ discussion: { chat: 'chat-eq', ecriture: true } }), 'u-cap');
-    await appuyer(arbre, ["Discussion de l'équipe"]);
+    // ADAPTÉ PAR PAGE-EQUIPE (19/11, planche 4c) : le bouton dit le nombre de membres.
+    await appuyer(arbre, ["Discussion de l'équipe", 'Discussion de l’équipe · 2 membres']);
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, { chatId: 'chat-eq' });
   });
 
   test('19. retour au tournoi : navigue vers la fiche du tournoi', async () => {
     const arbre = await monter(equipe(), 'u-cap');
-    await appuyer(arbre, ['Revenir au tournoi', 'Retour au tournoi', 'Retour']);
+    // ADAPTÉ PAR PAGE-EQUIPE (19/11, règle d'Adel D276) : « Voir les infos du tournoi ».
+    await appuyer(arbre, ['Revenir au tournoi', 'Retour au tournoi', 'Retour', 'Voir les infos du tournoi']);
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.EventDetails, { eventId: 'evt-1' });
   });
 });

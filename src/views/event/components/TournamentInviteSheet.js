@@ -174,7 +174,10 @@ function TournamentInviteSheet({
         <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
           {t('implEquipe.invite.noResultText')}
         </Text>
+        {/* PAGE-EQUIPE (3d) : l'icône de partage remise. */}
         <Button
+          icon="share"
+          iconPosition="before"
           isLoading={isSharing}
           onPress={() => onShare('share')}
           size="sm"
@@ -199,7 +202,22 @@ function TournamentInviteSheet({
           ) : null}
         </View>
         {invitedIds.has(user.documentId) ? (
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('implEquipe.invite.invited')}</Text>
+          // PAGE-EQUIPE (3c) : « ✓ Invité », pastille bleue.
+          <View
+            style={[
+              Alignments.row, Alignments.alignCenter, Spaces.gap[4],
+              {
+                backgroundColor: `${Colors.primary500}24`,
+                borderRadius: 999,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              },
+            ]}
+            testID={`tournament-invite-invited-${user.documentId}`}
+          >
+            <GlyphIcon color={Colors.primary500} name="check" size={14} />
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('implEquipe.invite.invited')}</Text>
+          </View>
         ) : (
           <Button
             disabled={isInviting}
@@ -216,18 +234,43 @@ function TournamentInviteSheet({
   const recherche = (
     <View style={Spaces.gap[12]}>
       {/* Android : le champ que la feuille suit au clavier (CLAVREGLE) ; ailleurs, TextInput. */}
-      <BottomModalTextInput
-        accessibilityLabel={t('implEquipe.invite.searchTitle')}
-        autoCorrect={false}
-        // Chef « A » (18/11, T-SUITES) : le champ prend le focus dès que la recherche s'ouvre.
-        autoFocus
-        onChangeText={onChangeQuery}
-        placeholder={placeholder || t('implEquipe.invite.placeholder')}
-        placeholderTextColor={Colors.neutral500}
-        style={ds.styles.input}
-        testID="tournament-invite-search-input"
-        value={query}
-      />
+      {/* PAGE-EQUIPE (3c, 3d) : la loupe dans le champ, et la croix qui l'efface dès qu'il y a du
+          texte. */}
+      <View style={{ justifyContent: 'center' }}>
+        <BottomModalTextInput
+          accessibilityLabel={t('implEquipe.invite.searchTitle')}
+          autoCorrect={false}
+          // Chef « A » (18/11, T-SUITES) : le champ prend le focus dès que la recherche s'ouvre.
+          autoFocus
+          onChangeText={onChangeQuery}
+          placeholder={placeholder || t('implEquipe.invite.placeholder')}
+          placeholderTextColor={Colors.neutral500}
+          style={[ds.styles.input, { paddingLeft: 44, paddingRight: 44 }]}
+          testID="tournament-invite-search-input"
+          value={query}
+        />
+        <View pointerEvents="none" style={{ left: 14, position: 'absolute' }}>
+          <GlyphIcon color={Colors.neutral200} name="search" size={18} />
+        </View>
+        {String(query || '').length > 0 ? (
+          <TouchableOpacity
+            accessibilityLabel={t('implEquipe.invite.clearSearch')}
+            accessibilityRole="button"
+            onPress={() => onChangeQuery('')}
+            style={{
+              alignItems: 'center',
+              height: 44,
+              justifyContent: 'center',
+              position: 'absolute',
+              right: 0,
+              width: 44,
+            }}
+            testID="tournament-invite-search-clear"
+          >
+            <GlyphIcon color={Colors.neutral200} name="xmark" size={18} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
       {resultat}
     </View>
   );

@@ -164,12 +164,22 @@ describe('T-PAIE — les places sur la fiche d équipe', () => {
     expect(contenu).toContain('Payé');
     expect(contenu).toContain('À payer');
     expect(contenu).toContain('1 place payée sur 5');
-    const copier = boutons(arbre, 'Copier le lien de paiement');
+    // ATTENDU CHANGÉ PAR PAGE-EQUIPE (19/11, maquette 3a, Adel décision 2 « une ligne par joueur ») :
+    // « Copier le lien de paiement » est rangé dans le menu à trois points de chaque joueur à payer.
+    expect(boutons(arbre, 'Copier le lien de paiement')).toHaveLength(0);
+    /** @type {any[]} */
+    const copier = [];
+    const menus = () => arbre.root.findAll((/** @type {any} */ n) => String(n.props?.accessibilityLabel || '').startsWith('Actions pour ') && typeof n.props?.onPress === 'function' && n.type !== 'View');
+    const noms = [...new Set(menus().map((/** @type {any} */ m) => m.props.accessibilityLabel))];
+    noms.forEach((/** @type {string} */ nom) => {
+      act(() => { menus().find((/** @type {any} */ m) => m.props.accessibilityLabel === nom).props.onPress(); });
+      copier.push(...boutons(arbre, 'Copier le lien de paiement').map((/** @type {any} */ b) => b.props.onPress));
+    });
     expect(copier).toHaveLength(2);
-    await act(async () => { await copier[0].props.onPress(); });
+    await act(async () => { await copier[0](); });
     expect(mockCopier).toHaveBeenCalledWith(LIEN_2);
     expect(boutons(arbre, 'Payer ma place (20 €)')).toHaveLength(0);
-  });
+  }, 30000);
 
   test('🔴 joueur connecté : « Payer ma place » ouvre SON lien, aucun lien des autres', async () => {
     const arbre = await monter('joueur');
