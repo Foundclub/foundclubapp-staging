@@ -729,135 +729,104 @@ export const getOnboardingViews = ({
     && parentalDeclarationAccepted !== true,
   );
 
-  const baseViews = (() => {
+  // INSCRIPTION-CODE (19/11/2026, V1 3.5 corrigée par la V2 : v2_01 « ok ») — L'ORDRE EST UNE
+  // DONNÉE. Tous les parcours commencent par le même tronc : l'activité, puis « Qui es-tu ? » (l'âge
+  // est connu avant le rôle : refus avant 13 ans, déclaration parentale avant 15 ans), puis le rôle.
+  // Les numéros se calculent sur la position : plus de « needsParentalDeclaration ? n+1 : n ».
+  // Une étape déjà remplie est masquée plus bas (le sport, le nom, le rôle déjà posé).
+  const etape = (/** @type {string} */ route, canShow = true) => ({ canShow, route });
+  const tronc = [
+    etape(RouteNames.UserSport),
+    etape(RouteNames.UserName),
+    ...(needsParentalDeclaration ? [etape(RouteNames.UserParentalDeclaration)] : []),
+    etape(RouteNames.UserRole),
+  ];
+  const routesDuParcours = (() => {
     switch (roleKey) {
       case 'coach':
         return [
-          { canShow: true, index: 1, route: RouteNames.UserName },
-          ...(needsParentalDeclaration
-            ? [{ canShow: true, index: 2, route: RouteNames.UserParentalDeclaration }]
-            : []),
-          { canShow: true, index: needsParentalDeclaration ? 3 : 2, route: RouteNames.UserAddress },
-          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserAvatar },
-          {
-            canShow: shouldShowAffiliationGuide,
-            index: needsParentalDeclaration ? 5 : 4,
-            route: RouteNames.UserAffiliationGuide,
-          },
+          ...tronc,
+          etape(RouteNames.UserAddress),
+          etape(RouteNames.UserAvatar),
+          etape(RouteNames.UserAffiliationGuide, shouldShowAffiliationGuide),
           // D16 - la branche staff se dedouble ICI : l'entraineur declare les
           // equipes qu'il entraine, le dirigeant s'arrete au club (il le
           // couvre en entier). `Welcome` n'est plus une etape comptee.
-          {
-            canShow: !hasTeamAffiliation,
-            index: needsParentalDeclaration ? 6 : 5,
-            route: RouteNames.UserTrainedTeams,
-          },
+          etape(RouteNames.UserTrainedTeams, !hasTeamAffiliation),
         ];
       // PARENT (2026-09-02) — le parcours du parent : son identite (AVEC sa
       // date de naissance : un parent est un adulte CONNU, et le garde-fou
       // tchat du serveur traite un age inconnu comme un enfant), puis sa
-      // photo. Rien d autre : ni section, ni sport, ni club — ce sont les
-      // etapes de son ENFANT, pas les siennes. `Welcome` reste le sas de sortie.
-      // « Declarer mon enfant » (une fiche joueur sans identifiants, version A
-      // d Adel du 02/09) est le second lot : il s inserera ici, apres la photo.
+      // photo. `Welcome` reste le sas de sortie. INSCRIPTION-CODE : l'activité du tronc est celle
+      // de son enfant (V1 3.5 : « Le sport de ton enfant › Rôle › Toi, le parent… »).
       // La declaration parentale ne s insere que si le « parent » est lui-meme
       // un mineur de moins de 15 ans : le seuil 15 vaut pour tout le monde.
       case 'parent':
         return [
-          { canShow: true, index: 1, route: RouteNames.UserName },
-          ...(needsParentalDeclaration
-            ? [{ canShow: true, index: 2, route: RouteNames.UserParentalDeclaration }]
-            : []),
-          { canShow: true, index: needsParentalDeclaration ? 3 : 2, route: RouteNames.UserAvatar },
-          // PARENT P2 (10/09, decision d Adel) — « declare ton enfant », posee
-          // ICI, a la place que ce fichier lui reservait depuis le 02/09.
-          //
+          ...tronc,
+          etape(RouteNames.UserAvatar),
+          // PARENT P2 (10/09, decision d Adel) — « declare ton enfant ».
           // ⚖️ AVEC UN « PLUS TARD », ET CE N EST PAS DU CONFORT. Un parent peut
           // s inscrire juste pour CHERCHER un club avant de decider. Collecter le
           // prenom, le nom et la date de naissance d un enfant avant qu il y ait
           // un besoin reel, c est ce que la minimisation interdit (C8 du plan).
           // L etape se VOIT dans le tunnel ; elle ne s impose pas.
-          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserChild },
+          etape(RouteNames.UserChild),
         ];
       case 'player':
         return [
-          { canShow: true, index: 1, route: RouteNames.UserName },
-          ...(needsParentalDeclaration
-            ? [{ canShow: true, index: 2, route: RouteNames.UserParentalDeclaration }]
-            : []),
-          { canShow: true, index: needsParentalDeclaration ? 3 : 2, route: RouteNames.UserSection },
-          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserAddress },
-          { canShow: true, index: needsParentalDeclaration ? 5 : 4, route: RouteNames.UserAvatar },
+          ...tronc,
+          etape(RouteNames.UserSection),
+          etape(RouteNames.UserAddress),
+          etape(RouteNames.UserAvatar),
           // Optional steps for players
-          { canShow: true, index: needsParentalDeclaration ? 6 : 5, route: RouteNames.UserSport },
-          { canShow: true, index: needsParentalDeclaration ? 7 : 6, route: RouteNames.UserPosition },
-          { canShow: true, index: needsParentalDeclaration ? 8 : 7, route: RouteNames.UserPhysique },
-          { canShow: true, index: needsParentalDeclaration ? 9 : 8, route: RouteNames.UserLevel },
-          { canShow: true, index: needsParentalDeclaration ? 10 : 9, route: RouteNames.UserCategory },
-          { canShow: true, index: needsParentalDeclaration ? 11 : 10, route: RouteNames.UserSportHistory },
-          { canShow: true, index: needsParentalDeclaration ? 12 : 11, route: RouteNames.UserClubSearch },
-          {
-            canShow: shouldShowAffiliationGuide,
-            index: needsParentalDeclaration ? 13 : 12,
-            route: RouteNames.UserAffiliationGuide,
-          },
+          etape(RouteNames.UserPosition),
+          etape(RouteNames.UserPhysique),
+          etape(RouteNames.UserLevel),
+          etape(RouteNames.UserCategory),
+          etape(RouteNames.UserSportHistory),
+          etape(RouteNames.UserClubSearch),
+          etape(RouteNames.UserAffiliationGuide, shouldShowAffiliationGuide),
           // D16 - « Equipe (demande envoyee au coach) ». Elle suit le club :
           // on ne peut pas choisir une equipe avant le club qui la contient.
           // `Welcome` n'est plus une etape comptee.
-          {
-            canShow: !hasTeamAffiliation,
-            index: needsParentalDeclaration ? 14 : 13,
-            route: RouteNames.UserTeamAffiliation,
-          },
+          etape(RouteNames.UserTeamAffiliation, !hasTeamAffiliation),
         ];
       case 'president':
         return [
-          { canShow: true, index: 1, route: RouteNames.UserName },
-          // AGE-OBLIGATOIRE - le dirigeant donne sa date depuis le 02/10 : la
-          // declaration parentale s'insere chez lui comme chez l'entraineur.
-          ...(needsParentalDeclaration
-            ? [{ canShow: true, index: 2, route: RouteNames.UserParentalDeclaration }]
-            : []),
+          ...tronc,
           // D16 - « Ville ». Elle alimente les suggestions de club
           // (« PRES DE CHEZ TOI ») : elle doit donc arriver AVANT l'etape
           // club, sinon son ajout n'a aucun interet. `Welcome` n'est plus
           // une etape comptee.
-          { canShow: true, index: needsParentalDeclaration ? 3 : 2, route: RouteNames.UserAddress },
-          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserAvatar },
-          {
-            canShow: shouldShowAffiliationGuide,
-            index: needsParentalDeclaration ? 5 : 4,
-            route: RouteNames.UserAffiliationGuide,
-          },
+          etape(RouteNames.UserAddress),
+          etape(RouteNames.UserAvatar),
+          etape(RouteNames.UserAffiliationGuide, shouldShowAffiliationGuide),
         ];
       case 'superAdmin':
         return [
-          { canShow: true, index: 1, route: RouteNames.UserName },
-          { canShow: true, index: 2, route: RouteNames.UserAvatar },
-          { canShow: true, index: 3, route: RouteNames.Welcome },
+          etape(RouteNames.UserName),
+          etape(RouteNames.UserAvatar),
+          etape(RouteNames.Welcome),
         ];
       default:
         return [
-          { canShow: true, index: 1, route: RouteNames.UserRole },
-          { canShow: true, index: 2, route: RouteNames.UserName },
-          ...(needsParentalDeclaration
-            ? [{ canShow: true, index: 3, route: RouteNames.UserParentalDeclaration }]
-            : []),
-          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserSection },
-          { canShow: true, index: needsParentalDeclaration ? 5 : 4, route: RouteNames.UserAddress },
-          { canShow: true, index: needsParentalDeclaration ? 6 : 5, route: RouteNames.UserAvatar },
+          ...tronc,
+          etape(RouteNames.UserSection),
+          etape(RouteNames.UserAddress),
+          etape(RouteNames.UserAvatar),
           // Optional steps (will apply if user selects player role)
-          { canShow: true, index: needsParentalDeclaration ? 7 : 6, route: RouteNames.UserSport },
-          { canShow: true, index: needsParentalDeclaration ? 8 : 7, route: RouteNames.UserPosition },
-          { canShow: true, index: needsParentalDeclaration ? 9 : 8, route: RouteNames.UserPhysique },
-          { canShow: true, index: needsParentalDeclaration ? 10 : 9, route: RouteNames.UserLevel },
-          { canShow: true, index: needsParentalDeclaration ? 11 : 10, route: RouteNames.UserCategory },
-          { canShow: true, index: needsParentalDeclaration ? 12 : 11, route: RouteNames.UserSportHistory },
-          { canShow: true, index: needsParentalDeclaration ? 13 : 12, route: RouteNames.UserClubSearch },
-          { canShow: true, index: needsParentalDeclaration ? 14 : 13, route: RouteNames.Welcome },
+          etape(RouteNames.UserPosition),
+          etape(RouteNames.UserPhysique),
+          etape(RouteNames.UserLevel),
+          etape(RouteNames.UserCategory),
+          etape(RouteNames.UserSportHistory),
+          etape(RouteNames.UserClubSearch),
+          etape(RouteNames.Welcome),
         ];
     }
   })();
+  const baseViews = routesDuParcours.map((view, rang) => ({ ...view, index: rang + 1 }));
   // D15 : `UserName` porte desormais prenom + nom + date de naissance. L'ecran
   // ne peut donc etre saute que si les TROIS sont deja connus - sinon on
   // renverrait l'utilisateur a l'etape suivante sans jamais lui demander sa

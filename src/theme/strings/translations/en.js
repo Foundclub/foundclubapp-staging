@@ -17377,6 +17377,18 @@ export default {
       title: 'Which positions?',
     },
     sport: {
+      // INSCRIPTION-CODE (19/11, V01 + V02): the first sign-up screen.
+      premierEcran: {
+        pasDansLaListe: 'I can’t find my activity',
+        populaires: 'Most chosen',
+        porte: 'Do you represent a town hall or a sports complex?',
+        porteMairie: 'Do you represent a town hall?',
+        recherche: 'Search: football, judo, yoga…',
+        sousTitre: 'Your sport or activity.',
+        sousTitrePlusieurs: 'Your sport or activity. You can choose up to 3.',
+        titre: 'What do you practise?',
+        toutes: 'All activities, A to Z',
+      },
       subtitle: 'Choose your preferred sport',
       title: "What's your sport?",
     },
@@ -27380,6 +27392,11 @@ export default {
     loading: {
       description: "We're fetching your profile before you choose your role.",
       title: 'Loading profile',
+    },
+    // INSCRIPTION-CODE (19/11, V05): adult roles closed before 18.
+    mineur: {
+      aPartirDe18: 'From 18 years old',
+      explication: 'Some roles are reserved for people aged 18 and over.',
     },
     rolesError: {
       message: 'Unable to load the roles.',

@@ -31,10 +31,13 @@ const ROW_MIN_HEIGHT = 56;
  * @param {boolean} [props.multi] - Liste a choix multiple : case CARREE.
  * @param {string} [props.subtitle] - Precision facultative sous le libelle.
  * @param {string} [props.testID] - Identifiant de test.
+ * @param {boolean} [props.disabled] - INSCRIPTION-CODE (V05) : rangée fermée, visible mais grisée
+ *   (un rôle réservé aux adultes) ; sa raison va dans `subtitle`.
  * @returns {import('react').ReactElement} La rangee.
  */
 function OnboardingRadioRow({
   checked,
+  disabled = false,
   label,
   multi = false,
   onPress,
@@ -49,7 +52,8 @@ function OnboardingRadioRow({
       // liste a cocher. Le role suit la forme, sinon un lecteur d'ecran annonce
       // « bouton radio » sur une liste ou plusieurs reponses sont possibles.
       accessibilityRole={multi ? 'checkbox' : 'radio'}
-      accessibilityState={{ checked }}
+      accessibilityState={{ checked, disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={[
         Spaces.paddingHorizontal[16],
@@ -62,6 +66,7 @@ function OnboardingRadioRow({
             : Colors.neutral800,
           borderColor: checked ? Colors.primary500 : Colors.neutral700,
         },
+        disabled ? { opacity: 0.5 } : null,
       ]}
       testID={testID}
     >

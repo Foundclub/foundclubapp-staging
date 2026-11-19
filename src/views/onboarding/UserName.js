@@ -427,9 +427,10 @@ function UserName({ navigation }) {
         [{
           onPress: () => {
             ecrireModeComplexe(userData?.documentId, false);
-            navigation.navigate(RouteNames.UserRole);
+            // INSCRIPTION-CODE (19/11) : la porte « mairie ou complexe ? » est au premier écran.
+            navigation.navigate(RouteNames.UserSport);
           },
-          text: t('userName.gerantMineur.retour', 'Revenir au choix du statut'),
+          text: t('userName.gerantMineur.retour', 'Revenir au premier écran'),
         }],
       );
       return;

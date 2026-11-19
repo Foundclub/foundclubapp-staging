@@ -7,19 +7,18 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getRoleDocumentIdByKey, markOnboardingStarted } from '@/domains/auth/authUseCases';
+import {
+  getOnboardingViews, getRoleDocumentIdByKey, markOnboardingStarted,
+} from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { aUneDemandeDeGestion } from '@/domains/collectivite/collectiviteAccueil';
 import { lienDeLaVilleRetenu } from '@/domains/collectivite/lienDeLaVille';
-import { identiteComplete } from '@/domains/complexe/arriveeSansRole';
-import { ecrireModeComplexe } from '@/domains/complexe/modeComplexe';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
 import BandeauTournoiEnCours from '@/views/onboarding/components/BandeauTournoiEnCours';
-import ChoixPourUnComplexe from '@/views/onboarding/components/ChoixPourUnComplexe';
 import {
   continuerSurOrdinateur,
   STYLE_CONTINUER_ORDINATEUR,
@@ -38,7 +37,7 @@ import {
 
 import { getApiErrorTranslation } from '@/utils/errors/displayError';
 
-import { COMPLEXES_GERANT } from '@/config/fonctionsMasquees';
+import { isBirthdateUnderAge } from '@/constants/parentalDeclaration';
 import { useIsDesktop } from '@/responsive';
 
 /**
@@ -48,6 +47,7 @@ import { useIsDesktop } from '@/responsive';
  */
 function UserRole({ navigation }) {
   const {
+    getPostOnboardingHomeRoute,
     refetchUserData,
     USER_ROLES,
     userData,
@@ -59,13 +59,9 @@ function UserRole({ navigation }) {
   const [role, setRole] = useState(
     /** @type {string} */(userData?.role?.documentId || ''),
   );
-  // 🏛️ COLL-ACCUEIL (01/10, décision d'Adel « accueil A ») — la 5e rangée, « Je représente
-  // une collectivité ». Ce n'est PAS un rôle Strapi : le compte garde son rôle provisoire, et
-  // l'inscription de la mairie (CollectiviteSignup) remplace toutes les questions de sport.
-  const [representeCollectivite, setRepresenteCollectivite] = useState(false);
-  // RESA-INSCRIPTION (19/10/2026, plan E-G01 état 0) — « Je gère un complexe », même modèle :
-  // pas un rôle Strapi, et le tunnel du complexe remplace les questions de sport.
-  const [gereUnComplexe, setGereUnComplexe] = useState(false);
+  // INSCRIPTION-CODE (19/11, V02 validé) — « Je représente une collectivité » et « Je gère un
+  // complexe » ont quitté cet écran : ils sont au bas du PREMIER écran (UserSport), derrière
+  // « Tu représentes une mairie ou un complexe ? », avec les mêmes gestes.
   // hooks
   const {
     Alignments, Fonts, Spaces,
@@ -146,8 +142,14 @@ function UserRole({ navigation }) {
       } catch {
         // On navigue quand meme : les ecrans suivants refetchent le profil.
       }
-      // UserName est la premiere etape de TOUS les flux apres le choix du role.
-      navigation.navigate(RouteNames.UserName);
+      // INSCRIPTION-CODE (19/11) — l'activité et « Qui es-tu ? » viennent AVANT le rôle : la suite
+      // est la première étape due du parcours du rôle choisi (calculée sur ce rôle, pas sur l'ancien
+      // profil en mémoire). Plus rien de dû : la sortie habituelle.
+      const roleChoisi = (Array.isArray(roles) ? roles : [])
+        .find((r) => r?.documentId === role);
+      const suite = getOnboardingViews({ ...userData, role: roleChoisi || userData?.role })
+        .views.find((view) => view.canShow && view.route !== RouteNames.UserRole)?.route;
+      navigation.navigate(suite || getPostOnboardingHomeRoute());
     },
   });
 
@@ -157,21 +159,7 @@ function UserRole({ navigation }) {
    */
   const handleSelection = (selectedRole) => {
     const newRole = getRoleDocumentIdByKey(roles, selectedRole);
-    setRepresenteCollectivite(false);
-    setGereUnComplexe(false);
     setRole((currentRole) => (newRole === currentRole ? '' : newRole));
-  };
-
-  const handleSelectCollectivite = () => {
-    setRole('');
-    setGereUnComplexe(false);
-    setRepresenteCollectivite((avant) => !avant);
-  };
-
-  const handleSelectComplexe = () => {
-    setRole('');
-    setRepresenteCollectivite(false);
-    setGereUnComplexe((avant) => !avant);
   };
 
   const playerRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.player);
@@ -196,27 +184,20 @@ function UserRole({ navigation }) {
   // COCHE. `role` demarre sur le role ACTUEL du compte : pour un compte neuf,
   // c'est le role provisoire (« Authenticated »), qu'aucune case ne montre.
   // Il n'etait pas vide, donc le bouton restait actif et l'envoyait — 403.
+  // INSCRIPTION-CODE (19/11, V05 + reco de v2_01 « ok ») — l'âge est connu AVANT le rôle : avant
+  // 18 ans, les rôles d'adulte restent visibles mais fermés, et disent pourquoi. Le serveur reste
+  // le garde-fou (« Requested role is not allowed ») ; ceci évite d'y arriver.
+  const estMineur = isBirthdateUnderAge(userData?.birthdate, 18);
+  const rolesDAdulte = estMineur ? [coachRoleId, presidentRoleId, parentRoleId] : [];
   const hasChosenRole = [playerRoleId, coachRoleId, presidentRoleId, parentRoleId]
     .filter(Boolean)
+    .filter((id) => !rolesDAdulte.includes(id))
     .includes(role);
+  const reserveAuxAdultes = estMineur
+    ? t('userRole.mineur.aPartirDe18', 'À partir de 18 ans')
+    : undefined;
 
   const handleNext = () => {
-    // COLL-ACCUEIL — la mairie : aucun rôle à poser, aucune question de sport.
-    if (representeCollectivite) {
-      navigation.navigate(RouteNames.CollectiviteSignup);
-      return;
-    }
-    // RESA-INSCRIPTION — le complexe : aucun rôle à poser, le tunnel EXISTANT (RESA-L5A1).
-    // GERANT-INSCRIPTION (10/11/2026, décision 3 A) : l'identité d'abord, comme les autres rôles,
-    // et le contrôle d'âge avant qu'un complexe existe. Le mode complexe garde le choix (stockage
-    // local, tient un rechargement du site) : « Qui es-tu ? » mène ensuite à la fiche.
-    if (gereUnComplexe) {
-      ecrireModeComplexe(userData?.documentId, true);
-      navigation.navigate(identiteComplete(userData)
-        ? RouteNames.ComplexeDevenirGerant
-        : RouteNames.UserName);
-      return;
-    }
     if (!hasChosenRole) return;
     updateUserMutation.mutate({ role });
   };
@@ -315,6 +296,14 @@ function UserRole({ navigation }) {
           <Text style={[Fonts.p1, Fonts.neutral00]}>
             {t('profile.subtitles.type')}
           </Text>
+          {estMineur ? (
+            <Text style={[Fonts.p2, Fonts.neutral300]} testID="role-mineur">
+              {t(
+                'userRole.mineur.explication',
+                'Certains rôles sont réservés aux 18 ans et plus.',
+              )}
+            </Text>
+          ) : null}
         </View>
         <WithDataWrapper error={rolesError?.message} isLoading={rolesLoading}>
           {/*
@@ -331,43 +320,32 @@ function UserRole({ navigation }) {
             />
             <OnboardingRadioRow
               checked={Boolean(role) && role === coachRoleId}
+              disabled={estMineur}
               label={t('profile.fields.types.coach')}
               onPress={() => handleSelection(USER_ROLES.coach)}
+              subtitle={reserveAuxAdultes}
             />
             <OnboardingRadioRow
               checked={Boolean(role) && role === presidentRoleId}
+              disabled={estMineur}
               label={t('profile.fields.types.president')}
               onPress={() => handleSelection(USER_ROLES.president)}
+              subtitle={reserveAuxAdultes}
             />
             {parentRoleId ? (
               <OnboardingRadioRow
                 checked={Boolean(role) && role === parentRoleId}
+                disabled={estMineur}
                 label={t('profile.fields.types.parent', 'Parent')}
                 onPress={() => handleSelection(USER_ROLES.parent)}
+                subtitle={reserveAuxAdultes}
               />
-            ) : null}
-            {/* COLL-ACCUEIL (01/10) — séparée des rôles sportifs, sous son propre intertitre. */}
-            <Text style={[Fonts.p3Bold, Fonts.neutral300, Spaces.marginTop[12]]}>
-              {t('collectiviteAccueil.statut.intertitre', 'Pour une mairie').toUpperCase()}
-            </Text>
-            <OnboardingRadioRow
-              checked={representeCollectivite}
-              label={t('collectiviteAccueil.statut.libelle', 'Je représente une collectivité')}
-              onPress={handleSelectCollectivite}
-              subtitle={t(
-                'collectiviteAccueil.statut.precision',
-                'Mairie, intercommunalité, département, région.',
-              )}
-              testID="statut-collectivite"
-            />
-            {COMPLEXES_GERANT ? (
-              <ChoixPourUnComplexe checked={gereUnComplexe} onPress={handleSelectComplexe} />
             ) : null}
           </View>
         </WithDataWrapper>
       </ScrollView>
       <Button
-        disabled={!hasChosenRole && !representeCollectivite && !gereUnComplexe}
+        disabled={!hasChosenRole}
         isLoading={updateUserMutation.isPending}
         onPress={handleNext}
         style={surOrdinateur

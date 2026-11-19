@@ -86,3 +86,13 @@ export const CARTES_ACCUEIL_MASQUEES = Object.freeze([
   ...(LEAGUE_SUR_ACCUEIL ? [] : ['league-entry']),
   ...(RESERVATIONS_SUR_ACCUEIL ? [] : ['search-reservations']),
 ]);
+
+/**
+ * INSCRIPTION-CODE (19/11/2026, V1 « 3.3 Plusieurs sports » validé, V01) — jusqu'à 3 activités au
+ * premier écran de l'inscription, la première étant la principale.
+ * `false` (ÉTEINT) : un seul choix. Raison : le compte n'a qu'un champ texte `preferredSport`
+ * (admin user/schema.json:222) ; sans champ pour les autres activités, les cocher reviendrait à
+ * demander une information jetée, ce que le pack écarte. À rallumer avec le champ serveur.
+ * @type {boolean}
+ */
+export const INSCRIPTION_PLUSIEURS_SPORTS = false;

@@ -140,8 +140,10 @@ export function Intertitre({ children }) {
  *  onChoisir: (cle: string) => void,
  *  sansTousLesSports?: boolean,
  *  sports: any[] | undefined,
+ *  textes?: { populaires?: string, recherche?: string, toutes?: string },
  *  valeurs: unknown,
- * }} props `cle` : ce qui identifie un sport pour l'appelant — l'identifiant (clubs, événements,
+ * }} props `textes` (INSCRIPTION-CODE, premier écran de l'inscription, V01) : les mots de
+ *   l'intitulé « populaires », de la recherche et du lien « de A à Z » ; absent = ceux d'avant. `cle` : ce qui identifie un sport pour l'appelant — l'identifiant (clubs, événements,
  *   profils, réservations) ou le NOM (les annonces filtrent par nom). `valeurs` : la ou les clefs
  *   choisies, texte ou liste (vide = « Tous les sports »). `libelle` : l'intitulé du champ, dans
  *   les écrans-formulaires (il est dans la rangée des feuilles « Filtrer »). `sansTousLesSports`
@@ -157,6 +159,7 @@ function ChoixDuSport({
   onChoisir,
   sansTousLesSports = false,
   sports,
+  textes = undefined,
   valeurs,
 }) {
   const { t } = useTranslation();
@@ -164,7 +167,7 @@ function ChoixDuSport({
   const [recherche, setRecherche] = useState('');
   const [toutAfficher, setToutAfficher] = useState(false);
   const TOUS_SPORTS = t('clubFiltersSheet.allSports', 'Tous les sports');
-  const TOUT_DE_A_A_Z = t('pastillesFiltresClub.sport.all', 'Tous les sports, de A à Z');
+  const TOUT_DE_A_A_Z = textes?.toutes || t('pastillesFiltresClub.sport.all', 'Tous les sports, de A à Z');
 
   // Un sport par clé : « Volley » et « Volleyball » font UNE ligne « Volleyball ». `clesDuGroupe` :
   // les clefs de toutes ses lignes, pour cocher un choix rangé sous l'une ou l'autre.
@@ -222,7 +225,7 @@ function ChoixDuSport({
         density="default"
         icon="search"
         onChangeText={setRecherche}
-        placeholder={t('pastillesFiltresClub.sport.search', 'Rechercher un sport')}
+        placeholder={textes?.recherche || t('pastillesFiltresClub.sport.search', 'Rechercher un sport')}
         placeholderTextColor={Colors.neutral300}
         value={recherche}
       />
@@ -246,7 +249,9 @@ function ChoixDuSport({
           {actuels.length ? actuels.map(ligne) : null}
           {!actuels.length && !sansTousLesSports ? ligneTousLesSports(true) : null}
           {populaires.some((sport) => !estChoisi(sport)) ? (
-            <Intertitre>{t('pastillesFiltresClub.sport.popular', 'Sports populaires')}</Intertitre>
+            <Intertitre>
+              {textes?.populaires || t('pastillesFiltresClub.sport.popular', 'Sports populaires')}
+            </Intertitre>
           ) : null}
           {populaires.filter((sport) => !estChoisi(sport)).map(ligne)}
           {toutAfficher ? (

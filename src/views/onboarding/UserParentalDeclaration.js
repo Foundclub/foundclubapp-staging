@@ -71,6 +71,11 @@ function UserParentalDeclaration({ navigation, route }) {
    */
   const resolveRouteApresLaCase = () => {
     const views = onboardingViews?.views || [];
+    // INSCRIPTION-CODE (19/11) : le rôle vient APRÈS « Qui es-tu ? » et la déclaration ; un compte
+    // qui n'a pas encore de rôle y va, avant la ville.
+    if (views.some((view) => view.canShow && view.route === RouteNames.UserRole)) {
+      return RouteNames.UserRole;
+    }
     if (views.length === 0 || views.some((view) => view.route === RouteNames.UserAddress)) {
       return RouteNames.UserAddress;
     }

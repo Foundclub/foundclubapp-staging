@@ -18201,6 +18201,18 @@ export default {
       title: 'Quels postes ?',
     },
     sport: {
+      // INSCRIPTION-CODE (19/11, V01 + V02) : le premier écran de l'inscription.
+      premierEcran: {
+        pasDansLaListe: 'Je ne trouve pas mon activité',
+        populaires: 'Les plus choisis',
+        porte: 'Tu représentes une mairie ou un complexe ?',
+        porteMairie: 'Tu représentes une mairie ?',
+        recherche: 'Rechercher : football, judo, yoga…',
+        sousTitre: 'Ton sport ou ton activité.',
+        sousTitrePlusieurs: 'Ton sport ou ton activité. Tu peux en choisir jusqu’à 3.',
+        titre: 'Que pratiques-tu ?',
+        toutes: 'Toutes les activités, de A à Z',
+      },
       subtitle: 'Choisis ton sport de préférence',
       title: 'Quel est ton sport ?',
     },
@@ -29149,6 +29161,11 @@ export default {
     loading: {
       description: 'Nous récupérons ton profil avant de choisir ton rôle.',
       title: 'Chargement du profil',
+    },
+    // INSCRIPTION-CODE (19/11, V05) : les rôles d'adulte fermés avant 18 ans.
+    mineur: {
+      aPartirDe18: 'À partir de 18 ans',
+      explication: 'Certains rôles sont réservés aux 18 ans et plus.',
     },
     rolesError: {
       message: 'Impossible de charger les rôles.',
