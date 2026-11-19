@@ -13922,6 +13922,8 @@ export default {
       parJoueur: 'per player',
       plusTard: 'Later',
     },
+    formulaireBillet:
+      'With an « open_event » main action, the pop-up shows as a ticket: date, time, venue and price read from the event; « Eyebrow » as the small line, the title in large, the image on top.',
     invitation: {
       invite: 'invites you to their team',
       payer: 'Pay for my spot ({{prix}})',
@@ -13937,8 +13939,6 @@ export default {
       valideeDes_other: 'The team is confirmed once {{count}} players have paid.',
       voirEquipe: 'See the team',
     },
-    formulaireBillet:
-      'With an « open_event » main action, the pop-up shows as a ticket: date, time, venue and price read from the event; « Eyebrow » as the small line, the title in large, the image on top.',
     rechercheEffacer: 'Clear search',
   },
   implFiche: {
@@ -27799,7 +27799,6 @@ export default {
       stay: 'Keep my team',
       teamButton: 'Withdraw my team',
       teamHow: 'FoundClub Support withdraws the team and handles the refunds of the paid spots.',
-      // eslint-disable-next-line max-len
       teamRule: 'Until {{refundDate}} included, each paid spot is fully refunded. After that, no refund, but each player can hand over their spot until {{cessionDate}}.',
       teamRuleGeneric: 'Refunds of the spots follow the registration terms.',
       teamTitle: 'Withdraw your team?',

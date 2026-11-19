@@ -14781,6 +14781,8 @@ export default {
       parJoueur: 'par joueur',
       plusTard: 'Plus tard',
     },
+    formulaireBillet:
+      'Avec une action principale « open_event », la pop-up s’affiche en billet : date, heure, lieu et prix lus sur l’événement ; « Eyebrow » en petite ligne, le titre en grand, l’image en haut.',
     invitation: {
       invite: 't’invite dans son équipe',
       payer: 'Payer ma place ({{prix}})',
@@ -14796,8 +14798,6 @@ export default {
       valideeDes_other: 'L’équipe est validée dès {{count}} joueurs payés.',
       voirEquipe: 'Voir l’équipe',
     },
-    formulaireBillet:
-      'Avec une action principale « open_event », la pop-up s’affiche en billet : date, heure, lieu et prix lus sur l’événement ; « Eyebrow » en petite ligne, le titre en grand, l’image en haut.',
     rechercheEffacer: 'Effacer la recherche',
   },
   implFiche: {

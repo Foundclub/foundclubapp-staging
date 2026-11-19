@@ -34,7 +34,8 @@ jest.mock('react-native-reanimated', () => (
 
 // LA COUTURE : GiftedChat ne dessine rien, on lit les props qu'il reçoit à chaque rendu.
 // Le `Composer` est la RÉPLIQUE de lib/Composer.js (2.8.1, non compilé par jest) : même ordre
-// des styles — `textInputStyle`, PUIS `{ height: composerHeight }` — et `textInputProps` en dernier.
+// des styles — `textInputStyle`, PUIS `{ height: composerHeight }` — et `textInputProps` en
+// dernier.
 jest.mock('react-native-gifted-chat', () => {
   const { createElement } = jest.requireActual('react');
   const { TextInput: ChampRN, View: VueRN } = jest.requireActual('react-native');
@@ -46,7 +47,11 @@ jest.mock('react-native-gifted-chat', () => {
     }) => createElement(ChampRN, {
       multiline,
       onChangeText: onTextChanged,
-      style: [{ fontSize: 16, lineHeight: 22, marginLeft: 10 }, textInputStyle, { height: composerHeight }],
+      style: [
+        { fontSize: 16, lineHeight: 22, marginLeft: 10 },
+        textInputStyle,
+        { height: composerHeight },
+      ],
       value: text,
       ...textInputProps,
     }),
@@ -338,7 +343,7 @@ const champ = (hauteurDeGiftedChat, texte) => {
   return { props: entree.props, style: StyleSheet.flatten(entree.props.style) };
 };
 
-describe('CHAT-SAISIE — le champ des conversations grandit avec le texte, jusqu\'à 5 lignes', () => {
+describe('CHAT-SAISIE — le champ des conversations grandit avec le texte, jusqu’à 5 lignes', () => {
   beforeEach(() => {
     jouerLeTelephone('ios', '18.0', { bottom: 34, top: 47 });
   });
@@ -366,7 +371,8 @@ describe('CHAT-SAISIE — le champ des conversations grandit avec le texte, jusq
   it('S3 — au-delà de 5 lignes, le champ défile en lui-même', () => {
     monterConversation();
 
-    const { props, style } = champ(200, Array.from({ length: 8 }, (_v, i) => `ligne ${i}`).join('\n'));
+    const huitLignes = Array.from({ length: 8 }, (_v, i) => `ligne ${i}`).join('\n');
+    const { props, style } = champ(200, huitLignes);
 
     expect(props.multiline).toBe(true);
     expect(props.scrollEnabled).not.toBe(false);

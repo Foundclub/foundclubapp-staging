@@ -19,7 +19,8 @@ import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
  * la ou on vend) + lien « Restaurer mes achats » (restauration RevenueCat +
  * invalidation du contexte).
  * @param {object} props
- * @param {boolean} [props.pricesNotice] - Affiche « TVA non applicable, art. 293 B du CGI. Renouvellement automatique… »
+ * @param {boolean} [props.pricesNotice] - Affiche « TVA non applicable, art. 293 B du CGI.
+ *   Renouvellement automatique… »
  *   (defaut true). Faux sous une offre qui ne se renouvelle pas (offerte, posee
  *   a la main) : la phrase y serait fausse (recette du 29/09, tournee 4).
  * @param {boolean} [props.restore] - Affiche le lien de restauration (defaut true) ;

@@ -124,7 +124,10 @@ describe('LegalFooter — ce qu il faisait deja (caracterisation)', () => {
       .flatMap((/** @type {any} */ node) => collectTexts(node.props.children));
 
     // IMPL-6 (18/11, D261) : franchise en base de TVA, plus de « Prix TTC ».
-    expect(texts).toContain('TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment.');
+    expect(texts).toContain(
+      'TVA non applicable, art. 293 B du CGI. '
+      + 'Renouvellement automatique, résiliable à tout moment.',
+    );
     expect(texts.join(' ')).not.toContain('TTC');
   });
 
