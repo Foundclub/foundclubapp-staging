@@ -195,14 +195,17 @@ describe('RÔLES — écran 3 : le mode joueur d\'un dirigeant qui joue', () => 
 // tournoi ne montre la jauge « x / 24 équipes » qu'à l'organisateur (`canManageEvent`). Un visiteur
 // sans compte, ou un joueur, n'est jamais organisateur : il lit « 24 équipes attendues ».
 describe('M1323 — canManageEvent d un tournoi', () => {
-  const TOURNOI = { club: { documentId: 'club-1' }, organizer: { documentId: 'dir-1' }, type: { name: 'Tournoi' } };
+  const TOURNOI = {
+    club: { documentId: 'club-1' }, organizer: { documentId: 'dir-1' }, type: { name: 'Tournoi' },
+  };
 
   test('visiteur sans compte : faux', () => {
     expect(lire(null).canManageEvent(TOURNOI)).toBe(false);
   });
 
   test('joueur sans rôle de dirigeant : faux', () => {
-    expect(lire({ documentId: 'j-1', role: { name: 'Joueur' } }).canManageEvent(TOURNOI)).toBe(false);
+    const joueur = lire({ documentId: 'j-1', role: { name: 'Joueur' } });
+    expect(joueur.canManageEvent(TOURNOI)).toBe(false);
   });
 
   test('l organisateur du tournoi (dirigeant) : vrai', () => {

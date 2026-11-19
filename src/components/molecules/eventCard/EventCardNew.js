@@ -34,12 +34,12 @@ import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
 import FacilityClosureCardTag from '@/components/molecules/facilityClosure/FacilityClosureCardTag';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
+import { getTournamentShortPlace } from '@/views/event/tournamentJoinRules';
 import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
   getTournamentTeamsLine,
 } from '@/views/event/tournamentTeamsCount';
-import { getTournamentShortPlace } from '@/views/event/tournamentJoinRules';
 import { getTournamentCategoryLabel } from '@/views/event/tournamentUtils';
 
 import {

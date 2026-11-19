@@ -67,9 +67,9 @@ const monter = (/** @type {any} */ props) => {
 };
 
 describe('T-PAGES-4b — le bandeau du tournoi au téléphone (maquette b)', () => {
-  // IMPL-1-FICHE (18/11, écran 6b) : « Organisé par … · lieu court » ; TOURNOI, l'état, « Dès 16 ans »
-  // (« Mixte » et l'activité passent dans le format de « L'essentiel »).
-  test('🔴 titre, « Organisé par AR Soccer · Montpellier », puis les 3 étiquettes de la maquette', () => {
+  // IMPL-1-FICHE (18/11, écran 6b) : « Organisé par … · lieu court » ; TOURNOI, l'état,
+  // « Dès 16 ans » (« Mixte » et l'activité passent dans le format de « L'essentiel »).
+  test('🔴 titre, « Organisé par AR Soccer · Montpellier », puis les 3 étiquettes', () => {
     const statusLabel = 'Ton équipe est inscrite';
     const { etiquettes, tous } = monter({ tournamentHero: { statusLabel } });
     expect(tous.slice(0, 2))

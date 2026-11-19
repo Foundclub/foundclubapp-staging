@@ -216,11 +216,11 @@ import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentEssentials, { getTournamentEssentials } from './components/TournamentEssentials';
 import { TournamentBeforeSignUpCard, TournamentHowItWorksCard } from './components/TournamentFicheBlocks';
 import TournamentFicheMyTeamCard from './components/TournamentFicheMyTeamCard';
-import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import { withTournamentTeamsLine } from './components/TournamentFicheWeb';
 import TournamentJoinTeamPanel from './components/TournamentJoinTeamPanel';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
+import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import {
   isPaidTournament, openTournamentTerms, tournamentPaidThreshold,
 } from './components/tournamentTerms';
@@ -7434,8 +7434,9 @@ function EventDetails({ navigation, route }) {
     const lieu = getEventLocationText(event);
     return (
       <TournamentEssentials
-        // IMPL-1-FICHE (18/11, écran 6b) : une carte, une ligne par info ; l'activité et la section
-        // (« Foot à 5, Mixte ») ouvrent la ligne du format (elles quittent les pastilles du bandeau).
+        // IMPL-1-FICHE (18/11, écran 6b) : une carte, une ligne par info ; l'activité et la
+        // section (« Foot à 5, Mixte ») ouvrent la ligne du format (elles quittent les pastilles
+        // du bandeau).
         actions={lieu ? {
           place: (
             <OuvrirDansLeGps
@@ -8113,7 +8114,9 @@ function EventDetails({ navigation, route }) {
             event={event}
             onCreate={(() => {
               if (visiteurPeutCreerSonEquipe) return ouvrirLaConnexionDuTournoi;
-              if (canCreateCustomTournamentTeam) return () => setIsTournamentCreateModalVisible(true);
+              if (canCreateCustomTournamentTeam) {
+                return () => setIsTournamentCreateModalVisible(true);
+              }
               return null;
             })()}
             onOpenTeamPage={handleOpenTournamentTeam}
@@ -8815,8 +8818,9 @@ function EventDetails({ navigation, route }) {
               ⛔ Ni `ScreenContainer` ni `Tag` ne bougent : ils sont partages, le
               defaut ne l est pas. Et surtout PAS de plafond de largeur ici, qui
               tronquerait « SEANCE D ESSAI ». */}
-          {/* IMPL-1-FICHE (18/11, écran 6b) : sur la fiche d'un tournoi, TOURNOI passe dans les
-              pastilles du bandeau (EventHeader) ; la pastille de type ne le redit pas au-dessus. */}
+          {/* IMPL-1-FICHE (18/11, écran 6b) : sur la fiche d'un tournoi, TOURNOI passe dans
+              les pastilles du bandeau (EventHeader) ; la pastille de type ne le redit pas
+              au-dessus. */}
           {bandeauDuTournoi ? null : (
             <View
               style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}

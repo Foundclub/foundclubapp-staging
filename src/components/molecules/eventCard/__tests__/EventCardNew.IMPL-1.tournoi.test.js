@@ -126,9 +126,6 @@ const TOURNOI = (/** @type {any} */ autres = {}) => ({
   ...autres,
 });
 
-const fois = (/** @type {string} */ texte, /** @type {string} */ extrait) => texte
-  .split(extrait).length - 1;
-
 // IMPL-1-FICHE (18/11/2026, pack T-DESIGN-TOURNOI, écrans 6a et 7a, option A retenue par Adel
 // « 6- A ») — la carte d'un tournoi dans les listes (Événements, Rechercher) :
 //   · le lieu dit « AR Soccer · Montpellier » (le complexe et la ville), jamais le terrain
@@ -162,7 +159,7 @@ describe('IMPL-1 · 6a / 7a — la carte d un tournoi', () => {
     const [bouton] = parTestID(tree, 'event-card-see-tournament');
     expect(bouton).toBeDefined();
     expect(textsOf(tree)).toContain('Voir le tournoi');
-    act(() => { bouton.props.onClick ? bouton.props.onClick() : bouton.props.onPress?.(); });
+    act(() => { (bouton.props.onClick || bouton.props.onPress)(); });
     expect(ouvrir).toHaveBeenCalledTimes(1);
   });
 

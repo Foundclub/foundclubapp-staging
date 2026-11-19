@@ -292,6 +292,6 @@ export const getTournamentTeamPublicPlayers = (team) => (
  */
 export const getTournamentTeamCaptainShort = (team) => String(team?.captainDisplayName || '').trim()
   || prenomEtInitiale(
-  team?.captainUser?.firstname || team?.captainUser?.firstName,
-  team?.captainUser?.lastname || team?.captainUser?.lastName || team?.captainUser?.lastInitial,
-);
+    team?.captainUser?.firstname || team?.captainUser?.firstName,
+    team?.captainUser?.lastname || team?.captainUser?.lastName || team?.captainUser?.lastInitial,
+  );

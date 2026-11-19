@@ -1506,10 +1506,10 @@ describe('IMPL-1 · 8 — l onglet Équipes de la maquette', () => {
 // mon équipe » ni de « Rejoindre une équipe » pour un joueur sans équipe ; qui a une équipe garde
 // « Voir mon équipe » et ses gestes.
 describe('IMPL-1 × IMPL-3 — inscriptions fermées', () => {
-  const fermer = (/** @type {any} */ lecteur) => {
-    lecteur.event.tournamentConfig = { ...lecteur.event.tournamentConfig, registrationsClosed: true };
-    return lecteur;
-  };
+  const fermer = (/** @type {any} */ lecteur) => ({
+    ...lecteur,
+    event: { ...lecteur.event, tournamentConfig: { ...lecteur.event.tournamentConfig, registrationsClosed: true } },
+  });
 
   test('🔴 sans équipe : « Inscriptions fermées » (jaune), ni inscription ni « Rejoindre », pas de « Créer mon équipe » en bas', () => {
     mockTeamQuery.data = null;

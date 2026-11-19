@@ -2451,8 +2451,11 @@ function EventDetails({ navigation, route }) {
   // IMPL-1-FICHE (8a) : « Créer mon équipe » de l'onglet, le même geste que la carte « Ton
   // inscription ».
   let creerDepuisLOnglet = null;
-  if (isSignedIn && canCreateCustomTournamentTeam) creerDepuisLOnglet = handleCreateTournamentTeam;
-  else if (!isSignedIn && inscrireMonEquipeVisiteur) creerDepuisLOnglet = ouvrirLInscriptionDuTournoi;
+  if (isSignedIn && canCreateCustomTournamentTeam) {
+    creerDepuisLOnglet = handleCreateTournamentTeam;
+  } else if (!isSignedIn && inscrireMonEquipeVisiteur) {
+    creerDepuisLOnglet = ouvrirLInscriptionDuTournoi;
+  }
   const blocDuTournoi = isTournamentEvent ? (
     <div
       data-event-section="tournament"
@@ -2721,8 +2724,8 @@ function EventDetails({ navigation, route }) {
           {erreurEquipeTournoi}
         </div>
       ) : null}
-      {/* IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8, écrans 8a à 8e) : le joueur lit l'onglet
-          Équipes de la maquette, le même qu'au téléphone (seuil, cartes qui s'ouvrent, « Cherche N
+      {/* IMPL-1-FICHE (18/11, pack T-DESIGN-TOURNOI, page 8, écrans 8a à 8e) : le joueur lit
+          l'onglet Équipes de la maquette, le même qu'au téléphone (seuil, cartes qui s'ouvrent, « Cherche N
           joueurs », « Demander à rejoindre », aperçu sans le paiement de chacun). */}
       {vueJoueurDuTournoi ? (
         <TournamentTeamsPublic
@@ -3249,7 +3252,10 @@ function EventDetails({ navigation, route }) {
                           pour un membre connecté. */}
                       {!isSignedIn ? (
                         <span style={{
-                          color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
+                          color: accentColor,
+                          fontSize: 13,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
                         }}
                         >
                           {event?.type?.name || t('eventDetails.eventFallback', 'Événement')}
@@ -3265,14 +3271,23 @@ function EventDetails({ navigation, route }) {
                       >
                         {headerTitle}
                       </h1>
-                      {/* T-PAGES-3 : « Organisé par » (maquette (a)) remplace la ligne des Infos rapides. */}
+                      {/* T-PAGES-3 : « Organisé par » (maquette (a)) remplace la ligne des Infos
+                          rapides. */}
                       {vueJoueurDuTournoi && quickInfoOrganizerName ? (
-                        <span data-testid="event-tournament-organizer" style={{ color: softTextColor, fontSize: 15 }}>
-                          {t('tournamentFicheWeb.organizedBy', { name: quickInfoOrganizerName, ...SANS_ECHAPPEMENT })}
+                        <span
+                          data-testid="event-tournament-organizer"
+                          style={{ color: softTextColor, fontSize: 15 }}
+                        >
+                          {t('tournamentFicheWeb.organizedBy', {
+                            name: quickInfoOrganizerName, ...SANS_ECHAPPEMENT,
+                          })}
                         </span>
                       ) : null}
                       {etiquettesDuTournoi.length ? (
-                        <div data-testid="event-tournament-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        <div
+                          data-testid="event-tournament-tags"
+                          style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+                        >
                           {etiquettesDuTournoi.map((etiquette) => (
                             <span
                               key={etiquette.texte}
@@ -3311,8 +3326,8 @@ function EventDetails({ navigation, route }) {
                   )}
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                    {/* IMPL-1-FICHE (6b) : « Terrain A » n'est plus montré au joueur (l'organisateur le
-                        garde) ; le lieu réel est dans le bandeau et « L'essentiel ». */}
+                    {/* IMPL-1-FICHE (6b) : « Terrain A » n'est plus montré au joueur
+                        (l'organisateur le garde) ; le lieu réel est dans le bandeau et « L'essentiel ». */}
                     {event?.facility?.name && !vueJoueurDuTournoi ? (
                       <span style={{
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
