@@ -22,6 +22,7 @@ import {
   withConvocationResponses,
 } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import { libelleOrganisateur } from '@/domains/event/organisateurEvenement';
 import {
   getCurrentUserEventParticipationState,
   isPendingParticipationRequest,
@@ -1157,6 +1158,8 @@ function EventDetails({ navigation, route }) {
   const headerClubName = String(event?.team?.club?.name || event?.club?.name || '').trim();
   // T-FICHE (14/11) — « Infos rapides » : sans équipe, le club de l'événement est l'organisateur.
   const quickInfoOrganizerName = event?.team ? '' : String(event?.club?.name || '').trim();
+  // ORGANISATEUR-VISIBLE (19/11) : la personne qui propose l'événement, en « Prénom N. ».
+  const quickInfoProposedBy = libelleOrganisateur(event);
   const headerTitle = isMatchEvent && headerClubName && matchOpponentName
     ? `${headerClubName} — ${matchOpponentName}`
     // T-FINITIONS2 (16/11, M1295) : le nom donné (T-NOM) d'abord, comme le fil d'Ariane.
@@ -4452,6 +4455,10 @@ function EventDetails({ navigation, route }) {
                       ...(quickInfoOrganizerName ? [{
                         label: t('eventDetails.organizer', 'Organisateur'),
                         value: quickInfoOrganizerName,
+                      }] : []),
+                      ...(quickInfoProposedBy ? [{
+                        label: t('eventDetails.proposedBy', 'Proposé par'),
+                        value: quickInfoProposedBy,
                       }] : []),
                       // T-FICHE-2 (14/11) : la section est celle de l'équipe ;
                       // sans équipe, ligne masquée.

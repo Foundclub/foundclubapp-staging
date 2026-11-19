@@ -19,6 +19,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { isClubAudienceEvent } from '@/domains/event/clubAudience';
 import { estDuClubOrganisateur, resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import { libelleOrganisateur } from '@/domains/event/organisateurEvenement';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import useEvent from '@/domains/event/useEvent';
@@ -594,6 +595,8 @@ function EventCardNew({
     // tournoi à âge minimum.
     getTournamentCategoryLabel(item, getDisplayLabel(item?.tournamentCategory)),
   ].filter(Boolean).join(' • ');
+  // ORGANISATEUR-VISIBLE (19/11) : la personne qui propose l'événement, en « Prénom N. ».
+  const proposedByLabel = libelleOrganisateur(item);
   const teamName = item?.team?.name
     || (isTournamentEvent && item?.tournamentScopeMode === 'autonomous' ? 'Tournoi autonome' : '');
   const matchDisplay = isMatchEvent
@@ -1006,6 +1009,17 @@ function EventCardNew({
                   Montpellier » est coupé) ; le sport est déjà dans la ligne sous le titre. */}
               {isTournamentEvent ? null : renderMetaCell(Images.running, sportName)}
             </View>
+            {proposedByLabel ? (
+              <Text
+                numberOfLines={1}
+                style={[styles.metaText, { color: Colors.neutral00 }]}
+                testID="event-card-proposed-by"
+              >
+                {t('eventCardNew.proposedBy', 'Proposé par {{name}}', {
+                  name: proposedByLabel, ...SANS_ECHAPPEMENT,
+                })}
+              </Text>
+            ) : null}
           </View>
 
           {/* Badges d'état des réservations (données réelles conservées) */}
