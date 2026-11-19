@@ -430,7 +430,13 @@ function TournamentTeamDetails({ navigation, route }) {
     getApiErrorTranslation(erreur) || erreur?.message || repli
   );
 
+  // IMPL-2C (19/11, émulateur 48 b) : chaque action de la page dit son erreur elle-même ; le filet
+  // global (src/app/queryClient.js, MutationCache) se tait, sinon une 2ᵉ alerte « Accès refusé. »
+  // suivait la première.
+  const SANS_FILET = { preventToastError: true };
+
   const respondMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: (responseStatus) => respondToTournamentTeam(teamId, responseStatus),
     onError: (mutationError) => {
       Alert.alert(t(
@@ -445,6 +451,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const respondInvitationMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: (status) => respondToTournamentInvitation(teamId, status),
     onError: (mutationError) => {
       Alert.alert(t(
@@ -459,6 +466,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const requestJoinMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: ({ acceptRiskDeclaration }) => requestJoinTournamentTeam(teamId, { acceptRiskDeclaration }),
     onError: (mutationError) => {
       // T-REJOINDRE (17/11, fait de recette) : sans phrase du serveur, dire quoi faire.
@@ -475,6 +483,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const removeMemberMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: (memberId) => removeTournamentTeamMember(teamId, memberId),
     onError: (mutationError) => {
       Alert.alert(t(
@@ -489,6 +498,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const transferCaptainMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: (memberId) => transferTournamentTeamCaptain(teamId, memberId),
     onError: (mutationError) => {
       Alert.alert(t(
@@ -503,6 +513,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const inviteMemberMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: (userDocumentId) => inviteTournamentTeamMember(teamId, userDocumentId),
     onError: (mutationError) => {
       Alert.alert(t(
@@ -520,6 +531,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const reviewJoinRequestMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: ({ memberId, status }) => reviewTournamentJoinRequest(teamId, memberId, status),
     onError: (mutationError) => {
       Alert.alert(t(
@@ -534,6 +546,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const toggleOpenRequestsMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: (isOpenToJoinRequests) => toggleTournamentTeamOpenRequests(teamId, isOpenToJoinRequests),
     onError: (mutationError) => {
       // IMPL-2C : refusé (403), le réglage n'est pas « en panne » : il n'est pas ouvert à ce
@@ -554,6 +567,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const leaveTeamMutation = useMutation({
+    meta: SANS_FILET,
     mutationFn: () => leaveTournamentTeam(teamId),
     onError: (mutationError) => {
       Alert.alert(t(
