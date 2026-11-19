@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { contacterDepuisLaConsole } from '@/domains/messaging/assistanceConsole';
 import { libelleDuRole } from '@/domains/messaging/roleDuMembre';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
@@ -21,6 +22,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useDeleteAdminUser, useGetAdminUser, useUpdateAdminUser } from '@/services/admin/adminQueries';
 import { useGetRoles } from '@/services/auth/authQueries';
+import { ouvrirConversationAssistancePour } from '@/services/chat/assistanceService';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -183,15 +185,20 @@ function AdminUserDetail() {
 
     setIsContacting(true);
     try {
-      const chat = await startWhisperChat([targetUserDocumentId]);
-      if (!chat?.documentId) {
+      // D271 (« A2 A ») : face à un mineur, le serveur refuse le tête-à-tête ; on ouvre son fil
+      // d'assistance, signé « Assistance FoundClub ».
+      const ouvert = await contacterDepuisLaConsole(targetUserDocumentId, {
+        ouvrirPour: ouvrirConversationAssistancePour,
+        startWhisperChat,
+      });
+      if (!ouvert) {
         Alert.alert(
           t('adminUserDetail.errorTitle', 'Erreur'),
           t('adminUserDetail.openChatError', "Impossible d'ouvrir la conversation."),
         );
         return;
       }
-      navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      navigation.navigate(RouteNames.Conversation, ouvert);
     } catch (contactError) {
       Alert.alert(
         t('adminUserDetail.errorTitle', 'Erreur'),

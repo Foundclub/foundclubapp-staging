@@ -136,6 +136,7 @@ export const etatDesCoches = (message) => {
  * `NON_EDITABLE_COMPOSITION_TYPES`) et que le telephone (Conversation.js).
  */
 const TYPES_NON_MODIFIABLES = new Set([
+  'club_share',
   'contact_share',
   'event_share',
   'location_share',

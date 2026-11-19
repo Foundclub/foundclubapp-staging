@@ -4444,6 +4444,14 @@ export default {
       createClubFailed: 'Unable to create the club.',
     },
   },
+  clubShareBubble: {
+    fallbackName: 'Club',
+    open: 'View club',
+    title: 'Shared club',
+    unavailableAction: 'Unavailable',
+    unavailableText: 'It has been removed from FoundClub',
+    unavailableTitle: 'This club is no longer available',
+  },
   clubStack: {
     headers: {
       assignToTeam: 'Assign to a team',
@@ -8654,6 +8662,7 @@ export default {
     attachments: {
       camera: 'Camera',
       captionPlaceholder: 'Add a caption',
+      club: 'Club',
       contact: 'Contact',
       createPoll: 'Create a poll',
       document: 'Document',
@@ -9085,6 +9094,7 @@ export default {
       sent: 'Your proposal has been sent!',
     },
     quote: {
+      club: 'Club',
       contact: 'Contact',
       event: 'Event',
       hint: 'Scrolls back to the quoted message',
@@ -9136,6 +9146,14 @@ export default {
     },
     scrollToBottom: 'Scroll to bottom',
     sending: 'Sending...',
+    shareClub: {
+      empty: 'No club found.',
+      error: 'Could not send this club.',
+      hint: 'Type the club name or city (at least 2 letters).',
+      messageText: 'Club: {{name}}',
+      searchPlaceholder: 'Club name or city',
+      title: 'Send a club',
+    },
     shareContact: {
       empty: 'No contact available to share in this chat.',
       send: 'Share',
@@ -16104,6 +16122,8 @@ export default {
     pinnedBadge: 'PINNED',
     preview: {
       attachment: 'Attachment',
+      clubShare: 'Shared club',
+      clubShareNamed: 'Club: {{name}}',
       contactShare: 'Shared contact',
       eventShare: 'Shared event',
       eventShareNamed: 'Event: {{name}}',
