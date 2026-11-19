@@ -973,7 +973,7 @@ function TournamentTeamDetails({ navigation, route }) {
             isLoading={inviteLinkState === 'pending'}
             onPress={() => shareInviteLink()}
             size="sm"
-            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien d’invitation')}
+            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien')}
             variant="Primary"
           />
           <Button
@@ -1074,7 +1074,7 @@ function TournamentTeamDetails({ navigation, route }) {
         onPress={assistance.ouvrir}
         size="sm"
         style={{ alignSelf: 'stretch', maxWidth: '100%' }}
-        title={t('tournamentTeamDetails.withdraw.button', 'Écrire à l’Assistance FoundClub')}
+        title={t('tournamentTeamDetails.withdraw.button', 'Écrire à l’Assistance')}
         variant="SecondaryLight"
       />
       {assistance.erreur ? (
@@ -1178,7 +1178,7 @@ function TournamentTeamDetails({ navigation, route }) {
             onPress={() => shareInviteLink()}
             size="sm"
             style={{ alignSelf: 'stretch' }}
-            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien d’invitation')}
+            title={t('tournamentTeamDetails.todo.shareLink', 'Partager le lien')}
             variant="Secondary"
           />
           <Button

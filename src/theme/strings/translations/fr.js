@@ -27457,7 +27457,8 @@ export default {
     thisTemporaryTeamIsArchived: 'Cette équipe éphémère est archivée. L’effectif reste lisible mais n’est plus modifiable.',
     todo: {
       searchPlayer: 'Chercher un joueur',
-      shareLink: 'Partager le lien d’invitation',
+      // IMPL-2C (19/11) : coupé à 375 px en entier.
+      shareLink: 'Partager le lien',
       title: 'À faire maintenant',
     },
     tournamentCard: {
@@ -27478,7 +27479,8 @@ export default {
     unableToUpdateThisOption: 'Impossible de mettre à jour cette option.',
     unableToUpdateYourAnswer: 'Impossible de mettre à jour ta réponse.',
     withdraw: {
-      button: 'Écrire à l’Assistance FoundClub',
+      // IMPL-2C (19/11) : coupé à 375 px en entier (« Écrire à l’Assistance », planche 10c).
+      button: 'Écrire à l’Assistance',
       error: 'La conversation ne s’est pas ouverte. Réessaie dans un instant.',
       // eslint-disable-next-line max-len
       text: 'Pour te retirer ou céder ta place, écris-nous : l’équipe FoundClub s’en occupe, selon les conditions d’inscription.',

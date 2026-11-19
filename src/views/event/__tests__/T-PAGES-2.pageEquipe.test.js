@@ -439,7 +439,8 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
     expect(contenu).toContain('L’équipe sera validée quand les 5 premières places seront payées.');
     expect(contenu).toContain('À faire maintenant');
     expect(contenu).toContain('Il te faut une autre place payée ?');
-    expect(combien(arbre, ['Partager le lien d’invitation'])).toBe(1);
+    // ATTENDU CHANGÉ PAR IMPL-2C (19/11, recette 48 point A) : « Partager le lien », coupé à 375 px sinon.
+    expect(combien(arbre, ['Partager le lien'])).toBe(1);
   });
 
   // T-SANS-PLAFOND (18/11, Adel D239) : plus de nombre maximum, donc « 2 joueurs », plus « 2 joueurs sur 8 ».
@@ -539,10 +540,12 @@ describe('T-PAGES-2 — joueur qui n’est pas capitaine (R6, R8)', () => {
 
   // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (18/11, planches 9b et 10a) : la phrase « Pour te retirer… »
   // en double du bouton disparaît ; « Écrire à l’Assistance FoundClub » reste et ouvre l'Assistance.
-  test('🔴 9b, 10a : plus de « Pour te retirer ou céder ta place, écris-nous » ; « Écrire à l’Assistance FoundClub » ouvre l’Assistance', async () => {
+  // ATTENDU CHANGÉ PAR IMPL-2C (19/11, recette 48 point A) : « Écrire à l’Assistance » (planche 10c),
+  // « … FoundClub » était coupé à 375 px.
+  test('🔴 9b, 10a : plus de « Pour te retirer ou céder ta place, écris-nous » ; « Écrire à l’Assistance » ouvre l’Assistance', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
     expect(texte(arbre)).not.toContain('Pour te retirer ou céder ta place, écris-nous');
-    await appuyer(arbre, ['Écrire à l’Assistance FoundClub']);
+    await appuyer(arbre, ['Écrire à l’Assistance']);
     expect(mockOuvrirAssistance).toHaveBeenCalled();
   });
 
@@ -867,7 +870,8 @@ describe('IMPL-2-EQUIPE — quitter avec une place payée (10c, 10d)', () => {
     expect(texte(arbre)).toContain('20 € · maillot taille L');
     await appuyer(arbre, ['Quitter l’équipe']);
     expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, tu es remboursé en entier : 20 €, sous 14 jours.');
-    await appuyer(arbre, ['Écrire à l’Assistance']);
+    // IMPL-2C : le bouton de la page porte le même libellé ; on appuie dans la fenêtre.
+    await appuyer(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-paid-leave')[0], ['Écrire à l’Assistance']);
     // M1311 (chef, 19/11) : la conversation s'ouvre avec « je souhaite me retirer » prérempli.
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
       brouillon: expect.stringContaining('je souhaite me retirer de l’équipe'), chatId: 'chat-assistance',
@@ -916,7 +920,8 @@ describe('M1311 — le capitaine retire son équipe par l’Assistance', () => {
     const arbre = await monter(datee(), 'u-cap');
     await appuyer(arbre, ['Retirer mon équipe']);
     expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, chaque place payée est remboursée intégralement. Après, pas de remboursement, mais chaque joueur peut céder sa place jusqu’au 17 décembre.');
-    await appuyer(arbre, ['Écrire à l’Assistance']);
+    // IMPL-2C : le bouton de la page porte le même libellé ; on appuie dans la fenêtre.
+    await appuyer(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-withdraw-team')[0], ['Écrire à l’Assistance']);
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
       brouillon: expect.stringContaining('je souhaite retirer mon équipe'), chatId: 'chat-assistance',
     }));
@@ -975,5 +980,25 @@ describe('IMPL-2C — un refus du serveur sur l’interrupteur se dit en frança
     const arbre = await monter(equipe(), 'u-cap');
     await appuyer(arbre, ['Ouverte aux demandes']);
     expect(derniereAlerte()?.[1]).toBe('Le tournoi est fermé.');
+  });
+});
+
+// IMPL-2C (19/11/2026, recette 48 point A, site à 375 px) — « Partager le lien d’invitati… » et « Écrire à
+// l’Assistance FoundC… » : un bouton tient sur une ligne (Button, ROLES2) et le site ne rétrécit pas la
+// police. Les libellés courts de la planche : « Partager le lien », « Écrire à l’Assistance » (10c).
+describe('IMPL-2C — des libellés de bouton qui tiennent à 375 px', () => {
+  const titres = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.title === 'string' && typeof n.props?.onPress === 'function')
+    .map((/** @type {any} */ n) => n.props.title);
+
+  test('🔴 capitaine d’une équipe non validée : « Partager le lien », plus « … d’invitation »', async () => {
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    expect(titres(arbre)).toContain('Partager le lien');
+    expect(titres(arbre)).not.toContain('Partager le lien d’invitation');
+  });
+
+  test('🔴 joueur : « Écrire à l’Assistance », plus « … FoundClub »', async () => {
+    const arbre = await monter(payante('joueur'), 'u-2');
+    expect(titres(arbre)).toContain('Écrire à l’Assistance');
+    expect(titres(arbre)).not.toContain('Écrire à l’Assistance FoundClub');
   });
 });
