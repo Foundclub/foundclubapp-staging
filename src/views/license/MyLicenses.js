@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
-import SANS_ECHAPPEMENT_PLACE from '@/theme/strings/sansEchappement';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -162,10 +162,10 @@ const placeSubtitleOf = (assignment, personName = '', teamName = '') => {
   const name = String(personName || '').trim();
   const team = String(teamName || '').trim();
   if (name && team) {
-    return i18next.t('myLicenses.place.subtitle', 'Place de {{name}} · équipe {{team}}', { name, team, ...SANS_ECHAPPEMENT_PLACE });
+    return i18next.t('myLicenses.place.subtitle', 'Place de {{name}} · équipe {{team}}', { name, team, ...SANS_ECHAPPEMENT });
   }
-  if (name) return i18next.t('myLicenses.place.subtitleNoTeam', 'Place de {{name}}', { name, ...SANS_ECHAPPEMENT_PLACE });
-  if (team) return i18next.t('myLicenses.place.subtitleTeamOnly', 'Équipe {{team}}', { team, ...SANS_ECHAPPEMENT_PLACE });
+  if (name) return i18next.t('myLicenses.place.subtitleNoTeam', 'Place de {{name}}', { name, ...SANS_ECHAPPEMENT });
+  if (team) return i18next.t('myLicenses.place.subtitleTeamOnly', 'Équipe {{team}}', { team, ...SANS_ECHAPPEMENT });
   return cardSubtitleOf(assignment);
 };
 
