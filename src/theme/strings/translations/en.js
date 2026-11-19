@@ -13923,7 +13923,9 @@ export default {
       plusTard: 'Later',
     },
     formulaireBillet:
-      'With an « open_event » main action, the pop-up shows as a ticket: date, time, venue and price read from the event; « Eyebrow » as the small line, the title in large, the image on top.',
+      'With an « open_event » main action, the pop-up shows as a ticket: '
+      + 'date, time, venue and price read from the event; « Eyebrow » as the small line, '
+      + 'the title in large, the image on top.',
     invitation: {
       invite: 'invites you to their team',
       payer: 'Pay for my spot ({{prix}})',

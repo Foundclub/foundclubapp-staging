@@ -259,7 +259,10 @@ function BilletTournoiModal({
                 {zones.heure ? (
                   <CaseDuBillet
                     nom={t('implAccueil.billet.heure', 'Heure')}
-                    valeur={t('implAccueil.billet.des', 'dès {{heure}}', { heure: zones.heure })}
+                    valeur={t('implAccueil.billet.des', 'dès {{heure}}', {
+                      heure: zones.heure,
+                      interpolation: { escapeValue: false },
+                    })}
                   />
                 ) : null}
               </View>
@@ -337,7 +340,9 @@ const styles = StyleSheet.create({
   carte: {
     borderRadius: 24,
     borderWidth: 1,
-    maxHeight: '92%',
+    // ponytail: carte centrée dans une fenêtre translucide ; 80 % laisse ≥ 64 dp
+    // sous la carte sur 640 dp, au-dessus de la barre d'Android (48 dp). Sortie : insets.
+    maxHeight: '80%',
     maxWidth: 420,
     overflow: 'hidden',
     width: '100%',

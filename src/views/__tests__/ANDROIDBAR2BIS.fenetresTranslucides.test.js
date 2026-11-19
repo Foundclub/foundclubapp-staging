@@ -46,6 +46,9 @@ import { setItem } from '@/platform/storage';
 // 📐 COLL-R-A7 (13/10, COL-005) — 14ᵉ, triée : le tunnel « Attribuer un créneau » en plein écran
 // (`FenetrePleinEcran` de SeasonSlotForm). Son bas est celui du gabarit des tunnels
 // (WizardStepLayout, `insets.bottom + 12`, D53) : RÉSERVE la barre, mesuré ci-dessous.
+// 🎟️ IMPL-4-ACCUEIL (19/11) — 18ᵉ, triée : la pop-up « billet » (BilletTournoiModal), carte
+// centrée comme GlobalPromptModal ; sa hauteur est plafonnée à 80 % (≥ 64 dp libres sous la carte
+// sur 640 dp, au-dessus de la barre de 48 dp). Sans objet, comme GlobalPromptModal.
 
 let mockInsets = {
   bottom: 48, left: 0, right: 0, top: 24,
@@ -387,6 +390,7 @@ describe('ANDROIDBAR-2BIS — les fenêtres translucides réservent la barre d�
       'components/organisms/feuilleDAdresse/FeuilleDAdresse.js ×1',
       'components/organisms/notifications/PreDemandeNotifications.js ×1',
       'components/organisms/notifications/SmartNotificationHost.js ×1',
+      'components/organisms/popup/BilletTournoiModal.js ×1',
       'components/organisms/popup/GlobalPromptModal.js ×1',
       'components/organisms/seasonSlot/SeasonSlotForm.js ×1',
       'views/chat/AdminsDuGroupe.js ×1',
