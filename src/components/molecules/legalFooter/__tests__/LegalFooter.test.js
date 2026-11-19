@@ -116,21 +116,44 @@ describe('LegalFooter — la mention de renouvellement ne se dit que si elle est
   });
 });
 
-describe('LegalFooter — ce qu il faisait deja (caracterisation)', () => {
-  it('affiche la mention legale partagee', () => {
-    const tree = render({});
+// TVA-STORES (19/11/2026, décision d'Adel « 23 retire », pilotage/VERIF_TVA_STORES_2026-11-19.md) :
+// dans l'application, c'est Apple ou Google qui vend l'abonnement, TVA comprise ; la mention de
+// franchise de Found Club y est inexacte. Elle ne reste que sur le site (Stripe, Found Club encaisse).
+// Ni « TTC » non plus : aux États-Unis, les prix du store sont hors taxe.
+// Avant : toutes les plateformes affichaient « TVA non applicable, art. 293 B du CGI.
+// Renouvellement automatique, résiliable à tout moment. » (IMPL-6, 18/11, D261).
+describe('TVA-STORES — la mention de TVA ne se dit que là où Found Club encaisse', () => {
+  const plateformeDorigine = Platform.OS;
 
-    const texts = tree.root.findAllByType(Text)
+  afterEach(() => {
+    Platform.OS = plateformeDorigine;
+  });
+
+  it.each(['ios', 'android'])('le téléphone %s : renouvellement seul, sans mention de TVA ni « TTC »', (plateforme) => {
+    Platform.OS = plateforme;
+
+    const texts = render({}).root.findAllByType(Text)
       .flatMap((/** @type {any} */ node) => collectTexts(node.props.children));
 
-    // IMPL-6 (18/11, D261) : franchise en base de TVA, plus de « Prix TTC ».
+    expect(texts).toContain('Renouvellement automatique, résiliable à tout moment.');
+    expect(texts.join(' ')).not.toMatch(/293 B|TVA|TTC/);
+  });
+
+  it('le site garde la mention de franchise (Stripe : Found Club encaisse)', () => {
+    Platform.OS = 'web';
+
+    const texts = render({}).root.findAllByType(Text)
+      .flatMap((/** @type {any} */ node) => collectTexts(node.props.children));
+
     expect(texts).toContain(
       'TVA non applicable, art. 293 B du CGI. '
       + 'Renouvellement automatique, résiliable à tout moment.',
     );
     expect(texts.join(' ')).not.toContain('TTC');
   });
+});
 
+describe('LegalFooter — ce qu il faisait deja (caracterisation)', () => {
   it('restaure les achats et rafraichit le contexte abonnement', async () => {
     const tree = render({});
 

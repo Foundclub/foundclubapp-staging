@@ -13,14 +13,18 @@ import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
 
 /**
  * Mention legale partagee de toute surface d'achat (handoff design) :
- * « TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment. »
- * (IMPL-6, 18/11/2026, D261 : Found Club est en franchise en base de TVA ; avant : « Prix TTC. … »)
+ * · sur le SITE (Stripe, Found Club encaisse) : « TVA non applicable, art. 293 B du CGI.
+ *   Renouvellement automatique, résiliable à tout moment. » (IMPL-6, 18/11/2026, D261 : Found Club
+ *   est en franchise en base de TVA ; avant : « Prix TTC. … ») ;
+ * · dans l'APPLICATION (Apple, Google vendent, TVA comprise) : « Renouvellement automatique,
+ *   résiliable à tout moment. » seul, ni mention de TVA ni « TTC » (TVA-STORES, 19/11/2026,
+ *   « 23 retire » ; avant : la mention de franchise partout).
  * + les liens CGU et confidentialite (B4 / Apple 3.1.2, exiges DANS le binaire
  * la ou on vend) + lien « Restaurer mes achats » (restauration RevenueCat +
  * invalidation du contexte).
  * @param {object} props
- * @param {boolean} [props.pricesNotice] - Affiche « TVA non applicable, art. 293 B du CGI.
- *   Renouvellement automatique… »
+ * @param {boolean} [props.pricesNotice] - Affiche la mention ci-dessus (« Renouvellement
+ *   automatique… », précédée de la franchise de TVA sur le site seulement)
  *   (defaut true). Faux sous une offre qui ne se renouvelle pas (offerte, posee
  *   a la main) : la phrase y serait fausse (recette du 29/09, tournee 4).
  * @param {boolean} [props.restore] - Affiche le lien de restauration (defaut true) ;
@@ -86,10 +90,12 @@ function LegalFooter({ pricesNotice = true, restore = true, style }) {
     <View style={[{ alignItems: 'center' }, style]}>
       {pricesNotice ? (
         <Text style={[Fonts.p4, Fonts.neutral400, Fonts.textCenter]}>
-          {t(
-            'legalFooter.pricesNotice',
-            'TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment.',
-          )}
+          {Platform.OS === 'web'
+            ? t(
+              'legalFooter.pricesNotice',
+              'TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment.',
+            )
+            : t('legalFooter.renewalNotice', 'Renouvellement automatique, résiliable à tout moment.')}
         </Text>
       ) : null}
       <View
