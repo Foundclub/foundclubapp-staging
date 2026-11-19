@@ -511,6 +511,34 @@ test('🔴 T-PAGES-3 (1b) capitaine dont la place est due — « Payer ma place 
   }
 });
 
+// IMPL-1C (19/11/2026, recette 48, écart 3 ; planche 9d « la phrase de remplacement vaut pour ces
+// endroits-là aussi ») — la carte « Mon équipe » de la fiche dit la phrase de la page d'équipe
+// (getUnpaidSentence, IMPL-2), plus jamais « Il manque 4 joueurs et 4 paiements ».
+test('🔴 IMPL-1C (écart 3) — la carte « Mon équipe » dit la phrase de la page d équipe', () => {
+  mockEquipeLue.data = {
+    documentId: 'equipe-lecteur',
+    event: { tournamentConfig: { ...CONFIG, entryFeeCents: 2000, paidMembersToValidate: 5 } },
+    members: [{ documentId: 'm1', responseStatus: 'present', user: { documentId: 'joueur-1', firstname: 'Hugo' } }],
+    name: 'Recette Site 333',
+    payment: {
+      entryFeeCents: 2000,
+      members: [{
+        isSelf: true, memberDocumentId: 'm1', paymentUrl: 'https://pay.example/m1', status: 'due',
+      }],
+      paidCount: 0,
+      paidMembersToValidate: 5,
+    },
+    status: 'pending',
+  };
+  try {
+    const carte = unSeul(monter(fiche([CAPITAINE_EQUIPE]), SEUL_18_ANS), 'tournament-my-team-card');
+    expect(texte(carte)).toContain('1 joueur n’a pas encore payé sa place : toi. 4 places sont encore libres.');
+    expect(texte(carte)).not.toMatch(/Il manque|paiements/);
+  } finally {
+    mockEquipeLue.data = null;
+  }
+});
+
 test('🔴 T-PAGES-3 (1c) compte trop jeune — « Ce tournoi est ouvert à partir de 16 ans », aucun bouton dans la carte', () => {
   const carte = unSeul(monter(fiche(), TROP_JEUNE), 'tournament-sign-up-card');
   expect(texte(carte)).toContain('Ce tournoi est ouvert à partir de 16 ans');
