@@ -312,3 +312,41 @@ describe('CORR-INSCRIPTION p18 — la carte lit le « oui » tout de suite', () 
       .toBeLessThan(navigation.navigate.mock.invocationCallOrder[0]);
   });
 });
+
+// INSCRIPTION-CODE (d) (19/11, insc_13 + reco de v2_07 « ok ») : coché d'avance pour un adulte,
+// rien avant 18 ans ; « Passer » enregistre ce qui est coché.
+describe('INSCRIPTION-CODE — « Oui, ouvert » coché d avance pour un adulte', () => {
+  const ilYA = (/** @type {number} */ ans) => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - ans);
+    return date.toISOString().slice(0, 10);
+  };
+  const passer = (/** @type {any} */ tree) => tree.root.findAllByType(TouchableOpacity)
+    .filter((/** @type {any} */ n) => n.findAllByType(Text)
+      .some((/** @type {any} */ x) => x.props.children === 'Passer cette étape'))[0];
+  const cochee = (/** @type {any} */ tree) => pilules(tree)
+    .filter((/** @type {any} */ n) => n.props.accessibilityState?.checked)
+    .map((/** @type {any} */ n) => n.findAllByType(Text)[0].props.children);
+
+  it('adulte : « Oui, ouvert » est coché ; « Passer » l enregistre', async () => {
+    mockUserData.current = { birthdate: ilYA(30), documentId: 'user-1' };
+    const { tree } = rendre();
+    expect(cochee(tree)).toEqual(['Oui, ouvert']);
+    await act(async () => { passer(tree).props.onPress(); });
+    expect(mockUpdateMe).toHaveBeenCalledWith({ isLookingForClub: true });
+  });
+
+  it('mineur de 14 ans : rien de coché ; « Passer » n enregistre rien', async () => {
+    mockUserData.current = { birthdate: ilYA(14), documentId: 'user-1' };
+    const { tree } = rendre();
+    expect(cochee(tree)).toEqual([]);
+    await act(async () => { passer(tree).props.onPress(); });
+    expect(mockUpdateMe).not.toHaveBeenCalled();
+  });
+
+  it('une réponse déjà donnée l emporte (« Pas pour l instant »)', () => {
+    mockUserData.current = { birthdate: ilYA(30), documentId: 'user-1', isLookingForClub: false };
+    const { tree } = rendre();
+    expect(cochee(tree)).toEqual(['Pas pour l\'instant']);
+  });
+});

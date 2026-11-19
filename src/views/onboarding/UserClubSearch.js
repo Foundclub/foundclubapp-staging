@@ -20,6 +20,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
 
+import { isBirthdateUnderAge } from '@/constants/parentalDeclaration';
+
 // D56 — les deux pilules du pack, dans l'ordre de la maquette. La copy vit
 // dans `fr.js` ; le repli garde l'ecran lisible si la cle disparait.
 // CARTECODE-PARCOURS : l'etape s'appelle « Ouvert au recrutement ? » (elle ecrit
@@ -104,11 +106,17 @@ function UserClubSearch({ navigation }) {
     },
   });
 
+  // INSCRIPTION-CODE (d) (19/11, insc_13 « ça doit être ouvert présélectionné », reco de v2_07
+  // « ok ») : « Oui, ouvert » coché d'avance pour un ADULTE ; rien de coché avant 18 ans (un mineur
+  // ne devient pas visible des clubs sans l'avoir choisi). Une réponse déjà donnée l'emporte.
+  const estAdulte = Boolean(userData?.birthdate) && !isBirthdateUnderAge(userData?.birthdate, 18);
   useEffect(() => {
     if (typeof userData?.isLookingForClub === 'boolean') {
       setIsLooking(userData.isLookingForClub);
+    } else if (estAdulte) {
+      setIsLooking((avant) => (avant === null ? true : avant));
     }
-  }, [userData?.isLookingForClub]);
+  }, [estAdulte, userData?.isLookingForClub]);
 
   if (userDataLoading) {
     return (
@@ -145,7 +153,11 @@ function UserClubSearch({ navigation }) {
     }
   };
 
-  const handleSkip = continuerLeTunnel;
+  // INSCRIPTION-CODE (d) (reco de v2_07) : « Passer » enregistre ce qui est coché ; sinon « coché
+  // d'avance » ne voudrait rien dire. Rien de coché (un mineur) : comme avant, rien n'est enregistré.
+  const handleSkip = () => (isLooking !== null && userData
+    ? updateUserMutation.mutate({ isLookingForClub: isLooking })
+    : continuerLeTunnel());
 
   return (
     <FormScreenContainer
