@@ -240,12 +240,20 @@ describe('HistoryWizardSingle — retirer le club retenu (D40 marche 1)', () => 
   });
 });
 
+const allerAuTroisEtValider = async (tree) => {
+  await act(async () => { pressableParTexte(tree, 'Continuer').props.onPress(); });
+  await act(async () => { pressableParTexte(tree, 'Continuer').props.onPress(); });
+  await act(async () => { pressableParTexte(tree, 'Ajouter à mon parcours').props.onPress(); });
+};
+
 describe('HistoryWizardSingle — apres un ajout, la feuille se REFERME (D40 marche 3)', () => {
   it('sans route de retour annoncee, on referme sur ce qu il y avait dessous', async () => {
     mockState.current = { ...etatVierge(), club: CLUB };
     const { navigation, tree } = rendre();
 
-    await act(async () => { pressableParTexte(tree, 'Valider').props.onPress(); });
+    // INSCRIPTION-CODE-2 (19/11) — Avant : « Valider » sur l'écran unique. L'ajout se fait en 3
+    // écrans (H1-H3) : « Continuer », « Continuer », puis « Ajouter à mon parcours ».
+    await allerAuTroisEtValider(tree);
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
     // C'ETAIT LE DEFAUT : `navigation.reset()` ECRASAIT la pile pour expedier
@@ -258,7 +266,8 @@ describe('HistoryWizardSingle — apres un ajout, la feuille se REFERME (D40 mar
     mockState.current = { ...etatVierge(), club: CLUB, returnRoute: 'UserSportHistory' };
     const { navigation, tree } = rendre();
 
-    await act(async () => { pressableParTexte(tree, 'Valider').props.onPress(); });
+    // Avant : « Valider » sur l'écran unique (voir plus haut).
+    await allerAuTroisEtValider(tree);
 
     expect(navigation.navigate).toHaveBeenCalledWith('UserSportHistory');
     expect(navigation.reset).not.toHaveBeenCalled();

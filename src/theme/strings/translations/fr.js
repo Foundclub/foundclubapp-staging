@@ -14355,6 +14355,22 @@ export default {
       save: "Impossible d'enregistrer cette expérience pour le moment.",
       saveTitle: 'Erreur',
     },
+    // INSCRIPTION-CODE-2 (19/11/2026) — l'ajout d'une expérience en 3 écrans (planche V2, H1-H3).
+    etapes: {
+      a: 'à',
+      ajouter: 'Ajouter à mon parcours',
+      arrivee: 'Arrivée',
+      aujourdhui: 'aujourd’hui',
+      categorie: 'Ta catégorie là-bas',
+      clubSousTitre: 'Un club où tu as joué. Tu ajouteras les autres ensuite.',
+      clubTitre: 'Dans quel club ?',
+      declaration: 'Je déclare que ces informations sont exactes. Elles peuvent être vérifiées.',
+      depart: 'Départ',
+      niveau: 'Ton meilleur niveau là-bas',
+      niveauTitre: 'À quel niveau ?',
+      periodeTitre: 'De quand à quand ?',
+      toujours: 'J’y suis toujours',
+    },
     filters: {
       apply: 'Appliquer',
       clear: 'Effacer',
@@ -18271,6 +18287,8 @@ export default {
       visibleLabel: 'Oui, ouvert',
     },
     history: {
+      // INSCRIPTION-CODE-2 (19/11, planche V2 H4) : ce que ça rapporte, dit en clair.
+      sousTitreCarte: 'Les clubs où tu as joué. Un club de plus, et ta carte gagne en rareté.',
       subtitle: 'Raconte-nous brièvement tes expériences passées (Clubs, niveaux, postes...)',
       title: 'Ton parcours sportif',
     },

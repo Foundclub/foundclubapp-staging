@@ -122,7 +122,12 @@ function UserSportHistory({ navigation }) {
             {t('onboarding.history.title', 'Ton parcours sportif')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('onboarding.history.subtitle', 'Raconte-nous brièvement tes expériences passées (Clubs, niveaux, postes...)')}
+            {/* INSCRIPTION-CODE-2 (planche V2 H4). Avant : « Raconte-nous brièvement tes
+                expériences passées (Clubs, niveaux, postes...) » (clé gardée). */}
+            {t(
+              'onboarding.history.sousTitreCarte',
+              'Les clubs où tu as joué. Un club de plus, et ta carte gagne en rareté.',
+            )}
           </Text>
         </View>
 
