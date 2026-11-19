@@ -1051,6 +1051,7 @@ function TournamentTeamDetails({ navigation, route }) {
           </View>
           <Switch
             accessibilityElementsHidden
+            accessibilityLabel={t('implEquipe.recruit.switch')}
             disabled={toggleOpenRequestsMutation.isPending}
             importantForAccessibility="no-hide-descendants"
             onValueChange={toggleRequests}
