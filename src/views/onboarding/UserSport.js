@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { compacterNomDeSport } from '@/domains/activity/cleDeSport';
 import { getOnboardingViews } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
@@ -13,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
@@ -126,8 +128,9 @@ function UserSport({ navigation }) {
   const filteredActivities = useMemo(() => {
     if (!activities) return [];
     if (!searchQuery.trim()) return activities;
-    const query = searchQuery.toLowerCase().trim();
-    return activities.filter((activity) => activity.name?.toLowerCase().includes(query));
+    // INSCRIPTION-PARCOURS (D245) : sans casse NI accents (« speleo » trouve « Spéléologie »).
+    const query = compacterNomDeSport(searchQuery);
+    return activities.filter((activity) => compacterNomDeSport(activity.name).includes(query));
   }, [activities, searchQuery]);
 
   if (userDataLoading) {
@@ -232,6 +235,7 @@ function UserSport({ navigation }) {
     >
       <View style={[Alignments.fill, Spaces.gap[16]]}>
         <View style={[Spaces.gap[16]]}>
+          <OnboardingFacultatif onPress={handleSkip} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.sport.title', 'Quel est ton sport ?')}
           </Text>

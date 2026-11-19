@@ -7,10 +7,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { niveauxPourLeSport } from '@/domains/level/niveauxDuSport';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import OnboardingFacultatif from '@/views/onboarding/components/OnboardingFacultatif';
 import OnboardingRadioRow from '@/views/onboarding/components/OnboardingRadioRow';
 import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
@@ -135,7 +137,16 @@ function UserLevel({ navigation }) {
   };
 
   // CORR-INSCRIPTION p17 : du plus bas au plus haut, rangés par `getLevels` (levelService).
-  const sortedLevels = levels || [];
+  // INSCRIPTION-PARCOURS-2 (D257, Q1) : les niveaux de SON sport (les 4 pour tous, puis la
+  // compétition si son sport en a) ; un niveau déjà enregistré hors de cette liste reste affiché.
+  const niveauxDuSport = niveauxPourLeSport(levels, userData?.preferredSport);
+  const niveauEnregistre = String(userData?.bestLevel?.name || userData?.bestLevel || '');
+  const horsDeLaListe = niveauEnregistre
+    && !niveauxDuSport.some((level) => level.name === niveauEnregistre);
+  const sortedLevels = horsDeLaListe
+    ? [...niveauxDuSport, ...(levels || []).filter((level) => level.name === niveauEnregistre)
+      .slice(0, 1)]
+    : niveauxDuSport;
 
   return (
     <FormScreenContainer
@@ -154,6 +165,7 @@ function UserLevel({ navigation }) {
     >
       <View style={[Alignments.fill, Spaces.gap[24]]}>
         <View style={[Spaces.gap[16]]}>
+          <OnboardingFacultatif onPress={handleSkip} />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
             {t('onboarding.level.title', 'Ton meilleur niveau ?')}
           </Text>

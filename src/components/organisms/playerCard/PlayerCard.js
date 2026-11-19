@@ -353,6 +353,8 @@ function Case({
  * @param {any} props.locked
  * @param {any} props.mode
  * @param {any} props.nationalite
+ * @param {boolean} [props.neutre] Carte modèle d'un sport sans modèle : ni terrain, ni numéro,
+ *   ni maillot.
  * @param {any} props.niveau
  * @param {any} props.nom
  * @param {any} props.numero
@@ -381,6 +383,7 @@ function PlayerCardBase({
   locked = false,
   mode = 'image',
   nationalite,
+  neutre = false,
   niveau,
   nom,
   numero,
@@ -523,10 +526,13 @@ function PlayerCardBase({
           {/* La scène, découpée à son cadre. Le terrain est un groupe mis à l'échelle, pas un
               <Svg> imbriqué : sur l'iPhone, celui-ci étirait ce qui venait après (CARTEAFF). */}
           <G clipPath="url(#zoneScene)">
-            <G transform={TERRAIN}>
-              <CourtLines sport={sport} strokeWidth={1.6} />
-            </G>
-            {!numeroVide ? (
+            {/* INSCRIPTION-PARCOURS-2 (D257) : la carte neutre ne dessine ni terrain ni numéro. */}
+            {!neutre ? (
+              <G transform={TERRAIN}>
+                <CourtLines sport={sport} strokeWidth={1.6} />
+              </G>
+            ) : null}
+            {!numeroVide && !neutre ? (
               <SvgText
                 fill="none"
                 fontFamily="Montserrat-Black"
@@ -608,7 +614,7 @@ function PlayerCardBase({
             </Text>
           </View>
         ) : null}
-        {(!photo && !ecran) || locked ? (
+        {((!photo && !ecran) || locked) && !neutre ? (
           <View
             style={{
               bottom: 0,

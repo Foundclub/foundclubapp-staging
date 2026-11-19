@@ -18091,6 +18091,9 @@ export default {
   },
   onboarding: {
     actions: {
+      // INSCRIPTION-PARCOURS A3 (D245) : en haut de chaque étape facultative.
+      optionalNotice: 'Facultatif : tu peux passer cette étape',
+      skipShort: 'Passer',
       skipStep: 'Passer cette étape',
     },
     category: {
@@ -18744,8 +18747,10 @@ export default {
     example: {
       category: 'Seniors',
       club: 'Basket Club Exemple',
+      clubNeutral: 'Club Exemple',
       cta: 'Découvrir ma carte',
       level: 'Régional',
+      levelNeutral: 'Confirmé',
       nationality: 'Française',
       position: 'Meneuse',
       subtitle: 'Photo, poste, niveau, club, parcours : plus elle est remplie, plus elle est rare.',

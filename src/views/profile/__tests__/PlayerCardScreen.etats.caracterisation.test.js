@@ -131,7 +131,9 @@ jest.mock(
 
 jest.mock(
   '@/components/templates/ScreenContainer',
-  () => function ScreenContainerMock({ children }) {
+  () => function ScreenContainerMock({ boundedHeight, children }) {
+    // INSCRIPTION-PARCOURS A4 : le dernier cadre monté dit s'il est borné (site).
+    global.mockCadreBorne = Boolean(boundedHeight);
     return children;
   },
 );
@@ -348,5 +350,109 @@ describe('PAR-L14 — etat CELEBRATION (fin d inscription) : inchange apres la c
     ]));
     act(() => gestes(arbre, 'Plus tard, continuer')[0].props.onPress());
     expect(navigation.navigate).toHaveBeenCalledWith('Home');
+  });
+});
+
+// INSCRIPTION-PARCOURS A4 (D245, 18/11) — un vrai inscrit : « Plus tard » est trop bas, il faut
+// défiler pour le voir. La carte arrive AU MILIEU de l'inscription (après « Ouvert au
+// recrutement ? ») : la sortie se voit sans défiler, sur la carte modèle comme sur la sienne.
+// Le banc ne mesure pas des pixels ; il vérifie que le bouton n'est plus DANS ce qui défile.
+describe('INSCRIPTION-PARCOURS A4 — « Plus tard, continuer » hors de ce qui défile', () => {
+  const { ScrollView } = jest.requireActual('react-native');
+  const porte = (n, nom) => n.type === TouchableOpacity
+    && n.findAllByType(Text).some((t) => [].concat(t.props.children).join('') === nom);
+  const dansLeDefilement = (arbre, nom) => arbre.root.findAllByType(ScrollView)
+    .some((zone) => zone.findAll((n) => porte(n, nom)).length > 0);
+
+  it('sur SA carte : le bouton existe, hors de la zone qui défile, et mène à la suite', () => {
+    const { arbre, navigation } = monterCelebration();
+
+    expect(gestes(arbre, 'Plus tard, continuer')).toHaveLength(1);
+    expect(dansLeDefilement(arbre, 'Plus tard, continuer')).toBe(false);
+    act(() => gestes(arbre, 'Plus tard, continuer')[0].props.onPress());
+    expect(navigation.navigate).toHaveBeenCalledWith('Home');
+  });
+
+  it('sur la carte MODÈLE : on peut déjà passer, sans défiler', () => {
+    const { arbre, navigation } = monter({ celebration: true, nextRoute: 'UserTeamAffiliation' });
+
+    expect(gestes(arbre, 'Découvrir ma carte')).toHaveLength(1);
+    expect(gestes(arbre, 'Plus tard, continuer')).toHaveLength(1);
+    expect(dansLeDefilement(arbre, 'Plus tard, continuer')).toBe(false);
+    act(() => gestes(arbre, 'Plus tard, continuer')[0].props.onPress());
+    expect(navigation.navigate).toHaveBeenCalledWith('UserTeamAffiliation');
+  });
+
+  it('hors inscription (depuis le profil) : aucun « Plus tard », cadre non borné', () => {
+    expect(gestes(monter().arbre, 'Plus tard, continuer')).toHaveLength(0);
+    expect(global.mockCadreBorne).toBe(false);
+  });
+
+  // Sur le SITE, la page entière défilait : le pied passait sous 1 094 px (écran de 667, banc du
+  // 18/11). Le cadre borné (RECHERCHE-UNIQUE) fait défiler la zone seule, le pied reste en bas.
+  it('en fin d inscription, carte modèle puis la sienne : cadre borné (site)', () => {
+    const monte = monter({ celebration: true });
+    expect(global.mockCadreBorne).toBe(true);
+    act(() => gestes(monte.arbre, 'Découvrir ma carte')[0].props.onPress());
+    expect(global.mockCadreBorne).toBe(true);
+  });
+});
+
+// INSCRIPTION-PARCOURS-2 (18/11/2026, D257, Q5 d'Adel) : la carte modèle de fin d'inscription
+// montre le sport de la personne ; sans modèle pour son sport, une carte neutre
+// (ni terrain ni numéro).
+describe('INSCRIPTION-PARCOURS-2 — la carte modèle prend le sport de la personne', () => {
+  const carteModele = (preferredSport) => {
+    mockUser = { ...ADULTE, preferredSport };
+    mockCardProps.length = 0;
+    monter({ celebration: true });
+    return mockCardProps.find((p) => p.prenom === 'Léa');
+  };
+
+  it('basket : la carte de Léa, meneuse, inchangée', () => {
+    const c = carteModele('Basketball');
+    expect(c).toEqual(expect.objectContaining({
+      club: 'Basket Club Exemple', numero: '7', poste: 'Meneuse', sport: 'Basketball',
+    }));
+    expect(c.neutre).toBeFalsy();
+  });
+
+  it('foot : son sport, un poste de foot, le numéro, son terrain', () => {
+    const c = carteModele('Football');
+    expect(c).toEqual(expect.objectContaining({
+      club: 'Club Exemple', numero: '7', poste: 'Milieu central', sport: 'Football',
+    }));
+    expect(c.neutre).toBeFalsy();
+  });
+
+  it('« Volley » (le doublon de Volleyball) : un poste de volley', () => {
+    expect(carteModele('Volley')).toEqual(expect.objectContaining({
+      poste: 'Passeur', sport: 'Volley',
+    }));
+  });
+
+  it('hand et rugby : un poste de leur sport', () => {
+    expect(carteModele('Handball').poste).toBe('Demi-centre');
+    expect(carteModele('Rugby').poste).toBe("Demi d'ouverture");
+  });
+
+  it('tennis (un terrain, pas de postes) : son terrain, ni poste ni numéro', () => {
+    const c = carteModele('Tennis');
+    expect(c).toEqual(expect.objectContaining({ numero: '', poste: '', sport: 'Tennis' }));
+    expect(c.neutre).toBeFalsy();
+  });
+
+  it('spéléo (pas de modèle) : carte neutre, son sport écrit, ni poste ni numéro ni équipe', () => {
+    const c = carteModele('Spéléologie');
+    expect(c).toEqual(expect.objectContaining({
+      equipe: '', neutre: true, numero: '', poste: '', sport: 'Spéléologie',
+    }));
+    expect(c.club).not.toMatch(/Basket/);
+    expect(c.niveau).not.toBe('Régional');
+  });
+
+  it('sans sport choisi : carte neutre, aucun sport écrit', () => {
+    const c = carteModele(undefined);
+    expect(c).toEqual(expect.objectContaining({ neutre: true, numero: '', sport: '' }));
   });
 });

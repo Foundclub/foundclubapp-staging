@@ -233,3 +233,34 @@ describe('UserSport — « Passer » saute aussi l`etape Poste (D23 (2))', () =>
     expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.UserPhysique);
   });
 });
+
+// INSCRIPTION-PARCOURS (D245, 18/11) — « la recherche est trop stricte » (un vrai inscrit). Le
+// filtre ignorait la casse, pas les accents : « speleo » ne trouvait pas « Spéléologie », ni
+// « petanque » « Pétanque ». Sur 132 sports de la recette, 37 portent un accent (compté le 18/11).
+describe('UserSport — la recherche ignore la casse et les accents (D245)', () => {
+  const taper = async (tree, texte) => {
+    const { TextInput } = jest.requireActual('react-native');
+    await act(async () => { tree.root.findByType(TextInput).props.onChangeText(texte); });
+  };
+
+  it.each([
+    ['speleo', 'Spéléologie'],
+    ['petanque', 'Pétanque'],
+    ['EQUITATION', 'Équitation'],
+    ['karate', 'Karaté'],
+    ['FOOT', 'Football'],
+  ])('« %s » trouve « %s »', async (texte, sport) => {
+    mockActivities.current = [
+      ...SPORTS,
+      { documentId: 'act-speleo', name: 'Spéléologie' },
+      { documentId: 'act-petanque', name: 'Pétanque' },
+      { documentId: 'act-equitation', name: 'Équitation' },
+      { documentId: 'act-karate', name: 'Karaté' },
+    ];
+    const { tree } = rendre();
+    await taper(tree, texte);
+
+    expect(pressable(tree, sport)).toBeDefined();
+    expect(pressable(tree, 'Tennis')).toBeUndefined();
+  });
+});

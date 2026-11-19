@@ -17272,6 +17272,8 @@ export default {
   },
   onboarding: {
     actions: {
+      optionalNotice: 'Optional: you can skip this step',
+      skipShort: 'Skip',
       skipStep: 'Skip this step',
     },
     category: {
@@ -18064,8 +18066,10 @@ export default {
     example: {
       category: 'Seniors',
       club: 'Example Basketball Club',
+      clubNeutral: 'Example Club',
       cta: 'Discover my card',
       level: 'Regional',
+      levelNeutral: 'Advanced',
       nationality: 'French',
       position: 'Point guard',
       subtitle: 'Photo, position, level, club, history: '

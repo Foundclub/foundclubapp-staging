@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -5,6 +6,7 @@ import {
   View,
 } from 'react-native';
 
+import { niveauxPourLeSport } from '@/domains/level/niveauxDuSport';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -33,7 +35,19 @@ function TeamWizardLevel({ navigation }) {
   const { dispatch, state } = useTeamWizard();
   const handleExitWizard = useTeamWizardExit(navigation);
   const levelsQuery = useGetLevels();
-  const { data: levels } = levelsQuery;
+  // NIVEAUX-PAR-SPORT : seulement les niveaux du sport choisi a l'etape Sport, s'il en a.
+  const levels = useMemo(
+    () => niveauxPourLeSport(levelsQuery.data, state.activities),
+    [levelsQuery.data, state.activities],
+  );
+  // Un niveau choisi pour un autre sport (retour en arriere, sport change) n'est plus propose :
+  // on le retire, sinon l'equipe partirait avec un niveau que l'ecran ne montre pas.
+  useEffect(() => {
+    const toujoursPropose = levels.some((level) => level.documentId === state.level);
+    if (state.level && levelsQuery.data && !toujoursPropose) {
+      dispatch({ payload: '', type: 'SET_LEVEL' });
+    }
+  }, [dispatch, levels, levelsQuery.data, state.level]);
   const { isLoading } = levelsQuery;
   const hasError = Boolean(levelsQuery.error);
   // W06 — le referentiel a repondu, et il n'a rien a proposer : voir
@@ -112,7 +126,7 @@ function TeamWizardLevel({ navigation }) {
           />
         ) : null}
 
-        {(levels || []).map((level) => {
+        {levels.map((level) => {
           const levelDocumentId = level.documentId || '';
           return (
             <WizardOptionCard

@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { cleDeSport } from '@/domains/activity/cleDeSport';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { CARD_COMPLETION_STEP, listMissingCardSteps } from '@/domains/playerCard/cardCompletion';
@@ -38,6 +39,7 @@ import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import ParentalDeclarationCard from '@/components/molecules/parentalDeclarationCard/ParentalDeclarationCard';
 import CardDisclosureSheet from '@/components/organisms/playerCard/CardDisclosureSheet';
 import CardSheen from '@/components/organisms/playerCard/CardSheen';
+import { courtFamily } from '@/components/organisms/playerCard/courts';
 import PlayerCard, { CARD_EXPORT_HEIGHT, CARD_EXPORT_WIDTH } from '@/components/organisms/playerCard/PlayerCard';
 import ShareCardModal from '@/components/organisms/shareCardModal/ShareCardModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -53,12 +55,22 @@ import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 import { formatHeight } from '@/utils/heightCentimeters';
 import { getImageUrl } from '@/utils/imageUrl';
 
+import { sportHasPositions } from '@/constants/positions';
 import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
 
 /**
  * @typedef {{ done?: boolean, mode: 'full' | 'share', startRarity?: string, steps: string[] }}
  *   ParcoursCarte
  */
+
+// INSCRIPTION-PARCOURS-2 (D257, Q5 d'Adel) : le poste de la carte modèle, pris dans les postes du
+// sport (constants/positions.js) ; le basket garde la « Meneuse » traduite.
+const POSTE_DU_MODELE = Object.freeze({
+  football: 'Milieu central',
+  handball: 'Demi-centre',
+  rugby: "Demi d'ouverture",
+  volleyball: 'Passeur',
+});
 
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
@@ -444,29 +456,54 @@ function PlayerCardScreen({ navigation, route }) {
 
   // ponytail: carte modèle FICTIVE (aucun compte derrière) ; ses mots passent par la traduction,
   // les noms propres restent. Sortie : la tirer du serveur si un jour elle doit changer seule.
+  // INSCRIPTION-PARCOURS-2 (D257, Q5) : la carte modèle prend le sport de la personne ; un sport
+  // sans terrain connu (spéléo, course…) ou pas de sport : carte neutre, ni terrain ni numéro.
+  const sportDuModele = model.sport;
+  const cleDuModele = cleDeSport(sportDuModele);
+  const modeleAvecPostes = sportHasPositions(cleDuModele);
+  const modeleBasket = cleDuModele === 'basketball';
   const exampleCardProps = {
     age: `22 ${t('playerCard.field.yearsUnit', 'ans')}`,
     categorie: t('playerCard.example.category', 'Seniors'),
-    club: t('playerCard.example.club', 'Basket Club Exemple'),
-    equipe: t('playerCard.example.team', 'Seniors filles'),
+    club: modeleBasket
+      ? t('playerCard.example.club', 'Basket Club Exemple')
+      : t('playerCard.example.clubNeutral', 'Club Exemple'),
+    equipe: modeleAvecPostes ? t('playerCard.example.team', 'Seniors filles') : '',
     historique: [],
     nationalite: t('playerCard.example.nationality', 'Française'),
-    niveau: t('playerCard.example.level', 'Régional'),
+    neutre: courtFamily(sportDuModele) === 'generique',
+    niveau: modeleAvecPostes
+      ? t('playerCard.example.level', 'Régional')
+      : t('playerCard.example.levelNeutral', 'Confirmé'),
     nom: 'MARTIN',
-    numero: '7',
+    numero: modeleAvecPostes ? '7' : '',
     poids: '62 kg',
-    poste: t('playerCard.example.position', 'Meneuse'),
+    poste: modeleBasket
+      ? t('playerCard.example.position', 'Meneuse')
+      : POSTE_DU_MODELE[/** @type {keyof typeof POSTE_DU_MODELE} */ (cleDuModele)] || '',
     prenom: 'Léa',
     qrLabel: 'foundclub.app',
     qrValue: '',
     rarity: 'EPIC',
     section: '',
-    sport: 'basketball',
+    sport: sportDuModele,
     statut: 'DISPONIBLE',
     taille: formatHeight(172),
     ville: 'Lyon 69007',
   };
   const showExample = isCelebration && !hasSeenExample && !parcours;
+  // INSCRIPTION-PARCOURS A4 (D245) : la carte arrive AU MILIEU de l'inscription ;
+  // « Plus tard, continuer » était sous la jauge et le partage : il fallait défiler.
+  // Posé SOUS la zone qui défile, il se voit sur la carte modèle comme sur la sienne.
+  const piedPlusTard = isCelebration ? (
+    <View style={[Spaces.paddingVertical[8]]}>
+      <Button
+        onPress={handleContinueOnboarding}
+        title={t('playerCard.revealContinue', 'Plus tard, continuer')}
+        variant="Ghost"
+      />
+    </View>
+  ) : null;
 
   if (parcours) {
     return (
@@ -525,7 +562,13 @@ function PlayerCardScreen({ navigation, route }) {
   if (showExample) {
     const exampleWidth = Math.min(windowWidth - 96, 420);
     return (
-      <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+      // A4 : sur le SITE, sans cadre borné, la page entière défile et le pied passe dessous.
+      <ScreenContainer
+        bgImage="bg2"
+        bottomInsetMode="screen"
+        boundedHeight
+        contentContainerStyle={CADRE_BORNE}
+      >
         <ScrollView
           contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]}
           showsVerticalScrollIndicator={false}
@@ -561,12 +604,19 @@ function PlayerCardScreen({ navigation, route }) {
             variant="Primary"
           />
         </ScrollView>
+        {piedPlusTard}
       </ScreenContainer>
     );
   }
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+    // A4 : borné en fin d'inscription seulement (site : « Plus tard » mesuré à 1 094 px sur 667).
+    <ScreenContainer
+      bgImage="bg2"
+      bottomInsetMode="screen"
+      boundedHeight={isCelebration}
+      contentContainerStyle={isCelebration ? CADRE_BORNE : undefined}
+    >
       <ScrollView contentContainerStyle={[Spaces.gap[16], Spaces.paddingVertical[16]]} showsVerticalScrollIndicator={false}>
         {/* En-tete */}
         <View style={[Spaces.gap[8], Alignments.alignCenter]}>
@@ -714,14 +764,8 @@ function PlayerCardScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {isCelebration ? (
-          <Button
-            onPress={handleContinueOnboarding}
-            title={t('playerCard.revealContinue', 'Plus tard, continuer')}
-            variant="Ghost"
-          />
-        ) : null}
       </ScrollView>
+      {piedPlusTard}
 
       {/* Rendu HORS-ECRAN dedie a la capture (992×1262 a l'export, jamais voile) */}
       <View collapsable={false} pointerEvents="none" style={styles.offscreen}>
@@ -754,6 +798,10 @@ function PlayerCardScreen({ navigation, route }) {
     </ScreenContainer>
   );
 }
+
+// A4 — le motif du projet pour un pied fixe sur le site (FacilityReportDetails) : cadre borné ET
+// contenu en `flex: 1`, sinon le contenu (flexShrink 0 sur le site) reprend toute sa hauteur.
+const CADRE_BORNE = [{ flex: 1 }];
 
 const styles = StyleSheet.create({
   accroche: { maxWidth: 320 },

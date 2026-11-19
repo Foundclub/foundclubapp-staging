@@ -231,7 +231,9 @@ describe('CORR-INSCRIPTION p17 — catégorie', () => {
     mockUserData.current = { birthdate: '1998-03-12', documentId: 'user-1' };
     const arbre = monter(UserCategory);
     const continuer = arbre.root.findAllByType(TouchableOpacity)
-      .find((/** @type {any} */ n) => n.props.accessibilityRole === 'button');
+      // INSCRIPTION-PARCOURS A3 : le « Passer » du bandeau du haut n'est pas « Continuer ».
+      .find((/** @type {any} */ n) => n.props.accessibilityRole === 'button'
+        && n.props.testID !== 'onboarding-facultatif-passer');
     await act(async () => { continuer.props.onPress(); });
     expect(mockUpdateMe).toHaveBeenCalledWith({ category: 'Sénior (+18 ans)' });
   });
