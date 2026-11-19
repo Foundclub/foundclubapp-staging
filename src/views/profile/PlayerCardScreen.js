@@ -63,15 +63,6 @@ import { FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES } from '@/platform/share/fileS
  *   ParcoursCarte
  */
 
-// INSCRIPTION-PARCOURS-2 (D257, Q5 d'Adel) : le poste de la carte modèle, pris dans les postes du
-// sport (constants/positions.js) ; le basket garde la « Meneuse » traduite.
-const POSTE_DU_MODELE = Object.freeze({
-  football: 'Milieu central',
-  handball: 'Demi-centre',
-  rugby: "Demi d'ouverture",
-  volleyball: 'Passeur',
-});
-
 /**
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props
  */
@@ -462,6 +453,15 @@ function PlayerCardScreen({ navigation, route }) {
   const cleDuModele = cleDeSport(sportDuModele);
   const modeleAvecPostes = sportHasPositions(cleDuModele);
   const modeleBasket = cleDuModele === 'basketball';
+  // INSCRIPTION-PARCOURS-2 (D257, Q5 d'Adel) : le poste de la carte modèle, pris dans les postes du
+  // sport (constants/positions.js) ; le basket garde la « Meneuse ».
+  /** @type {Record<string, string>} */
+  const posteDuModele = {
+    football: t('playerCard.example.positionFootball', 'Milieu central'),
+    handball: t('playerCard.example.positionHandball', 'Demi-centre'),
+    rugby: t('playerCard.example.positionRugby', "Demi d'ouverture"),
+    volleyball: t('playerCard.example.positionVolleyball', 'Passeur'),
+  };
   const exampleCardProps = {
     age: `22 ${t('playerCard.field.yearsUnit', 'ans')}`,
     categorie: t('playerCard.example.category', 'Seniors'),
@@ -480,7 +480,7 @@ function PlayerCardScreen({ navigation, route }) {
     poids: '62 kg',
     poste: modeleBasket
       ? t('playerCard.example.position', 'Meneuse')
-      : POSTE_DU_MODELE[/** @type {keyof typeof POSTE_DU_MODELE} */ (cleDuModele)] || '',
+      : posteDuModele[cleDuModele] || '',
     prenom: 'Léa',
     qrLabel: 'foundclub.app',
     qrValue: '',
