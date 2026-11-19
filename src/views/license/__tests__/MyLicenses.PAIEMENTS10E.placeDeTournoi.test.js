@@ -27,8 +27,10 @@ jest.mock('@/services/license/licenseQueries', () => ({
   generateLicenseReceipt: (/** @type {any} */ ...args) => mockGenererRecu(...args),
   useMyLicenses: () => mockMesCotisations,
 }));
-jest.mock('@/services/event/eventQueries', () => ({
-  useGetEvent: (/** @type {any} */ id) => (id ? mockEvenement : { data: undefined }),
+// La fiche du tournoi (cle `['event', id]`), lue par `useTournamentTeamName`.
+jest.mock('@tanstack/react-query', () => ({
+  ...jest.requireActual('@tanstack/react-query'),
+  useQuery: (/** @type {any} */ { queryKey }) => (queryKey?.[0] === 'event' && queryKey?.[1] ? mockEvenement : { data: undefined }),
 }));
 jest.mock('@/platform/media/downloadRemoteFile', () => ({
   downloadRemoteFile: (/** @type {any} */ ...args) => mockTelecharger(...args),

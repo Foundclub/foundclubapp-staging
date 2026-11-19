@@ -36,6 +36,8 @@ import useAuth from '@/domains/auth/useAuth';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
+
 import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 import {
   generateLicenseReceipt, useChildrenLicenses, useMyLicenses,
@@ -71,6 +73,7 @@ import {
   MemberTopBar,
   memberType,
 } from './memberLicenseUi';
+import useTournamentTeamName from './useTournamentTeamName';
 
 /**
  * Le retour de la liste : la pile s il y en a une, sinon l accueil.
@@ -196,11 +199,6 @@ const downloadPlaceReceipt = async (payment) => {
     return;
   }
   try {
-    // ponytail: chargé au geste, pas à l'import — la version téléphone tire
-    // react-native-blob-util, que les témoins de « Mes paiements » ne savent pas charger (même
-    // pratique : TournamentOrganizerBoard). Sortie : un mock commun dans le setup jest.
-    // eslint-disable-next-line global-require
-    const { downloadRemoteFile } = require('@/platform/media/downloadRemoteFile');
     const receiptNumber = receipt?.receiptNumber || payment?.receipt?.receiptNumber || '';
     await downloadRemoteFile({ fileName: `recu-${receiptNumber}`, url });
   } catch (error) {
@@ -365,9 +363,6 @@ function AssignmentCard({
 function TournamentPlaceCard({
   assignment, eventId, onPress, personName = '', viewerId = '',
 }) {
-  // ponytail: chargé au rendu d'une place qui nomme son tournoi, pas à l'import (voir le fichier).
-  // eslint-disable-next-line global-require
-  const useTournamentTeamName = require('./useTournamentTeamName').default;
   const teamName = useTournamentTeamName(eventId, viewerId);
   return (
     <AssignmentCard
