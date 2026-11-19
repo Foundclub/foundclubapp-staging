@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
@@ -18,8 +19,10 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import {
   MY_TOURNAMENT_INVITATIONS_KEY,
+  MY_TOURNAMENT_TEAMS_KEY,
   useGetTournamentTeam,
   useMyTournamentInvitations,
+  useMyTournamentTeams,
 } from '@/services/tournamentTeam/tournamentTeamQueries';
 import { respondToTournamentInvitation } from '@/services/tournamentTeam/tournamentTeamService';
 
@@ -132,7 +135,8 @@ function CadreDeCarte({ children, reussie = false, testID }) {
 
 /**
  * Une invitation (planche 2a) : qui invite, avec sa photo, l'équipe, le tournoi (date, lieu, prix),
- * la question, « Voir le tournoi », « Refuser » et « Accepter ».
+ * « Refuser » et « Accepter ». ACCUEIL-TOURNOI (19/11, Adel) : ni la question ni « Voir le
+ * tournoi » ; le haut de la carte, touché, ouvre le tournoi.
  * @param {object} props - Les propriétés.
  * @param {any} props.invitation - L'invitation (`team`, `event`, `invitedBy`).
  * @param {{ navigate: (...args: any[]) => void }} props.navigation - La navigation de l'accueil.
@@ -172,6 +176,7 @@ function CarteInvitationTournoi({ invitation, navigation, onAcceptee }) {
       // Les clefs de la page d'équipe (son `invalidate`), plus la liste de l'accueil.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [...MY_TOURNAMENT_INVITATIONS_KEY] }),
+        queryClient.invalidateQueries({ queryKey: [...MY_TOURNAMENT_TEAMS_KEY] }),
         queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
         queryClient.invalidateQueries({ queryKey: ['tournamentTeam', teamId] }),
       ]);
@@ -195,50 +200,56 @@ function CarteInvitationTournoi({ invitation, navigation, onAcceptee }) {
 
   return (
     <CadreDeCarte testID={`accueil-invitation-tournoi-${teamId}`}>
-      <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
-        {/* `flex: 1` : le titre gras garde toute la largeur (Android 16, dernier mot perdu). */}
-        <Text style={[Fonts.p3Bold, Fonts.primary200, { flex: 1 }]}>
-          {t('implAccueil.invitation.titre', 'Invitation au tournoi')}
-        </Text>
-        {quand ? <Text style={[Fonts.p3, Fonts.neutral300]}>{quand}</Text> : null}
-      </View>
-      <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
-        <Image
-          accessibilityIgnoresInvertColors
-          source={Images.roundAvatar}
-          style={{ borderRadius: 24, height: 48, width: 48 }}
-          testID="accueil-invitation-photo"
-        />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{invitant}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('implAccueil.invitation.invite', 't’invite dans son équipe')}
-            {' '}
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{invitation?.team?.name || ''}</Text>
-          </Text>
-        </View>
-      </View>
-      <View
-        style={{
-          borderColor: withAlpha(Colors.primary500, 0.24),
-          borderRadius: 12,
-          borderWidth: 1,
-          gap: 4,
-          padding: 12,
-        }}
+      {/* ACCUEIL-TOURNOI (19/11, Adel, écrans 2a, 2c, 2e) : le haut de la carte ouvre le tournoi
+          (plus de « Voir le tournoi ») ; « Refuser » et « Accepter » restent hors de cette zone. */}
+      <TouchableOpacity
+        accessibilityHint={t('implAccueil.invitation.ouvrir', 'Ouvre la fiche du tournoi')}
+        accessibilityRole="button"
+        onPress={() => navigation.navigate(RouteNames.EventStack, {
+          params: { eventId },
+          screen: RouteNames.EventDetails,
+        })}
+        style={{ gap: 8 }}
+        testID={`accueil-invitation-ouvrir-${teamId}`}
       >
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{invitation?.event?.name || ''}</Text>
-        {date ? <Text style={[Fonts.p3, Fonts.neutral200]}>{date}</Text> : null}
-        {lieu ? <Text style={[Fonts.p3, Fonts.neutral200]}>{lieu}</Text> : null}
-        {lignePrix ? <Text style={[Fonts.p3Bold, Fonts.primary500]}>{lignePrix}</Text> : null}
-      </View>
-      <Text style={[Fonts.p1, Fonts.neutral00]}>
-        {t(
-          'implAccueil.invitation.question',
-          '« Veux-tu rejoindre mon équipe pour ce tournoi ? »',
-          SANS_ECHAPPEMENT,
-        )}
-      </Text>
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+          {/* `flex: 1` : le titre gras garde toute la largeur (Android 16, dernier mot perdu). */}
+          <Text style={[Fonts.p3Bold, Fonts.primary200, { flex: 1 }]}>
+            {t('implAccueil.invitation.titre', 'Invitation au tournoi')}
+          </Text>
+          {quand ? <Text style={[Fonts.p3, Fonts.neutral300]}>{quand}</Text> : null}
+        </View>
+        <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+          <Image
+            accessibilityIgnoresInvertColors
+            source={Images.roundAvatar}
+            style={{ borderRadius: 24, height: 48, width: 48 }}
+            testID="accueil-invitation-photo"
+          />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{invitant}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t('implAccueil.invitation.invite', 't’invite dans son équipe')}
+              {' '}
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{invitation?.team?.name || ''}</Text>
+            </Text>
+          </View>
+        </View>
+        <View
+          style={{
+            borderColor: withAlpha(Colors.primary500, 0.24),
+            borderRadius: 12,
+            borderWidth: 1,
+            gap: 4,
+            padding: 12,
+          }}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{invitation?.event?.name || ''}</Text>
+          {date ? <Text style={[Fonts.p3, Fonts.neutral200]}>{date}</Text> : null}
+          {lieu ? <Text style={[Fonts.p3, Fonts.neutral200]}>{lieu}</Text> : null}
+          {lignePrix ? <Text style={[Fonts.p3Bold, Fonts.primary500]}>{lignePrix}</Text> : null}
+        </View>
+      </TouchableOpacity>
       {erreur ? (
         // IMPL-4B (planche 2c) : l'icône « ! » devant le message (motif de
         // PlayerMatchResponseScreen) ; sans libellé, seul le texte est annoncé.
@@ -252,13 +263,6 @@ function CarteInvitationTournoi({ invitation, navigation, onAcceptee }) {
           </Text>
         </View>
       ) : null}
-      <LienDeCarte
-        libelle={t('tournamentHomeInvitation.seeTournament', 'Voir le tournoi')}
-        onPress={() => navigation.navigate(RouteNames.EventStack, {
-          params: { eventId },
-          screen: RouteNames.EventDetails,
-        })}
-      />
       <View style={[Alignments.row, { gap: 12 }]}>
         <View style={{ flex: 1 }}>
           <Button
@@ -369,6 +373,146 @@ function CarteEquipeRejointe({ invitation, navigation }) {
 }
 
 /**
+ * « AR Soccer · Montpellier » (planche 9e) : le nom du lieu, puis la ville (dernier morceau de
+ * l'adresse lue par la règle commune) ; sans nom, l'adresse telle quelle.
+ * @param {any} event - Le tournoi.
+ * @returns {string} Le lieu court, ou rien.
+ */
+const lieuCourt = (event) => {
+  const texte = getEventLocationText(event);
+  const nom = typeof event?.location?.name === 'string' ? event.location.name.trim() : '';
+  const morceaux = String(texte || '').split(',').map((morceau) => morceau.trim()).filter(Boolean);
+  const ville = morceaux.length > 1 ? morceaux[morceaux.length - 1] : '';
+  if (!nom) return texte || '';
+  return [nom, ville].filter(Boolean).join(' · ');
+};
+
+/**
+ * Les initiales du rond de la carte (« FC » de « FoundClub x AR Soccer ») : les deux premières
+ * majuscules du nom du tournoi.
+ * ponytail: un nom tout en minuscules donne sa première lettre ; sortie : le logo de
+ * l'organisateur quand le serveur le rendra.
+ * @param {string} nom - Le nom du tournoi.
+ * @returns {string} Les initiales.
+ */
+const initialesDuTournoi = (nom) => (String(nom).match(/\p{Lu}/gu) || []).slice(0, 2).join('')
+  || String(nom).trim().slice(0, 1).toUpperCase();
+
+/**
+ * ACCUEIL-TOURNOI (19/11/2026, planche 9e) — mon tournoi dans « Tes prochains événements » : la
+ * pastille « Tournoi » et la date courte, le nom, « Ton équipe : … », le jour, les heures, le lieu,
+ * et « 1 place à payer » si ma place n'est pas payée (`myPlace.status === 'due'` ; rien pour un
+ * tournoi gratuit ou un paiement illisible). Toute la carte ouvre SA page d'équipe.
+ * @param {object} props - Les propriétés.
+ * @param {any} props.equipe - La ligne du serveur (`team`, `event`, `myPlace`).
+ * @param {{ navigate: (...args: any[]) => void }} props.navigation - La navigation de l'accueil.
+ * @returns {import('react').ReactElement} La carte.
+ */
+function CarteMonTournoi({ equipe, navigation }) {
+  const { t } = useTranslation();
+  const { Alignments, Colors, Fonts } = useTheme();
+  const teamId = String(equipe?.team?.documentId || '');
+  const eventId = String(equipe?.event?.documentId || '');
+  const nomTournoi = String(equipe?.event?.name || '');
+  const caseDate = getTournamentEssentials(equipe?.event).find((item) => item.key === 'date');
+  const jourLong = caseDate?.value
+    ? caseDate.value.charAt(0).toUpperCase() + caseDate.value.slice(1) : '';
+  const jour = equipe?.event?.date ? new Date(equipe.event.date) : null;
+  const jourCourt = jour && !Number.isNaN(jour.getTime())
+    ? jour.toLocaleDateString(localeDesFormats(), { day: '2-digit', month: '2-digit', weekday: 'short' })
+    : '';
+  const lieu = lieuCourt(equipe?.event);
+  const aPayer = equipe?.myPlace?.status === 'due';
+  const ligne = (icone, texte) => (
+    <View style={[Alignments.row, Alignments.alignCenter, { gap: 6 }]}>
+      <GlyphIcon color={Colors.primary500} name={icone} size={16} />
+      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{texte}</Text>
+    </View>
+  );
+  return (
+    <TouchableOpacity
+      accessibilityHint={t('implAccueil.prochains.ouvrir', 'Ouvre la page de ton équipe')}
+      accessibilityRole="button"
+      onPress={() => navigation.navigate(RouteNames.EventStack, {
+        params: { eventId, teamId },
+        screen: RouteNames.TournamentTeamDetails,
+      })}
+      style={{
+        backgroundColor: withAlpha(Colors.primary800, 0.82),
+        borderColor: withAlpha(Colors.primary500, 0.3),
+        borderRadius: 20,
+        borderWidth: 1,
+        gap: 10,
+        padding: 16,
+      }}
+      testID={`accueil-mon-tournoi-${teamId}`}
+    >
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+        <View
+          style={[Alignments.row, Alignments.alignCenter, {
+            borderColor: withAlpha(Colors.primary500, 0.5),
+            borderRadius: 999,
+            borderWidth: 1,
+            gap: 6,
+            paddingHorizontal: 10,
+            paddingVertical: 3,
+          }]}
+        >
+          <View style={{
+            backgroundColor: Colors.primary500, borderRadius: 3, height: 6, width: 6,
+          }}
+          />
+          <Text style={[Fonts.p3Bold, Fonts.primary500, Fonts.uppercase]}>
+            {t('implAccueil.prochains.badge', 'Tournoi')}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }} />
+        {jourCourt ? <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{jourCourt}</Text> : null}
+      </View>
+      <View style={[Alignments.row, Alignments.alignCenter, { gap: 12 }]}>
+        <View
+          style={[Alignments.alignCenter, Alignments.justifyCenter, {
+            backgroundColor: Colors.primary500, borderRadius: 22, height: 44, width: 44,
+          }]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{initialesDuTournoi(nomTournoi)}</Text>
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{nomTournoi}</Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t('implAccueil.prochains.tonEquipe', 'Ton équipe : {{team}}', {
+              team: equipe?.team?.name || '', ...SANS_ECHAPPEMENT,
+            })}
+          </Text>
+        </View>
+      </View>
+      {jourLong || caseDate?.note ? (
+        <View style={[Alignments.row, { flexWrap: 'wrap', gap: 16 }]}>
+          {jourLong ? ligne('calendar', jourLong) : null}
+          {caseDate?.note ? ligne('clock', caseDate.note) : null}
+        </View>
+      ) : null}
+      {lieu ? ligne('locationPin', lieu) : null}
+      {aPayer ? (
+        <View
+          style={{
+            alignSelf: 'flex-start',
+            backgroundColor: withAlpha(Colors.primary500, 0.16),
+            borderRadius: 999,
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+          }}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+            {t('implAccueil.prochains.placeAPayer', '1 place à payer')}
+          </Text>
+        </View>
+      ) : null}
+    </TouchableOpacity>
+  );
+}
+
+/**
  * T-INVITATION-ACCUEIL (18/11/2026, Adel D237 ; constat M1357 de la recette 46) — L'INVITATION À
  * REJOINDRE UNE ÉQUIPE DE TOURNOI, EN ATTENTE, EN HAUT DE L'ACCUEIL (téléphone et site) : une carte
  * par invitation `invited`, la plus récente en haut (ordre du serveur). Accepter et Refuser
@@ -379,6 +523,8 @@ function CarteEquipeRejointe({ invitation, navigation }) {
  * son prix, « Refuser » rouge et « Accepter » bleu côte à côte) ; après « Accepter », la carte
  * devient « Tu as rejoint l'équipe » et enchaîne sur le paiement, jusqu'à ce qu'on quitte
  * l'accueil (la carte « Mon équipe » prend alors le relais).
+ * ACCUEIL-TOURNOI (19/11, planche 9e) : sous les invitations, « Tes prochains événements » et mes
+ * tournois à venir (`GET /tournament-teams?view=mine`), rien sans tournoi ni si la lecture échoue.
  * Témoins : __tests__/InvitationsTournoiAccueil.test.js,
  * __tests__/HomeHub.T-INVITATION-ACCUEIL.test.js.
  * @param {object} props - Les propriétés.
@@ -386,6 +532,8 @@ function CarteEquipeRejointe({ invitation, navigation }) {
  * @returns {import('react').ReactElement | null} Les cartes, ou rien.
  */
 function InvitationsTournoiAccueil({ navigation }) {
+  const { t } = useTranslation();
+  const { Fonts } = useTheme();
   // L'onglet de l'accueil reste monté et l'app ne relit rien au retour
   // (`refetchOnWindowFocus: false`) : la lecture suit le focus de l'écran (comme HomeHub.js),
   // une invitation répondue sur la page d'équipe ou reçue entre-temps est à jour au retour sur
@@ -403,7 +551,14 @@ function InvitationsTournoiAccueil({ navigation }) {
     .filter((invitation) => invitation?.responseStatus === 'invited'
       && invitation?.team?.documentId && invitation?.event?.documentId
       && !idsRejoints.has(String(invitation.team.documentId)));
-  if (!invitations.length && !rejointes.length) return null;
+  // ACCUEIL-TOURNOI (planche 9e) : mes équipes de tournoi à venir, triées par le serveur ; trois
+  // au plus ; sans celle qu'on vient de rejoindre ici (sa carte « Tu as rejoint » la montre déjà).
+  const mesEquipes = useMyTournamentTeams({ ...LECTURE_DISCRETE, enabled: isFocused });
+  const tournois = (Array.isArray(mesEquipes?.data) ? mesEquipes.data : [])
+    .filter((equipe) => equipe?.team?.documentId && equipe?.event?.documentId
+      && !idsRejoints.has(String(equipe.team.documentId)))
+    .slice(0, 3);
+  if (!invitations.length && !rejointes.length && !tournois.length) return null;
   return (
     <View style={{ gap: 12 }}>
       {rejointes.map((invitation) => (
@@ -421,6 +576,20 @@ function InvitationsTournoiAccueil({ navigation }) {
           onAcceptee={(acceptee) => setRejointes((avant) => [acceptee, ...avant])}
         />
       ))}
+      {tournois.length ? (
+        <View style={{ gap: 12 }}>
+          <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('implAccueil.prochains.titre', 'Tes prochains événements')}
+          </Text>
+          {tournois.map((equipe) => (
+            <CarteMonTournoi
+              equipe={equipe}
+              key={`mon-tournoi-${String(equipe.team.documentId)}`}
+              navigation={navigation}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
