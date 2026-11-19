@@ -15757,6 +15757,7 @@ export default {
     pricesNotice: 'TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment.',
     privacy: 'Confidentialité',
     privacyHint: 'Ouvre la politique de confidentialité dans le navigateur.',
+    renewalNotice: 'Renouvellement automatique, résiliable à tout moment.',
     restore: 'Restaurer mes achats',
     restoreDone: {
       message: "Ton contexte abonnement vient d'être mis à jour.",

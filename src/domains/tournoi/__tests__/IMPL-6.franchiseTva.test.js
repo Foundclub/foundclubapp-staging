@@ -14,7 +14,15 @@ test('🔴 D261 : le § 2 des conditions dit « 20 € par joueur (TVA non appli
   expect(PARAGRAPHES_DES_CONDITIONS.join('\n')).not.toMatch(/\bTTC\b|toutes taxes/);
 });
 
-test('🔴 D261 : la mention sous les offres d abonnement ne dit plus « Prix TTC » (fr) ni « include VAT » (en)', () => {
+// TVA-STORES (19/11/2026, « 23 retire ») : `pricesNotice` n'est plus que le texte du SITE (Stripe) ;
+// l'application (Apple, Google vendent TVA comprise) lit `renewalNotice`, sans mention ni « TTC ».
+// Avant : `pricesNotice` était le texte unique, sur toutes les plateformes.
+test('🔴 D261 : la mention sous les offres d abonnement du SITE ne dit plus « Prix TTC » (fr) ni « include VAT » (en)', () => {
   expect(fr.legalFooter.pricesNotice).toBe('TVA non applicable, art. 293 B du CGI. Renouvellement automatique, résiliable à tout moment.');
   expect(en.legalFooter.pricesNotice).toBe('VAT not applicable, article 293 B of the French General Tax Code. Automatic renewal, cancel anytime.');
+});
+
+test('🔴 TVA-STORES : la mention de l application (stores) ne parle pas de TVA', () => {
+  expect(fr.legalFooter.renewalNotice).toBe('Renouvellement automatique, résiliable à tout moment.');
+  expect(en.legalFooter.renewalNotice).toBe('Automatic renewal, cancel anytime.');
 });

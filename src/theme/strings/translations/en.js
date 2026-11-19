@@ -14832,6 +14832,7 @@ export default {
     pricesNotice: 'VAT not applicable, article 293 B of the French General Tax Code. Automatic renewal, cancel anytime.',
     privacy: 'Privacy',
     privacyHint: 'Opens the privacy policy in the browser.',
+    renewalNotice: 'Automatic renewal, cancel anytime.',
     restore: 'Restore my purchases',
     restoreDone: {
       message: 'Your subscription details have just been updated.',
