@@ -1099,7 +1099,9 @@ function TournamentManagement({ navigation, route }) {
               >
                 <View style={deuxColonnes ? { flex: 2, minWidth: 0 } : null}>
                   <TournamentOrganizerBoard
-                    compact={deuxColonnes}
+                    // 1f : les lignes serrées demandent ≈ 500 px fixes (barre, état, lien, menu) ;
+                    // à 1024 la colonne des équipes n'en a pas assez, les cartes restent.
+                    compact={largeurDeLaFenetre >= 1280}
                     event={event}
                     eventId={eventId}
                     filters={filtresDesEquipes}

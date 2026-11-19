@@ -739,8 +739,10 @@ function TournamentOrganizerBoard({
         style={[Spaces.gap[8], { paddingVertical: 8 }]}
         testID={`orga-ligne-${id}`}
       >
-        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
-          <View style={{ flex: 3, minWidth: 0 }}>
+        {/* Largeurs mesurées sur la capture 1f (colonne des équipes ≈ 620 px à 1280) : barre 120,
+            état et lien à leur largeur naturelle, le nom prend le reste. */}
+        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{lu.nomDeLEquipe}</Text>
             {lu.nomDuCapitaine ? (
               <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300]}>
@@ -750,11 +752,9 @@ function TournamentOrganizerBoard({
               </Text>
             ) : null}
           </View>
-          <View style={{ flex: 2, minWidth: 0 }}>{milieu}</View>
-          <View style={{ alignItems: 'flex-end', flex: 2, minWidth: 0 }}>
-            {pastille(etat.texte, etat.couleur)}
-          </View>
-          {lienVoirLEquipe(id)}
+          <View style={{ flexShrink: 0, width: 120 }}>{milieu}</View>
+          <View style={{ flexShrink: 0 }}>{pastille(etat.texte, etat.couleur)}</View>
+          <View style={{ flexShrink: 0 }}>{lienVoirLEquipe(id)}</View>
           {boutonDuMenu(lu) || <View style={{ width: CIBLE }} />}
         </View>
         {menuEtAvis(lu)}
