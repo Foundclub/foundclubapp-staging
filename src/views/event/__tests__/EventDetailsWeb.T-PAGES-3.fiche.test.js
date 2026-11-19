@@ -269,7 +269,19 @@ const texte = (noeud) => (typeof noeud === 'string'
 const boutonsDe = (/** @type {any} */ noeud) => noeud.findAll((/** @type {any} */ n) => n.type === 'button').map(texte);
 const tousLesBoutons = (/** @type {any} */ arbre) => boutonsDe(arbre.root);
 const blocParticipants = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.id === 'event.participants').length;
-const blocTournoi = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
+
+// ONGLETS-SITE-FICHE (19/11/2026) : la fiche d'un tournoi du site a des onglets pour qui n'organise
+// pas ; « Les équipes » vit sous l'onglet Équipes. Ce qui se cherche dans le bloc des équipes et
+// ne se trouve pas sur l'onglet ouvert est cherché après un appui sur « Équipes ».
+const chercherAvecEquipes = (/** @type {any} */ arbre, /** @type {(n: any) => boolean} */ predicat) => {
+  const trouves = arbre.root.findAll(predicat);
+  if (trouves.length) return trouves;
+  const [onglet] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'button' && n.props?.['data-testid'] === 'onglet-tournamentTeams');
+  if (!onglet || onglet.props['aria-selected']) return trouves;
+  act(() => { onglet.props.onClick(); });
+  return arbre.root.findAll(predicat);
+};
+const blocTournoi = (/** @type {any} */ arbre) => chercherAvecEquipes(arbre, (/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
 // 15 ans le 19/12/2026 ; 18 ans ; le tournoi du samedi 19/12/2026 ouvert dès 16 ans.
 const compteNeLe = (/** @type {string | null} */ birthdate) => ({ ...JOUEUR, userData: { ...JOUEUR.userData, birthdate } });
 const TOURNOI_19_12 = (/** @type {Record<string, any>} */ sur = {}) => tournoiAutonome({
@@ -395,43 +407,46 @@ test.each(LECTEURS.filter(([nom]) => nom === 'organisateur'))('T-PAGES-3 (0) car
 // TournamentTeamsPublic.IMPL-1.test.js, web/tests/components/impl-1-fiche.spec.ts.
 // FICHE-TOURNOI (19/11/2026, 6b, site au téléphone) : plus de fil « Planning › … » ; le drapeau
 // (« ») devient le menu « ⋯ » qui porte « Signaler ». Témoin : EventDetailsWeb.FICHE-TOURNOI.test.js.
+// ONGLETS-SITE-FICHE (19/11/2026) : le relevé est celui de l'onglet Aperçu (ouvert d'abord) ; les
+// onglets s'y ajoutent ; « Les équipes » et « Voir la compétition » sont sous l'onglet Équipes (témoin
+// juste après).
 const APRES = {
   capitaine: {
-    boutons: ['Partager', '⋯', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Voir mon équipe', 'Aperçu', 'Équipes', 'Personnes', 'Lire les conditions d’inscription'],
     mots: ['équipes attendues', 'Mon équipe'],
     pastilles: [],
-    titres: ['Recette Site 333', 'Avant le match', 'Les équipes'],
+    titres: ['Recette Site 333', 'Avant le match'],
   },
   invité: {
-    boutons: ['Partager', '⋯', 'Répondre à mon invitation', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Répondre à mon invitation', 'Aperçu', 'Équipes', 'Personnes', 'Lire les conditions d’inscription'],
     mots: ['équipes attendues', 'Mon équipe'],
     pastilles: [],
-    titres: ['Recette Site 333', 'Avant le match', 'Les équipes'],
+    titres: ['Recette Site 333', 'Avant le match'],
   },
   'joueur sans équipe': {
-    boutons: ['Partager', '⋯', 'Créer mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Aperçu', 'Équipes', 'Personnes', 'Créer mon équipe', 'Lire les conditions d’inscription'],
     mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire', 'Rejoindre une équipe'],
     pastilles: [],
-    titres: ['Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
+    titres: ['Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire'],
   },
   membre: {
-    boutons: ['Partager', '⋯', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Voir mon équipe', 'Aperçu', 'Équipes', 'Personnes', 'Lire les conditions d’inscription'],
     mots: ['équipes attendues', 'Mon équipe'],
     pastilles: [],
-    titres: ['Recette Site 333', 'Avant le match', 'Les équipes'],
+    titres: ['Recette Site 333', 'Avant le match'],
   },
   'trop jeune': {
-    boutons: ['Partager', '⋯', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Aperçu', 'Équipes', 'Personnes', 'Lire les conditions d’inscription'],
     mots: ['équipes attendues', 'Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire'],
     pastilles: [],
-    titres: ['Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
+    titres: ['Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire'],
   },
   visiteur: {
-    boutons: ['Retour', 'Partager', 'Créer mon équipe', 'J’ai déjà un compte', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Retour', 'Partager', 'Aperçu', 'Équipes', 'Personnes', 'Créer mon équipe', 'J’ai déjà un compte', 'Lire les conditions d’inscription'],
     // FICHE-TOURNOI (8a) : « Rejoindre une équipe » aussi pour le visiteur (bloc du seuil).
-    mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire', 'Rejoindre une équipe'],
+    mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire'],
     pastilles: [],
-    titres: ['Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
+    titres: ['Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire'],
   },
 };
 
@@ -441,9 +456,21 @@ test.each(LECTEURS.filter(([nom]) => nom !== 'organisateur'))('🔴 T-PAGES-3 (1
   expect(vu).not.toEqual(AVANT[nom]);
 });
 
+// ONGLETS-SITE-FICHE (19/11/2026) : sous l'onglet Équipes, « Les équipes » et « Voir la compétition ».
+test.each(LECTEURS.filter(([nom]) => nom !== 'organisateur'))('🔴 ONGLETS-SITE-FICHE — %s : l onglet Équipes porte « Les équipes » et « Voir la compétition »', (_nom, compte, ev) => {
+  const arbre = monter(ev(), compte);
+  expect(blocTournoi(arbre)).toBeTruthy();
+  const titres = arbre.root.findAll((/** @type {any} */ n) => ['h1', 'h2', 'h3'].includes(n.type)).map(texte);
+  expect(titres).toContain('Les équipes');
+  expect(tousLesBoutons(arbre)).toContain('Voir la compétition');
+});
+
 // --- Les points de la consigne, un témoin chacun ---------------------------------------------------
-const parTestId = (/** @type {any} */ arbre, /** @type {string} */ id) => arbre.root
-  .findAll((/** @type {any} */ n) => (n.props?.['data-testid'] === id || n.props?.testID === id) && typeof n.type === 'string');
+const parTestId = (/** @type {any} */ arbre, /** @type {string} */ id) => {
+  const predicat = (/** @type {any} */ n) => (n.props?.['data-testid'] === id || n.props?.testID === id) && typeof n.type === 'string';
+  // La ligne du nombre d'équipes vit sous l'onglet Équipes (ONGLETS-SITE-FICHE).
+  return id === 'event-tournament-visitor-teams' ? chercherAvecEquipes(arbre, predicat) : arbre.root.findAll(predicat);
+};
 const unSeul = (/** @type {any} */ arbre, /** @type {string} */ id) => {
   const trouves = parTestId(arbre, id);
   expect(trouves).toHaveLength(1);
@@ -569,8 +596,9 @@ test.each([
 ])('🔴 T-PAGES-3 (3) %s — sous 30 % : « 24 équipes attendues », jamais le compte ni « au plus » ; à 8 sur 24 : « 8 équipes inscrites sur 24 »', (_nom, compte) => {
   const cinq = fiche([EQUIPE_OUVERTE], { tournamentTeamsSummary: { expectedCount: 24, registeredCount: 5 } });
   let arbre = monter(compte === VISITEUR ? { ...cinq, tournamentTeams: undefined } : cinq, compte);
-  expect(parTestId(arbre, 'event-tournament-visitor-teams').map(texte)).toEqual(['24 équipes attendues']);
+  // ONGLETS-SITE-FICHE : l'essentiel est sous Aperçu (ouvert d'abord), la ligne sous Équipes.
   expect(texte(unSeul(arbre, 'tournament-essentials-format'))).toContain('24 équipes attendues');
+  expect(parTestId(arbre, 'event-tournament-visitor-teams').map(texte)).toEqual(['24 équipes attendues']);
   expect(texte(arbre.root)).not.toContain('au plus');
   // Les compteurs de l organisateur (« N en attente · N validées · N effectifs à revoir ») ne sont pas rendus.
   expect(texte(arbre.root)).not.toMatch(/[0-9] effectifs? à revoir/);

@@ -11545,6 +11545,7 @@ export default {
       callUp: 'Convocation',
       detectionCandidates: 'Candidats',
       detectionSplit: 'Répartition',
+      label: 'Sections de la fiche',
       overview: 'Aperçu',
       people: 'Personnes',
       stageDays: 'Jours',

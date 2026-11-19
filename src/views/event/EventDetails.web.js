@@ -67,6 +67,7 @@ import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
   getTournamentTeamsTabLine,
+  isTournamentTeamsCountShown,
 } from '@/views/event/tournamentTeamsCount';
 import {
   canRegisterSourceTeamToTournament,
@@ -148,6 +149,7 @@ import {
 import CancelSeriesSheet from './components/CancelSeriesSheet';
 import EventChatRow from './components/EventChatRow';
 import EventHeader from './components/EventHeader';
+import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
@@ -292,6 +294,8 @@ function EventDetails({ navigation, route }) {
     enabled: Boolean(eventId && userData?.documentId),
   });
   const [isSharing, setIsSharing] = useState(false);
+  // ONGLETS-SITE-FICHE (19/11) : l'onglet ouvert de la fiche d'un tournoi (joueur, visiteur).
+  const [ongletDuTournoi, setOngletDuTournoi] = useState('overview');
   const [actionError, setActionError] = useState('');
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   // CORR-COLLECTIVITES 94 (31/10, Adel A) : « La Ville est prévenue », dans la fenêtre de l'app.
@@ -2324,6 +2328,26 @@ function EventDetails({ navigation, route }) {
   // « Gérer l'événement ») ; sur un ordinateur, rien ne change (6d : « garder le réel »).
   // Témoin : __tests__/EventDetailsWeb.FICHE-TOURNOI.test.js.
   const ficheDuTournoiAuTelephone = isTournamentEvent && !isTablet;
+  // ONGLETS-SITE-FICHE (19/11/2026, FICHE-MINIS 2, maquettes 6b site et 6d) — pour qui n'organise
+  // pas le tournoi, les onglets du téléphone (EventDetails.js) : Aperçu (l'essentiel, « Inscris ton
+  // équipe », « Comment ça marche », « Avant de t'inscrire »), Équipes (« Les équipes »),
+  // Personnes (la liste du téléphone, fermée à qui n'organise pas). « Équipes · N » dès le seuil
+  // des 30 % (« 4- A »). L'organisateur garde sa fiche d'avant (deux colonnes, pilotage).
+  // Témoin : __tests__/EventDetailsWeb.FICHE-TOURNOI.test.js « ONGLETS-SITE-FICHE ».
+  const libelleEquipes = t('eventDetails.tabs.teams', 'Équipes');
+  const ongletsDuTournoi = vueJoueurDuTournoi ? [
+    { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' },
+    {
+      label: isTournamentTeamsCountShown(event)
+        ? `${libelleEquipes} · ${getTournamentRegisteredTeamsCount(event)}`
+        : libelleEquipes,
+      value: 'tournamentTeams',
+    },
+    { label: t('eventDetails.tabs.people', 'Personnes'), value: 'participants' },
+  ] : [];
+  const surLOngletDuTournoi = (/** @type {string} */ valeur) => (
+    !vueJoueurDuTournoi || ongletDuTournoi === valeur
+  );
   const filDuTournoiMasque = ficheDuTournoiAuTelephone;
   const signalerDansLeMenu = ficheDuTournoiAuTelephone && isSignedIn;
   const menuDuHautItems = signalerDansLeMenu
@@ -2755,6 +2779,8 @@ function EventDetails({ navigation, route }) {
             ? ouvrirLaConnexionDuTournoi
             : null}
           onOpenTeamPage={handleOpenTournamentTeam}
+          // ONGLETS-SITE-FICHE : « Voir les infos du tournoi » de l'aperçu ramène à Aperçu.
+          onSeeTournament={() => setOngletDuTournoi('overview')}
           teams={equipesDeLaListe}
           threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
           viewerRequested={roleDuLecteur === 'requested'}
@@ -3751,6 +3777,59 @@ function EventDetails({ navigation, route }) {
                   {/* T-PAGES-3b (point 2) : au téléphone, « Mon équipe » passe AVANT l'essentiel
                       (maquette b) ; la carte d'inscription le suit (maquette a). */}
                   {!isDesktop && equipeDuLecteur ? carteDuTournoi : null}
+                  {/* ONGLETS-SITE-FICHE (6b site, 6d) : les onglets, juste sous le bandeau et
+                      « Mon équipe », comme au téléphone. */}
+                  {/* ponytail: rangée HTML (tablist) plutôt que le SegmentedControl du téléphone,
+                      qui tire react-native-gesture-handler dans chaque témoin du site ; même
+                      forme (pastilles, l'onglet ouvert plein). */}
+                  <div
+                    aria-label={t('eventDetails.tabs.label', 'Sections de la fiche')}
+                    data-testid="event-tournament-tabs"
+                    role="tablist"
+                    style={{
+                      display: 'grid', gap: 8, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    }}
+                  >
+                    {ongletsDuTournoi.map((onglet) => {
+                      const ouvert = ongletDuTournoi === onglet.value;
+                      return (
+                        <button
+                          aria-selected={ouvert}
+                          data-testid={`onglet-${onglet.value}`}
+                          key={onglet.value}
+                          onClick={() => setOngletDuTournoi(onglet.value)}
+                          role="tab"
+                          style={{
+                            background: ouvert ? accentColor : 'transparent',
+                            border: `1px solid ${ouvert ? accentColor : borderColor}`,
+                            borderRadius: 999,
+                            color: ouvert ? Colors?.primary900 : textColor,
+                            cursor: 'pointer',
+                            fontFamily: ouvert
+                              ? 'Montserrat-Bold, sans-serif'
+                              : 'Montserrat-Regular, Montserrat, sans-serif',
+                            fontSize: 15,
+                            minHeight: 44,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            padding: '8px 10px',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          type="button"
+                        >
+                          {onglet.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {surLOngletDuTournoi('participants') ? (
+                    <TournamentPeopleList canSeeNames={false} teams={tournamentTeams} />
+                  ) : null}
+                </>
+              ) : null}
+              {vueJoueurDuTournoi && surLOngletDuTournoi('overview') ? (
+                <>
                   {/* IMPL-1-FICHE (6b) : une carte, une ligne par info, et « Ouvrir dans le GPS »
                       sous l'adresse (il quitte l'en-tête, devenu bandeau). */}
                   <TournamentEssentials
@@ -4344,7 +4423,7 @@ function EventDetails({ navigation, route }) {
                   )}
                 </>
               ) : null}
-              {vueJoueurDuTournoi ? blocDuTournoi : null}
+              {vueJoueurDuTournoi && surLOngletDuTournoi('tournamentTeams') ? blocDuTournoi : null}
             </section>
 
             <section style={{ alignContent: 'start', display: 'grid', gap: 24, minWidth: 0 }}>

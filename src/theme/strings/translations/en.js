@@ -10900,6 +10900,7 @@ export default {
       callUp: 'Call-up',
       detectionCandidates: 'Candidates',
       detectionSplit: 'Split',
+      label: 'Page sections',
       overview: 'Overview',
       people: 'People',
       stageDays: 'Days',

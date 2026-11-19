@@ -289,7 +289,18 @@ const boutonsMonStatut = (arbre) => {
     .map((/** @type {any} */ b) => [texte(b), b.props.style?.background === 'transparent' ? 'contour' : 'plein']);
 };
 
-const blocTournoi = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
+// ONGLETS-SITE-FICHE (19/11/2026) : la fiche d'un tournoi du site a des onglets pour qui n'organise
+// pas ; « Les équipes » vit sous l'onglet Équipes. Ce qui se cherche dans le bloc des équipes et
+// ne se trouve pas sur l'onglet ouvert est cherché après un appui sur « Équipes ».
+const chercherAvecEquipes = (/** @type {any} */ arbre, /** @type {(n: any) => boolean} */ predicat) => {
+  const trouves = arbre.root.findAll(predicat);
+  if (trouves.length) return trouves;
+  const [onglet] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'button' && n.props?.['data-testid'] === 'onglet-tournamentTeams');
+  if (!onglet || onglet.props['aria-selected']) return trouves;
+  act(() => { onglet.props.onClick(); });
+  return arbre.root.findAll(predicat);
+};
+const blocTournoi = (/** @type {any} */ arbre) => chercherAvecEquipes(arbre, (/** @type {any} */ n) => n.props?.['data-event-section'] === 'tournament')[0];
 // T-PAGES-3 (17/11, maquette (a) et (b)) : sur un tournoi, le joueur ne lit plus « Mon statut » ; ses
 // gestes sont dans la colonne des cartes (« Ton inscription » ou « Mon équipe »). Les réglages, la
 // pastille de validation et « Infos rapides » restent à l'organisateur (témoin EventDetailsWeb.T-PAGES-3).
@@ -585,8 +596,7 @@ test('T-PARCOURS2 (3) site caractérisant — sans ligne du lecteur : « Inscrir
 // D49 : le visiteur sans compte ne reçoit pas les équipes ; il lit le résumé public
 // (`tournamentTeamsSummary`), avec le seuil des 30 %. D50 : « Rejoindre une équipe » pour le joueur seul.
 const VISITEUR = { ...JOUEUR, userData: null };
-const ligneVisiteur = (/** @type {any} */ arbre) => arbre.root
-  .findAll((/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-visitor-teams').map(texte);
+const ligneVisiteur = (/** @type {any} */ arbre) => chercherAvecEquipes(arbre, (/** @type {any} */ n) => n.props?.['data-testid'] === 'event-tournament-visitor-teams').map(texte);
 const tournoiPublic = (/** @type {any} */ tournamentTeamsSummary) => TOURNOI_19_12({
   tournamentConfig: { maxTeams: 24, minAge: 16 }, tournamentTeams: undefined, tournamentTeamsSummary,
 });
