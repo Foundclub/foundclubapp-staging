@@ -28,11 +28,15 @@ describe('INSCRIPTION-CODE — Activité › Qui es-tu ? › Rôle en tête de t
     ['player', [R.UserSport, R.UserSection, R.UserAddress, R.UserAvatar, R.UserPosition,
       R.UserPhysique, R.UserLevel, R.UserCategory, R.UserSportHistory, R.UserClubSearch,
       R.UserAffiliationGuide, R.UserTeamAffiliation]],
-    ['coach', [R.UserSport, R.UserAddress, R.UserAvatar, R.UserAffiliationGuide,
-      R.UserTrainedTeams]],
-    ['president', [R.UserSport, R.UserAddress, R.UserAvatar, R.UserAffiliationGuide]],
-    ['parent', [R.UserSport, R.UserAvatar, R.UserChild]],
-  ])('rôle %s posé, identité connue : le sport, puis la suite d’aujourd’hui', (role, attendu) => {
+    // INSCRIPTION-CODE-2 (19/11) — Avant : coach, dirigeant et parent commençaient AUSSI par
+    // R.UserSport. Mais l'activité vient avant le rôle : un compte qui a déjà l'un de ces rôles
+    // l'a passée, ou c'est un ANCIEN compte (ces parcours ne la demandaient pas) ; la lui montrer
+    // cassait le point de contrôle de l'âge (AGE-OBLIGATOIRE-3) et la reprise (TUNNELREPRISE,
+    // FINCHEMINS, RATTRAPAGE) : 8 témoins rouges. Le joueur la garde (elle était à lui).
+    ['coach', [R.UserAddress, R.UserAvatar, R.UserAffiliationGuide, R.UserTrainedTeams]],
+    ['president', [R.UserAddress, R.UserAvatar, R.UserAffiliationGuide]],
+    ['parent', [R.UserAvatar, R.UserChild]],
+  ])('rôle %s posé, identité connue : la suite d’aujourd’hui', (role, attendu) => {
     expect(parcours(USER_ROLES[role], {
       birthdate: '1990-01-01', firstname: 'Lina', lastname: 'Morel',
     })).toEqual(attendu);
