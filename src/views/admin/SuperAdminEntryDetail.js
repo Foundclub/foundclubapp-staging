@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { contacterDepuisLaConsole } from '@/domains/messaging/assistanceConsole';
 import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
@@ -31,6 +32,7 @@ import {
   useGetSuperadminEntry,
   useSetSuperadminUserSuspension,
 } from '@/services/admin/superadminQueries';
+import { ouvrirConversationAssistancePour } from '@/services/chat/assistanceService';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
@@ -264,15 +266,20 @@ function SuperAdminEntryDetail({ navigation, route }) {
 
     setIsContacting(true);
     try {
-      const chat = await startWhisperChat([entryDocumentId]);
-      if (!chat?.documentId) {
+      // D271 (« A2 A ») : face à un mineur, le serveur refuse le tête-à-tête ; on ouvre son fil
+      // d'assistance, signé « Assistance FoundClub ».
+      const ouvert = await contacterDepuisLaConsole(entryDocumentId, {
+        ouvrirPour: ouvrirConversationAssistancePour,
+        startWhisperChat,
+      });
+      if (!ouvert) {
         Alert.alert(
           t('common.errors.error', 'Erreur'),
           t('messaging.errors.failedToCreateConversation', 'Impossible de créer la conversation.'),
         );
         return;
       }
-      navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+      navigation.navigate(RouteNames.Conversation, ouvert);
     } catch (contactError) {
       Alert.alert(
         t('common.errors.error', 'Erreur'),

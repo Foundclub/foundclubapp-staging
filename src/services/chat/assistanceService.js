@@ -23,6 +23,17 @@ export const ouvrirMaConversationAssistance = async () => (
 );
 
 /**
+ * ASSISTANCE-MINEURS-CLUB (D271, Adel « A1 A ») — l'ÉQUIPE ouvre le fil d'assistance d'un compte,
+ * mineur compris, pour lui écrire la première (super-admins ; droit `ouvrirPour`).
+ * @param {string} userDocumentId - Le titulaire.
+ * @returns {Promise<{ documentId: string }>} Son fil.
+ */
+export const ouvrirConversationAssistancePour = async (userDocumentId) => {
+  const chemin = `/assistance/conversations/pour/${encodeURIComponent(userDocumentId)}`;
+  return (await (await client()).post(chemin)).data?.data;
+};
+
+/**
  * La boîte commune de la console (super-admins) : les conversations écrites, non lues d'abord.
  * @returns {Promise<{ conversations: any[], enAttenteTotal: number, nonLusTotal: number }>}
  *   La boîte.
