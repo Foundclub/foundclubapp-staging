@@ -303,10 +303,9 @@ function TournamentTeamProgress({
         count: progress.done, needed: progress.needed, ...SANS_ECHAPPEMENT,
       });
     }
-    const pastille = progress.isValidated
-      ? t('tournamentTeamProgress.validated')
-      : t('implEquipe.progress.toPay', { count: aPayer });
-    const pastilleTon = progress.isValidated ? Colors.primary500 : Colors.warning500;
+    // IMPL-2C (19/11, recette 48 point B ; planche 4b) : validée, le titre le dit et la pastille
+    // se tait (« Équipe validée » était écrit deux fois).
+    const pastille = progress.isValidated ? '' : t('implEquipe.progress.toPay', { count: aPayer });
     return (
       <View
         style={[
@@ -324,12 +323,14 @@ function TournamentTeamProgress({
           ]}
         >
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('tournamentTeamProgress.title')}</Text>
-          <Tag
-            style={ds.getToneTagStyle(pastilleTon)}
-            text={pastille}
-            textColor="neutral00"
-            textStyle={{ color: pastilleTon }}
-          />
+          {pastille ? (
+            <Tag
+              style={ds.getToneTagStyle(Colors.warning500)}
+              text={pastille}
+              textColor="neutral00"
+              textStyle={{ color: Colors.warning500 }}
+            />
+          ) : null}
         </View>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]} testID="tournament-team-progress-count">
           {progress.isValidated

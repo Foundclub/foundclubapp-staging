@@ -135,6 +135,14 @@ describe('TournamentTeamProgress detailed — la carte de la page d’équipe', 
     expect(contenu).not.toContain('places à payer');
   });
 
+  // IMPL-2C (19/11/2026, recette 48 point B, compte 777) : « Équipe validée » était écrit deux fois, dans
+  // la pastille et dans le titre. Planche 4b : une seule mention, le titre (la pastille ne sert qu'à « N
+  // places à payer »).
+  test('🔴 4b : « Équipe validée » une seule fois (le titre, plus la pastille)', () => {
+    const contenu = texte(monter({ members: QUATRE, payment: { ...PAIEMENT_4A, members: [], paidCount: 5 }, teamStatus: 'accepted' }));
+    expect(contenu.split('Équipe validée').length - 1).toBe(1);
+  });
+
   test('visiteur (`viewerIsMember` faux) : la règle neutre, aucun nom', () => {
     const contenu = texte(monter({ members: QUATRE, payment: { paidCount: 3, paidMembersToValidate: 5 }, viewerIsMember: false }));
     expect(contenu).toContain('3 places payées sur 5');
