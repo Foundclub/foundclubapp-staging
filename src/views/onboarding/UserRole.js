@@ -7,6 +7,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { familleDuSport } from '@/domains/activity/familleDuSport';
 import {
   getOnboardingViews, getRoleDocumentIdByKey, markOnboardingStarted,
 } from '@/domains/auth/authUseCases';
@@ -197,6 +198,21 @@ function UserRole({ navigation }) {
     ? t('userRole.mineur.aPartirDe18', 'À partir de 18 ans')
     : undefined;
 
+  // INSCRIPTION-CODE (b) (19/11, V04, V06 à V09, v2_03 « ok ») — les mots du rôle suivent la famille
+  // de l'activité choisie au premier écran. Activité inconnue ou absente : les mots d'avant.
+  const activite = String(userData?.preferredSport || '').trim();
+  const famille = familleDuSport(activite);
+  const libelleDuRole = (/** @type {string} */ cle, /** @type {string} */ avant) => (famille
+    ? t(`familles.${famille}.roles.${cle}`)
+    : avant);
+  const descriptionDuRole = (/** @type {string} */ cle) => (famille
+    ? t(`familles.${famille}.descriptions.${cle}`)
+    : undefined);
+  // « en football », « en spéléologie », mais « en VTT » : un sigle garde ses capitales.
+  const activiteDansLaPhrase = activite === activite.toUpperCase()
+    ? activite
+    : activite.charAt(0).toLowerCase() + activite.slice(1);
+
   const handleNext = () => {
     if (!hasChosenRole) return;
     updateUserMutation.mutate({ role });
@@ -291,10 +307,18 @@ function UserRole({ navigation }) {
             )}
           />
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('profile.titles.type')}
+            {activite
+              ? t('familles.roleTitre', {
+                activite: activiteDansLaPhrase, interpolation: { escapeValue: false },
+              })
+              : t('profile.titles.type')}
           </Text>
+          {/* V1 (insc_02) : la promesse « tu pourras en ajouter d'autres plus tard » n'avait aucun
+              code derrière ; on dit la vérité (un coach peut jouer dans une équipe). */}
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            {t('profile.subtitles.type')}
+            {famille === 'equipe' || !famille
+              ? t('familles.roleSousTitreEquipe')
+              : t('familles.roleSousTitre')}
           </Text>
           {estMineur ? (
             <Text style={[Fonts.p2, Fonts.neutral300]} testID="role-mineur">
@@ -315,30 +339,31 @@ function UserRole({ navigation }) {
           <View style={[Spaces.gap[12]]}>
             <OnboardingRadioRow
               checked={Boolean(role) && role === playerRoleId}
-              label={t('profile.fields.types.player')}
+              label={libelleDuRole('player', t('profile.fields.types.player'))}
               onPress={() => handleSelection(USER_ROLES.player)}
+              subtitle={descriptionDuRole('player')}
             />
             <OnboardingRadioRow
               checked={Boolean(role) && role === coachRoleId}
               disabled={estMineur}
-              label={t('profile.fields.types.coach')}
+              label={libelleDuRole('coach', t('profile.fields.types.coach'))}
               onPress={() => handleSelection(USER_ROLES.coach)}
-              subtitle={reserveAuxAdultes}
+              subtitle={reserveAuxAdultes || descriptionDuRole('coach')}
             />
             <OnboardingRadioRow
               checked={Boolean(role) && role === presidentRoleId}
               disabled={estMineur}
-              label={t('profile.fields.types.president')}
+              label={libelleDuRole('president', t('profile.fields.types.president'))}
               onPress={() => handleSelection(USER_ROLES.president)}
-              subtitle={reserveAuxAdultes}
+              subtitle={reserveAuxAdultes || descriptionDuRole('president')}
             />
             {parentRoleId ? (
               <OnboardingRadioRow
                 checked={Boolean(role) && role === parentRoleId}
                 disabled={estMineur}
-                label={t('profile.fields.types.parent', 'Parent')}
+                label={libelleDuRole('parent', t('profile.fields.types.parent', 'Parent'))}
                 onPress={() => handleSelection(USER_ROLES.parent)}
-                subtitle={reserveAuxAdultes}
+                subtitle={reserveAuxAdultes || descriptionDuRole('parent')}
               />
             ) : null}
           </View>

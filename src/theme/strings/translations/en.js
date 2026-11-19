@@ -12743,6 +12743,96 @@ export default {
       shared: 'Shared facilities',
     },
   },
+  // INSCRIPTION-CODE (19/11/2026, V2 2.1, v2_03 « ok ») : les mots de chaque famille d'activité.
+  familles: {
+    combat: {
+      descriptions: {
+        coach: 'I teach or coach one or more groups',
+        parent: 'My child practises, I follow their classes',
+        player: 'I practise in a club, or I am looking for one',
+        president: 'I run the club: licences, schedule, halls',
+      },
+      roles: {
+        coach: 'Teacher / Coach',
+        parent: 'Parent',
+        player: 'Practitioner',
+        president: 'Club manager',
+      },
+    },
+    culture: {
+      descriptions: {
+        coach: 'I give classes or run a workshop',
+        parent: 'My child takes classes, I follow their schedule',
+        player: 'I take classes, or I am looking for a school',
+        president: 'I run the association: enrolments, rooms',
+      },
+      roles: {
+        coach: 'Teacher / Facilitator',
+        parent: 'Parent',
+        player: 'Member',
+        president: 'Board member',
+      },
+    },
+    equipe: {
+      descriptions: {
+        coach: 'I coach one or more teams',
+        parent: 'My child plays, I follow their matches',
+        player: 'I play in a club, or I am looking for one',
+        president: 'I run a club: teams, licences, schedule',
+      },
+      roles: {
+        coach: 'Coach',
+        parent: 'Parent',
+        player: 'Player',
+        president: 'Club manager',
+      },
+    },
+    individuel: {
+      descriptions: {
+        coach: 'I coach one or more groups',
+        parent: 'My child practises, I follow their competitions',
+        player: 'I train in a club, or I am looking for one',
+        president: 'I run the club: licences, schedule',
+      },
+      roles: {
+        coach: 'Coach',
+        parent: 'Parent',
+        player: 'Athlete',
+        president: 'Club manager',
+      },
+    },
+    nature: {
+      descriptions: {
+        coach: 'I lead outings or introductory sessions',
+        parent: 'My child practises, I follow their outings',
+        player: 'I practise in a club, or I am looking for one',
+        president: 'I run the club: memberships, calendar',
+      },
+      roles: {
+        coach: 'Instructor',
+        parent: 'Parent',
+        player: 'Practitioner',
+        president: 'Board member',
+      },
+    },
+    raquette: {
+      descriptions: {
+        coach: 'I coach one or more players or groups',
+        parent: 'My child plays, I follow their matches',
+        player: 'I play in a club, or I am looking for one',
+        president: 'I run a club: teams, licences, schedule',
+      },
+      roles: {
+        coach: 'Coach',
+        parent: 'Parent',
+        player: 'Player',
+        president: 'Club manager',
+      },
+    },
+    roleSousTitre: 'Choose the main one.',
+    roleSousTitreEquipe: 'Choose the main one. A coach or a club manager can also play in a team.',
+    roleTitre: 'Your role in {{activite}}?',
+  },
   featuredRequests: {
     approveSuccess: {
       message: 'The event is now featured on the club.',
