@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { photoDuLieu } from '@/domains/event/photoDuLieu';
 import { confirmerLeRefus } from '@/domains/requests/confirmerLeRefus';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -27,6 +28,7 @@ import useRetraitBasDuDefilement from '@/components/templates/useRetraitBasDuDef
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetEvent } from '@/services/event/eventQueries';
 import { useGetTournamentDashboard } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
 import {
   drawTournamentGroups,
@@ -167,6 +169,10 @@ function TournamentManagement({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetTournamentDashboard(eventId || '');
+  // IMPL-1B-PHOTO (19/11, écran 1a) : le tableau de bord ne rend pas le lieu ; la photo du
+  // complexe se lit sur la fiche du tournoi (même clé de cache `['event', id]` : aucun appel
+  // quand on vient de la fiche).
+  const { data: ficheDuTournoi } = useGetEvent(eventId || '');
 
   const tournamentConfig = useMemo(
     () => (dashboard?.config && typeof dashboard.config === 'object' ? dashboard.config : {}),
@@ -1073,6 +1079,7 @@ function TournamentManagement({ navigation, route }) {
                     onChanged={async () => {
                       await Promise.all([invalidate(), relireLeResume?.()]);
                     }}
+                    photo={photoDuLieu(ficheDuTournoi, 'medium')}
                     registeredTeamsCount={inscrites}
                     summary={resumeDeLOrganisateur || null}
                     summaryFailed={Boolean(erreurDuResume)}

@@ -21,6 +21,7 @@ import { estDuClubOrganisateur, resolveEventCustomName } from '@/domains/event/e
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
+import { photoDuLieu } from '@/domains/event/photoDuLieu';
 import useEvent from '@/domains/event/useEvent';
 import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import { withAlpha } from '@/theme/colors';
@@ -547,6 +548,11 @@ function EventCardNew({
   const isShareMode = mode === 'share';
   const isTeamFocusedCard = displayProfile === 'teamFocused' && !isShareMode && !isReservation;
   const backgroundImage = getBackgroundImage(typeName, Images, isStageEvent);
+  // IMPL-1B-PHOTO (19/11, écrans 6a et 7a) — la photo du complexe au fond de la carte du
+  // TOURNOI, posée sur l'illustration (qui reste dessous si la photo ne charge pas). Le serveur
+  // la rend pour tout événement d'un complexe actif : seul le tournoi est demandé
+  // (`photoDuLieu.js`).
+  const photoDuTournoi = isTournamentEvent ? photoDuLieu(item, 'small') : null;
   const headerTitle = getHeaderTitle(typeName, item);
 
   // Sponsors
@@ -865,7 +871,19 @@ function EventCardNew({
         resizeMode="cover"
         source={backgroundImage}
         style={StyleSheet.absoluteFill}
-      />
+      >
+        {photoDuTournoi ? (
+          <Image
+            accessibilityLabel={photoDuTournoi.alt}
+            accessibilityRole="image"
+            accessible
+            resizeMode="cover"
+            source={{ uri: photoDuTournoi.uri }}
+            style={[StyleSheet.absoluteFill, styles.backgroundImage]}
+            testID="event-card-venue-photo"
+          />
+        ) : null}
+      </ImageBackground>
       <LinearGradient
         colors={veilColors}
         end={{ x: 0, y: 1 }}

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Image,
   Modal,
   Switch,
   Text,
@@ -105,6 +106,8 @@ const seuilDesPayes = (summary, tournamentConfig) => {
  * @param {string} [props.viewerDocumentId] - Le compte connecté.
  * @param {import('react').ReactNode} [props.filters] - Les filtres des équipes (existants).
  * @param {import('react').ReactNode} [props.invites] - Les invitations d'un tournoi privé.
+ * @param {{ alt: string, uri: string } | null} [props.photo] - La photo du lieu
+ *   (`photoDuLieu`), ou null.
  * @returns {import('react').ReactElement} Le tableau de bord.
  */
 function TournamentOrganizerBoard({
@@ -114,6 +117,7 @@ function TournamentOrganizerBoard({
   invites = null,
   navigation,
   onChanged,
+  photo = null,
   registeredTeamsCount,
   summary,
   summaryFailed = false,
@@ -725,6 +729,20 @@ function TournamentOrganizerBoard({
     }
     return (
       <View style={[carte, Spaces.gap[8], { borderColor: withAlpha(Colors.primary500, '66') }]}>
+        {/* IMPL-1B-PHOTO (19/11, écran 1a, Adel : « la photo de l'événement avec le ballon »
+            = la photo du complexe) : la même photo que le bandeau de la fiche, en tête de la
+            carte ; sans photo, la carte d'avant. */}
+        {photo ? (
+          <Image
+            accessibilityLabel={photo.alt}
+            accessibilityRole="image"
+            accessible
+            resizeMode="cover"
+            source={{ uri: photo.uri }}
+            style={{ borderRadius: 16, height: 140, width: '100%' }}
+            testID="orga-venue-photo"
+          />
+        ) : null}
         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
           {pastille(t('implOrga.tagTournament', 'TOURNOI'), Colors.primary500, true)}
           {connu
