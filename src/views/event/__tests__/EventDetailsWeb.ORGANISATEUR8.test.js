@@ -383,10 +383,19 @@ describe('ORGANISATEUR 8 — l organisateur sans équipe', () => {
 });
 
 describe('ORGANISATEUR 8 — le menu « Gérer l événement » d un tournoi (Q6)', () => {
+  // Récolte train 16 : FICHE-TOURNOI (5e212bef, 6b) met « Signaler » dans un menu ⋯ sur la fiche d'un
+  // tournoi au téléphone ; ce menu ne porte plus aucune action de « Gérer l'événement ».
+  // Avant : aucun menu du tout.
   test('🔴 sans équipe convoquée : plus de menu (seul « Modifier » restait), « Modifier » reste en bouton', () => {
     const arbre = monter(fiche([EQUIPE_OUVERTE]), ORGANISATEUR);
     expect(tousLesBoutons(arbre)).toContain('Modifier');
-    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.['aria-haspopup'] === 'menu')).toHaveLength(0);
+    const menus = arbre.root.findAll((/** @type {any} */ n) => n.props?.['aria-haspopup'] === 'menu' && typeof n.type === 'string');
+    expect(menus.length).toBeLessThanOrEqual(1);
+    const avant = tousLesBoutons(arbre);
+    if (menus.length) act(() => { menus[0].props.onClick(); });
+    const ouvertes = tousLesBoutons(arbre).filter((b) => !avant.includes(b));
+    expect(ouvertes.filter((b) => !/^Signaler/.test(b))).toEqual([]);
+    expect(tousLesBoutons(arbre).filter((b) => b === 'Modifier')).toHaveLength(1);
   });
 
   test('🔴 avec une équipe (composition) : « Modifier » et « Convocation » restent, « Annuler » est parti dans Gérer le tournoi', () => {

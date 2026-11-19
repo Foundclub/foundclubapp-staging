@@ -285,12 +285,16 @@ test('sans prénom (identité masquée par le serveur) : aucune ligne « Propos�
 });
 
 test('tournoi : jamais de « Proposé par » (il a déjà « Organisé par » le complexe)', () => {
-  const lignes = infosRapides(monter(evenement({
+  // Récolte train 16 : depuis ORGANISATEUR 8 (4d5cafa2), l'organisateur d'un tournoi lit la fiche du
+  // joueur : « Infos rapides » passe dans le bandeau et « L'essentiel ». Avant : la liste des lignes
+  // d'« Infos rapides » (Type, Organisateur, Capacité, Joueurs attendus, Prix / personne).
+  const arbre = monter(evenement({
     club: CLUB_TOURNOIS,
     organizer: { documentId: 'u-9', firstname: 'Camille', lastname: 'Durand' },
     team: null,
     tournamentScopeMode: 'autonomous',
-  })));
-  expect(libelles(lignes)).not.toContain('Proposé par');
-  expect(libelles(lignes)).toEqual(['Type', 'Organisateur', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+  }));
+  const texte = JSON.stringify(arbre.toJSON());
+  expect(texte).toContain('Tournoi Montpellier');
+  expect(texte).not.toContain('Proposé par');
 });

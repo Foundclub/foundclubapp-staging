@@ -302,11 +302,13 @@ describe('FINITIONS11 · point 1 — l en-tête des pages d événement du site'
 
   // Avant : le cas « Tournoi » de la liste ci-dessus (le nom en h1). ORGANISATEUR 8 (19/11) : l'organisateur
   // d'un tournoi lit le bandeau du joueur (EventHeader) ; le nom y est l'en-tête, le fil et le drapeau restent.
-  test('4 · Tournoi : le même fil, le nom dans le bandeau, le drapeau « Signaler »', () => {
+  // Récolte train 16 : FICHE-TOURNOI (5e212bef, 6b) retire au téléphone le fil et le drapeau de la
+  // fiche d'un tournoi (« Signaler » passe dans le menu ⋯) ; le nom reste dans le bandeau (ORGANISATEUR 8).
+  test('4 · Tournoi : le nom dans le bandeau ; au téléphone, ni fil ni drapeau (« Signaler » dans le menu)', () => {
     const root = mountScreen({ event: buildEvent({ name: 'Tournoi de printemps', type: { name: 'Tournoi' } }) });
-    expect(textOf(fil(root)[0])).toBe('Planning › Tournoi');
+    expect(fil(root)).toHaveLength(0);
     expect(JSON.stringify(mounted.toJSON())).toContain('Tournoi de printemps');
-    expect(drapeau(root)).toHaveLength(1);
+    expect(drapeau(root)).toHaveLength(0);
   });
 
   // ACCUEIL-JOUEUR (09/11/2026, point 3, mots d'Adel) : le lieu se lit en adresse PRÉCISE (rue,
