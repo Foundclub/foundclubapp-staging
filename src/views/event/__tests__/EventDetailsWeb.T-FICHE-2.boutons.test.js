@@ -377,9 +377,11 @@ test('match d équipe : rien ne change, « Participer » seul et plein', () => {
   expect(boutonsMonStatut(monter(MATCH_EQUIPE))).toEqual([['Participer', 'plein']]);
 });
 
-test('« Infos rapides » sans équipe : plus de ligne « Section » ; « Joueurs attendus » reste', () => {
-  // T-PAGES-3 point 4 : sur un tournoi, « Infos rapides » reste à l'organisateur.
-  expect(lignesInfosRapides(monter(tournoiAutonome(), ORGANISATEUR))).toEqual(['Type', 'Organisateur', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+// Avant : « Infos rapides sans équipe : plus de ligne Section ; Joueurs attendus reste », lu par l'organisateur.
+// ORGANISATEUR 8 (19/11, Adel Q5 « A » / Q6 « A ») : l'organisateur lit la fiche redessinée : plus d'« Infos rapides » sur un tournoi (le match garde la sienne, témoin suivant).
+test('ORGANISATEUR 8 — tournoi sans équipe : l organisateur n a plus d Infos rapides', () => {
+  const arbre = monter(tournoiAutonome(), ORGANISATEUR);
+  expect(arbre.root.findAll((/** @type {any} */ n) => n.type === 'h2' && String(n.props.children) === 'Infos rapides')).toHaveLength(0);
 });
 
 test('« Infos rapides » d un match d équipe : la ligne « Section » reste, avec sa valeur', () => {
@@ -490,10 +492,11 @@ test('🔴 T-FINITIONS2 — le grand titre porte le nom donné (T-NOM)', () => {
   expect(textesH1(arbre)).toContain('TEST — FoundClub x AR Soccer');
 });
 
-test('🔴 T-FINITIONS2 — « Mix clubs » : « Autorisé », avec son accent', () => {
-  // T-PAGES-3 point 4 : « Mix clubs » est un réglage de l'organisateur, retiré de la vue joueur.
+// Avant : « Mix clubs : Autorisé », lu par l'organisateur dans « Infos rapides ». ORGANISATEUR 8 : le réglage se lit
+// et se change dans les Réglages du tournoi (« Autoriser les joueurs d'autres clubs »).
+test('ORGANISATEUR 8 — « Mix clubs » quitte la fiche de l organisateur (Réglages du tournoi)', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: { allowCrossClubPlayers: true } }), ORGANISATEUR);
-  expect(JSON.stringify(arbre.toJSON())).toContain('Autorisé');
+  expect(JSON.stringify(arbre.toJSON())).not.toContain('Mix clubs');
 });
 
 test('🔴 T-FINITIONS2 — tournoi sans valeur : ni « Capacité » ni « Joueurs attendus »', () => {
@@ -512,7 +515,10 @@ test('T-FINITIONS2 caractérisant — un match garde « Capacité »', () => {
 // l'en-tête, et « Voir mon équipe » avec elle (un grand ovale bleu). La rangée garde sa hauteur
 // (`alignSelf: 'start'`) et le bouton une cible de 44 px. Témoin de style : jsdom ne mesure rien
 // (le rendu réel reste à voir sur la recette).
-test('🔴 T-SUITES (5) — organisateur et capitaine : « Voir mon équipe » garde la taille d un bouton (rangée non étirée, 44 px)', () => {
+// Avant : « Voir mon équipe » (event-status-tournament-team) dans la colonne « Mon statut », bouton de 44 px.
+// ORGANISATEUR 8 : l'organisateur capitaine lit « Gérer le tournoi » et « Mon équipe » côte à côte (44 px), en
+// tête de la carte ; « Mon statut » ne lui est plus montré.
+test('ORGANISATEUR 8 — organisateur et capitaine : « Mon équipe » à côté de « Gérer le tournoi », 44 px', () => {
   const arbre = monter(tournoiAutonome({
     tournamentTeams: [{
       captainUser: { documentId: 'joueur-1' },
@@ -522,9 +528,8 @@ test('🔴 T-SUITES (5) — organisateur et capitaine : « Voir mon équipe » g
       status: 'pending',
     }],
   }), ORGANISATEUR);
-  const bouton = arbre.root.findAll((/** @type {any} */ n) => n.type === 'button' && n.props?.['data-testid'] === 'event-status-tournament-team')[0];
-  expect(texte(bouton)).toBe('Voir mon équipe');
-  expect(bouton.props.style.minHeight).toBe(44);
-  expect(bouton.parent.type).toBe('div');
-  expect(bouton.parent.props.style.alignSelf).toBe('start');
+  const rangee = arbre.root.findAll((/** @type {any} */ n) => n.type === 'div' && n.props?.['data-testid'] === 'tournament-organizer-player-actions')[0];
+  const boutons = rangee.findAll((/** @type {any} */ n) => n.type === 'button');
+  expect(boutons.map(texte)).toEqual(['Gérer le tournoi', 'Mon équipe']);
+  boutons.forEach((/** @type {any} */ b) => expect(b.props.style.minHeight).toBe(44));
 });

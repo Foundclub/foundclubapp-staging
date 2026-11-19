@@ -296,15 +296,14 @@ test('5. tournoi gratuit : pricePerPerson reste affiché (caractérisant)', () =
   expect(contient(monter(tournoiAutonome({ pricePerPerson: 7 }), ORGANISATEUR), '7 € par joueur')).toBe(true);
 });
 
-test('7. tournoi payant en validation manuelle : « Équipe validée au 5ᵉ joueur payé » (seuil lu)', () => {
+// Avant : « 7. tournoi payant en validation manuelle : Équipe validée au 5ᵉ joueur payé », lu par l'organisateur
+// dans « Infos rapides ». ORGANISATEUR 8 (19/11, Adel Q5 « A » / Q6 « A ») : l'organisateur lit la fiche redessinée : la règle est dans « Gérer le tournoi » et ses Réglages.
+test('ORGANISATEUR 8 — 7. la fiche de l organisateur ne redit plus la règle de validation', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: { entryFeeCents: 2000, registrationMode: 'manual' } }), ORGANISATEUR);
-  expect(contient(arbre, 'Équipe validée au 5ᵉ joueur payé')).toBe(true);
-  expect(contient(arbre, 'Manuelle')).toBe(false);
-  if (mounted) act(() => mounted.unmount());
-  const six = monter(tournoiAutonome({ tournamentConfig: { entryFeeCents: 2000, paidMembersToValidate: 6, registrationMode: 'manual' } }), ORGANISATEUR);
-  expect(contient(six, 'Équipe validée au 6ᵉ joueur payé')).toBe(true);
+  expect(contient(arbre, 'Équipe validée au 5ᵉ joueur payé')).toBe(false);
 });
 
-test('7. tournoi gratuit en validation manuelle : « Manuelle » (caractérisant)', () => {
-  expect(contient(monter(tournoiAutonome({ tournamentConfig: { registrationMode: 'manual' } }), ORGANISATEUR), 'Manuelle')).toBe(true);
+// Avant : gratuit « Manuelle » dans « Infos rapides » ; ORGANISATEUR 8 : dans les Réglages du tournoi.
+test('ORGANISATEUR 8 — 7. gratuit : le mode quitte la fiche de l organisateur (Réglages)', () => {
+  expect(contient(monter(tournoiAutonome({ tournamentConfig: { registrationMode: 'manual' } }), ORGANISATEUR), 'Validation des équipes')).toBe(false);
 });

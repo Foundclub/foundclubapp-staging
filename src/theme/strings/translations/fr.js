@@ -27268,7 +27268,8 @@ export default {
     allowPlayersFromOtherClubs: 'Autoriser les joueurs d’autres clubs',
     // eslint-disable-next-line max-len
     allowsAdditionsFromOutsideThe: 'Autorise les ajouts hors club organisateur dans les effectifs du tournoi.',
-    allowTemporaryTeams: 'Autoriser les équipes éphémères',
+    allowTemporaryTeams: 'Autoriser les équipes créées par les joueurs',
+    autoApproval: 'Validation automatique',
     automatic: 'Automatique',
     best3rds: 'Meilleurs 3es',
     bracketSize: 'Taille du tableau',
@@ -27287,6 +27288,7 @@ export default {
     league: 'Championnat',
     loss: 'Défaite',
     manual: 'Manuelle',
+    manualApproval: 'Validation manuelle',
     matchGeneration: 'Génération des matchs',
     maxNumberOfTeams: 'Nombre max d’équipes',
     maxSquad: 'Effectif max',
@@ -27296,6 +27298,8 @@ export default {
     numberOfGroups: 'Nombre de poules',
     // eslint-disable-next-line max-len
     onlyTheTournamentCreatorCan: 'Seul le créateur du tournoi peut modifier ces paramètres globaux.',
+    paidApproval_one: 'À {{count}} joueur payé, l’équipe se valide seule.',
+    paidApproval_other: 'À {{count}} joueurs payés, l’équipe se valide seule.',
     playersCanCreateTheirOwn: 'Les joueurs peuvent créer leur propre équipe pour ce tournoi.',
     qualifiedPerGroup: 'Qualifiés par poule',
     rosterImpactDetected: 'Impact sur l’effectif détecté',
@@ -27314,13 +27318,13 @@ export default {
     teamsAndEligibility: 'Équipes et éligibilité',
     theMinimumSquadSizeCan: 'L’effectif minimum ne peut pas dépasser l’effectif maximum.',
     // eslint-disable-next-line max-len
-    theNumberOfTeamsAnd: 'Le nombre d’équipes et la fourchette d’effectif s’appliquent à toutes les équipes éphémères de ce tournoi.',
+    theNumberOfTeamsAnd: 'Le nombre d’équipes et la fourchette d’effectif s’appliquent à toutes les équipes créées par les joueurs pour ce tournoi.',
     // eslint-disable-next-line max-len
     theOrganiserTriggersTheSchedule: 'L’organisateur déclenche lui-même la génération du calendrier.',
     // eslint-disable-next-line max-len
     theScheduleIsGeneratedAutomatically: 'Le calendrier est généré automatiquement une fois les poules créées.',
     // eslint-disable-next-line max-len
-    theseSettingsDriveTheGroups: 'Ces réglages pilotent les poules, la phase finale et le calcul du classement. Après modification, resynchronise la compétition depuis le cockpit organisateur.',
+    theseSettingsDriveTheGroups: 'Ces réglages pilotent les poules, la phase finale et le calcul du classement. Après une modification, touche « Synchroniser la structure » dans Gérer le tournoi, ligne Poules.',
     thirdPlaceMatch: 'Match pour la 3e place',
     // eslint-disable-next-line max-len
     thisTextIsShownOn: 'Ce texte est affiché sur la fiche tournoi et sert de référence commune pour les équipes.',
@@ -27330,7 +27334,7 @@ export default {
     tooManyGroups_other: 'Au plus {{count}} poules pour {{teams}} équipes : chaque poule doit compter 2 équipes.',
     tournamentFrame: 'Cadre du tournoi',
     tournamentRules: 'Règles du tournoi',
-    tournamentSettings: 'Paramètres du tournoi',
+    tournamentSettings: 'Réglages du tournoi',
     unableToUpdateTheTournament: 'Impossible de mettre à jour les paramètres du tournoi.',
     useAStandardBracketSize: 'Utilise une taille de tableau standard : 2, 4, 8, 16 ou 32.',
     win: 'Victoire',
@@ -29647,7 +29651,14 @@ export default {
   },
   // IMPL-3-ORGA (18/11/2026) — la page de l organisateur du tournoi (planche 1).
   implOrga: {
+    archiveBody: 'L’équipe sort de la liste des équipes inscrites. Tu la retrouves dans « Archivées ».',
+    archiveConfirm: 'Archiver',
+    archiveTitle: 'Archiver {{name}} ?',
+    cancelEvent: 'Annuler l’événement',
+    cancelEventConfirm: 'Annuler l’événement',
+    cancelEventError: 'L’événement n’a pas pu être annulé.',
     captainLine: 'Capitaine : {{name}}',
+    captainShort: 'Cap. {{name}}',
     collected: 'encaissé',
     daySubtitle: 'poules, matchs, classements',
     dayTitle: 'Jour J',
@@ -29657,6 +29668,7 @@ export default {
     declineRefund_other: 'Les {{count}} places déjà payées sont remboursées en entier '
       + '({{amount}}), sous 14 jours.',
     declineRefundHow: 'Le remboursement revient sur le moyen de paiement de chaque joueur.',
+    declineRefundNotified: 'FoundClub est prévenu et s’occupe du remboursement.',
     declineRefundRule: 'Les places déjà payées sont remboursées en entier, sous 14 jours.',
     declineTitle: 'Refuser {{name}} ?',
     emptyBody: 'Partage le tournoi : les équipes apparaîtront ici dès leur inscription.',
@@ -29683,8 +29695,11 @@ export default {
     moreActions: 'Plus d’actions pour {{name}}',
     noneRegistered: 'aucune',
     paidAndPlayers: '{{paid}} payés · {{count}} joueurs',
-    paidOn: '{{paid}} payés sur {{threshold}}',
+    paidOn_one: '{{count}} payé sur {{threshold}}',
+    paidOn_other: '{{count}} payés sur {{threshold}}',
     paidPlaces: 'places payées',
+    paidRule_one: 'Une équipe se valide seule dès {{count}} joueur payé.',
+    paidRule_other: 'Une équipe se valide seule dès {{count}} joueurs payés.',
     placesToRefund_one: '1 place payée à rembourser',
     placesToRefund_other: '{{count}} places payées à rembourser',
     refundedPlaces_one: '1 place payée remboursée',
@@ -29718,5 +29733,6 @@ export default {
     teamsValidatedPaid: 'équipes validées ({{count}} payés)',
     toDo: 'à faire',
     writeAllCaptains: 'Écrire à tous les capitaines',
+    yourTeam: 'ton équipe',
   },
 };

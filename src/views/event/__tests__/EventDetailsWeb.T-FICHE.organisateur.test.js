@@ -232,46 +232,26 @@ afterEach(() => {
   mounted = null;
 });
 
-/**
- * Les lignes du bloc « Infos rapides », dans l'ordre : [libellé, valeur].
- * @param {any} arbre
- * @returns {string[][]}
- */
-const infosRapides = (arbre) => {
-  const titre = arbre.root.findAll((/** @type {any} */ n) => n.type === 'h2'
-    && String(n.props.children) === 'Infos rapides')[0];
-  const grille = titre.parent.children.find((/** @type {any} */ n) => n.type === 'div');
-  return grille.children.map((/** @type {any} */ ligne) => ligne.children
-    .map((/** @type {any} */ span) => String(span.children.join(''))));
-};
-
-const libelles = (/** @type {string[][]} */ lignes) => lignes.map(([libelle]) => libelle);
-
-test('match d équipe : la ligne « Équipe » garde le nom de l équipe, aucune ligne « Organisateur »', () => {
-  const lignes = infosRapides(monter(evenement({
+// Avant : ces trois témoins lisaient « Infos rapides » avec le compte de l'organisateur (T-PAGES-3 point 4).
+// ORGANISATEUR 8 (19/11, Adel Q5 « A » / Q6 « A ») : l'organisateur lit la fiche redessinée : plus personne ne lit « Infos rapides » sur un tournoi. Le club se lit dans le bandeau
+// (« Organisé par … »), date, lieu, prix et format dans « L'essentiel », la capacité dans les Réglages.
+test('ORGANISATEUR 8 — tournoi d une équipe : plus d Infos rapides pour l organisateur', () => {
+  const arbre = monter(evenement({
     club: null,
     team: {
       club: CLUB_TOURNOIS, documentId: 'team-1', name: 'U13', players: [], trainers: [],
     },
-  })));
-  expect(lignes).toContainEqual(['Équipe', 'U13']);
-  expect(libelles(lignes)).not.toContain('Organisateur');
-  // T-FINITIONS2 (16/11, chef M1294) : cet événement est un TOURNOI (type par défaut) avec 0 joueur
-  // attendu ; une case à 0 ne s'affiche plus sur un tournoi.
-  expect(libelles(lignes)).toEqual(['Type', 'Équipe', 'Section', 'Capacité', 'Prix / personne']);
+  }));
+  expect(arbre.root.findAll((/** @type {any} */ n) => n.type === 'h2' && String(n.props.children) === 'Infos rapides')).toHaveLength(0);
 });
 
-test('tournoi autonome (club sans équipe) : « Organisateur » = nom du club, plus de « Équipe : Non définie »', () => {
-  const lignes = infosRapides(monter(evenement({
-    club: CLUB_TOURNOIS, team: null, tournamentScopeMode: 'autonomous',
-  })));
-  expect(lignes).toContainEqual(['Organisateur', 'FoundClub Tournois']);
-  expect(libelles(lignes)).not.toContain('Équipe');
-  // Rien d autre ne disparaît : la ligne prend la place de « Équipe ».
-  expect(libelles(lignes)).toEqual(['Type', 'Organisateur', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+test('ORGANISATEUR 8 — tournoi autonome : le club organisateur se lit dans le bandeau, plus d Infos rapides', () => {
+  const arbre = monter(evenement({ club: CLUB_TOURNOIS, team: null, tournamentScopeMode: 'autonomous' }));
+  expect(arbre.root.findAll((/** @type {any} */ n) => n.type === 'h2' && String(n.props.children) === 'Infos rapides')).toHaveLength(0);
+  expect(JSON.stringify(arbre.toJSON())).toContain('FoundClub Tournois');
 });
 
-test('ni équipe ni club : la ligne est masquée, les autres restent', () => {
-  const lignes = infosRapides(monter(evenement({ club: null, team: null })));
-  expect(libelles(lignes)).toEqual(['Type', 'Capacité', 'Joueurs attendus', 'Prix / personne']);
+test('ORGANISATEUR 8 — ni équipe ni club : plus d Infos rapides non plus', () => {
+  const arbre = monter(evenement({ club: null, team: null }));
+  expect(arbre.root.findAll((/** @type {any} */ n) => n.type === 'h2' && String(n.props.children) === 'Infos rapides')).toHaveLength(0);
 });

@@ -379,8 +379,14 @@ const AVANT = {
   },
 };
 
-test.each(LECTEURS.filter(([nom]) => nom === 'organisateur'))('T-PAGES-3 (0) caractérisant — %s : la fiche reste celle d avant', (nom, compte, ev) => {
-  expect(inventaire(monter(ev(), compte))).toEqual(AVANT[nom]);
+// Avant : « (0) caractérisant — l'organisateur garde la fiche d'avant » (relevé AVANT.organisateur).
+// ORGANISATEUR 8 (19/11, Adel Q5 « A » / Q6 « A ») : l'organisateur lit la fiche redessinée ; ses gestes sont dans « Gérer le tournoi » (EventDetailsWeb.ORGANISATEUR8).
+test('ORGANISATEUR 8 (0) — l organisateur ne lit plus l ancienne fiche : « Gérer le tournoi », « Mon équipe », plus d Infos rapides', () => {
+  const vu = inventaire(monter(fiche([EQUIPE_OUVERTE, CAPITAINE_EQUIPE]), ORGANISATEUR));
+  expect(vu).not.toEqual(AVANT.organisateur);
+  expect(vu.boutons).toEqual(expect.arrayContaining(['Gérer le tournoi', 'Mon équipe']));
+  expect(vu.mots).not.toContain('Infos rapides');
+  expect(vu.mots).not.toContain('Mode tournoi');
 });
 
 // Ce que chaque lecteur voit APRÈS T-PAGES-3 (maquette (a) et (b)) ; diff gardé / déplacé / retiré :
@@ -580,10 +586,14 @@ test.each([
   expect(parTestId(arbre, 'event-tournament-visitor-teams').map(texte)).toEqual(['8 équipes inscrites · 16 places libres']);
 });
 
-test('T-PAGES-3 (3) caractérisant — l organisateur garde le vrai nombre (compteurs), sans la ligne des 30 %', () => {
+// Avant : l'organisateur lisait ses compteurs (« N en attente · N validées · N effectifs à revoir ») dans « Mode
+// tournoi ». ORGANISATEUR 8 : ces chiffres sont dans « Gérer le tournoi » (inscrites, validées, filtres) ; la
+// fiche ne lui montre toujours pas la ligne des 30 %.
+test('T-PAGES-3 (3) caractérisant — l organisateur n a jamais la ligne des 30 % ; ses compteurs sont dans Gérer le tournoi', () => {
   const arbre = monter(fiche([EQUIPE_OUVERTE], { tournamentTeamsSummary: { expectedCount: 24, registeredCount: 5 } }), ORGANISATEUR);
   expect(parTestId(arbre, 'event-tournament-visitor-teams')).toHaveLength(0);
-  expect(texte(arbre.root)).toMatch(/[0-9] effectifs? à revoir/);
+  expect(texte(arbre.root)).not.toMatch(/[0-9] effectifs? à revoir/);
+  expect(tousLesBoutons(arbre)).toContain('Gérer le tournoi');
 });
 
 test('🔴 T-PAGES-3 (4) non-organisateur — ni Infos rapides, ni réglages Mode tournoi, ni pastille de validation, ni « Participer »', () => {
@@ -630,22 +640,6 @@ test('T-PAGES-3 (6) R11 — « Créer » jamais à qui a une équipe ; Présent�
 
 // --- M1310 (chef, 17/11) : « Valider » refusé par le serveur (effectif minimum), rien à l'écran -----
 // Le message partait dans « Mon statut », en haut de la fiche, loin du bouton (bas de la colonne).
-const ligneDEquipe = (/** @type {any} */ arbre, /** @type {string} */ nom) => blocTournoi(arbre)
-  .findAll((/** @type {any} */ n) => n.type === 'div' && texte(n).includes(nom)
-    && n.findAll((/** @type {any} */ b) => b.type === 'button' && texte(b) === 'Valider').length === 1)
-  .slice(-1)[0];
-
-test('🔴 T-PAGES-3 M1310 — organisateur : « Valider » refusé (effectif minimum), le message du serveur s affiche sous l équipe', async () => {
-  mockValiderEquipe.mockRejectedValue(new Error('Effectif minimum non atteint : 5 joueurs.'));
-  const arbre = monter(fiche([EQUIPE_OUVERTE]), ORGANISATEUR);
-  const valider = ligneDEquipe(arbre, 'On te trouve une place')
-    .findAll((/** @type {any} */ n) => n.type === 'button' && texte(n) === 'Valider')[0];
-  await act(async () => { await valider.props.onClick(); });
-  expect(mockValiderEquipe).toHaveBeenCalledWith('equipe-ouverte-t-pages-3', 'accepted');
-  const alerte = ligneDEquipe(arbre, 'On te trouve une place')
-    .findAll((/** @type {any} */ n) => n.props?.role === 'alert' && typeof n.type === 'string');
-  expect(alerte.map(texte)).toEqual(['Effectif minimum non atteint : 5 joueurs.']);
-});
 
 // --- Précision du chef (17/11) : sous le seuil des 30 %, le nombre d'équipes ne se lit NULLE PART ----
 // La liste ne montre que l'équipe du lecteur et celles qui cherchent un joueur ; un compteur de

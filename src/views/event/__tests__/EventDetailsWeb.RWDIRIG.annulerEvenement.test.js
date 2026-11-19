@@ -622,10 +622,12 @@ describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
     (/** @type {any} */ n) => n.type === 'button' && textOf(n) === libelle,
   )[0];
 
-  test('🐞 « Créer une équipe » ouvre une feuille, sans fenêtre du navigateur', async () => {
+  // Avant : le bouton « Créer une équipe » du bloc de l'organisateur. ORGANISATEUR 8 (19/11) : l'organisateur lit
+  // la carte d'inscription du joueur, son bouton « Créer mon équipe » ouvre la même feuille.
+  test('🐞 « Créer mon équipe » ouvre une feuille, sans fenêtre du navigateur', async () => {
     window.prompt = jest.fn(() => 'Les Lions');
     const root = mountScreen({ event: tournoi() });
-    await act(async () => { bouton(root, 'Créer une équipe').props.onClick(); });
+    await act(async () => { bouton(root, 'Créer mon équipe').props.onClick(); });
 
     expect(window.prompt).not.toHaveBeenCalled();
     const champ = root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Nom de l’équipe' && typeof n.props?.onChangeText === 'function')[0];
@@ -704,7 +706,9 @@ describe('CORR-EVENEMENTS 130 · la feuille d équipe du tournoi', () => {
     expect(bouton(root, 'Gérer mon équipe')).toBeUndefined();
     expect(bouton(root, 'Créer une équipe')).toBeUndefined();
     expect(JSON.stringify(mounted.toJSON())).toContain('Tournoi clôturé le');
-    expect(bouton(root, 'Piloter la compétition')).toBeDefined();
+    // Avant : « Piloter la compétition » restait (lecture). ORGANISATEUR 8 : « Gérer le tournoi », en tête de
+    // la carte, mène à la même page (lecture seule d'un tournoi clôturé).
+    expect(bouton(root, 'Gérer le tournoi')).toBeDefined();
   });
 });
 

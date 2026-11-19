@@ -358,9 +358,11 @@ test('🔴 (1) tournoi clôturé ou sans section ni âge — ni « Inscriptions 
   expect(etiquettes(nu)).toEqual(['TOURNOI']);
 });
 
-test('🔒 (1) organisateur — son en-tête ne change pas : aucune étiquette', () => {
+// Avant : « (1) organisateur — son en-tête ne change pas : aucune étiquette ». ORGANISATEUR 8 (19/11, Adel Q5 « A » / Q6 « A ») : l'organisateur lit la fiche redessinée :
+// les mêmes étiquettes que le joueur (maquette 11a : TOURNOI, Ton équipe est inscrite, Dès 16 ans).
+test('ORGANISATEUR 8 (1) — organisateur capitaine : les étiquettes de la maquette 11a', () => {
   const arbre = monter(fiche([EQUIPE_OUVERTE, CAPITAINE_EQUIPE], MIXTE), ORGANISATEUR);
-  expect(etiquettes(arbre)).toEqual([]);
+  expect(etiquettes(arbre)).toEqual(['TOURNOITon équipe est inscriteDès 16 ans']);
 });
 
 test('🔴 (2) au téléphone — capitaine, membre, invité : la carte « Mon équipe » AVANT l essentiel', () => {

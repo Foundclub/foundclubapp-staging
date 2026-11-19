@@ -12,6 +12,9 @@ import TournamentManagement from '../TournamentManagement';
 //   clôturer ; décision : lecture seule, avec un bandeau « Clôturé ».
 // Le premier bloc décrit l'existant d'un tournoi ouvert, qui ne doit pas bouger.
 
+// Le premier rendu charge tout l écran (jusqu à 7 s sous charge, rouge par délai le 19/11) : délai large.
+jest.setTimeout(30000);
+
 /** @type {any} */
 let mockDashboard = null;
 const mockErreurDuTableau = { value: /** @type {any} */ (null) };
@@ -121,6 +124,11 @@ const monter = async (/** @type {any} */ donnees) => {
   return arbre;
 };
 const texte = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+// ORGANISATEUR 2 (19/11) : les gestes de la compétition sont sous les lignes du Jour J ; on déplie la ligne.
+const deplier = async (/** @type {any} */ arbre, /** @type {string} */ onglet) => {
+  const ligne = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === `orga-jour-j-${onglet}` && typeof n.props?.onPress === 'function')[0];
+  await act(async () => { await ligne.props.onPress(); });
+};
 const boutons = (/** @type {any} */ arbre) => arbre.root.findAll(
   (/** @type {any} */ n) => typeof n.props?.accessibilityLabel === 'string' && typeof n.props?.onPress === 'function',
 ).map((/** @type {any} */ n) => n.props.accessibilityLabel);
@@ -140,11 +148,16 @@ describe('existant — un tournoi ouvert garde ses gestes', () => {
   test('brouillon : tirer, générer, modifier et clôturer sont proposés', async () => {
     const arbre = await monter(tableau());
 
+    // Avant : tout se lisait d'un coup dans « Actions compétition ». ORGANISATEUR 2 (19/11) : « Poules » déplie
+    // l'état et le tirage, « Matchs » la génération ; « Réglages » et « Clôturer » restent sur la page.
+    await deplier(arbre, 'groups');
     expect(texte(arbre)).toContain('Compétition en brouillon');
     expect(boutons(arbre)).toEqual(expect.arrayContaining([
       // IMPL-3-ORGA (planche 1c) : « Modifier les paramètres » est devenu la ligne « Réglages ».
-      'Tirer les poules', 'Générer les matchs', 'Réglages', 'Clôturer le tournoi',
+      'Tirer les poules', 'Réglages', 'Clôturer le tournoi',
     ]));
+    await deplier(arbre, 'matches');
+    expect(boutons(arbre)).toContain('Générer les matchs');
   });
 });
 
@@ -152,6 +165,7 @@ describe('CORR-EVENEMENTS 129 C — « Générer les matchs » dit ce qu il a cr
   test('🐞 après la génération, le nombre de matchs créés est annoncé', async () => {
     mockGenerate.mockResolvedValue({ overview: { groups: 1, totalMatches: 6 } });
     const arbre = await monter(tableau());
+    await deplier(arbre, 'matches');
     const generer = arbre.root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Générer les matchs')[0];
 
     await act(async () => { await generer.props.onPress(); });
@@ -163,6 +177,7 @@ describe('CORR-EVENEMENTS 129 C — « Générer les matchs » dit ce qu il a cr
   test('🐞 aucun match créé : la cause est dite', async () => {
     mockGenerate.mockResolvedValue({ overview: { groups: 2, totalMatches: 0 } });
     const arbre = await monter(tableau());
+    await deplier(arbre, 'matches');
     const generer = arbre.root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Générer les matchs')[0];
 
     await act(async () => { await generer.props.onPress(); });
@@ -177,7 +192,9 @@ describe('CORR-EVENEMENTS 131 — un tournoi clôturé se lit, il ne se pilote p
     const arbre = await monter(tableau({
       event: { documentId: 'evt-1', sessionStatus: 'closed' },
       teams: [
-        { archivedAt: '2026-10-30T18:12:00.000Z', documentId: 'eq-1', name: 'Alpha', status: 'archived' },
+        {
+          archivedAt: '2026-10-30T18:12:00.000Z', documentId: 'eq-1', name: 'Alpha', status: 'archived',
+        },
       ],
     }));
 
@@ -216,7 +233,12 @@ describe('REPRISE-EVENEMENTS 130 — le titre du lecteur', () => {
 // CORR-EVENEMENTS point 133 (recette du site, 30/10) — textes du tournoi sans accents, « (s) » et
 // mots anglais. Les textes écrits en dur dans le cockpit passent par le catalogue.
 describe('CORR-EVENEMENTS 133 — le cockpit parle français', () => {
+  afterEach(() => { mockPeutGerer.value = true; });
+
+  // Avant : lu par l'organisateur dans « Structure sportive ». ORGANISATEUR 2 (19/11) : ce bloc a quitté sa page ;
+  // le lecteur le lit toujours dans la vue d'ensemble.
   test('🐞 plus de « poule(s) », « match(s) », « Equipes », « Aleatoire » ni « roster »', async () => {
+    mockPeutGerer.value = false;
     const arbre = await monter(tableau({
       config: { competitionState: 'draft', formatMode: 'groups_only', seedingMode: 'random' },
     }));
@@ -296,7 +318,12 @@ describe('T3-TOURNOI-PRIVE — le lien et les invités', () => {
 
 // T-PARCOURS-2 (17/11, point 11, recette 42 r42-app-05a) — « Voir le tournoi », vue d'ensemble : la
 // ligne « Validation des équipes » suit la règle de la fiche (getTournamentPaidValidationLabel).
+// Avant : lu aussi par l'organisateur (« Structure sportive », retirée de sa page le 19/11, ORGANISATEUR 2 : il lit
+// « Une équipe se valide seule dès 5 joueurs payés. », TournamentManagement.ORGANISATEUR) ; le lecteur la lit encore.
 describe('T-PARCOURS-2 point 11 — la validation des équipes d un tournoi payant', () => {
+  beforeEach(() => { mockPeutGerer.value = false; });
+  afterEach(() => { mockPeutGerer.value = true; });
+
   const config = (/** @type {any} */ sur = {}) => ({
     competitionState: 'draft', formatMode: 'groups_only', registrationMode: 'manual', ...sur,
   });

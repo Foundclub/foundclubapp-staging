@@ -437,26 +437,23 @@ test('T-F3 joueur seul — sans équipe, la carte de l équipe ouverte porte « 
 // Serveur (admin 0eb46167, lu par le chef du tournoi) : tournoi payant, équipe « pending » validée quand les
 // places payées atteignent `paidMembersToValidate` (5 par défaut), quel que soit le mode ; « auto » valide à la
 // création.
-const ligneValidation = (/** @type {any} */ arbre) => texte(blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'span'
-  && texte(n).startsWith('Validation des'))[0]);
 const tournoiRegle = (/** @type {any} */ tournamentConfig) => tournoiAutonome({ tournamentConfig });
 // T-PAGES-3 point 4 : la ligne « Validation des équipes » est un réglage, lu par l'organisateur.
 const monterRegle = (/** @type {any} */ tournamentConfig) => monter(tournoiRegle(tournamentConfig), L_ORGANISATEUR);
 
-test('🔴 T-F3 validation — payant en « manual » : « Équipe validée au 5ᵉ joueur payé » (seuil lu, sinon 5)', () => {
-  expect(ligneValidation(monterRegle({ entryFeeCents: 2000, registrationMode: 'manual' })))
-    .toContain('Équipe validée au 5ᵉ joueur payé');
-  act(() => mounted.unmount());
-  mounted = null;
-  expect(ligneValidation(monterRegle({ entryFeeCents: 2000, paidMembersToValidate: 6, registrationMode: 'manual' })))
-    .toContain('Équipe validée au 6ᵉ joueur payé');
+// Avant : la ligne « Validation des équipes » du bloc « Mode tournoi » de l'organisateur (payant : « Équipe
+// validée au 5ᵉ joueur payé »). ORGANISATEUR 8 (19/11, Adel Q5 « A » / Q6 « A ») : l'organisateur lit la fiche redessinée ; la règle est dite dans « Gérer le tournoi »
+// (« Une équipe se valide seule dès 5 joueurs payés. », TournamentManagement.ORGANISATEUR) et dans ses Réglages.
+test('ORGANISATEUR 8 — la fiche de l organisateur ne redit plus la ligne « Validation des équipes »', () => {
+  const arbre = monterRegle({ entryFeeCents: 2000, registrationMode: 'manual' });
+  expect(texte(arbre.root)).not.toContain('Validation des équipes');
+  expect(texte(arbre.root)).not.toContain('Équipe validée au 5ᵉ joueur payé');
 });
 
-test('T-F3 validation caractérisant — gratuit en « manual » : « Manuelle » ; « auto », même payant : « Automatique »', () => {
-  expect(ligneValidation(monterRegle({ registrationMode: 'manual' }))).toContain('Manuelle');
-  act(() => mounted.unmount());
-  mounted = null;
-  expect(ligneValidation(monterRegle({ entryFeeCents: 2000, registrationMode: 'auto' }))).toContain('Automatique');
+// Avant : gratuit « Manuelle », « auto » « Automatique », lus dans le bloc de l'organisateur. ORGANISATEUR 8 :
+// le choix se lit et se change dans les Réglages du tournoi (TournamentSettingsEdit.ORGANISATEUR).
+test('ORGANISATEUR 8 caractérisant — gratuit ou « auto » : la fiche de l organisateur ne dit plus le mode', () => {
+  expect(texte(monterRegle({ registrationMode: 'manual' }).root)).not.toContain('Validation des équipes');
 });
 
 // ==========================================================================
@@ -467,20 +464,17 @@ const pastilles = (/** @type {any} */ arbre) => arbre.root
   .map(texte);
 const PAYANT = { entryFeeCents: 2000, registrationMode: 'manual' };
 
-test('🔴 T-PARCOURS2 (9) — tournoi payant : la pastille dit la règle du 5ᵉ joueur payé', () => {
-  // T-PAGES-3 point 4 (M1316) : sur un tournoi, la pastille reste à l'organisateur.
+// Avant : sur un tournoi payant, la pastille de l'organisateur disait « Équipe validée au 5ᵉ joueur payé ».
+// ORGANISATEUR 8 (19/11, Adel Q5 « A » / Q6 « A ») : l'organisateur lit la fiche redessinée (étiquettes TOURNOI / état / âge) ; la règle est dans « Gérer le tournoi ».
+test('ORGANISATEUR 8 — tournoi payant : plus de pastille de validation sur la fiche de l organisateur', () => {
   const arbre = monter(tournoiAutonome({ tournamentConfig: PAYANT, validationMode: 'manual' }), L_ORGANISATEUR);
-  expect(pastilles(arbre)).toContain('Équipe validée au 5ᵉ joueur payé');
+  expect(pastilles(arbre)).not.toContain('Équipe validée au 5ᵉ joueur payé');
   expect(pastilles(arbre)).not.toContain('Validation manuelle');
 });
 
-test('T-PARCOURS2 (9) caractérisant — tournoi gratuit, ou match : « Validation manuelle »', () => {
-  const gratuit = monter(tournoiAutonome({
-    tournamentConfig: { registrationMode: 'manual' }, validationMode: 'manual',
-  }), L_ORGANISATEUR);
-  expect(pastilles(gratuit)).toContain('Validation manuelle');
-  act(() => mounted.unmount());
-  mounted = null;
+// Avant : le tournoi gratuit de l'organisateur disait aussi « Validation manuelle » ; ORGANISATEUR 8 : plus sur
+// un tournoi (Réglages). Le match garde sa pastille.
+test('T-PARCOURS2 (9) caractérisant — un match garde « Validation manuelle »', () => {
   const match = monter({ ...MATCH_EQUIPE, validationMode: 'manual' });
   expect(pastilles(match)).toContain('Validation manuelle');
 });
@@ -616,7 +610,10 @@ test('🔴 T-REJ visiteur — 8 inscrites sur 24 (30 %, arrondi au supérieur) :
 
 // T-PAGES-3 point 3 (décision d'Adel « 4- A », 17/11) : le seuil des 30 % vaut aussi pour le compte
 // connecté ; seul l'organisateur garde le vrai nombre (et « Aucune équipe n'est encore inscrite »).
-test('🔴 T-PAGES-3 (3) — un compte connecté lit lui aussi « 24 équipes attendues », sans compteurs ; l organisateur garde les siens', () => {
+// Avant : l'organisateur gardait ses compteurs et « Aucune équipe n'est encore inscrite » dans son bloc.
+// ORGANISATEUR 8 : il lit la liste du joueur, sans la ligne des 30 % (vrai nombre) ; ses chiffres sont dans
+// « Gérer le tournoi ».
+test('🔴 T-PAGES-3 (3) — un compte connecté lit lui aussi « 24 équipes attendues », sans compteurs ; l organisateur n a pas la ligne des 30 %', () => {
   const arbre = monter(TOURNOI_19_12({ tournamentConfig: { maxTeams: 24, minAge: 16 }, tournamentTeamsSummary: { expectedCount: 24, registeredCount: 0 } }), compteNeLe('2008-01-01'));
   expect(ligneVisiteur(arbre)).toEqual(['24 équipes attendues']);
   expect(texte(blocTournoi(arbre))).not.toContain('encore inscrite');
@@ -624,7 +621,6 @@ test('🔴 T-PAGES-3 (3) — un compte connecté lit lui aussi « 24 équipes at
   mounted = null;
   const organisateur = monter(TOURNOI_19_12({ tournamentTeamsSummary: { expectedCount: 24, registeredCount: 0 } }), L_ORGANISATEUR);
   expect(ligneVisiteur(organisateur)).toEqual([]);
-  expect(texte(blocTournoi(organisateur))).toContain('encore inscrite');
 });
 
 test('🔴 T-REJ joueur seul — « Rejoindre une équipe » pour un compte de 18 ans sans équipe ; ni pour le visiteur, ni pour le compte de 15 ans', () => {
@@ -643,20 +639,12 @@ test('🔴 T-REJ joueur seul — « Rejoindre une équipe » pour un compte de 1
 // T-SUITES-TOURNOI (18/11, point 11) : la ligne de l'organisateur disait « 7 équipes » à côté de
 // « 5 en attente · 1 validée » : elle comptait l'équipe refusée. Règle du pilotage
 // (getTournamentRegisteredTeamsCount) : en attente + validées, sans les refusées ni les archivées.
-test('🔴 T-SUITES (11) — organisateur : 1 validée, 5 en attente, 1 refusée, 1 archivée => « 6 équipes »', () => {
-  const equipe = (/** @type {number} */ n, /** @type {string} */ status, extra = {}) => ({
-    ...EQUIPE_OUVERTE, documentId: `eq-${n}`, name: `Équipe ${n}`, status, ...extra,
-  });
-  const arbre = monter(TOURNOI_19_12({
-    tournamentTeams: [
-      equipe(1, 'accepted'), equipe(2, 'pending'), equipe(3, 'pending'), equipe(4, 'pending'),
-      equipe(5, 'pending'), equipe(6, 'pending'), equipe(7, 'declined'),
-      equipe(8, 'pending', { archivedAt: '2026-11-10T10:00:00.000Z' }),
-    ],
-  }), L_ORGANISATEUR);
-  const [compteurs] = blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'div'
+// Avant : la ligne des compteurs de l'organisateur, dans son bloc (« 6 équipes · 5 en attente »). ORGANISATEUR 8 :
+// le même compte (en attente + validées) est le chiffre « équipes inscrites » de « Gérer le tournoi »
+// (TournamentManagement.CORREVENEMENTS, T-REGLES-EQUIPE point 8) ; la fiche n'a plus ces compteurs.
+test('ORGANISATEUR 8 — la fiche de l organisateur n a plus la ligne de compteurs (dans Gérer le tournoi)', () => {
+  const arbre = monter(TOURNOI_19_12({ tournamentTeams: [EQUIPE_OUVERTE] }), L_ORGANISATEUR);
+  const compteurs = blocTournoi(arbre).findAll((/** @type {any} */ n) => n.type === 'div'
     && n.props.style?.flexWrap === 'wrap' && texte(n).includes('en attente'));
-  expect(texte(compteurs)).toMatch(/^6 équipes/);
-  // Chef « 2- A » : l'équipe archivée n'est plus « en attente » non plus.
-  expect(texte(compteurs)).toContain('5 en attente');
+  expect(compteurs).toHaveLength(0);
 });

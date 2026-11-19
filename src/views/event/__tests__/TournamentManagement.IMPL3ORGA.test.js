@@ -9,6 +9,9 @@ import TournamentManagement from '../TournamentManagement';
 // 5 refuser avec la règle de remboursement, 6 écrire au capitaine / à tous les capitaines, 7 réglages, 8 interrupteur
 // des inscriptions, 9 partager, 10 à la une, 11 jour J, 12 exporter. Maquettes 1a à 1f.
 
+// Le premier rendu charge tout l écran (jusqu à 7 s sous charge) : délai large, pas de faux rouge.
+jest.setTimeout(30000);
+
 /** @type {any} */
 let mockDashboard = null;
 /** @type {any} */
@@ -245,11 +248,13 @@ describe('IMPL-3 1b — le menu ⋯ d une équipe', () => {
     expect(rendu).not.toContain('"Valider"');
   });
 
-  test('🔴 équipe validée : pas de « Refuser l équipe » (CGV partie I § 3)', async () => {
+  // Avant : « équipe validée : pas de Refuser l équipe (CGV partie I § 3) ». Décision d'Adel du 19/11 : « Refuser »
+  // aussi pour une équipe validée (TournamentManagement.ORGANISATEUR, point 3).
+  test('équipe validée : « Refuser l équipe » est proposé (Adel 19/11), « Écrire au capitaine » aussi', async () => {
     const arbre = await monter();
-    await toucher(parTestID(arbre, 'orga-menu-eq-pantheres'));
-    expect(parTestID(arbre, 'orga-refuser-eq-pantheres')).toBeUndefined();
-    expect(parTestID(arbre, 'orga-ecrire-eq-pantheres')).toBeDefined();
+    await toucher(parTestID(arbre, 'orga-menu-eq-nord'));
+    expect(parTestID(arbre, 'orga-refuser-eq-nord')).toBeDefined();
+    expect(parTestID(arbre, 'orga-ecrire-eq-nord')).toBeDefined();
   });
 
   test('caractérisant : un tournoi gratuit en validation manuelle garde « Valider l équipe » dans le menu', async () => {
@@ -282,6 +287,9 @@ describe('IMPL-3 1b — le menu ⋯ d une équipe', () => {
     const arbre = await monter();
     await toucher(parTestID(arbre, 'orga-menu-eq-pantheres'));
     await toucher(parTestID(arbre, 'orga-archiver-eq-pantheres'));
+    // Avant : l archivage partait au toucher. O9 (19/11) : il se confirme d abord.
+    const confirmer = Alert.alert.mock.calls[0][2].find((/** @type {any} */ bouton) => bouton.style !== 'cancel');
+    await act(async () => { await confirmer.onPress(); });
     expect(mockReview).toHaveBeenCalledWith('eq-pantheres', 'archived');
   });
 });
@@ -365,6 +373,8 @@ describe('IMPL-3 1c — Jour J, Réglages, À la une', () => {
 
   test('caractérisant : les gestes de la compétition restent (synchroniser, tirer, clôturer)', async () => {
     const arbre = await monter();
+    // Avant : visibles d'emblée dans « Actions compétition ». ORGANISATEUR 2 (19/11) : sous la ligne « Poules ».
+    await toucher(parTestID(arbre, 'orga-jour-j-groups'));
     expect(parLibelle(arbre, 'Synchroniser la structure')).toBeDefined();
     expect(parLibelle(arbre, 'Tirer les poules')).toBeDefined();
     expect(parLibelle(arbre, 'Clôturer le tournoi')).toBeDefined();

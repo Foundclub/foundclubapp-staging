@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -527,18 +528,10 @@ function TournamentManagement({ navigation, route }) {
         style={tournamentDs.styles.panelCard}
       >
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {canManageTournament && !isClosed ? t(
-            'tournamentManagement.competitionActions',
-            'Actions compétition',
-          ) : t(
-            'tournamentManagement.competitionView',
-            'Lecture compétition',
-          )}
+          {t('tournamentManagement.competitionView', 'Lecture compétition')}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {canManageTournament && !isClosed
-            ? t('tournamentManagement.runTheDrawGenerateThe', 'Organise le tirage, génère les matchs, puis publie la compétition quand la structure est prête.')
-            : t('tournamentManagement.youCanFollowGroupsMatches', 'Tu peux suivre les poules, les matchs, les classements et le bracket depuis ce cockpit en lecture seule.')}
+          {t('tournamentManagement.youCanFollowGroupsMatches', 'Tu peux suivre les poules, les matchs, les classements et le bracket depuis ce cockpit en lecture seule.')}
         </Text>
 
         {isClosed ? (
@@ -568,52 +561,9 @@ function TournamentManagement({ navigation, route }) {
           </View>
         ) : null}
 
-        {canManageTournament && !isClosed ? (
-          <View style={[Spaces.gap[12]]}>
-            {renderActionButton({
-              disabled: isCompetitionPublished,
-              isLoading: setupCompetitionMutation.isPending,
-              onPress: () => setupCompetitionMutation.mutate(),
-              title: t('tournamentManagement.syncTheStructure', 'Synchroniser la structure'),
-              variant: 'Secondary',
-            })}
-            {competitionActions.canDrawGroups ? renderActionButton({
-              isLoading: drawGroupsMutation.isPending,
-              onPress: () => drawGroupsMutation.mutate(),
-              title: t('tournamentManagement.drawTheGroups', 'Tirer les poules'),
-              variant: 'Primary',
-            }) : null}
-            {competitionActions.canGenerateMatches ? renderActionButton({
-              isLoading: generateMatchesMutation.isPending,
-              onPress: () => generateMatchesMutation.mutate(),
-              title: t('tournamentManagement.generateTheMatches', 'Générer les matchs'),
-              variant: 'Secondary',
-            }) : null}
-            {competitionActions.canGenerateKnockout ? renderActionButton({
-              isLoading: generateKnockoutMutation.isPending,
-              onPress: () => generateKnockoutMutation.mutate(),
-              title: t('tournamentManagement.generateTheKnockoutStage', 'Générer la phase finale'),
-              variant: 'Secondary',
-            }) : null}
-            {competitionActions.canPublish ? renderActionButton({
-              isLoading: publishCompetitionMutation.isPending,
-              onPress: handlePublishCompetition,
-              title: t('tournamentManagement.publishTheCompetition', 'Publier la compétition'),
-              variant: 'Primary',
-            }) : null}
-            {/* IMPL-3-ORGA : « Modifier les paramètres » est devenu la ligne « Réglages »
-                (planche 1c). */}
-            <Button
-              isLoading={closeTournamentMutation.isPending}
-              onPress={handleCloseTournament}
-              size="sm"
-              style={{ borderColor: `${Colors.error500}55` }}
-              textStyle={{ color: Colors.error500 }}
-              title={t('tournamentManagement.closeTheTournament', 'Clôturer le tournoi')}
-              variant="SecondaryLight"
-            />
-          </View>
-        ) : null}
+        {/* ORGANISATEUR 2 (19/11) : qui pilote ne lit plus ce bloc (tableau de bord) ; ses
+            gestes sont sous les lignes du Jour J (gestesDuJourJ). Ici, la lecture seule :
+            lecteur, ou tournoi clôturé. */}
       </View>
     </View>
   );
@@ -717,7 +667,8 @@ function TournamentManagement({ navigation, route }) {
             <View style={[Spaces.gap[12]]}>
               <Button
                 onPress={() => navigation.navigate(RouteNames.TournamentTeamDetails, { eventId, teamId: team?.documentId })}
-                title={t('tournamentManagement.openTheTeam', 'Ouvrir l équipe')}
+                // Avant : « Ouvrir l équipe ». 1a (19/11) : « Voir l'équipe » partout.
+                title={t('implOrga.seeTeam', 'Voir l’équipe')}
                 variant="Secondary"
               />
               {canManageTournament && !isClosed && normalizeTournamentText(team?.status) === 'pending' ? (
@@ -845,6 +796,67 @@ function TournamentManagement({ navigation, route }) {
     );
   };
 
+  // ORGANISATEUR 8 (Adel Q5 « A », 19/11) : « Annuler » l'événement d'un tournoi quitte le menu de
+  // la fiche
+  // du site et vient ici, sous Réglages, à côté de « Clôturer ». Même geste que la fiche
+  // (EventDetails.web.js annulerLEvenement) : confirmation, POST /events/:id/cancel, la Ville
+  // prévenue le
+  // cas échéant, puis retour. ponytail: un tournoi n'a pas de série ; sans la feuille « cette
+  // séance /
+  // les suivantes », seule cette date est annulée. Sortie : CancelSeriesSheet si un tournoi
+  // récurrent naît.
+  const [annulationEnCours, setAnnulationEnCours] = useState(false);
+  const annulerLEvenement = () => {
+    Alert.alert(
+      t('eventDetails.modals.cancelEvent.title', 'Es-tu sûr·e de vouloir annuler cet événement ?'),
+      t(
+        'eventDetails.modals.cancelEvent.description',
+        'Une fois annulé, l’événement ne sera plus visible par les participant·e·s.',
+      ),
+      [
+        { style: 'cancel', text: t('tournamentManagement.cancel', 'Annuler') },
+        {
+          onPress: async () => {
+            setAnnulationEnCours(true);
+            try {
+              // Chargé au geste, comme « À la une » (eventService tire react-native-blob-util).
+              // eslint-disable-next-line global-require
+              const { cancelEvent } = require('@/services/event/eventService');
+              const reponse = await cancelEvent({ documentId: eventId });
+              await invalidate();
+              const prevenue = reponse?.meta?.collectivitePrevenue;
+              const revenir = () => navigation.goBack();
+              if (prevenue) {
+                Alert.alert(
+                  t('useEventMutations.villePrevenue.titre', 'C’est annulé'),
+                  t('useEventMutations.villePrevenue.corps', {
+                    defaultValue: 'La {{ville}} est prévenue : la place se libère.',
+                    ville: prevenue.collectiviteName
+                      || t('collectiviteDemandes.club.laVille', 'Ville'),
+                    ...SANS_ECHAPPEMENT,
+                  }),
+                  [{ onPress: revenir, text: 'OK' }],
+                );
+                return;
+              }
+              revenir();
+            } catch (/** @type {any} */ cause) {
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                cause?.response?.data?.error?.message || cause?.message
+                  || t('implOrga.cancelEventError', 'L’événement n’a pas pu être annulé.'),
+              );
+            } finally {
+              setAnnulationEnCours(false);
+            }
+          },
+          style: 'destructive',
+          text: t('implOrga.cancelEventConfirm', 'Annuler l’événement'),
+        },
+      ],
+    );
+  };
+
   const surfaceDesLignes = {
     backgroundColor: withAlpha(Colors.primary900, 'F2'),
     borderColor: withAlpha(Colors.primary500, '3D'),
@@ -894,9 +906,76 @@ function TournamentManagement({ navigation, route }) {
     <View key={cle} style={{ backgroundColor: Colors.primary700, height: 1 }} />
   );
 
+  // ORGANISATEUR 2 (Adel 19/11, carte 1c) : les blocs « Structure sportive » et « Actions
+  // compétition »
+  // quittent la page de l'organisateur (la structure vit dans « Réglages »). Leurs gestes
+  // n'existaient nulle
+  // part ailleurs (grep du 19/11) : chacun passe sous la ligne du Jour J qu'il concerne, mêmes
+  // conditions,
+  // même mutation. « Clôturer le tournoi » n'a pas de ligne : il reste seul sous « Réglages / À la
+  // une ».
+  // Témoin : TournamentManagement.ORGANISATEUR.test.js.
+  const gestesDuJourJ = (/** @type {string} */ onglet) => {
+    /** @type {any[]} */
+    let gestes = [];
+    if (onglet === 'groups') {
+      gestes = [
+        renderActionButton({
+          disabled: isCompetitionPublished,
+          isLoading: setupCompetitionMutation.isPending,
+          onPress: () => setupCompetitionMutation.mutate(),
+          title: t('tournamentManagement.syncTheStructure', 'Synchroniser la structure'),
+          variant: 'Secondary',
+        }),
+        competitionActions.canDrawGroups ? renderActionButton({
+          isLoading: drawGroupsMutation.isPending,
+          onPress: () => drawGroupsMutation.mutate(),
+          title: t('tournamentManagement.drawTheGroups', 'Tirer les poules'),
+          variant: 'Primary',
+        }) : null,
+      ];
+    } else if (onglet === 'matches') {
+      gestes = [
+        competitionActions.canGenerateMatches ? renderActionButton({
+          isLoading: generateMatchesMutation.isPending,
+          onPress: () => generateMatchesMutation.mutate(),
+          title: t('tournamentManagement.generateTheMatches', 'Générer les matchs'),
+          variant: 'Secondary',
+        }) : null,
+        // « Publier » demande des matchs ou un tableau : la ligne Matchs existe toujours.
+        competitionActions.canPublish ? renderActionButton({
+          isLoading: publishCompetitionMutation.isPending,
+          onPress: handlePublishCompetition,
+          title: t('tournamentManagement.publishTheCompetition', 'Publier la compétition'),
+          variant: 'Primary',
+        }) : null,
+      ];
+    } else if (onglet === 'bracket') {
+      gestes = [
+        competitionActions.canGenerateKnockout ? renderActionButton({
+          isLoading: generateKnockoutMutation.isPending,
+          onPress: () => generateKnockoutMutation.mutate(),
+          title: t('tournamentManagement.generateTheKnockoutStage', 'Générer la phase finale'),
+          variant: 'Secondary',
+        }) : null,
+      ];
+    }
+    const presents = gestes.filter(Boolean);
+    // L'état de la compétition (brouillon / publiée) se lisait dans « Structure sportive » : il
+    // reste lu ici,
+    // au-dessus des gestes qu'il ouvre ou ferme.
+    return presents.length ? (
+      <View style={Spaces.gap[12]} testID={`orga-gestes-${onglet}`}>
+        <Text style={[Fonts.p3, Fonts.neutral300]}>{competitionStateLabel}</Text>
+        {presents.map((geste, index) => (
+          <View key={`geste-${onglet}-${String(index)}`}>{geste}</View>
+        ))}
+      </View>
+    ) : null;
+  };
+
   // Planche 1c : « Jour J » (poules, matchs, classements, et la phase finale quand elle existe) ;
-  // chaque ligne déplie le contenu d'avant (les onglets), puis la structure sportive et ses gestes,
-  // gardés tels quels.
+  // chaque ligne déplie le contenu d'avant (les onglets) et ses gestes.
   const renderJourJ = () => {
     const groupes = Number(dashboard?.overview?.groups) || 0;
     const matchs = Number(dashboard?.overview?.totalMatches) || 0;
@@ -961,8 +1040,8 @@ function TournamentManagement({ navigation, route }) {
             }),
           ])}
         </View>
+        {activeTab !== 'overview' ? gestesDuJourJ(activeTab) : null}
         {activeTab !== 'overview' ? renderActiveTab() : null}
-        {renderOverviewTab()}
         <View style={surfaceDesLignes}>
           {ligneDeNavigation({
             icone: 'penSquare',
@@ -985,6 +1064,24 @@ function TournamentManagement({ navigation, route }) {
             titre: t('implOrga.featured', 'À la une'),
           })}
         </View>
+        <Button
+          isLoading={closeTournamentMutation.isPending}
+          onPress={handleCloseTournament}
+          size="sm"
+          style={{ borderColor: `${Colors.error500}55` }}
+          textStyle={{ color: Colors.error500 }}
+          title={t('tournamentManagement.closeTheTournament', 'Clôturer le tournoi')}
+          variant="SecondaryLight"
+        />
+        <Button
+          isLoading={annulationEnCours}
+          onPress={annulerLEvenement}
+          size="sm"
+          style={{ borderColor: `${Colors.error500}55` }}
+          textStyle={{ color: Colors.error500 }}
+          title={t('implOrga.cancelEvent', 'Annuler l’événement')}
+          variant="SecondaryLight"
+        />
       </View>
     );
   };
@@ -1049,12 +1146,19 @@ function TournamentManagement({ navigation, route }) {
         >
           {pilote ? (
             <>
-              <View style={tournamentDs.styles.screenIntro}>
-                <Text style={[Fonts.h2, Fonts.neutral00]}>
-                  {t('tournamentManagement.tournamentControl', 'Gérer le tournoi')}
-                </Text>
-                <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300]}>{titreDuLecteur}</Text>
-              </View>
+              {/* 1a (19/11) : le titre une seule fois. Le site le dit dans sa barre fine
+                  (registre), et le nom est dans la carte du tournoi ; le téléphone (pile sans
+                  titre) le dit ici, avec le nom. */}
+              {Platform.OS === 'web' ? null : (
+                <View style={tournamentDs.styles.screenIntro}>
+                  <Text style={[Fonts.h2, Fonts.neutral00]}>
+                    {t('tournamentManagement.tournamentControl', 'Gérer le tournoi')}
+                  </Text>
+                  <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral300]}>
+                    {titreDuLecteur}
+                  </Text>
+                </View>
+              )}
               {/* Planche 1f : au bureau (1024 px et plus), « Jour J » et les réglages passent
                   à droite. */}
               <View
@@ -1065,6 +1169,9 @@ function TournamentManagement({ navigation, route }) {
               >
                 <View style={deuxColonnes ? { flex: 2, minWidth: 0 } : null}>
                   <TournamentOrganizerBoard
+                    // 1f : les lignes serrées demandent ≈ 500 px fixes (barre, état, lien, menu) ;
+                    // à 1024 la colonne des équipes n'en a pas assez, les cartes restent.
+                    compact={largeurDeLaFenetre >= 1280}
                     event={event}
                     eventId={eventId}
                     filters={filtresDesEquipes}

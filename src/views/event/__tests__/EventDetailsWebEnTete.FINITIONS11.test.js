@@ -300,6 +300,15 @@ describe('FINITIONS11 · point 1 — l en-tête des pages d événement du site'
     expect(drapeau(root)).toHaveLength(1);
   });
 
+  // Avant : le cas « Tournoi » de la liste ci-dessus (le nom en h1). ORGANISATEUR 8 (19/11) : l'organisateur
+  // d'un tournoi lit le bandeau du joueur (EventHeader) ; le nom y est l'en-tête, le fil et le drapeau restent.
+  test('4 · Tournoi : le même fil, le nom dans le bandeau, le drapeau « Signaler »', () => {
+    const root = mountScreen({ event: buildEvent({ name: 'Tournoi de printemps', type: { name: 'Tournoi' } }) });
+    expect(textOf(fil(root)[0])).toBe('Planning › Tournoi');
+    expect(JSON.stringify(mounted.toJSON())).toContain('Tournoi de printemps');
+    expect(drapeau(root)).toHaveLength(1);
+  });
+
   // ACCUEIL-JOUEUR (09/11/2026, point 3, mots d'Adel) : le lieu se lit en adresse PRÉCISE (rue,
   // ville), plus « Lyon (69001) » seul — la planche P3-match-ordi est dépassée sur ce point.
   test('5 · la ligne d infos vaut pour tous les types, le lieu en adresse précise', () => {
