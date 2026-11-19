@@ -919,6 +919,9 @@ describe('IMPL-4B — « Rien ne correspond à « xqz » » sur l onglet Clubs d
     expect(etatVide().actionLabel).toBe('clubList.actions.createClub');
     expect(etatVide().onAction).toEqual(expect.any(Function));
     expect(etatVide().title).toBe('Rien ne correspond à « xqz »');
+    // Planche 7c (chef, 19/11 « 1- B ») : la phrase d'aide sous le titre.
+    expect(etatVide().description)
+      .toBe('Vérifie l’orthographe, essaie un autre mot ou un autre jour.');
   });
 
   test('🔴 une apostrophe ou une barre dans la recherche sortent telles quelles', async () => {
@@ -943,6 +946,7 @@ describe('IMPL-4B — « Rien ne correspond à « xqz » » sur l onglet Clubs d
     await monter({ champDeRecherchePlein: true });
 
     expect(etatVide().title).toBe('clubList.noData');
+    expect(etatVide().description).toBeUndefined();
     expect(etatVide().actionLabel).toBe('clubList.actions.createClub');
   });
 

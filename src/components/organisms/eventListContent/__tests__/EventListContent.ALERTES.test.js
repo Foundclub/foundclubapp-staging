@@ -196,7 +196,10 @@ jest.mock('@/components/atoms/emptyState/EmptyState', () => {
   const { Text } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { title }) => <Text>{`VIDE ${title}`}</Text>,
+    // IMPL-4B : la phrase d'aide, quand il y en a une, suit le titre.
+    default: (/** @type {any} */ { description, title }) => (
+      <Text>{description ? `VIDE ${title} — ${description}` : `VIDE ${title}`}</Text>
+    ),
   };
 });
 
@@ -611,7 +614,11 @@ describe('IMPL-4B — « Rien ne correspond à « xqz » » sur l onglet Événe
 
     expect(texte).toContain('Me prévenir des nouveaux événements comme ceux-ci');
     expect(texte).toContain('Ne rate plus aucun événement');
-    expect(texte).toContain('VIDE Rien ne correspond à « xqz »');
+    // Planche 7c (chef, 19/11 « 1- B ») : la phrase d'aide sous le titre.
+    expect(texte).toContain(
+      'VIDE Rien ne correspond à « xqz » — '
+      + 'Vérifie l’orthographe, essaie un autre mot ou un autre jour.',
+    );
     expect(texte).not.toContain('eventList.noData');
   });
 
@@ -628,7 +635,7 @@ describe('IMPL-4B — « Rien ne correspond à « xqz » » sur l onglet Événe
         champPlein: true, filtres: { city: MONTRIVAGE, q }, liste: LISTE_VIDE,
       });
       const texte = texteVisible(tree);
-      expect(texte).toContain('VIDE eventList.noData');
+      expect(texte).toContain('VIDE eventList.noData |');
       expect(texte).toContain('Me prévenir des nouveaux événements comme ceux-ci');
     },
   );

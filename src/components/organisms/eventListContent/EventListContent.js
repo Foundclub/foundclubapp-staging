@@ -1429,6 +1429,10 @@ function EventListContent({
     );
   };
 
+  // IMPL-4B (planche 7c) : dans Rechercher, le titre de l'état vide cite les mots tapés, une
+  // phrase d'aide dessous ; l'alerte et sa feuille ne changent pas.
+  const videAvecMotsTapes = champDeRecherchePlein && Boolean(activeSearchText);
+  const descriptionVide = !showFilters ? t('eventList.emptyDesc', 'Essaie de modifier tes filtres ou lance une nouvelle recherche.') : undefined;
   const emptyListContent = (
     showLoadingPlaceholder ? (
       <SearchResultsLoadingState
@@ -1439,11 +1443,15 @@ function EventListContent({
       customEmptyComponent || (
         <EmptyState
           actionLabel={!showFilters ? t('eventList.actions.findEvent') : undefined}
-          description={!showFilters ? t('eventList.emptyDesc', 'Essaie de modifier tes filtres ou lance une nouvelle recherche.') : undefined}
+          description={videAvecMotsTapes
+            ? t(
+              'implAccueil.rechercheVideAide',
+              'Vérifie l’orthographe, essaie un autre mot ou un autre jour.',
+            )
+            : descriptionVide}
           icon={Images.search}
           onAction={!showFilters ? handleFindEvent : undefined}
-          // IMPL-4B (planche 7c) : dans Rechercher, le titre cite les mots tapés ; rien d'autre.
-          title={champDeRecherchePlein && activeSearchText
+          title={videAvecMotsTapes
             ? t('implAccueil.rechercheVide', 'Rien ne correspond à « {{q}} »', {
               q: activeSearchText, ...SANS_ECHAPPEMENT,
             })

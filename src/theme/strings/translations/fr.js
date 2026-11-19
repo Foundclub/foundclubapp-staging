@@ -14803,6 +14803,7 @@ export default {
     },
     rechercheEffacer: 'Effacer la recherche',
     rechercheVide: 'Rien ne correspond à « {{q}} »',
+    rechercheVideAide: 'Vérifie l’orthographe, essaie un autre mot ou un autre jour.',
   },
   implFiche: {
     askToJoin: 'Demander à rejoindre',

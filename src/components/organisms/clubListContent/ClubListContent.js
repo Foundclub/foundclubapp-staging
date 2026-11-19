@@ -856,12 +856,20 @@ function ClubListContent({
     }
 
     // R17-INVITER : la Ville ne crée pas de club (son lien « Le club n'est pas sur FoundClub ? »).
-    // IMPL-4B (planche 7c) : dans Rechercher, le titre cite les mots tapés ; rien d'autre.
+    // IMPL-4B (planche 7c) : dans Rechercher, le titre cite les mots tapés, une phrase d'aide
+    // dessous ; le bouton ne change pas.
+    const rechercheSansResultat = champDeRecherchePlein && activeSearchText;
     return (
       <EmptyState
         actionLabel={actionDeCarte ? undefined : t('clubList.actions.createClub')}
+        description={rechercheSansResultat
+          ? t(
+            'implAccueil.rechercheVideAide',
+            'Vérifie l’orthographe, essaie un autre mot ou un autre jour.',
+          )
+          : undefined}
         onAction={actionDeCarte ? undefined : handleCreateClub}
-        title={champDeRecherchePlein && activeSearchText
+        title={rechercheSansResultat
           ? t('implAccueil.rechercheVide', 'Rien ne correspond à « {{q}} »', {
             q: activeSearchText, ...SANS_ECHAPPEMENT,
           })
