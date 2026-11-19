@@ -211,3 +211,61 @@ describe('D54 · le garde-fou : rien de tout ca sur le profil de quelqu\'un d\'a
     expect(boutonsRondsPlus(arbre)).toHaveLength(0);
   });
 });
+
+// INSCRIPTION-CODE-3 (19/11, planche V2 H4, décision du chef « étape 2, Q1 : A ») — DANS
+// L'INSCRIPTION SEULEMENT (propriété `dansLeTunnel`, passée par UserSportHistory) : « Ajouter un
+// autre club » quand un club est déjà là, et UNE ligne « 2019 à aujourd’hui · Sénior · Régional 2 »
+// (la période, la catégorie et le niveau y déménagent). Le profil ne change pas.
+describe('H4 · dans le tunnel d’inscription', () => {
+  const enCours = [{
+    category: { name: 'Sénior (+18 ans)' },
+    club: { name: 'US Exemple Marseille' },
+    documentId: 'exp-2',
+    isCurrentlyActive: true,
+    level: { name: 'Régional 2' },
+    startYear: 2019,
+  }];
+  const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+    .map((/** @type {any} */ n) => aplatirTexte(n.props.children));
+
+  it('« Ajouter un autre club » quand un club est déjà là', async () => {
+    mockHistories = enCours;
+    const onAddPress = jest.fn();
+    const arbre = await rendre({ dansLeTunnel: true, onAddPress });
+    const carte = pressablePortant(arbre, 'Ajouter un autre club');
+    expect(carte).toBeDefined();
+    await act(async () => { carte.props.onPress(); });
+    expect(onAddPress).toHaveBeenCalledTimes(1);
+    expect(textes(arbre).some((x) => x.includes('Ajouter une expérience'))).toBe(false);
+  });
+
+  it('une seule ligne : « 2019 à aujourd’hui · Sénior (+18 ans) · Régional 2 »', async () => {
+    mockHistories = enCours;
+    const arbre = await rendre({ dansLeTunnel: true });
+    const lus = textes(arbre);
+    expect(lus).toContain('2019 à aujourd’hui · Sénior (+18 ans) · Régional 2');
+    expect(lus.some((x) => x.startsWith('Catégorie :'))).toBe(false);
+  });
+
+  it('une période close : « 2015 à 2023 · Senior · Regional 1 »', async () => {
+    mockHistories = uneExperience;
+    const arbre = await rendre({ dansLeTunnel: true });
+    expect(textes(arbre)).toContain('2015 à 2023 · Senior · Regional 1');
+  });
+
+  it('liste vide : l’ajout garde son nom', async () => {
+    mockHistories = [];
+    const arbre = await rendre({ dansLeTunnel: true });
+    expect(pressablePortant(arbre, 'Ajouter une expérience')).toBeDefined();
+  });
+
+  it('hors du tunnel (le profil) : rien ne change', async () => {
+    mockHistories = enCours;
+    const arbre = await rendre();
+    const lus = textes(arbre);
+    expect(pressablePortant(arbre, 'Ajouter une expérience')).toBeDefined();
+    expect(lus).toContain("2019 - Aujourd'hui");
+    expect(lus).toContain('Catégorie : Sénior (+18 ans)');
+    expect(lus.some((x) => x.includes('Ajouter un autre club'))).toBe(false);
+  });
+});

@@ -135,6 +135,7 @@ function UserSportHistory({ navigation }) {
         {/* We wrap it in a View to ensure it doesn't stretch weirdly */}
         <View style={{ flex: 1 }}>
           <UserHistorySection
+            dansLeTunnel
             isOwnProfile
             onAddPress={handleAddExperience}
             onEditPress={(entry) => {

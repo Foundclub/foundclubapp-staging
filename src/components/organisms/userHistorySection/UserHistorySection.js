@@ -42,10 +42,13 @@ import {
  * @param {(item: UserHistoryItem) => void} [props.onEditPress]
  * @param {string} [props.bestLevel]
  * @param {string} [props.preferredSport]
+ * @param {boolean} [props.dansLeTunnel] Dans l'inscription seulement (planche V2 H4) : « Ajouter
+ *   un autre club », et une seule ligne « 2019 à aujourd’hui · Sénior · Régional 2 ».
  * @returns {import('react').ReactElement}
  */
 function UserHistorySection({
   bestLevel,
+  dansLeTunnel = false,
   isOwnProfile = false,
   onAddPress,
   onEditPress,
@@ -142,6 +145,23 @@ function UserHistorySection({
     return t('profile.history.periodNotSet', 'Période non renseignée');
   };
 
+  // INSCRIPTION-CODE-3 (planche V2 H4, décision du chef « étape 2, Q1 : A ») : dans l'inscription,
+  // la période, la catégorie et le niveau tiennent sur UNE ligne. Le profil garde ses pastilles.
+  const ligneDuTunnel = (/** @type {UserHistoryItem} */ item) => {
+    const start = String(item?.startYear || '').trim();
+    const end = String(item?.endYear || '').trim();
+    const fin = item?.isCurrentlyActive
+      ? t('historyWizardSingle.etapes.aujourdhui', 'aujourd’hui')
+      : end;
+    let periode = start || end;
+    if (start && fin && fin !== start) {
+      periode = `${start} ${t('historyWizardSingle.etapes.a', 'à')} ${fin}`;
+    }
+    return [periode || formatYearRange(item), item?.category?.name, item?.level?.name]
+      .filter(Boolean)
+      .join(' · ');
+  };
+
   const getClubName = (/** @type {UserHistoryItem} */ item) => {
     if (item?.club?.name) return item.club.name;
     if (item?.multisport_club?.name) return item.multisport_club.name;
@@ -209,7 +229,9 @@ function UserHistorySection({
       <Text style={[Fonts.p1Bold, Fonts.primary500]}>
         +
         {' '}
-        {t('profile.history.add', 'Ajouter une expérience')}
+        {dansLeTunnel && sortedHistories.length > 0
+          ? t('profile.history.ajouterUnAutreClub', 'Ajouter un autre club')
+          : t('profile.history.add', 'Ajouter une expérience')}
       </Text>
     </TouchableOpacity>
   ) : null;
@@ -320,7 +342,7 @@ function UserHistorySection({
                     {getClubName(item)}
                   </Text>
                   <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                    {formatYearRange(item)}
+                    {dansLeTunnel ? ligneDuTunnel(item) : formatYearRange(item)}
                   </Text>
                 </View>
                 {item?.isCurrentlyActive ? (
@@ -340,7 +362,7 @@ function UserHistorySection({
               </View>
 
               <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[4]]}>
-                {item?.category?.name ? (
+                {!dansLeTunnel && item?.category?.name ? (
                   <View
                     style={{
                       backgroundColor: `${Colors.neutral700}55`,
@@ -358,7 +380,7 @@ function UserHistorySection({
                     </Text>
                   </View>
                 ) : null}
-                {item?.level?.name ? (
+                {!dansLeTunnel && item?.level?.name ? (
                   <View
                     style={{
                       backgroundColor: `${Colors.neutral700}55`,

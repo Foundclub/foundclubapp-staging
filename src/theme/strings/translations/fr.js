@@ -19718,6 +19718,7 @@ export default {
     },
     history: {
       add: 'Ajouter une expérience',
+      ajouterUnAutreClub: 'Ajouter un autre club',
       bestLevel: 'Meilleur niveau',
       count_one: '{{count}} expérience',
       count_other: '{{count}} expériences',
