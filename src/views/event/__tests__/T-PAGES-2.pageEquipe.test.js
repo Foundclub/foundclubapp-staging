@@ -30,16 +30,21 @@ import TournamentTeamDetails from '../TournamentTeamDetails';
 
 const mockCandidats = [{ documentId: 'u-cand', firstname: 'Candidat' }];
 
+// IMPL-2C (19/11) : les options de chaque action, gardées pour le témoin du filet global.
+const mockOptionsDesActions = [];
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: (/** @type {any} */ opts) => ({
-    isPending: false,
-    // IMPL-2C (19/11) : comme react-query, `mutate` ne lève jamais : un refus va à `onError`.
-    mutate: (/** @type {any} */ v) => Promise.resolve(opts.mutationFn(v)).catch((/** @type {any} */ e) => {
-      if (!opts.onError) throw e;
-      opts.onError(e, v);
-    }),
-    mutateAsync: async (/** @type {any} */ v) => opts.mutationFn(v),
-  }),
+  useMutation: (/** @type {any} */ opts) => {
+    mockOptionsDesActions.push(opts);
+    return {
+      isPending: false,
+      // IMPL-2C (19/11) : comme react-query, `mutate` ne lève jamais : un refus va à `onError`.
+      mutate: (/** @type {any} */ v) => Promise.resolve(opts.mutationFn(v)).catch((/** @type {any} */ e) => {
+        if (!opts.onError) throw e;
+        opts.onError(e, v);
+      }),
+      mutateAsync: async (/** @type {any} */ v) => opts.mutationFn(v),
+    };
+  },
   useQuery: (/** @type {any} */ opts) => {
     const cle = Array.isArray(opts?.queryKey) ? opts.queryKey[0] : '';
     if (cle === 'tournament-team-users') return { data: mockCandidats, isFetching: false };
@@ -1026,5 +1031,19 @@ describe('IMPL-2C — rouvrir la fenêtre marche même si elle est partie sans p
     // La feuille disparaît à l'écran sans appeler `onClose` (index perdu au clavier) : rien ne change côté page.
     await act(async () => { bouton(arbre, 'Chercher un joueur').props.onPress(); });
     expect(mockMontagesDeFenetre.n).toBe(avant + 2);
+  });
+});
+
+// IMPL-2C (19/11/2026, émulateur, recette 48 b, capture 09-9h-2e-fenetre-acces-refuse-48b) — après « Tu ne
+// peux pas modifier ce réglage pour l'instant. » et « OK », une SECONDE fenêtre « Erreur — Accès refusé. » :
+// le filet global des actions (src/app/queryClient.js, MutationCache.onError) parlait aussi. Chaque action
+// de cette page dit son erreur elle-même : elle fait taire le filet (`meta.preventToastError`).
+describe('IMPL-2C — une seule alerte par refus', () => {
+  test('🔴 chaque action qui dit son erreur fait taire le filet global', async () => {
+    mockOptionsDesActions.splice(0);
+    await monter(equipe(), 'u-cap');
+    const avecAlerte = mockOptionsDesActions.filter((o) => typeof o?.onError === 'function');
+    expect(avecAlerte.length).toBeGreaterThanOrEqual(9);
+    expect(avecAlerte.filter((o) => o?.meta?.preventToastError !== true)).toHaveLength(0);
   });
 });
