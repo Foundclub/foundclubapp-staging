@@ -1215,9 +1215,12 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     // meme garantie, meme unicite, sur le contenant d'aujourd'hui.
     expect(byTestId(root, 'event-manage-sheet')).toHaveLength(1);
     expect(hasText(root, 'Gérer le tournoi')).toBe(true);
-    ['Modifier', 'À la une', 'Réglages tournoi', 'Annuler'].forEach((label) => {
+    // ORGA-MINIS (19/11, réponse 6 A d'Adel au téléphone) : « Annuler » d'un tournoi est dans
+    // Gérer le tournoi, sous Réglages ; il n'est plus dans cette feuille.
+    ['Modifier', 'À la une', 'Réglages tournoi'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
+    expect(pressableWithText(root, 'Annuler')).toBeUndefined();
     // N4 (D1) : « Compo » est devenu « Convocation ». Egalite STRICTE et par
     // clef — le mot seul attraperait l'onglet homonyme.
     expect(libelleDeLaRangee(root, 'lineup')).toBe('Convocation');
