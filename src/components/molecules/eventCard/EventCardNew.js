@@ -410,13 +410,16 @@ const resolveCapacityGauge = (eventItem, {
     // visiteur) alors que 6 étaient inscrites.
     const total = getTournamentTeamsCapacity(eventItem);
     if (!total) return null;
-    if (!isOrganizer) {
+    // IMPL-1C (19/11, recette 48, point B) : la liste des événements ne rend ni le résumé ni les
+    // équipes ; sans nombre connu, l'organisateur lit la règle, jamais « 0 / 24 ».
+    const inscrites = getTournamentRegisteredTeamsCount(eventItem);
+    if (!isOrganizer || inscrites === null) {
       return {
         line: getTournamentTeamsLine(eventItem) || '', taken: 0, total, unit: '',
       };
     }
     return {
-      taken: Number(getTournamentRegisteredTeamsCount(eventItem)),
+      taken: Number(inscrites),
       total,
       unit: i18next.t('eventCardNew.teamsUnit', ' équipes'),
     };

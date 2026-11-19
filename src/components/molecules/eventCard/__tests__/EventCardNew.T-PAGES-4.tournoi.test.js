@@ -172,6 +172,18 @@ describe('EventCardNew — T-PAGES-4, la carte d un tournoi (recette 44)', () =>
     expect(texte).not.toContain('équipes attendues');
   });
 
+  // IMPL-1C (19/11, recette 48, point B) : la LISTE des événements ne rend ni le résumé des
+  // équipes ni les équipes (la fiche seule les joint) ; la carte de l'organisateur disait
+  // « 0 / 24 ».
+  test('🔴 B — organisateur sans nombre connu (liste) : jamais « 0 / 24 »', () => {
+    mockCanManageEvent.mockReturnValue(true);
+    const sansNombre = TOURNOI({ tournamentTeams: undefined, tournamentTeamsSummary: undefined });
+    const texte = textsOf(renderCard({ item: sansNombre }));
+    mockCanManageEvent.mockReturnValue(false);
+    expect(texte).not.toContain('0 / 24');
+    expect(texte).toContain('24 équipes attendues');
+  });
+
   test('🔴 3 — « À partir de 16 ans » et « Mixte » ne s écrivent qu une fois', () => {
     const texte = textsOf(renderCard({ item: TOURNOI() }));
     // 2 = la ligne sous le titre + la sonde de mesure invisible de MarqueeText (même texte,

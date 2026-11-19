@@ -343,8 +343,12 @@ export function TournamentMyTeamCard({
       <h2 style={{ ...ui.sectionTitleStyle, overflowWrap: 'anywhere' }}>
         {equipe?.name || team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
       </h2>
+      {/* IMPL-1C (19/11, recette 48, écart 3 ; planche 9d) : la carte de la page d'équipe, avec sa
+          phrase (getUnpaidSentence, IMPL-2) ; plus « Il manque N joueurs et N paiements ». Sans
+          `payment.members` ou équipe validée, la carte le dit seule. Témoin : T-PAGES-3.fiche. */}
       {equipe ? (
         <TournamentTeamProgress
+          detailed
           members={equipe.members || []}
           payment={equipe.payment || null}
           showTodo

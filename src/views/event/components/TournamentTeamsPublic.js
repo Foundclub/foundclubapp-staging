@@ -21,6 +21,7 @@ import {
   getTournamentTeamCaptainShort,
   getTournamentTeamLookingFor,
   getTournamentTeamPlayerCount,
+  isTournamentRegistrationClosed,
 } from '../tournamentJoinRules';
 import { isTournamentTeamOpenToJoinRequests } from '../tournamentUtils';
 // L'aperçu (8e) vit dans la feuille d'équipe, doublée par les témoins du site.
@@ -295,7 +296,13 @@ function TournamentTeamsPublic({
 }) {
   const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
-  const [listeOuverte, setListeOuverte] = useState(!belowThreshold);
+  // IMPL-1C (19/11, recette 48, point A) : « dès N inscrites » seulement avec un seuil connu
+  // (N > 0) et pas encore atteint ; inscriptions fermées : ni seuil, ni appel à créer,
+  // « Inscriptions fermées », et les équipes se lisent.
+  // Témoin : TournamentTeamsPublic.IMPL-1 « point A ».
+  const fermees = isTournamentRegistrationClosed(event);
+  const sousLeSeuil = Boolean(belowThreshold) && Number(threshold) > 0 && !fermees;
+  const [listeOuverte, setListeOuverte] = useState(!sousLeSeuil);
   const [apercu, setApercu] = useState(/** @type {any} */ (null));
   const demande = useTournamentJoinRequest({
     event,
@@ -328,14 +335,19 @@ function TournamentTeamsPublic({
     : teams.filter((team) => team?.documentId && team.documentId === viewerTeam?.documentId);
   return (
     <View style={Spaces.gap[12]} testID="tournament-teams-public">
-      {belowThreshold ? (
+      {fermees ? (
+        <Text style={[Fonts.p2Bold, Fonts.warning400]} testID="tournament-teams-closed">
+          {t('implFiche.registrationsClosed')}
+        </Text>
+      ) : null}
+      {sousLeSeuil ? (
         <TournamentTeamsThresholdCard
           onCreate={viewerTeam ? null : onCreate}
           onJoin={demander && !viewerTeam ? () => setListeOuverte(true) : null}
           threshold={threshold}
         />
       ) : null}
-      {listeOuverte && belowThreshold && teams.length === 0 ? (
+      {listeOuverte && sousLeSeuil && teams.length === 0 ? (
         <Text accessibilityRole="alert" style={[Fonts.p3, Fonts.neutral00]}>
           {t('tournamentJoin.none')}
         </Text>

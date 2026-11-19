@@ -28,6 +28,16 @@ export const getTournamentTeamsCapacity = (event) => {
 };
 
 /**
+ * Une équipe inscrite : en attente ou validée, non archivée (ni refusée, ni archivée).
+ * @param {any} team - L'équipe du tournoi.
+ * @returns {boolean} Vrai si elle compte parmi les inscrites.
+ */
+export const isTournamentTeamRegistered = (team) => Boolean(
+  team && !team.archivedAt
+  && STATUTS_INSCRITS.includes(String(team.status || 'pending').toLowerCase()),
+);
+
+/**
  * Le nombre d'équipes inscrites, ou `null` s'il n'est pas connu (visiteur sans résumé).
  * @param {any} event - Le tournoi.
  * @returns {number | null} Le nombre.
@@ -38,10 +48,7 @@ export const getTournamentRegisteredTeamsCount = (event) => {
     return Math.round(Number(resume));
   }
   if (!Array.isArray(event?.tournamentTeams)) return null;
-  return event.tournamentTeams.filter((/** @type {any} */ team) => (
-    team && !team.archivedAt
-    && STATUTS_INSCRITS.includes(String(team.status || 'pending').toLowerCase())
-  )).length;
+  return event.tournamentTeams.filter(isTournamentTeamRegistered).length;
 };
 
 /**

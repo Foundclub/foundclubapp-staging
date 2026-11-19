@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import i18next from 'i18next';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -55,7 +55,10 @@ import {
 import { createTournamentDesignSystem, withAlpha } from './tournamentDesignSystem';
 import TournamentInvitationRequest from './TournamentInvitationRequest';
 import TournamentInvites from './TournamentInvites';
-import { getTournamentRegisteredTeamsCount } from './tournamentTeamsCount';
+import {
+  getTournamentRegisteredTeamsCount,
+  isTournamentTeamRegistered,
+} from './tournamentTeamsCount';
 import {
   getTournamentClosure,
   getTournamentCompetitionActions,
@@ -184,13 +187,38 @@ function TournamentManagement({ navigation, route }) {
     () => getTournamentCompetitionActions(dashboard),
     [dashboard],
   );
+  // IMPL-1C (19/11, recette 48, écart 4 ; planche page 8) : qui ne gère pas le tournoi ne voit que
+  // les équipes inscrites (en attente, validées), sans état interne ; le serveur les rend toutes
+  // (tournament-competition.js:544, lot IMPL-5). Témoin : TournamentManagement.IMPL-1C.lecteur.
+  // Sa propre équipe reste visible, refusée comprise (chef, 19/11). Contrat IMPL-5D : pour un
+  // non-gérant, le serveur rend `memberCount` partout et `members` pour SA seule équipe ; aucune
+  // lecture de `members` sans garde.
+  const moi = userData?.documentId || null;
+  const serveurSansMembres = useMemo(
+    () => tournamentTeams.some((team) => Number.isFinite(Number(team?.memberCount))),
+    [tournamentTeams],
+  );
+  const estLaMienne = useCallback(
+    (/** @type {any} */ team) => Boolean(team?.viewerMembership)
+      || (serveurSansMembres && Array.isArray(team?.members))
+      || Boolean(moi && team?.captainUser?.documentId === moi)
+      || Boolean(moi && (Array.isArray(team?.members) ? team.members : [])
+        .some((/** @type {any} */ membre) => membre?.user?.documentId === moi)),
+    [moi, serveurSansMembres],
+  );
+  const equipesVisibles = useMemo(
+    () => (canManageTournament
+      ? tournamentTeams
+      : tournamentTeams.filter((team) => isTournamentTeamRegistered(team) || estLaMienne(team))),
+    [canManageTournament, estLaMienne, tournamentTeams],
+  );
   const filteredTeams = useMemo(
-    () => tournamentTeams.filter((team) => {
+    () => equipesVisibles.filter((team) => {
       if (teamFilter === 'all') return true;
       if (teamFilter === 'warning') return isTournamentTeamNonCompliant(team, tournamentConfig);
       return normalizeTournamentText(team?.status) === teamFilter;
     }),
-    [teamFilter, tournamentConfig, tournamentTeams],
+    [equipesVisibles, teamFilter, tournamentConfig],
   );
 
   const invalidate = async () => {
@@ -450,7 +478,7 @@ function TournamentManagement({ navigation, route }) {
           {competitionActions.hasBracket ? (
             <Tag style={tournamentDs.getToneTagStyle(Colors.success500)} text={t('tournamentManagement.bracketGenerated', 'Bracket génère')} textColor="neutral00" textStyle={{ color: Colors.success500 }} />
           ) : null}
-          {counters.warning > 0 ? (
+          {canManageTournament && counters.warning > 0 ? (
             <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={t('tournamentManagement.rosterAlertsCount', { count: counters.warning, defaultValue_one: '{{count}} effectif à revoir', defaultValue_other: '{{count}} effectifs à revoir' })} textColor="gold500" />
           ) : null}
         </View>
@@ -599,20 +627,22 @@ function TournamentManagement({ navigation, route }) {
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
           {t('tournamentManagement.registeredTeams', 'Équipes inscrites')}
         </Text>
-        <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
-          {TEAM_FILTER_OPTIONS.map((option) => {
-            const selected = teamFilter === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setTeamFilter(option.value)}
-                style={tournamentDs.getPillStyle(selected)}
-              >
-                <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {canManageTournament ? (
+          <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
+            {TEAM_FILTER_OPTIONS.map((option) => {
+              const selected = teamFilter === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => setTeamFilter(option.value)}
+                  style={tournamentDs.getPillStyle(selected)}
+                >
+                  <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>{option.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
 
       {filteredTeams.length === 0 ? (
@@ -624,7 +654,22 @@ function TournamentManagement({ navigation, route }) {
       {filteredTeams.map((team) => {
         const rosterSummary = getTournamentRosterSummary(team, tournamentConfig);
         const statusMeta = getTournamentTeamStatusMeta(team?.status, Colors);
-        const hasRosterWarning = isTournamentTeamNonCompliant(team, tournamentConfig);
+        const hasRosterWarning = canManageTournament
+          && isTournamentTeamNonCompliant(team, tournamentConfig);
+        // Le nombre de joueurs : `memberCount` du serveur (IMPL-5D), sinon le résumé ou
+        // `members`, sinon rien ; jamais « 0 joueur » faute de données.
+        const montrerEtat = canManageTournament || estLaMienne(team)
+          || normalizeTournamentText(team?.status) === 'accepted';
+        let nombreDeJoueurs = null;
+        if (team?.memberCount !== null && team?.memberCount !== undefined
+          && Number.isFinite(Number(team.memberCount))) {
+          nombreDeJoueurs = Number(team.memberCount);
+        } else if (Array.isArray(team?.members) || rosterSummary.membersSummary) {
+          nombreDeJoueurs = rosterSummary.totalCount;
+        }
+        const sousTitreEphemere = canManageTournament
+          ? t('tournamentManagement.temporaryTeamCreatedByA', 'Équipe éphémère créée par un joueur')
+          : t('implFiche.tournamentTeam', 'Équipe du tournoi');
         return (
           <View
             key={team?.documentId || team?.name}
@@ -640,24 +685,29 @@ function TournamentManagement({ navigation, route }) {
                         || t('tournamentManagement.aClubTeam', 'une équipe club'),
                       ...SANS_ECHAPPEMENT,
                     })
-                    : t(
-                      'tournamentManagement.temporaryTeamCreatedByA',
-                      'Équipe éphémère créée par un joueur',
-                    )}
+                    : sousTitreEphemere}
                 </Text>
               </View>
-              <Tag style={tournamentDs.getToneTagStyle(statusMeta.tone)} text={statusMeta.label} textColor="neutral00" textStyle={{ color: statusMeta.tone }} />
+              {montrerEtat ? (
+                <Tag style={tournamentDs.getToneTagStyle(statusMeta.tone)} text={statusMeta.label} textColor="neutral00" textStyle={{ color: statusMeta.tone }} />
+              ) : null}
             </View>
 
             <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-              <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.rosterTotal', { count: rosterSummary.totalCount, defaultValue_one: '{{count}} joueur', defaultValue_other: '{{count}} joueurs' })} textColor="primary500" />
-              <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={t('tournamentManagement.rosterPresent', { count: rosterSummary.presentCount, defaultValue_one: '{{count}} présent', defaultValue_other: '{{count}} présents' })} textColor="neutral00" />
-              <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={t('tournamentManagement.rosterPending', { count: rosterSummary.pendingCount, defaultValue: '{{count}} en attente' })} textColor="neutral00" />
-              {rosterSummary.invitedCount > 0 ? (
-                <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.rosterInvited', { count: rosterSummary.invitedCount, defaultValue_one: '{{count}} invitation', defaultValue_other: '{{count}} invitations' })} textColor="primary500" />
+              {nombreDeJoueurs !== null ? (
+                <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.rosterTotal', { count: nombreDeJoueurs, defaultValue_one: '{{count}} joueur', defaultValue_other: '{{count}} joueurs' })} textColor="primary500" />
               ) : null}
-              {rosterSummary.requestedCount > 0 ? (
-                <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={t('tournamentManagement.rosterRequested', { count: rosterSummary.requestedCount, defaultValue_one: '{{count}} demande', defaultValue_other: '{{count}} demandes' })} textColor="warning500" />
+              {canManageTournament ? (
+                <>
+                  <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={t('tournamentManagement.rosterPresent', { count: rosterSummary.presentCount, defaultValue_one: '{{count}} présent', defaultValue_other: '{{count}} présents' })} textColor="neutral00" />
+                  <Tag style={{ backgroundColor: tournamentDs.colors.subtleSurface, borderColor: tournamentDs.colors.borderMuted }} text={t('tournamentManagement.rosterPending', { count: rosterSummary.pendingCount, defaultValue: '{{count}} en attente' })} textColor="neutral00" />
+                  {rosterSummary.invitedCount > 0 ? (
+                    <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={t('tournamentManagement.rosterInvited', { count: rosterSummary.invitedCount, defaultValue_one: '{{count}} invitation', defaultValue_other: '{{count}} invitations' })} textColor="primary500" />
+                  ) : null}
+                  {rosterSummary.requestedCount > 0 ? (
+                    <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={t('tournamentManagement.rosterRequested', { count: rosterSummary.requestedCount, defaultValue_one: '{{count}} demande', defaultValue_other: '{{count}} demandes' })} textColor="warning500" />
+                  ) : null}
+                </>
               ) : null}
               {hasRosterWarning ? (
                 <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={t('tournamentManagement.rosterToReview', 'Effectif à revoir')} textColor="gold500" />
@@ -1048,10 +1098,10 @@ function TournamentManagement({ navigation, route }) {
 
               <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
                 {/* T-REGLES-EQUIPE (point 8) : en attente + validées, comme le serveur (maxTeams) et la fiche. */}
-                {renderSummaryCard(t('tournamentManagement.summaryTeams', 'Équipes'), getTournamentRegisteredTeamsCount({ tournamentTeams }), Colors.primary500)}
+                {renderSummaryCard(t('tournamentManagement.summaryTeams', 'Équipes'), canManageTournament ? getTournamentRegisteredTeamsCount({ tournamentTeams }) : equipesVisibles.length, Colors.primary500)}
                 {renderSummaryCard(t('tournamentManagement.summaryGroups', 'Poules'), dashboard?.overview?.groups || 0, Colors.primary500)}
                 {renderSummaryCard(t('tournamentManagement.summaryMatches', 'Matchs'), dashboard?.overview?.totalMatches || 0, Colors.success500)}
-                {renderSummaryCard(t('tournamentManagement.summaryRosterAlerts', 'À revoir'), counters.warning, Colors.gold500)}
+                {canManageTournament ? renderSummaryCard(t('tournamentManagement.summaryRosterAlerts', 'À revoir'), counters.warning, Colors.gold500) : null}
               </View>
 
               <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
