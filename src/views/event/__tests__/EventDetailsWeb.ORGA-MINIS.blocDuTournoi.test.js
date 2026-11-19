@@ -245,6 +245,12 @@ const monter = (/** @type {any} */ event, /** @type {any} */ compte = JOUEUR) =>
       />,
     );
   });
+  // Récolte train 16 : ONGLETS-SITE-FICHE (ca2191f1) range « Les équipes » sous l'onglet Équipes pour
+  // qui n'organise pas. Avant : les équipes étaient sous Aperçu, sans onglet. L'organisateur n'a pas
+  // d'onglets.
+  const [ongletEquipes] = mounted.root.findAll((/** @type {any} */ n) => n.type === 'button'
+    && n.props?.['data-testid'] === 'onglet-tournamentTeams');
+  if (ongletEquipes) act(() => { ongletEquipes.props.onClick(); });
   return mounted;
 };
 
