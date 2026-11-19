@@ -68,9 +68,9 @@ function ConversationClubPicker({ navigation, route }) {
     });
   }, [chatId, navigation]);
 
-  const message = (texte) => (
+  const message = (libelle) => (
     <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-      {texte}
+      {libelle}
     </Text>
   );
 
