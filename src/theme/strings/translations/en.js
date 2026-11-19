@@ -13944,6 +13944,8 @@ export default {
       voirEquipe: 'See the team',
     },
     rechercheEffacer: 'Clear search',
+    rechercheVide: 'Nothing matches “{{q}}”',
+    rechercheVideAide: 'Check the spelling, try another word or another day.',
   },
   implFiche: {
     askToJoin: 'Ask to join',

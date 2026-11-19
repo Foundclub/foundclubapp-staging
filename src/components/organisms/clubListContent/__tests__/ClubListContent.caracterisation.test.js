@@ -27,6 +27,11 @@ const mockEtat = {
   pagesTerritoire: { pages: [] },
   pageSuivanteEnCours: false,
   recherche: '',
+  // IMPL-4B : la session de la carte et la réponse « zone visible », absentes par défaut.
+  /** @type {any} */
+  pagesZone: undefined,
+  /** @type {Record<string, any>} */
+  sessionsDeCarte: {},
   /** @type {any} */
   territoireDemande: null,
 };
@@ -47,8 +52,13 @@ const mockDispatch = jest.fn((/** @type {any} */ action) => {
 jest.mock('react-i18next', () => ({
   ...jest.requireActual('react-i18next'),
   useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ repli) => (
-      typeof repli === 'string' ? repli : key
+    // IMPL-4B : la forme à 3 arguments interpole `{{x}}` (le titre « Rien ne correspond à … »).
+    t: (/** @type {string} */ key, /** @type {any} */ repli, /** @type {any} */ options) => (
+      typeof repli === 'string'
+        ? repli.replace(/\{\{(\w+)\}\}/g, (jeton, nom) => (
+          options?.[nom] === undefined ? jeton : String(options[nom])
+        ))
+        : key
     ),
   }),
 }));
@@ -155,7 +165,10 @@ jest.mock(
 
 jest.mock('@/store/appContext', () => ({
   useAppContext: () => ([
-    { clubFilters: { ...mockEtat.filtres, name: mockEtat.recherche }, searchMapSessions: {} },
+    {
+      clubFilters: { ...mockEtat.filtres, name: mockEtat.recherche },
+      searchMapSessions: mockEtat.sessionsDeCarte,
+    },
     mockDispatch,
   ]),
 }));
@@ -240,7 +253,7 @@ jest.mock('@/services/search/searchQueries', () => ({
     refetch: mockRien,
   }),
   useSearchClubsMap: () => ({
-    data: undefined,
+    data: mockEtat.pagesZone,
     error: undefined,
     fetchNextPage: mockRien,
     hasNextPage: false,
@@ -316,6 +329,8 @@ beforeEach(() => {
   mockEtat.pagesPertinence = { pages: [{ data: [] }] };
   mockEtat.pageSuivanteEnCours = false;
   mockEtat.recherche = '';
+  mockEtat.pagesZone = undefined;
+  mockEtat.sessionsDeCarte = {};
   mockChamp.props = null;
   mockListe.props = null;
   mockListe.montages = 0;
@@ -886,5 +901,67 @@ describe('ClubListContent — l ancre du guide sur les pastilles', () => {
       && typeof n.type !== 'string');
     expect(ancre.findAll((/** @type {any} */ n) => n.type === 'PastillesFiltresClub'))
       .toHaveLength(1);
+  });
+});
+
+// IMPL-4B-ACCUEIL (19/11/2026, planche 7c) — dans Rechercher, une recherche sans résultat le dit
+// avec les mots tapés : « Rien ne correspond à « xqz » ». Le TITRE seul change, et seulement
+// depuis Rechercher (`champDeRecherchePlein`, que SearchHubScreen pose hors annuaire) quand le
+// champ n'est pas vide. Tout ce que l'état vide offrait reste : « Ajouter mon club », la variante
+// « Zoome pour affiner ».
+describe('IMPL-4B — « Rien ne correspond à « xqz » » sur l onglet Clubs de Rechercher', () => {
+  const etatVide = () => mockListe.props.ListEmptyComponent().props;
+
+  test('🔴 Rechercher, « xqz », 0 club : le titre la cite, « Ajouter mon club » reste', async () => {
+    mockEtat.recherche = ' xqz ';
+    await monter({ champDeRecherchePlein: true });
+
+    expect(etatVide().actionLabel).toBe('clubList.actions.createClub');
+    expect(etatVide().onAction).toEqual(expect.any(Function));
+    expect(etatVide().title).toBe('Rien ne correspond à « xqz »');
+    // Planche 7c (chef, 19/11 « 1- B ») : la phrase d'aide sous le titre.
+    expect(etatVide().description)
+      .toBe('Vérifie l’orthographe, essaie un autre mot ou un autre jour.');
+  });
+
+  test('🔴 une apostrophe ou une barre dans la recherche sortent telles quelles', async () => {
+    mockEtat.recherche = 'l’om / l\'ol';
+    await monter({ champDeRecherchePlein: true });
+
+    expect(etatVide().title).toBe('Rien ne correspond à « l’om / l\'ol »');
+  });
+
+  test('📌 hors de Rechercher (annuaire, Ville) : le titre d avant', async () => {
+    mockEtat.recherche = 'xqz';
+    await monter();
+    expect(etatVide().title).toBe('clubList.noData');
+
+    await monter({ annuaire: true });
+    expect(texteRendu()).toContain('clubList.noData');
+    expect(texteRendu()).not.toContain('Rien ne correspond');
+  });
+
+  test.each([[''], ['   ']])('📌 Rechercher, champ vide (%p) : titre d avant', async (recherche) => {
+    mockEtat.recherche = recherche;
+    await monter({ champDeRecherchePlein: true });
+
+    expect(etatVide().title).toBe('clubList.noData');
+    expect(etatVide().description).toBeUndefined();
+    expect(etatVide().actionLabel).toBe('clubList.actions.createClub');
+  });
+
+  test('📌 zone trop large : « Zoome pour affiner » reste, même avec « xqz »', async () => {
+    const zone = {
+      east: 4, lat: 43.6, lng: 3.9, north: 44, south: 43, west: 3,
+    };
+    mockEtat.recherche = 'xqz';
+    mockEtat.sessionsDeCarte = {
+      clubs: { executedQuery: { view: 'list' }, searchedViewport: zone },
+    };
+    mockEtat.pagesZone = { pages: [{ data: [], meta: { requiresZoom: true } }] };
+    await monter({ champDeRecherchePlein: true });
+
+    expect(etatVide().title).toBe('Zoome pour affiner la recherche');
+    expect(etatVide().actionLabel).toBeUndefined();
   });
 });

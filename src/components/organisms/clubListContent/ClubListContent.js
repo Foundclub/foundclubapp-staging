@@ -19,6 +19,7 @@ import {
 
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
@@ -167,7 +168,8 @@ const mergeClubCollections = (...collections) => {
  *   `pied` (CORR-RECHERCHE point 2, posé par la seule Ville dans « Ajouter un club ») : rendu en
  *   fin de liste, il défile avec elle au lieu de rester figé dessous. Absent, rien ne change.
  *   `champDeRecherchePlein` (IMPL-4-ACCUEIL, page 7, posé par la recherche du téléphone) : le
- *   champ pleine largeur, les filtres dedans. Absent, rien ne change.
+ *   champ pleine largeur, les filtres dedans. IMPL-4B (planche 7c, 19/11) : avec lui, le titre de
+ *   l'état vide cite la recherche (« Rien ne correspond à « xqz » »). Absent, rien ne change.
  * @returns {import('react').ReactElement}
  */
 function ClubListContent({
@@ -854,14 +856,30 @@ function ClubListContent({
     }
 
     // R17-INVITER : la Ville ne crée pas de club (son lien « Le club n'est pas sur FoundClub ? »).
+    // IMPL-4B (planche 7c) : dans Rechercher, le titre cite les mots tapés, une phrase d'aide
+    // dessous ; le bouton ne change pas.
+    const rechercheSansResultat = champDeRecherchePlein && activeSearchText;
     return (
       <EmptyState
         actionLabel={actionDeCarte ? undefined : t('clubList.actions.createClub')}
+        description={rechercheSansResultat
+          ? t(
+            'implAccueil.rechercheVideAide',
+            'Vérifie l’orthographe, essaie un autre mot ou un autre jour.',
+          )
+          : undefined}
         onAction={actionDeCarte ? undefined : handleCreateClub}
-        title={t('clubList.noData')}
+        title={rechercheSansResultat
+          ? t('implAccueil.rechercheVide', 'Rien ne correspond à « {{q}} »', {
+            q: activeSearchText, ...SANS_ECHAPPEMENT,
+          })
+          : t('clubList.noData')}
       />
     );
-  }, [actionDeCarte, handleCreateClub, requiresViewportZoom, showLoadingPlaceholder, t]);
+  }, [
+    actionDeCarte, activeSearchText, champDeRecherchePlein, handleCreateClub, requiresViewportZoom,
+    showLoadingPlaceholder, t,
+  ]);
 
   // ANNUAIRE-E1 — sur l'annuaire du site, les cartes sont posées à plat et défilent AVEC la page.
   // Une liste qui ne défile pas elle-même ne sait plus quand elle arrive au bout : sans borne, elle

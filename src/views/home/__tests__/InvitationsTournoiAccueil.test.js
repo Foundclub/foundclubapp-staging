@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import InvitationsTournoiAccueil from '@/views/home/InvitationsTournoiAccueil';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -275,6 +277,48 @@ describe('T-INVITATION-ACCUEIL — la carte d’invitation de tournoi sur l’ac
     expect(lisibles(arbre)).toContain(DEJA_PRIS);
     expect(lisibles(arbre)).toContain('Invitation au tournoi');
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  // IMPL-4B-ACCUEIL (planche 2c, 19/11) : l'icône « ! » devant le message d'erreur, à sa couleur ;
+  // décorative (le texte garde la région vivante, donc l'annonce au lecteur d'écran).
+  it('IMPL-4B — l’erreur de la carte porte l’icône « ! », le texte reste annoncé', async () => {
+    respondToTournamentInvitation.mockRejectedValue(new Error(DEJA_PRIS));
+    const arbre = await monter();
+    expect(arbre.root.findAllByType(GlyphIcon)).toHaveLength(0);
+    await act(async () => { pressable(arbre, 'Accepter').props.onPress(); });
+    await vidanger();
+    const icones = arbre.root.findAllByType(GlyphIcon);
+    expect(icones).toHaveLength(1);
+    expect(icones[0].props).toMatchObject({ name: 'triangleExclamation', size: 16 });
+    const message = arbre.root.findAll((n) => typeof n.type === 'string'
+      && n.props?.accessibilityLiveRegion === 'polite');
+    expect(message).toHaveLength(1);
+    expect(message[0].props.children).toBe(DEJA_PRIS);
+    // La même couleur que le texte (le rouge du thème).
+    expect(StyleSheet.flatten(message[0].props.style).color).toBe(icones[0].props.color);
+  });
+
+  // IMPL-4B-ACCUEIL (planches 2a, 2e, 19/11) : « Il y a 5 min » à droite du titre, quand le
+  // serveur rend la date de l'invitation (`createdAt`, lot IMPL-5C, recette 49).
+  it('IMPL-4B — avec la date de l’invitation : « Il y a 5 min »', async () => {
+    const ilYA5Min = new Date(Date.now() - 5 * 60_000 - 5_000).toISOString();
+    getMyTournamentInvitations.mockResolvedValue([invitation('a', { createdAt: ilYA5Min })]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Il y a 5 min');
+    expect(lisibles(arbre)).toContain('Invitation au tournoi');
+  });
+
+  it.each([
+    ['absente (serveur de la recette 48)', {}],
+    ['nulle', { createdAt: null }],
+    ['illisible', { createdAt: 'pas-une-date' }],
+  ])('IMPL-4B — date de l’invitation %s : aucun texte de temps', async (_cas, extra) => {
+    getMyTournamentInvitations.mockResolvedValue([invitation('a', extra)]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Invitation au tournoi');
+    expect(lisibles(arbre).some((texte) => /il y a|instant|Invalid/i.test(texte))).toBe(false);
+    // Le titre reste seul sur sa ligne : rien de vide à sa droite.
+    expect(lisibles(arbre).filter((texte) => texte === '')).toHaveLength(0);
   });
 
   it('répondue ailleurs (page d’équipe) : au retour sur l’accueil, la carte s’en va', async () => {
