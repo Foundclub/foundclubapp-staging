@@ -117,7 +117,9 @@ const dateEnMots = (value, options) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(localeDesFormats(), options);
 };
+/** @type {Intl.DateTimeFormatOptions} */
 const DATE_COURTE = { day: 'numeric', month: 'short', weekday: 'short' };
+/** @type {Intl.DateTimeFormatOptions} */
 const JOUR_ET_MOIS = { day: 'numeric', month: 'long' };
 
 /**
