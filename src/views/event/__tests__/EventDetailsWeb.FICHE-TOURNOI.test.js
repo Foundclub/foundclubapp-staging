@@ -280,7 +280,8 @@ const JOUEUR = {
 const TOURNOI = () => buildEvent({
   name: 'FoundClub x AR Soccer',
   team: null,
-  tournamentConfig: { competitionState: 'draft', maxTeams: 24 },
+  // Payant : « Avant de t'inscrire » ne se montre que pour un tournoi payant (ou à maillot).
+  tournamentConfig: { competitionState: 'draft', entryFeeCents: 2000, maxTeams: 24 },
   tournamentTeams: [],
   type: { name: 'Tournoi' },
 });
@@ -322,5 +323,86 @@ describe('FICHE-TOURNOI · 6b — l en-tête de la fiche d un tournoi, site', ()
     const root = mountScreen({ auth: JOUEUR, event: buildEvent() });
     expect(fil(root)).toHaveLength(1);
     expect(drapeau(root)).toHaveLength(1);
+  });
+});
+
+// ==========================================================================
+// ONGLETS-SITE-FICHE (19/11/2026, FICHE-MINIS 2, chef ; maquettes 6b site et 6d) — la fiche
+// d'un tournoi sur le site, pour qui n'organise pas : les onglets Aperçu / Équipes / Personnes,
+// comme au téléphone. L'essentiel, « Inscris ton équipe », « Comment ça marche » et « Avant de
+// t'inscrire » vivent dans Aperçu ; « Les équipes » dans Équipes ; la liste des personnes dans
+// Personnes. Sur un ordinateur, la carte de droite (« Mon équipe » / « Inscris ton équipe ») reste
+// sous chaque onglet. L'organisateur garde sa fiche d'avant.
+// ==========================================================================
+
+const parId = (/** @type {any} */ root, /** @type {string} */ id) => root.findAll(
+  (/** @type {any} */ n) => (n.props?.testID === id || n.props?.['data-testid'] === id) && typeof n.type === 'string',
+);
+const blocDesEquipes = (/** @type {any} */ root) => root.findAll(
+  (/** @type {any} */ n) => n.type === 'div' && n.props['data-event-section'] === 'tournament',
+);
+const onglets = (/** @type {any} */ root) => root.findAll(
+  (/** @type {any} */ n) => n.type === 'button' && n.props.role === 'tab',
+).map((/** @type {any} */ n) => textOf(n));
+const allerSur = (/** @type {any} */ root, /** @type {string} */ valeur) => {
+  const [onglet] = root.findAll((/** @type {any} */ n) => n.type === 'button' && n.props['data-testid'] === `onglet-${valeur}`);
+  act(() => { onglet.props.onClick(); });
+};
+const avant = (/** @type {any} */ root, /** @type {string} */ premier, /** @type {string} */ second) => {
+  const json = JSON.stringify(mounted.toJSON());
+  return json.indexOf(premier) > -1 && json.indexOf(premier) < json.indexOf(second);
+};
+
+describe('ONGLETS-SITE-FICHE — les onglets de la fiche d un tournoi, site', () => {
+  afterEach(() => { mockLargeur.width = 375; });
+
+  test('🔴 téléphone, joueur sans équipe : Aperçu / Équipes / Personnes, avant l essentiel', () => {
+    const root = mountScreen({ auth: JOUEUR, event: TOURNOI() });
+    expect(onglets(root)).toEqual(['Aperçu', 'Équipes', 'Personnes']);
+    expect(avant(root, 'event-tournament-tabs', 'tournament-essentials')).toBe(true);
+  });
+
+  test('🔴 Aperçu : l essentiel, « Comment ça marche », « Avant de t inscrire », pas « Les équipes »', () => {
+    const root = mountScreen({ auth: JOUEUR, event: TOURNOI() });
+    expect(parId(root, 'tournament-essentials').length).toBeGreaterThan(0);
+    expect(parId(root, 'tournament-how-it-works')).toHaveLength(1);
+    expect(parId(root, 'tournament-before-sign-up')).toHaveLength(1);
+    expect(blocDesEquipes(root)).toHaveLength(0);
+  });
+
+  test('🔴 Équipes : « Les équipes » tout de suite, sans l essentiel ni les blocs d inscription', () => {
+    const root = mountScreen({ auth: JOUEUR, event: TOURNOI() });
+    allerSur(root, 'tournamentTeams');
+    expect(blocDesEquipes(root)).toHaveLength(1);
+    expect(parId(root, 'tournament-essentials')).toHaveLength(0);
+    expect(parId(root, 'tournament-how-it-works')).toHaveLength(0);
+    expect(parId(root, 'tournament-before-sign-up')).toHaveLength(0);
+  });
+
+  test('🔴 Personnes : la liste des personnes du tournoi (fermée à qui n organise pas)', () => {
+    const root = mountScreen({ auth: JOUEUR, event: TOURNOI() });
+    allerSur(root, 'participants');
+    expect(parId(root, 'tournament-people-locked').length + parId(root, 'tournament-people-empty').length).toBeGreaterThan(0);
+    expect(blocDesEquipes(root)).toHaveLength(0);
+  });
+
+  test('🔴 au seuil des 30 % : « Équipes · 9 »', () => {
+    const root = mountScreen({ auth: JOUEUR, event: { ...TOURNOI(), tournamentTeamsSummary: { expectedCount: 24, registeredCount: 9 } } });
+    expect(onglets(root)).toEqual(['Aperçu', 'Équipes · 9', 'Personnes']);
+  });
+
+  test('🔴 ordinateur (6d) : les onglets aussi ; la carte de droite reste sous l onglet Équipes', () => {
+    mockLargeur.width = 1280;
+    const root = mountScreen({ auth: JOUEUR, event: TOURNOI() });
+    expect(onglets(root)).toEqual(['Aperçu', 'Équipes', 'Personnes']);
+    allerSur(root, 'tournamentTeams');
+    expect(parId(root, 'event-tournament-side')).toHaveLength(1);
+    expect(blocDesEquipes(root)).toHaveLength(1);
+  });
+
+  test('l organisateur garde sa fiche : pas d onglets, « Les équipes » visible', () => {
+    const root = mountScreen({ event: TOURNOI() });
+    expect(onglets(root)).toEqual([]);
+    expect(blocDesEquipes(root)).toHaveLength(1);
   });
 });

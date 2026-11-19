@@ -68,6 +68,7 @@ import {
   getTournamentRegisteredTeamsCount,
   getTournamentTeamsCapacity,
   getTournamentTeamsTabLine,
+  isTournamentTeamsCountShown,
 } from '@/views/event/tournamentTeamsCount';
 import {
   canRegisterSourceTeamToTournament,
@@ -129,8 +130,8 @@ import {
 } from '@/utils/clubCertification';
 import { lireLeMomentCourt } from '@/utils/date';
 import { getEntityDocumentId } from '@/utils/entityId';
-import { confirmerDansLApp, demanderDansLApp } from '@/utils/fenetreDeLApp';
 import { getErrorStatus } from '@/utils/errors/displayError';
+import { confirmerDansLApp, demanderDansLApp } from '@/utils/fenetreDeLApp';
 import getImageUrl from '@/utils/imageUrl';
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
@@ -149,6 +150,7 @@ import {
 import CancelSeriesSheet from './components/CancelSeriesSheet';
 import EventChatRow from './components/EventChatRow';
 import EventHeader from './components/EventHeader';
+import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentTeamsPublic from './components/TournamentTeamsPublic';
 import EventChildRegistration, {
   EventChildRegistrationsForOrganizer,
@@ -293,6 +295,8 @@ function EventDetails({ navigation, route }) {
     enabled: Boolean(eventId && userData?.documentId),
   });
   const [isSharing, setIsSharing] = useState(false);
+  // ONGLETS-SITE-FICHE (19/11) : l'onglet ouvert de la fiche d'un tournoi (joueur, visiteur).
+  const [ongletDuTournoi, setOngletDuTournoi] = useState('overview');
   const [actionError, setActionError] = useState('');
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   // CORR-COLLECTIVITES 94 (31/10, Adel A) : « La Ville est prévenue », dans la fenêtre de l'app.
@@ -2340,6 +2344,30 @@ function EventDetails({ navigation, route }) {
   // « Gérer l'événement ») ; sur un ordinateur, rien ne change (6d : « garder le réel »).
   // Témoin : __tests__/EventDetailsWeb.FICHE-TOURNOI.test.js.
   const ficheDuTournoiAuTelephone = isTournamentEvent && !isTablet;
+  // ONGLETS-SITE-FICHE (19/11/2026, FICHE-MINIS 2, maquettes 6b site et 6d) — pour qui n'organise
+  // pas le tournoi, les onglets du téléphone (EventDetails.js) : Aperçu (l'essentiel, « Inscris ton
+  // équipe », « Comment ça marche », « Avant de t'inscrire »), Équipes (« Les équipes »),
+  // Personnes (la liste du téléphone, fermée à qui n'organise pas). « Équipes · N » dès le seuil
+  // des 30 % (« 4- A »). L'organisateur garde sa fiche d'avant (deux colonnes, pilotage).
+  // Témoin : __tests__/EventDetailsWeb.FICHE-TOURNOI.test.js « ONGLETS-SITE-FICHE ».
+  // Récolte train 16 : depuis ORGANISATEUR 8 (4d5cafa2), l'organisateur lit aussi cette fiche
+  // (vueJoueurDuTournoi) ; ONGLETS-SITE-FICHE (ca2191f1) lui laisse sa fiche sans onglets : les
+  // onglets ne valent que pour qui n'organise pas, et l'organisateur voit tout, comme avant.
+  const ongletsVisibles = vueJoueurDuTournoi && !organisateurDuTournoi;
+  const libelleEquipes = t('eventDetails.tabs.teams', 'Équipes');
+  const ongletsDuTournoi = ongletsVisibles ? [
+    { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' },
+    {
+      label: isTournamentTeamsCountShown(event)
+        ? `${libelleEquipes} · ${getTournamentRegisteredTeamsCount(event)}`
+        : libelleEquipes,
+      value: 'tournamentTeams',
+    },
+    { label: t('eventDetails.tabs.people', 'Personnes'), value: 'participants' },
+  ] : [];
+  const surLOngletDuTournoi = (/** @type {string} */ valeur) => (
+    !ongletsVisibles || ongletDuTournoi === valeur
+  );
   const filDuTournoiMasque = ficheDuTournoiAuTelephone;
   const signalerDansLeMenu = ficheDuTournoiAuTelephone && isSignedIn;
   const menuDuHautItems = signalerDansLeMenu
@@ -2657,27 +2685,27 @@ function EventDetails({ navigation, route }) {
           compétition » et « Modifier les paramètres » (ligne Réglages) ne sont plus redits ici. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         {organisateurDuTournoi ? null : (
-        <button
-          onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
-          style={{
-            background: canEdit ? accentColor : 'transparent',
-            border: canEdit ? 0 : `1px solid ${borderColor}`,
-            borderRadius: 999,
-            color: textColor,
-            cursor: 'pointer',
-            fontFamily: canEdit ? 'Montserrat-Bold, sans-serif' : 'Montserrat-Regular, sans-serif',
-            padding: '10px 16px',
-          }}
-          type="button"
-        >
-          {canEdit ? t(
-            'eventDetails.runTheCompetition',
-            'Piloter la compétition',
-          ) : t(
-            'eventDetails.seeTheCompetition',
-            'Voir la compétition',
-          )}
-        </button>
+          <button
+            onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
+            style={{
+              background: canEdit ? accentColor : 'transparent',
+              border: canEdit ? 0 : `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: textColor,
+              cursor: 'pointer',
+              fontFamily: canEdit ? 'Montserrat-Bold, sans-serif' : 'Montserrat-Regular, sans-serif',
+              padding: '10px 16px',
+            }}
+            type="button"
+          >
+            {canEdit ? t(
+              'eventDetails.runTheCompetition',
+              'Piloter la compétition',
+            ) : t(
+              'eventDetails.seeTheCompetition',
+              'Voir la compétition',
+            )}
+          </button>
         )}
         {canEdit && !tournoiClos && !organisateurDuTournoi ? (
           <button
@@ -2818,6 +2846,8 @@ function EventDetails({ navigation, route }) {
             ? ouvrirLaConnexionDuTournoi
             : null}
           onOpenTeamPage={handleOpenTournamentTeam}
+          // ONGLETS-SITE-FICHE : « Voir les infos du tournoi » de l'aperçu ramène à Aperçu.
+          onSeeTournament={() => setOngletDuTournoi('overview')}
           teams={equipesDeLaListe}
           threshold={getTournamentTeamsThreshold(getTournamentTeamsCapacity(event))}
           viewerRequested={roleDuLecteur === 'requested'}
@@ -3670,13 +3700,13 @@ function EventDetails({ navigation, route }) {
                       SuperAdmin (SECU-RESA). Aux autres, ce calendrier refusait l'envoi. */}
                   {isReservation && facilityId
                     && getUserRoleKey(userData?.role?.name) === 'superAdmin' ? (
-                    <button
-                      onClick={() => navigation.navigate(RouteNames.BookingCalendar, { facilityId })}
-                      style={{ ...outlineButtonStyle, padding: '12px 16px' }}
-                      type="button"
-                    >
-                      {t('eventDetails.openTheCalendar', 'Ouvrir le calendrier')}
-                    </button>
+                      <button
+                        onClick={() => navigation.navigate(RouteNames.BookingCalendar, { facilityId })}
+                        style={{ ...outlineButtonStyle, padding: '12px 16px' }}
+                        type="button"
+                      >
+                        {t('eventDetails.openTheCalendar', 'Ouvrir le calendrier')}
+                      </button>
                     ) : null}
                 </div>
                 {/* T-PAGES-3 : le panneau « Rejoindre une équipe » (T-REJOINDRE) est dans la carte
@@ -3815,6 +3845,61 @@ function EventDetails({ navigation, route }) {
                   {/* T-PAGES-3b (point 2) : au téléphone, « Mon équipe » passe AVANT l'essentiel
                       (maquette b) ; la carte d'inscription le suit (maquette a). */}
                   {!isDesktop && (equipeDuLecteur || organisateurDuTournoi) ? carteDuTournoi : null}
+                  {/* ONGLETS-SITE-FICHE (6b site, 6d) : les onglets, juste sous le bandeau et
+                      « Mon équipe », comme au téléphone. */}
+                  {/* ponytail: rangée HTML (tablist) plutôt que le SegmentedControl du téléphone,
+                      qui tire react-native-gesture-handler dans chaque témoin du site ; même
+                      forme (pastilles, l'onglet ouvert plein). */}
+                  {ongletsVisibles ? (
+                    <div
+                      aria-label={t('eventDetails.tabs.label', 'Sections de la fiche')}
+                      data-testid="event-tournament-tabs"
+                      role="tablist"
+                      style={{
+                        display: 'grid', gap: 8, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      }}
+                    >
+                      {ongletsDuTournoi.map((onglet) => {
+                        const ouvert = ongletDuTournoi === onglet.value;
+                        return (
+                          <button
+                            aria-selected={ouvert}
+                            data-testid={`onglet-${onglet.value}`}
+                            key={onglet.value}
+                            onClick={() => setOngletDuTournoi(onglet.value)}
+                            role="tab"
+                            style={{
+                              background: ouvert ? accentColor : 'transparent',
+                              border: `1px solid ${ouvert ? accentColor : borderColor}`,
+                              borderRadius: 999,
+                              color: ouvert ? Colors?.primary900 : textColor,
+                              cursor: 'pointer',
+                              fontFamily: ouvert
+                                ? 'Montserrat-Bold, sans-serif'
+                                : 'Montserrat-Regular, Montserrat, sans-serif',
+                              fontSize: 15,
+                              minHeight: 44,
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              padding: '8px 10px',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            type="button"
+                          >
+                            {onglet.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  {ongletsVisibles && surLOngletDuTournoi('participants') ? (
+                    <TournamentPeopleList canSeeNames={false} teams={tournamentTeams} />
+                  ) : null}
+                </>
+              ) : null}
+              {vueJoueurDuTournoi && surLOngletDuTournoi('overview') ? (
+                <>
                   {/* IMPL-1-FICHE (6b) : une carte, une ligne par info, et « Ouvrir dans le GPS »
                       sous l'adresse (il quitte l'en-tête, devenu bandeau). */}
                   <TournamentEssentials
@@ -4159,13 +4244,13 @@ function EventDetails({ navigation, route }) {
                       {t('eventDetails.teamLineUp', "Composition d'equipes")}
                     </strong>
                     {canEdit ? (
-                    <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
-                      {staffCompositionPayload?.draft
-                        ? t('eventDetails.aDraftAlreadyExistsResume', 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.')
-                        : compositionEligiblePlayerCount === 0
-                          ? t('eventDetails.youCanAlreadyCreateThe', 'Tu peux déjà créer les équipes même sans participant : les postes resteront libres et se compléteront ensuite.')
-                          : t('eventDetails.createSeveralTeamsByHand', 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.')}
-                    </span>
+                      <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
+                        {staffCompositionPayload?.draft
+                          ? t('eventDetails.aDraftAlreadyExistsResume', 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.')
+                          : compositionEligiblePlayerCount === 0
+                            ? t('eventDetails.youCanAlreadyCreateThe', 'Tu peux déjà créer les équipes même sans participant : les postes resteront libres et se compléteront ensuite.')
+                            : t('eventDetails.createSeveralTeamsByHand', 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.')}
+                      </span>
                     ) : null}
                   </div>
 
@@ -4411,7 +4496,7 @@ function EventDetails({ navigation, route }) {
                   )}
                 </>
               ) : null}
-              {vueJoueurDuTournoi ? blocDuTournoi : null}
+              {vueJoueurDuTournoi && surLOngletDuTournoi('tournamentTeams') ? blocDuTournoi : null}
             </section>
 
             <section style={{ alignContent: 'start', display: 'grid', gap: 24, minWidth: 0 }}>

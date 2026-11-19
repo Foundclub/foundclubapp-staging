@@ -70,7 +70,6 @@ function ShareEventModal({
       whisper: 3,
     };
 
-
     // Filter chats where user can write
     const writableChats = chats.filter(
       (chat) => canWriteInChat({ chat, hasClubAccess, user: userData }),
@@ -117,10 +116,15 @@ function ShareEventModal({
   };
 
   const chatCount = allChats.length;
+  // FICHE-MINIS (19/11/2026, chef) : sans aucune conversation où écrire (visiteur sans compte
+  // depuis la fiche d'un tournoi, ou compte sans conversation), la section « Partager dans une
+  // conversation » n'est pas montrée ; le partage par lien reste. Une erreur de chargement, elle,
+  // reste dite. Témoin : __tests__/ShareEventModal.FICHE-MINIS.sectionVide.test.js.
+  const sansConversation = !isLoading && !error && chatCount === 0;
   const isScrollableChatList = isLoading || chatCount > 4;
   const modalSnapPoints = useMemo(() => {
     if (isLoading) return ['70%'];
-    if (chatCount === 0) return ['62%'];
+    if (chatCount === 0) return ['48%'];
     if (chatCount === 1) return ['66%'];
     if (chatCount <= 3) return ['74%'];
     if (chatCount <= 6) return ['82%'];
@@ -307,41 +311,45 @@ function ShareEventModal({
           </Text>
         </View>
 
-        <View style={styles.chatSectionHeader}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('event.shareInChat', 'Partager dans une conversation')}
-          </Text>
-          <Text style={[Fonts.p3, Fonts.neutral300, styles.chatSectionHint]}>
-            {t('event.shareInChatHint', 'Envoi direct dans FoundClub.')}
-          </Text>
-        </View>
+        {sansConversation ? null : (
+          <View style={styles.chatSectionHeader}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('event.shareInChat', 'Partager dans une conversation')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral300, styles.chatSectionHint]}>
+              {t('event.shareInChatHint', 'Envoi direct dans FoundClub.')}
+            </Text>
+          </View>
+        )}
 
         {/* List */}
-        <WithDataWrapper
-          error={error}
-          isLoading={isLoading}
-          wrapperStyle={isScrollableChatList ? [Alignments.fill] : undefined}
-        >
-          {isScrollableChatList ? (
-            <FlashList
-              contentContainerStyle={styles.chatListContent}
-              data={allChats}
-              keyExtractor={(item) => item.documentId}
-              ListEmptyComponent={renderEmptyState}
-              renderItem={renderItem}
-            />
-          ) : (
-            <View style={styles.chatListCompact}>
-              {allChats.length === 0
-                ? renderEmptyState()
-                : allChats.map((chat) => (
-                  <View key={chat.documentId}>
-                    {renderItem({ item: chat })}
-                  </View>
-                ))}
-            </View>
-          )}
-        </WithDataWrapper>
+        {sansConversation ? null : (
+          <WithDataWrapper
+            error={error}
+            isLoading={isLoading}
+            wrapperStyle={isScrollableChatList ? [Alignments.fill] : undefined}
+          >
+            {isScrollableChatList ? (
+              <FlashList
+                contentContainerStyle={styles.chatListContent}
+                data={allChats}
+                keyExtractor={(item) => item.documentId}
+                ListEmptyComponent={renderEmptyState}
+                renderItem={renderItem}
+              />
+            ) : (
+              <View style={styles.chatListCompact}>
+                {allChats.length === 0
+                  ? renderEmptyState()
+                  : allChats.map((chat) => (
+                    <View key={chat.documentId}>
+                      {renderItem({ item: chat })}
+                    </View>
+                  ))}
+              </View>
+            )}
+          </WithDataWrapper>
+        )}
       </View>
     </BottomModal>
   );
