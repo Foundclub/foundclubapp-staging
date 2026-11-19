@@ -269,10 +269,9 @@ const ResizeObserverDOrigine = global.window.ResizeObserver;
 
 beforeEach(() => {
   observes = [];
-  global.window.ResizeObserver = /** @type {any} */ (class {
-    observe(/** @type {any} */ n) { observes.push(n); }
-
-    disconnect() { this.fini = true; }
+  // Appelé avec `new` : l'objet rendu remplace l'instance.
+  global.window.ResizeObserver = /** @type {any} */ (function ResizeObserverEspion() {
+    return { disconnect: () => {}, observe: (/** @type {any} */ n) => { observes.push(n); } };
   });
 });
 
@@ -295,14 +294,14 @@ const monterAvecLeDom = async () => {
       const noeud = {
         addEventListener: () => {},
         focus: () => {},
+        removeEventListener: () => {},
         get scrollHeight() {
           return element.type === 'textarea'
             ? scrollHeightPour(Math.max(1, etat.texte.split('\n').length))
             : 1000;
         },
-        removeEventListener: () => {},
-        scrollTop: 0,
         scrollTo: () => {},
+        scrollTop: 0,
         style: /** @type {Record<string, string>} */ ({}),
         testid: element.props?.['data-testid'],
         type: element.type,
