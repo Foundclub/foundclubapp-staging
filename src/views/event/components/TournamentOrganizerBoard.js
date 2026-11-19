@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Image,
   ImageBackground,
   Modal,
   Switch,
@@ -121,6 +122,8 @@ const seuilDesPayes = (summary, tournamentConfig) => {
  * @param {string} [props.viewerDocumentId] - Le compte connecté.
  * @param {import('react').ReactNode} [props.filters] - Les filtres des équipes (existants).
  * @param {import('react').ReactNode} [props.invites] - Les invitations d'un tournoi privé.
+ * @param {{ alt: string, uri: string } | null} [props.photo] - La photo du lieu
+ *   (`photoDuLieu`), ou null.
  * @returns {import('react').ReactElement} Le tableau de bord.
  */
 function TournamentOrganizerBoard({
@@ -131,6 +134,7 @@ function TournamentOrganizerBoard({
   invites = null,
   navigation,
   onChanged,
+  photo = null,
   registeredTeamsCount,
   summary,
   summaryFailed = false,
@@ -893,9 +897,10 @@ function TournamentOrganizerBoard({
     return (
       <View style={[carte, Spaces.gap[8], { borderColor: withAlpha(Colors.primary500, '66') }]}>
         {/* 1a (Adel 19/11) : la photo du tournoi, la même que le bandeau de la fiche
-            (EventHeader). ponytail: c'est l'image du TYPE (card-tournoi.png), comme la fiche ;
-            la photo du complexe arrivera avec les photos du lieu (serveur IMPL-5B,
-            `facility.photos`), ici et sur la fiche ensemble. */}
+            (EventHeader) : l'illustration du TYPE (card-tournoi.png, ORGANISATEUR 4d5cafa2) reste
+            dessous. IMPL-1B-PHOTO (e3954b46, Adel : « la photo de l'événement avec le ballon » = la
+            photo du complexe) : la photo du complexe se pose SUR l'illustration, comme au bandeau ;
+            sans photo, ou si elle ne charge pas, l'illustration seule. Récolte train 16. */}
         <ImageBackground
           accessibilityIgnoresInvertColors
           imageStyle={{ borderRadius: 12 }}
@@ -903,7 +908,21 @@ function TournamentOrganizerBoard({
           source={/** @type {any} */ (BG_TOURNAMENT)}
           style={{ borderRadius: 12, height: 120, overflow: 'hidden' }}
           testID="orga-photo-tournoi"
-        />
+        >
+          {photo ? (
+            <Image
+              accessibilityLabel={photo.alt}
+              accessibilityRole="image"
+              accessible
+              resizeMode="cover"
+              source={{ uri: photo.uri }}
+              style={{
+                borderRadius: 12, bottom: 0, left: 0, position: 'absolute', right: 0, top: 0,
+              }}
+              testID="orga-venue-photo"
+            />
+          ) : null}
+        </ImageBackground>
         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
           {pastille(t('implOrga.tagTournament', 'TOURNOI'), Colors.primary500, true)}
           {connu

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
+import { photoDuLieu } from '@/domains/event/photoDuLieu';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -405,9 +406,12 @@ function EventHeader({
   // TOURNOI : l'image du tournoi (celle de sa carte dans les listes) en bandeau, le nom et
   // « Organisé par … · lieu court » sur le voile, puis les pastilles sur UNE ligne : TOURNOI en
   // bleu, l'état, l'âge. « Mixte » et l'activité passent dans le format (« L'essentiel »).
-  // ponytail: l'image est celle du TYPE (card-tournoi.png) : l'événement n'a aucun champ photo
-  // (schéma admin) ; la photo du complexe demande un champ ou les photos de l'installation.
+  // IMPL-1B-PHOTO (19/11, écrans 6b, 6d, 9f, 11a) : la photo du complexe (celle du terrain
+  // d'abord, rendue par le serveur sous `facility`, IMPL-5B) se pose SUR l'illustration du
+  // tournoi (card-tournoi.png), qui reste dessous : sans photo, ou si elle ne charge pas, le
+  // bandeau d'avant.
   if (enBandeau && !matchScoreSummary) {
+    const photoDuBandeau = photoDuLieu(event, 'medium');
     const lieuCourt = getTournamentShortPlace(event);
     const lieuSansClub = clubName && lieuCourt.startsWith(`${clubName} · `)
       ? lieuCourt.slice(clubName.length + 3)
@@ -441,6 +445,19 @@ function EventHeader({
             justifyContent: 'flex-end', minHeight: 184, overflow: 'hidden',
           }]}
         >
+          {photoDuBandeau ? (
+            <Image
+              accessibilityLabel={photoDuBandeau.alt}
+              accessibilityRole="image"
+              accessible
+              resizeMode="cover"
+              source={{ uri: photoDuBandeau.uri }}
+              style={{
+                borderRadius: 24, bottom: 0, left: 0, position: 'absolute', right: 0, top: 0,
+              }}
+              testID="event-header-venue-photo"
+            />
+          ) : null}
           <View
             pointerEvents="none"
             style={{

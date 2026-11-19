@@ -78,6 +78,8 @@ jest.mock('@/components/atoms/button/Button', () => {
 });
 jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => (/** @type {any} */ { children }) => children);
 jest.mock('@/components/templates/ScreenContainer', () => (/** @type {any} */ { children }) => children);
+// IMPL-1B-PHOTO (19/11) : la page lit aussi la fiche du tournoi (photo du lieu, carte 1a) ; ici, pas de photo.
+jest.mock('@/services/event/eventQueries', () => ({ useGetEvent: () => ({ data: null }) }));
 jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
   useGetTournamentDashboard: () => ({
     data: mockDashboard, error: null, isLoading: false, refetch: jest.fn(),
