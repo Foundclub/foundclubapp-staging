@@ -1,4 +1,4 @@
-/* eslint-disable max-len -- les témoins se lisent en entier. */
+/* eslint-disable max-len, react/jsx-props-no-spreading -- les témoins se lisent en entier ; le harnais passe les propriétés du cas. */
 import '@/theme/strings';
 
 import { Platform } from 'react-native';
@@ -53,7 +53,7 @@ afterEach(() => {
   Platform.OS = systemeDOrigine;
 });
 
-const monter = (/** @type {string} */ systeme) => {
+const monter = (/** @type {string} */ systeme, /** @type {any} */ extra = {}) => {
   Platform.OS = /** @type {any} */ (systeme);
   act(() => {
     arbre = renderer.create(
@@ -66,6 +66,7 @@ const monter = (/** @type {string} */ systeme) => {
         onShare={jest.fn()}
         query=""
         teamName="Les Lions"
+        {...extra}
       />,
     );
   });
@@ -85,6 +86,17 @@ test('Android : la fenêtre demande `extend` et un cran fixe, le même avant et 
   expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-invite-search-input').length).toBeGreaterThan(0);
   expect(apres.androidKeyboardBehavior).toBe('extend');
   expect(apres.snapPoints).toBe(avant.snapPoints);
+});
+
+// Tournée Android (chef, 19/11) : la fenêtre se fermait AUSSI ouverte directement en recherche (« Chercher un
+// joueur » de la page). La cause n'est donc pas seulement le passage choix → recherche : c'est le champ gorhom
+// déclaré en `interactive`. `extend` et le cran fixe valent dès l'ouverture, quel que soit le premier écran.
+test('Android, ouverture directe en recherche : `extend` et le cran fixe dès le premier rendu, champ présent', () => {
+  monter('android', { initialMode: 'search' });
+  expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-invite-search-input').length).toBeGreaterThan(0);
+  const props = mockProps[0];
+  expect(props.androidKeyboardBehavior).toBe('extend');
+  expect(props.snapPoints).toEqual(['86%']);
 });
 
 test('site : hauteur automatique inchangée (pas de cran : la feuille à 375 px et la fenêtre au centre restent comme avant)', () => {

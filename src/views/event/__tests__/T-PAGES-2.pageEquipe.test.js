@@ -92,7 +92,15 @@ jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => {
     }, react.createElement(rn.Text, null, 'Envoyer ma demande'));
   };
 });
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => (/** @type {any} */ props) => (props.isVisible || props.visible ? props.children : null));
+// IMPL-2C (19/11) : la doublure compte ses montages (une fenêtre neuve = un montage de plus).
+const mockMontagesDeFenetre = { n: 0 };
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const { useEffect } = jest.requireActual('react');
+  return function BottomModalMock(/** @type {any} */ props) {
+    useEffect(() => { mockMontagesDeFenetre.n += 1; }, []);
+    return props.isVisible || props.visible ? props.children : null;
+  };
+});
 const mockOuvrirAssistance = jest.fn();
 jest.mock('@/views/chat/useOuvrirLAssistance', () => ({
   __esModule: true,
@@ -1000,5 +1008,23 @@ describe('IMPL-2C — des libellés de bouton qui tiennent à 375 px', () => {
     const arbre = await monter(payante('joueur'), 'u-2');
     expect(titres(arbre)).toContain('Écrire à l’Assistance');
     expect(titres(arbre)).not.toContain('Écrire à l’Assistance FoundClub');
+  });
+});
+
+// IMPL-2C (19/11/2026, recette 48 écart 7, tournée Android) — après la disparition de la fenêtre au clavier,
+// « Chercher un joueur » et les « Inviter » des places libres ne faisaient PLUS RIEN : la feuille était
+// partie sans rendre la main (`onClose` jamais reçu), la page la croyait ouverte, et rouvrir mettait
+// « ouvert » sur « ouvert ». Chaque appui rouvre désormais une fenêtre NEUVE, quel que soit l'état gardé.
+describe('IMPL-2C — rouvrir la fenêtre marche même si elle est partie sans prévenir', () => {
+  const bouton = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === libelle && typeof n.props?.onPress === 'function' && n.type !== 'View')[0];
+
+  test('🔴 « Chercher un joueur » deux fois, sans fermeture entre les deux : une fenêtre neuve à chaque appui', async () => {
+    const arbre = await monter(payante('capitaine'), 'u-cap');
+    const avant = mockMontagesDeFenetre.n;
+    await act(async () => { bouton(arbre, 'Chercher un joueur').props.onPress(); });
+    expect(mockMontagesDeFenetre.n).toBe(avant + 1);
+    // La feuille disparaît à l'écran sans appeler `onClose` (index perdu au clavier) : rien ne change côté page.
+    await act(async () => { bouton(arbre, 'Chercher un joueur').props.onPress(); });
+    expect(mockMontagesDeFenetre.n).toBe(avant + 2);
   });
 });

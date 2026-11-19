@@ -213,6 +213,9 @@ function TournamentTeamDetails({ navigation, route }) {
     Spaces,
   });
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  // IMPL-2C (19/11, écart 7 Android) : le numéro de l'ouverture, clé de la fenêtre
+  // (voir openInvite).
+  const [inviteOuverture, setInviteOuverture] = useState(0);
   // IMPL-2-EQUIPE (18/11, planche 3b) : la fenêtre « Inviter un joueur », son premier écran et la
   // place libre touchée ; (10c, 10d) la fenêtre « Ta place est payée » avant de quitter.
   const [inviteMode, setInviteMode] = useState(/** @type {'choice' | 'search'} */ ('choice'));
@@ -921,6 +924,10 @@ function TournamentTeamDetails({ navigation, route }) {
     setInviteMode(mode);
     setInviteSlot(slot);
     setIsInviteOpen(true);
+    // IMPL-2C (19/11, recette 48 écart 7, Android) : une feuille partie au clavier sans
+    // `onClose` laissait la page « ouverte » ; rouvrir ne changeait rien et les boutons
+    // semblaient morts. Chaque appui monte une fenêtre NEUVE (clé), qui se présente à nouveau.
+    setInviteOuverture((n) => n + 1);
   };
   const openInviteSearch = () => openInvite('search', null);
   // IMPL-2-EQUIPE (3b) : le lien de l'équipe par WhatsApp, SMS ou copie (« share » = la feuille
@@ -1681,6 +1688,7 @@ function TournamentTeamDetails({ navigation, route }) {
             isSharing={inviteLinkState === 'pending'}
             isVisible
             isWide={isWide}
+            key={inviteOuverture}
             onChangeQuery={setMemberSearchQuery}
             onClose={() => setIsInviteOpen(false)}
             onInvite={(/** @type {any} */ userId) => inviteMemberMutation.mutate(userId)}
