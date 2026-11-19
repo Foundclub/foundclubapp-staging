@@ -154,7 +154,6 @@ describe('TVA-STORES — la mention de TVA ne se dit que là où Found Club enca
 });
 
 describe('LegalFooter — ce qu il faisait deja (caracterisation)', () => {
-
   it('restaure les achats et rafraichit le contexte abonnement', async () => {
     const tree = render({});
 
