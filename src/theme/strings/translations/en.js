@@ -27830,6 +27830,10 @@ export default {
       title: 'Players',
       toValidate_one: '{{count}} paid out of {{needed}} to validate',
       toValidate_other: '{{count}} paid out of {{needed}} to validate',
+      remind: 'Remind',
+      remindDraft: 'Hi {{name}}! You still need to pay for your spot in the {{event}} tournament: {{link}}',
+      remindDraftNoLink: 'Hi {{name}}! You still need to pay for your spot in the {{event}} tournament.',
+      remindMinor: 'Minor player: no private messages, write to them in the team chat.',
     },
   },
   // IMPL-3-ORGA (18/11/2026) — la page de l organisateur du tournoi (planche 1).

@@ -697,3 +697,53 @@ describe('PAGE-EQUIPE — la liste des joueurs de la maquette 3a', () => {
     expect(services.removeTournamentTeamMember).toHaveBeenCalledWith('tt-1', 'mb-3');
   });
 });
+
+// RELANCER-B (Adel « 5- B », 19/11 ~16:55) — maquette 3a : « Relancer », sans cloche, sur la ligne
+// d'un joueur qui n'a pas payé (vue du capitaine). Le bouton ouvre le fil direct avec ce joueur (créé
+// ou retrouvé par le serveur, `createWhisperChat`) et y dépose un message prérempli (`brouillon`, lu
+// par Conversation.js et Conversation.web.js) que le capitaine envoie lui-même. Aucun droit, aucun
+// appel serveur et aucun envoi neufs.
+const chatDouble = jest.requireMock('@/services/chat/chatService');
+const relancerDe = (/** @type {any} */ arbre, /** @type {string} */ id) => boutonsDe(parId(arbre, `tournament-member-row-${id}`), ['Relancer']);
+describe('RELANCER-B — « Relancer » un joueur qui n’a pas payé', () => {
+  test('🔴 capitaine : un « Relancer » sur la ligne de Deux (à payer), aucun sur la sienne (payée)', async () => {
+    const arbre = await monter(datee(payante('capitaine')), 'u-cap');
+    expect(relancerDe(arbre, 'mb-2')).toHaveLength(1);
+    expect(relancerDe(arbre, 'mb-1')).toHaveLength(0);
+  });
+  test('🔴 sans cloche : « Relancer » ne porte aucune icône', async () => {
+    const arbre = await monter(datee(payante('capitaine')), 'u-cap');
+    expect(relancerDe(arbre, 'mb-2')[0].props.icone).toBeUndefined();
+  });
+  test('🔴 « Relancer » ouvre le fil direct avec Deux, message prérempli (tournoi + son lien), rien n’est envoyé', async () => {
+    const arbre = await monter(datee(payante('capitaine')), 'u-cap');
+    await act(async () => { await relancerDe(arbre, 'mb-2')[0].props.onPress(); });
+    expect(chatDouble.createWhisperChat).toHaveBeenCalledWith(['u-2']);
+    const [ecran, params] = navigation.navigate.mock.calls[navigation.navigate.mock.calls.length - 1];
+    expect(ecran).toBe(RouteNames.Conversation);
+    expect(params.chatId).toBe('chat-1');
+    expect(params.brouillon).toBe(`Salut Deux ! Il te reste ta place à payer pour le tournoi FoundClub x AR Soccer : ${LIEN_2}`);
+    expect(alerte).not.toHaveBeenCalled();
+  });
+  test('un joueur qui n’est pas capitaine ne voit aucun « Relancer »', async () => {
+    const arbre = await monter(datee(payante('joueur')), 'u-2');
+    expect(combien(arbre, ['Relancer'])).toBe(0);
+  });
+  test('🔴 joueur mineur : « Relancer » grisé, avec la raison ; aucun fil ouvert', async () => {
+    const team = datee(payante('capitaine'));
+    team.members[1] = { ...team.members[1], parentalConsentPending: true };
+    const arbre = await monter(team, 'u-cap');
+    const [relancer] = relancerDe(arbre, 'mb-2');
+    expect(relancer.props.disabled).toBe(true);
+    expect(textesDe(parId(arbre, 'tournament-member-row-mb-2'))).toContain('Joueur mineur : pas de message privé, écris-lui dans la discussion de l’équipe.');
+    await act(async () => { await relancer.props.onPress?.(); });
+    expect(chatDouble.createWhisperChat).not.toHaveBeenCalled();
+  });
+  test('🔴 le serveur refuse le fil (règle des mineurs) : sa phrase s’affiche, on ne navigue pas', async () => {
+    chatDouble.createWhisperChat.mockRejectedValueOnce(Object.assign(new Error('Cette personne est mineure : seuls les encadrants de son club peuvent lui écrire en privé.'), { details: { code: 'MINOR_DIRECT_CHAT_FORBIDDEN' } }));
+    const arbre = await monter(datee(payante('capitaine')), 'u-cap');
+    await act(async () => { await relancerDe(arbre, 'mb-2')[0].props.onPress(); });
+    expect(alerte.mock.calls[alerte.mock.calls.length - 1][1]).toBe('Cette personne est mineure : seuls les encadrants de son club peuvent lui écrire en privé.');
+    expect(navigation.navigate).not.toHaveBeenCalledWith(RouteNames.Conversation, expect.anything());
+  });
+});
