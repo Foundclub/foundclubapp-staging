@@ -554,7 +554,7 @@ function TournamentTeamDetails({ navigation, route }) {
   });
 
   const invitedUserIds = useMemo(() => new Set(
-    invitedMembers.map((member) => member?.user?.documentId).filter(Boolean),
+    invitedMembers.map((/** @type {any} */ member) => member?.user?.documentId).filter(Boolean),
   ), [invitedMembers]);
   const candidateUsers = useMemo(() => {
     let baseUsers = sourceTeamEligibleUsers;

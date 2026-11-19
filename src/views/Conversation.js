@@ -6765,7 +6765,7 @@ function Conversation({ navigation, route }) {
               marginLeft: 0,
               marginTop: 0,
               // 5 lignes + la marge interne (8 + 8) + le bord (1 + 1).
-              maxHeight: (5 * Fonts.p1.lineHeight) + 16 + 2,
+              maxHeight: (5 * /** @type {{ lineHeight: number }} */ (Fonts.p1).lineHeight) + 16 + 2,
               minHeight: 44,
             },
           ]}

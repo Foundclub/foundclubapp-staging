@@ -355,6 +355,8 @@ export const isActiveMemberOfTournamentTeam = async (teamDocumentId, userDocumen
  * effectif, equipe unique et cloture, puis cree la place a payer). Deconnecte : l'invitation attend
  * le compte.
  * @param {object} params - ce qu'on sait.
+ * @param {boolean} [params.isMember] - T-LIEN-MEMBRE : la relecture de l'équipe trouve le compte
+ *   dedans (isActiveMemberOfTournamentTeam).
  * @param {boolean} params.isSignedIn - la personne est-elle connectee ?
  * @param {any} [params.preview] - l'apercu public (tournoi, equipe, statut).
  * @param {any} params.t - la traduction (react-i18next ou une doublure).
@@ -364,8 +366,6 @@ export const isActiveMemberOfTournamentTeam = async (teamDocumentId, userDocumen
  *   primaryDisabled?: boolean, secondary: string, secondaryAction: 'dismiss' | 'openTeam',
  *   showTerms: boolean, title: string }} la fenetre (`primaryDisabled` : T-FINITIONS-3 ;
  *   `action`, `ageNotice`, `showTerms` : T-PAGES-6).
- * @param {boolean} [params.isMember] - T-LIEN-MEMBRE : la relecture de l'équipe trouve le compte
- *   dedans (isActiveMemberOfTournamentTeam).
  */
 export const describeCodedTournamentInvite = ({
   isMember = false, isSignedIn, preview, t,

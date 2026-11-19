@@ -104,7 +104,9 @@ const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ even
  *     value: string;
  *     verdict?: 'win' | 'draw' | 'loss' | null;
  *   } | null;
- *   tournamentHero?: { showFacility?: boolean, statusLabel?: string | null } | null;
+ *   tournamentHero?: {
+ *     showFacility?: boolean, statusLabel?: string | null, statusTone?: string | null,
+ *   } | null;
  * }} props
  */
 function EventHeader({
