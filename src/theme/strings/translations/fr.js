@@ -4799,6 +4799,14 @@ export default {
       createClubFailed: 'Impossible de créer le club.',
     },
   },
+  clubShareBubble: {
+    fallbackName: 'Club',
+    open: 'Voir le club',
+    title: 'Club partagé',
+    unavailableAction: 'Indisponible',
+    unavailableText: 'Il a été retiré de FoundClub',
+    unavailableTitle: "Ce club n'est plus disponible",
+  },
   clubStack: {
     headers: {
       assignToTeam: 'Assigner à une équipe',
@@ -9210,6 +9218,7 @@ export default {
     attachments: {
       camera: 'Caméra',
       captionPlaceholder: 'Ajouter une légende',
+      club: 'Club',
       contact: 'Contact',
       createPoll: 'Créer un sondage',
       document: 'Document',
@@ -9653,6 +9662,7 @@ export default {
       sent: 'Ta proposition a été envoyée !',
     },
     quote: {
+      club: 'Club',
       contact: 'Contact',
       event: 'Événement',
       hint: 'Remonte au message cité',
@@ -9705,6 +9715,14 @@ export default {
     },
     scrollToBottom: 'Revenir en bas',
     sending: 'Envoi en cours...',
+    shareClub: {
+      empty: 'Aucun club trouvé.',
+      error: "Impossible d'envoyer ce club.",
+      hint: 'Tape le nom ou la ville du club (2 lettres au moins).',
+      messageText: 'Club : {{name}}',
+      searchPlaceholder: 'Nom du club ou ville',
+      title: 'Envoyer un club',
+    },
     shareContact: {
       empty: 'Aucun contact partageable dans ce chat.',
       send: 'Partager',
@@ -17075,6 +17093,8 @@ export default {
     pinnedBadge: 'ÉPINGLÉ',
     preview: {
       attachment: 'Pièce jointe',
+      clubShare: 'Club partagé',
+      clubShareNamed: 'Club : {{name}}',
       contactShare: 'Contact partagé',
       eventShare: 'Événement partagé',
       eventShareNamed: 'Événement : {{name}}',

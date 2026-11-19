@@ -52,6 +52,7 @@ import {
   autorisationsDuGroupe,
   envoiReserveAuxAdmins,
 } from '@/domains/messaging/autorisationsDuGroupe';
+import { compositionDuClubPartage, texteDuClubPartage } from '@/domains/messaging/clubPartage';
 import { presenceDansLeFil } from '@/domains/messaging/evenementDansLeFil';
 import {
   auteurDuMessageCite,
@@ -124,6 +125,7 @@ import {
   TITRE_DU_FIL,
 } from '@/components/molecules/bulleDuFil/typographieDuFil';
 import ChatReactionsRow from '@/components/molecules/chatReactions/ChatReactionsRow';
+import ClubShareBubble from '@/components/molecules/clubShareBubble/ClubShareBubble';
 import CompositionMessageBubbleDuFil from '@/components/molecules/compositionMessageBubble/CompositionMessageBubbleDuFil';
 import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
 import DocumentMessageBubble from '@/components/molecules/documentMessageBubble/DocumentMessageBubble';
@@ -311,6 +313,7 @@ const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 64;
 const MESSAGE_REPLY_SWIPE_OVERSHOOT_FRICTION = 4;
 
 const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
+  'club_share',
   'contact_share',
   'event_share',
   'location_share',
@@ -1576,6 +1579,7 @@ function Conversation({ navigation, route }) {
   const [videoOuverte, setVideoOuverte] = useState('');
   const [didTryImageHttpsFallback, setDidTryImageHttpsFallback] = useState(false);
   const handledSharedEventFromPickerRef = useRef('');
+  const handledSharedClubFromPickerRef = useRef('');
   const sharedEventPreviewByIdRef = useRef(new Map());
   const messageContainerRef = useRef(null);
   const conversationOpenLoggedChatIdRef = useRef('');
@@ -3425,6 +3429,38 @@ function Conversation({ navigation, route }) {
     navigation.setParams({ sharedEventFromPicker: undefined });
   }, [handleShareEvent, navigation, route?.params?.sharedEventFromPicker]);
 
+  // ASSISTANCE-MINEURS-CLUB (D271) — le club choisi dans `ConversationClubPicker` part comme
+  // l'événement : une composition. Le serveur relit le club et réécrit la carte
+  // (`carte-de-club.ts`) ; le texte sert aux apps anciennes.
+  useEffect(() => {
+    const clubFromPicker = route?.params?.sharedClubFromPicker;
+    const clubDocumentId = String(clubFromPicker?.documentId || '').trim();
+    if (!clubDocumentId) {
+      handledSharedClubFromPickerRef.current = '';
+      return;
+    }
+    if (handledSharedClubFromPickerRef.current === clubDocumentId) return;
+    handledSharedClubFromPickerRef.current = clubDocumentId;
+    navigation.setParams({ sharedClubFromPicker: undefined });
+    if (!sendMessage(chatId, texteDuClubPartage(t, clubFromPicker?.name), {
+      composition: compositionDuClubPartage(clubFromPicker),
+      sender: userData,
+    })) {
+      showErrorBanner(t(
+        'conversation.poll.errors.sendUnavailable',
+        'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
+      ));
+    }
+  }, [
+    chatId,
+    navigation,
+    route?.params?.sharedClubFromPicker,
+    sendMessage,
+    showErrorBanner,
+    t,
+    userData,
+  ]);
+
   // 👥 MSG1A (§3.16) — les « Infos du groupe » s'ouvrent pour TOUT membre du groupe (le pack :
   // toucher le titre, ou ⋮ > « Infos du groupe ») ; les gestes d'admin restent aux admins.
   const handleOpenGroupManagement = () => {
@@ -3707,6 +3743,14 @@ function Conversation({ navigation, route }) {
     });
   };
 
+  const openSharedClub = (/** @type {string} */ clubDocumentId) => {
+    if (!clubDocumentId) return;
+    navigation.navigate(RouteNames.ClubStack, {
+      params: { clubId: clubDocumentId },
+      screen: RouteNames.Club,
+    });
+  };
+
   const openSharedEvent = (/** @type {string} */ eventDocumentId) => {
     if (!eventDocumentId) return;
     navigation.navigate(RouteNames.EventStack, {
@@ -3795,6 +3839,12 @@ function Conversation({ navigation, route }) {
         label: t('conversation.attachments.event', 'Événement'),
         unavailableReason: eventReason,
       },
+      // ASSISTANCE-MINEURS-CLUB (D271) — envoyer un club, « comme pour les événements ».
+      {
+        icon: 'CL',
+        key: 'club',
+        label: t('conversation.attachments.club', 'Club'),
+      },
       {
         disabled: !isLocationShareEnabled,
         icon: 'LO',
@@ -3827,6 +3877,11 @@ function Conversation({ navigation, route }) {
     switch (actionKey) {
       case 'camera':
         runAttachmentAction(handleTakePhoto);
+        break;
+      case 'club':
+        runAttachmentAction(() => {
+          if (chatId) navigation.navigate(RouteNames.ConversationClubPicker, { chatId });
+        });
         break;
       case 'contact':
         runAttachmentAction(() => setIsContactShareModalVisible(true));
@@ -6239,6 +6294,20 @@ function Conversation({ navigation, route }) {
                 composition={currentMessage.composition}
                 isMe={!isLeft}
                 onPressContact={openSharedContact}
+              />
+            </View>
+          ),
+        );
+      }
+
+      if (currentMessage.composition.type === 'club_share') {
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <ClubShareBubble
+                composition={currentMessage.composition}
+                isMe={!isLeft}
+                onPressClub={openSharedClub}
               />
             </View>
           ),

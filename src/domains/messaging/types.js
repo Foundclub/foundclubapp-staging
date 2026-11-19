@@ -26,7 +26,7 @@
 /**
  * @typedef {{ url?: string; id?: string | number; documentId?: string; mime?: string; name?: string; size?: number }} MessageAttachment
  * @typedef {{
- *   type?: 'poll' | 'proposal' | 'voice_note' | 'location_share' | 'contact_share' | 'event_share' | string;
+ *   type?: 'poll' | 'proposal' | 'voice_note' | 'location_share' | 'contact_share' | 'event_share' | 'club_share' | string;
  *   date?: string;
  *   venue?: string;
  *   durationMs?: number;

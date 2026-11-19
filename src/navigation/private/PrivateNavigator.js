@@ -702,6 +702,13 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/chat/ConversationClubPicker').default}
+          name={RouteNames.ConversationClubPicker}
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/planning/PersonalPlanningWeekFullscreen').default}
           name={RouteNames.PlanningWeekFullscreen}
           options={{

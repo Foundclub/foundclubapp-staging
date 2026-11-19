@@ -11,7 +11,7 @@ import ConvocationGlyph from '@/components/atoms/convocationGlyph/ConvocationGly
 
 /**
  * @typedef {'photos' | 'camera' | 'location' | 'contact' | 'document' | 'poll' | 'event'
- *   | 'convocation'} ChatAttachmentActionKey
+ *   | 'convocation' | 'club'} ChatAttachmentActionKey
  */
 
 /**
@@ -55,6 +55,28 @@ function ChatAttachmentActionIcon({
             cy="14.5"
             fill="none"
             r="3.2"
+            stroke={strokeColor}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={strokeWidth}
+          />
+        </Svg>
+      );
+    // ASSISTANCE-MINEURS-CLUB (D271) — un écusson, pour « Club ».
+    case 'club':
+      return (
+        <Svg height={size} viewBox="0 0 24 24" width={size}>
+          <Path
+            d="M12 3.5l6.5 2.4v5.2c0 4.1-2.7 7.4-6.5 8.9-3.8-1.5-6.5-4.8-6.5-8.9V5.9L12 3.5z"
+            fill="none"
+            stroke={strokeColor}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={strokeWidth}
+          />
+          <Path
+            d="M9 11.5l2 2 4-4"
+            fill="none"
             stroke={strokeColor}
             strokeLinecap="round"
             strokeLinejoin="round"

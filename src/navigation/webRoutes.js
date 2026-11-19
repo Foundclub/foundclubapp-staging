@@ -161,6 +161,8 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.Communautes]: '/communautes',
   [RouteNames.NouveauGroupeCommunaute]: '/communautes/nouveau',
   [RouteNames.ConversationPublicEventPicker]: '/messages/:chatId/public-events',
+  // ASSISTANCE-MINEURS-CLUB (D271) — choisir un club a envoyer dans la conversation.
+  [RouteNames.ConversationClubPicker]: '/messages/:chatId/clubs',
   [RouteNames.BookingCalendar]: '/booking',
   [RouteNames.ReservationDetails]: '/reservations/:reservationId',
   // CORR-CHEMINS (30/10, point 50 « A ») : « modifier une réservation » (ReservationEdit.web.js),

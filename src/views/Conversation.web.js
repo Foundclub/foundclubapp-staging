@@ -19,6 +19,7 @@ import {
 } from '@/domains/messaging/anonymatDeLigue';
 import { separerLeFilDAssistance } from '@/domains/messaging/assistance';
 import canWriteInChat from '@/domains/messaging/canWriteInChat';
+import { compositionDuClubPartage, texteDuClubPartage } from '@/domains/messaging/clubPartage';
 import {
   communauteDeLaLigne,
   communautesSansLigne,
@@ -87,6 +88,7 @@ import ApercuDImageDuSite from '@/components/molecules/apercuDImage/ApercuDImage
 // MSG1W §3.5 — les fenetres du « + » reprennent les composants du telephone.
 import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 // MSG1W §3.4 / §3.8 — les bulles PARTAGEES du telephone (restylees par MESSAGERIE-1A).
+import ClubShareBubble from '@/components/molecules/clubShareBubble/ClubShareBubble';
 import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
@@ -2030,6 +2032,7 @@ function Conversation({ navigation, route }) {
   const messagePaneRef = useRef(null)
   const typingTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
   const handledSharedEventFromPickerRef = useRef('')
+  const handledSharedClubFromPickerRef = useRef('');
   const voiceRecorderRef = useRef(null)
   // MSG1W §3.1 — le cadre a la hauteur de l ecran, « revenir en bas », le menu « + », la saisie.
   const cadreRef = useRef(/** @type {HTMLDivElement | null} */ (null));
@@ -2795,6 +2798,29 @@ function Conversation({ navigation, route }) {
     navigation.setParams?.({ sharedEventFromPicker: undefined })
   }, [handleShareEvent, navigation, route?.params?.sharedEventFromPicker])
 
+  // ASSISTANCE-MINEURS-CLUB (D271) — le club choisi dans `ConversationClubPicker` part comme
+  // l'événement ; le serveur relit le club et réécrit la carte (`carte-de-club.ts`).
+  useEffect(() => {
+    const clubFromPicker = route?.params?.sharedClubFromPicker;
+    const clubDocumentId = String(clubFromPicker?.documentId || '').trim();
+    if (!clubDocumentId) {
+      handledSharedClubFromPickerRef.current = '';
+      return;
+    }
+    if (handledSharedClubFromPickerRef.current === clubDocumentId) return;
+    handledSharedClubFromPickerRef.current = clubDocumentId;
+    navigation.setParams?.({ sharedClubFromPicker: undefined });
+    sendChatPayload({
+      clearComposer: false,
+      composition: compositionDuClubPartage(clubFromPicker),
+      message: texteDuClubPartage(t, clubFromPicker?.name),
+    }).catch((error) => {
+      const repli = t('conversation.shareClub.error', "Impossible d'envoyer ce club.");
+      // eslint-disable-next-line no-alert -- le meme retour que le partage d'evenement du site
+      window.alert(error?.message || repli);
+    });
+  }, [navigation, route?.params?.sharedClubFromPicker, sendChatPayload, t]);
+
   const handleShareLocation = useCallback(async () => {
     if (!navigator.geolocation) {
       window.alert(i18next.t(
@@ -3429,6 +3455,19 @@ function Conversation({ navigation, route }) {
           ) : null}
         </div>
       )
+    }
+
+    // ASSISTANCE-MINEURS-CLUB (D271) — la carte d'un club envoyé, la bulle du téléphone.
+    if (composition.type === 'club_share') {
+      return (
+        <ClubShareBubble
+          composition={composition}
+          isMe={isMine}
+          onPressClub={(/** @type {string} */ clubId) => {
+            if (clubId) navigation.navigate(RouteNames.Club, { clubId });
+          }}
+        />
+      );
     }
 
     // MSG1W §3.18 — contact et position : les bulles du TELEPHONE (restylees par MESSAGERIE-1A).
@@ -5046,6 +5085,13 @@ function Conversation({ navigation, route }) {
       action: () => setFenetre('evenement'),
       cle: 'event',
       libelle: t('conversation.attachments.event', 'Événement'),
+    },
+    {
+      action: () => {
+        if (chatId) navigation.navigate(RouteNames.ConversationClubPicker, { chatId });
+      },
+      cle: 'club',
+      libelle: t('conversation.attachments.club', 'Club'),
     },
     {
       action: handleShareLocation,

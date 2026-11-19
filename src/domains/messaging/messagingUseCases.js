@@ -439,6 +439,13 @@ export const getChatMessagePreview = (message, t = defaultTranslate) => {
   const compositionType = String(composition?.type || '').trim().toLowerCase();
   const named = (key, fallback, values) => fillTemplate(t(key, fallback), values);
   switch (compositionType) {
+    // ASSISTANCE-MINEURS-CLUB (D271) — un club envoyé avec le « + ».
+    case 'club_share': {
+      const clubName = String(composition?.clubName || '').trim();
+      return clubName
+        ? named('messaging.preview.clubShareNamed', 'Club : {{name}}', { name: clubName })
+        : t('messaging.preview.clubShare', 'Club partagé');
+    }
     case 'contact_share':
       return t('messaging.preview.contactShare', 'Contact partagé');
     case 'event_share': {

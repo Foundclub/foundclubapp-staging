@@ -220,6 +220,11 @@ export const extraitDuMessageCite = (message, t) => {
   const titre = (/** @type {any} */ valeur) => String(valeur || '').trim();
 
   switch (composition?.type) {
+    case 'club_share':
+      return {
+        icone: 'users',
+        texte: titre(composition.clubName) || t('conversation.quote.club', 'Club'),
+      };
     case 'contact_share':
       return {
         icone: 'users',

@@ -112,6 +112,7 @@ export const RouteNames = /** @type {const} */ ({
   // COMMUNAUTES-L2 (13/11, D76) : mes communautes, puis « Nouveau groupe » en 2 etapes.
   Communautes: 'Communautes',
   Conversation: 'Conversation',
+  ConversationClubPicker: 'ConversationClubPicker',
   ConversationPublicEventPicker: 'ConversationPublicEventPicker',
   CreateSection: 'CreateSection',
   CreateSquad: 'CreateSquad',
