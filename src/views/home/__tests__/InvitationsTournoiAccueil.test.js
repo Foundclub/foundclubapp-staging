@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { colors } from '@/theme/colors';
+
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import InvitationsTournoiAccueil from '@/views/home/InvitationsTournoiAccueil';
 
@@ -461,6 +463,33 @@ describe('ACCUEIL-TOURNOI — le tournoi dans « Tes prochains événements »',
     expect(textes.indexOf('Invitation au tournoi')).toBeGreaterThanOrEqual(0);
     expect(textes.indexOf('Invitation au tournoi'))
       .toBeLessThan(textes.indexOf('Tes prochains événements'));
+  });
+
+  // Chef d'orchestre, 19/11 : la consigne d'Adel « tout en bleu » ne vise que le vert ; l'ambre
+  // de la maquette reste, par le jeton « avertissement » du thème.
+  it('« 1 place à payer » en ambre (jeton warning400), sur un fond ambre léger', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
+    const arbre = await monter();
+    const texte = arbre.root.findAll((n) => typeof n.type === 'string'
+      && n.props?.children === '1 place à payer')[0];
+    expect(StyleSheet.flatten(texte.props.style).color).toBe(colors.warning400);
+  });
+
+  it('le sport du tournoi devant l’équipe : « Football à 5 · Ton équipe : … »', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p', {
+      event: { ...monEquipe('p').event, tournamentActivity: { name: 'Football à 5' } },
+    })]);
+    const arbre = await monter();
+    expect(lisibles(arbre)).toContain('Football à 5 · Ton équipe : Les Panthères');
+  });
+
+  it('« Tout voir » ouvre l’onglet Planning (MyEventList)', async () => {
+    getMyTournamentTeams.mockResolvedValue([monEquipe('p')]);
+    const arbre = await monter();
+    await act(async () => { pressable(arbre, 'Tout voir').props.onPress(); });
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.HomeTab, {
+      screen: RouteNames.MyEventList,
+    });
   });
 
   it('juste après « Accepter » : l’équipe rejointe ne s’affiche qu’une fois', async () => {

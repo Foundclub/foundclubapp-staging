@@ -491,9 +491,14 @@ function CarteMonTournoi({ equipe, navigation }) {
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{nomTournoi}</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t('implAccueil.prochains.tonEquipe', 'Ton équipe : {{team}}', {
-              team: equipe?.team?.name || '', ...SANS_ECHAPPEMENT,
-            })}
+            {/* « Football à 5 · Ton équipe : … » : le sport (nom de l'activité) quand le serveur
+                le rend. */}
+            {[
+              String(equipe?.event?.tournamentActivity?.name || '').trim(),
+              t('implAccueil.prochains.tonEquipe', 'Ton équipe : {{team}}', {
+                team: equipe?.team?.name || '', ...SANS_ECHAPPEMENT,
+              }),
+            ].filter(Boolean).join(' · ')}
           </Text>
         </View>
       </View>
@@ -508,13 +513,15 @@ function CarteMonTournoi({ equipe, navigation }) {
         <View
           style={{
             alignSelf: 'flex-start',
-            backgroundColor: withAlpha(Colors.primary500, 0.16),
+            // L'ambre de la planche 9e (jeton « avertissement ») : la consigne « tout en bleu »
+            // ne vise que le vert (chef d'orchestre, 19/11).
+            backgroundColor: withAlpha(Colors.warning500, 0.16),
             borderRadius: 999,
             paddingHorizontal: 12,
             paddingVertical: 4,
           }}
         >
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+          <Text style={[Fonts.p3Bold, { color: Colors.warning400 }]}>
             {t('implAccueil.prochains.placeAPayer', '1 place à payer')}
           </Text>
         </View>
@@ -544,7 +551,7 @@ function CarteMonTournoi({ equipe, navigation }) {
  */
 function InvitationsTournoiAccueil({ navigation }) {
   const { t } = useTranslation();
-  const { Fonts } = useTheme();
+  const { Alignments, Fonts } = useTheme();
   // L'onglet de l'accueil reste monté et l'app ne relit rien au retour
   // (`refetchOnWindowFocus: false`) : la lecture suit le focus de l'écran (comme HomeHub.js),
   // une invitation répondue sur la page d'équipe ou reçue entre-temps est à jour au retour sur
@@ -589,9 +596,24 @@ function InvitationsTournoiAccueil({ navigation }) {
       ))}
       {tournois.length ? (
         <View style={{ gap: 12 }}>
-          <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {t('implAccueil.prochains.titre', 'Tes prochains événements')}
-          </Text>
+          <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
+            <Text accessibilityRole="header" style={[Fonts.h4Bold, Fonts.neutral00, { flex: 1 }]}>
+              {t('implAccueil.prochains.titre', 'Tes prochains événements')}
+            </Text>
+            {/* « Tout voir » : l'onglet Planning (chef d'orchestre, 19/11), même geste que la
+                fiche du tournoi (EventDetails.js). */}
+            <TouchableOpacity
+              accessibilityRole="link"
+              onPress={() => navigation.navigate(RouteNames.HomeTab, {
+                screen: RouteNames.MyEventList,
+              })}
+              style={{ justifyContent: 'center', minHeight: 44 }}
+            >
+              <Text style={[Fonts.p2, Fonts.neutral300]}>
+                {t('implAccueil.prochains.toutVoir', 'Tout voir')}
+              </Text>
+            </TouchableOpacity>
+          </View>
           {tournois.map((equipe) => (
             <CarteMonTournoi
               equipe={equipe}

@@ -13947,6 +13947,7 @@ export default {
       placeAPayer: '1 spot to pay',
       titre: 'Your upcoming events',
       tonEquipe: 'Your team: {{team}}',
+      toutVoir: 'See all',
     },
     rechercheEffacer: 'Clear search',
     rechercheVide: 'Nothing matches “{{q}}”',

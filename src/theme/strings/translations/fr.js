@@ -14807,6 +14807,7 @@ export default {
       placeAPayer: '1 place à payer',
       titre: 'Tes prochains événements',
       tonEquipe: 'Ton équipe : {{team}}',
+      toutVoir: 'Tout voir',
     },
     rechercheEffacer: 'Effacer la recherche',
     rechercheVide: 'Rien ne correspond à « {{q}} »',
