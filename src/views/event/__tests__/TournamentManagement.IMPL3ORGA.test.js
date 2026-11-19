@@ -1,5 +1,5 @@
 /* eslint-disable max-len -- les témoins se lisent en entier. */
-import { Alert } from 'react-native';
+import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import TournamentManagement from '../TournamentManagement';
@@ -410,6 +410,10 @@ describe('IMPL-3 — sans résumé de l organisateur', () => {
     expect(rendu).toContain('—');
     expect(rendu).toContain('Les paiements et l’interrupteur des inscriptions sont réservés à l’organisateur du tournoi.');
     expect(parTestID(arbre, 'orga-inscriptions').props.disabled).toBe(true);
+    // Les TEXTES lus à l écran (l interrupteur garde son nom accessible, sa valeur dit l état).
+    const lus = arbre.root.findAllByType(Text).map((/** @type {any} */ n) => [].concat(n.props.children).join('')).join(' | ');
+    expect(lus).not.toContain('Inscriptions ouvertes');
+    expect(lus).not.toContain('Les joueurs peuvent s’inscrire');
   });
 
   test('🔴 sans résumé, la fenêtre de refus dit la règle, jamais « rien à rembourser »', async () => {

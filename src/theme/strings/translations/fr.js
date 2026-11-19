@@ -29479,6 +29479,7 @@ export default {
     registrationsError: 'Les inscriptions n’ont pas pu être modifiées.',
     registrationsOpen: 'Inscriptions ouvertes',
     registrationsOpenHint: 'Les joueurs peuvent s’inscrire',
+    registrationsUnknown: 'Inscriptions',
     remindError: 'La relance n’est pas partie.',
     remindNobody: 'Personne à relancer : toutes les places sont payées.',
     remindSent_one: 'Relance envoyée au joueur de {{team}} qui n’a pas payé.',

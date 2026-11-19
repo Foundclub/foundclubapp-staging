@@ -716,14 +716,20 @@ function TournamentOrganizerBoard({
   const enTete = () => {
     const lieu = String(summary?.place || '').trim();
     const dateDuTournoi = ligneDeDate(event);
-    const etatDesInscriptions = ouvertes
-      ? t('implOrga.registrationsOpen', 'Inscriptions ouvertes')
-      : t('implOrga.registrationsClosed', 'Inscriptions fermées');
+    // Sans résumé, l'état des inscriptions n'est pas connu : jamais affiché comme « ouvertes ».
+    let etatDesInscriptions = t('implOrga.registrationsUnknown', 'Inscriptions');
+    if (connu) {
+      etatDesInscriptions = ouvertes
+        ? t('implOrga.registrationsOpen', 'Inscriptions ouvertes')
+        : t('implOrga.registrationsClosed', 'Inscriptions fermées');
+    }
     return (
       <View style={[carte, Spaces.gap[8], { borderColor: withAlpha(Colors.primary500, '66') }]}>
         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
           {pastille(t('implOrga.tagTournament', 'TOURNOI'), Colors.primary500, true)}
-          {pastille(etatDesInscriptions, ouvertes ? Colors.primary500 : Colors.warning400)}
+          {connu
+            ? pastille(etatDesInscriptions, ouvertes ? Colors.primary500 : Colors.warning400)
+            : null}
         </View>
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{event?.name || ''}</Text>
         {dateDuTournoi ? <Text style={[Fonts.p2, Fonts.neutral200]}>{dateDuTournoi}</Text> : null}
@@ -745,14 +751,16 @@ function TournamentOrganizerBoard({
           <GlyphIcon color={Colors.neutral00} name={ouvertes ? 'users' : 'lockShut'} size={20} />
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.h5Bold, Fonts.neutral00]}>{etatDesInscriptions}</Text>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {ouvertes
-                ? t('implOrga.registrationsOpenHint', 'Les joueurs peuvent s’inscrire')
-                : t(
-                  'implOrga.registrationsClosedHint',
-                  'Plus aucune équipe ne s’inscrit. Le tournoi continue.',
-                )}
-            </Text>
+            {connu ? (
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {ouvertes
+                  ? t('implOrga.registrationsOpenHint', 'Les joueurs peuvent s’inscrire')
+                  : t(
+                    'implOrga.registrationsClosedHint',
+                    'Plus aucune équipe ne s’inscrit. Le tournoi continue.',
+                  )}
+              </Text>
+            ) : null}
           </View>
           <Switch
             accessibilityLabel={t('implOrga.registrationsOpen', 'Inscriptions ouvertes')}
@@ -804,11 +812,7 @@ function TournamentOrganizerBoard({
       <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
         {chiffre(inscrites, libelleDesInscrites, Colors.neutral00, 'orga-chiffre-inscrites')}
         {chiffre(
-          String(connu
-            ? Number(summary.validatedTeamsCount) || 0
-            : teams.filter((/** @type {any} */ e) => (
-              normalizeTournamentText(e?.status) === 'accepted'
-            )).length),
+          connu ? String(Number(summary.validatedTeamsCount) || 0) : '—',
           libelleDesValidees,
           Colors.neutral00,
           'orga-chiffre-validees',

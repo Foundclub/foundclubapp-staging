@@ -27690,6 +27690,7 @@ export default {
     registrationsError: 'Registrations could not be changed.',
     registrationsOpen: 'Registrations open',
     registrationsOpenHint: 'Players can register',
+    registrationsUnknown: 'Registrations',
     remindError: 'The reminder was not sent.',
     remindNobody: 'Nobody to remind: every spot is paid.',
     remindSent_one: 'Reminder sent to the {{team}} player who hasn’t paid.',
