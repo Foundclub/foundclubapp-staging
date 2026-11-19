@@ -666,8 +666,8 @@ function UserName({ navigation }) {
               <Text style={[Fonts.p2, Fonts.neutral300]} testID="raison-date-de-naissance">
                 {t(
                   'userName.birthdate.raison',
-                  'Elle sert à protéger les mineurs et à te proposer ta catégorie. Elle n’est '
-                    + 'jamais affichée.',
+                  'Elle sert à protéger les mineurs et à te proposer ta catégorie. Ta date n’est '
+                    + 'jamais affichée, seulement ton âge sur ta carte.',
                 )}
               </Text>
             </View>

@@ -29162,7 +29162,7 @@ export default {
     birthdate: {
       dayPlaceholder: 'JJ',
       monthPlaceholder: 'MM',
-      raison: 'Elle sert à protéger les mineurs et à te proposer ta catégorie. Elle n’est jamais affichée.',
+      raison: 'Elle sert à protéger les mineurs et à te proposer ta catégorie. Ta date n’est jamais affichée, seulement ton âge sur ta carte.',
       yearPlaceholder: 'AAAA',
     },
     gerantMineur: {

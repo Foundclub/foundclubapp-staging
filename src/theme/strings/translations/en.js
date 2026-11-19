@@ -27394,7 +27394,7 @@ export default {
     birthdate: {
       dayPlaceholder: 'DD',
       monthPlaceholder: 'MM',
-      raison: 'It is used to protect minors and to suggest your category. It is never displayed.',
+      raison: 'It is used to protect minors and to suggest your category. Your date is never shown, only your age on your card.',
       yearPlaceholder: 'YYYY',
     },
     gerantMineur: {
