@@ -213,6 +213,7 @@ describe('getTournamentClosure', () => {
   });
 });
 
+/* eslint-disable max-len -- titres de témoins en phrases (même parade que les fiches) */
 // DEUX-EQUIPES (19/11/2026, recette 49, M1362 / M1363) — la règle partagée des équipes du lecteur.
 describe('getViewerTournamentTeams (DEUX-EQUIPES)', () => {
   const { getViewerTournamentTeams } = jest.requireActual('./tournamentUtils');

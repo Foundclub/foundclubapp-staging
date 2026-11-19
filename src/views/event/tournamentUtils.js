@@ -286,10 +286,11 @@ export const isTournamentTeamSetAside = (team) => Boolean(team?.archivedAt)
   || ['archived', 'declined'].includes(normalizeTournamentText(team?.status));
 
 /**
- * DEUX-EQUIPES (19/11, recette 49, M1362 / M1363) — LES ÉQUIPES DU LECTEUR DANS UN TOURNOI, une seule
- * règle pour la fiche de l'app et celle du site. Le capitaine d'une équipe refusée qui joue ou est
- * invité ailleurs ne voyait que l'équipe refusée (le choix « capitaine d'abord » ne regardait pas le
- * statut). L'équipe active passe avant l'équipe refusée ou archivée ; celle-ci ne reste « son équipe »
+ * DEUX-EQUIPES (19/11, recette 49, M1362 / M1363) — LES ÉQUIPES DU LECTEUR DANS UN TOURNOI, une
+ * seule règle pour la fiche de l'app et celle du site. Le capitaine d'une équipe refusée qui joue
+ * ou est invité ailleurs ne voyait que l'équipe refusée (le choix « capitaine d'abord » ne
+ * regardait pas le statut). L'équipe active passe avant l'équipe refusée ou archivée ; celle-ci
+ * ne reste « son équipe »
  * que s'il n'en a pas d'autre (comportement d'avant), et `declinedTeam` permet de la signaler.
  * @param {any[] | undefined} teams - Les équipes du tournoi.
  * @param {string | undefined} userId - Le compte connecté.
@@ -317,8 +318,10 @@ export const getViewerTournamentTeams = (teams, userId, { managementClosed = fal
   const pendingTeam = getTournamentPendingMembershipForUser(ordered, userId);
   const activeAilleurs = (/** @type {any} */ team) => [managedTeam, memberTeam, pendingTeam]
     .some((autre) => autre && autre !== team && !isTournamentTeamSetAside(autre));
-  if (managedTeam && isTournamentTeamSetAside(managedTeam) && activeAilleurs(managedTeam)) managedTeam = null;
-  if (memberTeam && isTournamentTeamSetAside(memberTeam) && activeAilleurs(memberTeam)) memberTeam = null;
+  const aEcarter = (/** @type {any} */ team) => team && isTournamentTeamSetAside(team)
+    && activeAilleurs(team);
+  if (aEcarter(managedTeam)) managedTeam = null;
+  if (aEcarter(memberTeam)) memberTeam = null;
   const declinedTeam = ordered.find((team) => (
     normalizeTournamentText(team?.status) === 'declined' && (gere(team) || joue(team))
   )) || null;

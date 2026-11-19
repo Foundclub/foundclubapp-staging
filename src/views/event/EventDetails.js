@@ -1202,7 +1202,9 @@ function EventDetails({ navigation, route }) {
   // avant l'équipe refusée ou archivée (même règle que le site, tournamentUtils.js).
   // T-PARCOURS-2 (point 3) : `members`, ou la ligne du lecteur rendue par le serveur.
   const equipesDuLecteur = useMemo(
-    () => getViewerTournamentTeams(tournamentTeams, userData?.documentId, { managementClosed: tournoiClos }),
+    () => getViewerTournamentTeams(tournamentTeams, userData?.documentId, {
+      managementClosed: tournoiClos,
+    }),
     [tournamentTeams, tournoiClos, userData?.documentId],
   );
   const currentUserTournamentTeam = equipesDuLecteur.memberTeam;
