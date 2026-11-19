@@ -29579,6 +29579,7 @@ export default {
       you: 'toi',
     },
     recruit: {
+      forbidden: 'Tu ne peux pas modifier ce réglage pour l’instant.',
       none: 'Aucune demande en attente pour le moment.',
       off: 'Personne ne peut demander à rejoindre ; tu invites toi-même.',
       on: 'Les joueurs du tournoi peuvent demander à rejoindre ton équipe.',

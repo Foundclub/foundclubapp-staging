@@ -33,7 +33,11 @@ const mockCandidats = [{ documentId: 'u-cand', firstname: 'Candidat' }];
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ opts) => ({
     isPending: false,
-    mutate: (/** @type {any} */ v) => opts.mutationFn(v),
+    // IMPL-2C (19/11) : comme react-query, `mutate` ne lève jamais : un refus va à `onError`.
+    mutate: (/** @type {any} */ v) => Promise.resolve(opts.mutationFn(v)).catch((/** @type {any} */ e) => {
+      if (!opts.onError) throw e;
+      opts.onError(e, v);
+    }),
     mutateAsync: async (/** @type {any} */ v) => opts.mutationFn(v),
   }),
   useQuery: (/** @type {any} */ opts) => {
@@ -943,5 +947,33 @@ describe('Contrat IMPL-5 — la page vue par un tiers', () => {
     expect(contenu).toContain('1 place payée sur 5');
     expect(contenu).not.toMatch(/À payer|n’a pas encore payé|n’ont pas encore payé/);
     expect(contenu).not.toMatch(/(^| \| )Payé( \| |$)/);
+  });
+});
+
+// IMPL-2C (19/11/2026, recette 48, bloquant de la tournée du site, compte 777) — le capitaine au rôle Joueur
+// touche « Ouverte aux demandes » : le serveur refuse (403, droit `toggleOpenRequests` absent, corrigé côté
+// serveur en recette 49), et l'écran affichait « Erreur — Forbidden ». Il dit une phrase lisible ; une phrase
+// française du serveur (refus métier) passe toujours.
+describe('IMPL-2C — un refus du serveur sur l’interrupteur se dit en français', () => {
+  const { toggleTournamentTeamOpenRequests } = jest.requireMock('@/services/tournamentTeam/tournamentTeamService');
+  const derniereAlerte = () => alerte.mock.calls[alerte.mock.calls.length - 1];
+
+  test('🔴 403 « Forbidden » : « Tu ne peux pas modifier ce réglage pour l’instant. », jamais « Forbidden »', async () => {
+    toggleTournamentTeamOpenRequests.mockRejectedValueOnce({
+      details: {}, message: 'Forbidden', name: 'ForbiddenError', status: 403,
+    });
+    const arbre = await monter(equipe(), 'u-cap');
+    await appuyer(arbre, ['Ouverte aux demandes']);
+    expect(derniereAlerte()?.[1]).toBe('Tu ne peux pas modifier ce réglage pour l’instant.');
+    expect(JSON.stringify(alerte.mock.calls)).not.toContain('Forbidden');
+  });
+
+  test('400 avec une phrase française du serveur : elle est gardée', async () => {
+    toggleTournamentTeamOpenRequests.mockRejectedValueOnce({
+      details: {}, message: 'Le tournoi est fermé.', name: 'ValidationError', status: 400,
+    });
+    const arbre = await monter(equipe(), 'u-cap');
+    await appuyer(arbre, ['Ouverte aux demandes']);
+    expect(derniereAlerte()?.[1]).toBe('Le tournoi est fermé.');
   });
 });

@@ -27785,6 +27785,7 @@ export default {
       you: 'you',
     },
     recruit: {
+      forbidden: 'You can’t change this setting for now.',
       none: 'No pending request for now.',
       off: 'Nobody can ask to join; you invite players yourself.',
       on: 'Tournament players can ask to join your team.',
