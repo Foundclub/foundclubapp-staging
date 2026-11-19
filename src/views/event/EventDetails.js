@@ -206,6 +206,7 @@ import EventExportSheet from './components/EventExportSheet';
 import EventHeader from './components/EventHeader';
 import EventNextActionCard from './components/EventNextActionCard';
 import EventParticipants from './components/EventParticipants';
+import EventProposedBy from './components/EventProposedBy';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
@@ -8854,6 +8855,8 @@ function EventDetails({ navigation, route }) {
               matchScoreSummary={matchEncartSummary}
               tournamentHero={bandeauDuTournoi}
             />
+            {/* ORGANISATEUR-VISIBLE (19/11) : qui propose l'événement, sous le bandeau. */}
+            <EventProposedBy event={event} />
             {/* T-PAGES-4b (18/11, maquette (b), téléphone) : « Mon équipe » vient juste sous le
                 bandeau, avant la discussion et « L'essentiel ». */}
             {renderTournamentMyTeamCard()}

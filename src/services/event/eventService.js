@@ -893,7 +893,7 @@ const buildViewerScopedUserRelation = (viewerDocumentId) => {
   };
 };
 
-const buildCompactEventCardPopulate = (viewerDocumentId) => ({
+export const buildCompactEventCardPopulate = (viewerDocumentId) => ({
   club: {
     fields: ['documentId', 'name', 'addressDetails'],
     populate: {
@@ -988,6 +988,11 @@ const buildCompactEventCardPopulate = (viewerDocumentId) => ({
         fields: ['documentId', 'name'],
       },
     },
+  },
+  // ORGANISATEUR-VISIBLE (19/11) : « Proposé par Prénom N. » sur la carte. Trois champs nommés,
+  // jamais l'e-mail ni le téléphone (une relation peuplée sans `fields` les rendrait tous).
+  organizer: {
+    fields: ['documentId', 'firstname', 'lastname'],
   },
   tournamentActivity: {
     fields: ['documentId', 'name'],
