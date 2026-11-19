@@ -27719,6 +27719,11 @@ export default {
   implEquipe: {
     invite: {
       back: 'Back to both options',
+      cancelConfirm: 'Cancel the invitation',
+      cancelKeep: 'Keep the invitation',
+      cancelText: 'The player will no longer be able to join the team with this invitation.',
+      cancelTitle: 'Cancel the invitation?',
+      clearSearch: 'Clear the search',
       close: 'Close',
       copied: 'Link copied: paste it in a message to your player.',
       copy: 'Copy link',
@@ -27756,6 +27761,12 @@ export default {
       unpaidText: 'Your spot opens up for another player. You have not paid anything: there is nothing to refund.',
       unpaidTitle: 'Leave the team?',
       writeAssistance: 'Write to Support',
+    },
+    page: {
+      attendance: 'Will you be there on {{date}}?',
+      discussion_one: 'Team chat · {{count}} member',
+      discussion_other: 'Team chat · {{count}} members',
+      seeTournament: 'See the tournament details',
     },
     place: {
       dueTitle: 'Your spot is not paid yet',
@@ -27817,6 +27828,8 @@ export default {
       invitedWaiting: 'waiting for their answer',
       paid: 'Paid',
       title: 'Players',
+      toValidate_one: '{{count}} paid out of {{needed}} to validate',
+      toValidate_other: '{{count}} paid out of {{needed}} to validate',
     },
   },
   // IMPL-3-ORGA (18/11/2026) — la page de l organisateur du tournoi (planche 1).

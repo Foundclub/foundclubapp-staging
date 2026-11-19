@@ -117,8 +117,11 @@ const monter = async (/** @type {any} */ discussion) => {
   return arbre;
 };
 const texte = (/** @type {any} */ arbre) => JSON.stringify(arbre.toJSON());
+// ADAPTÉ PAR PAGE-EQUIPE (19/11, planche 4c) : sur la page d'équipe, le bouton dit aussi le nombre de
+// membres (« Discussion de l’équipe · 2 membres ») ; on le reconnaît à son début.
+const DEBUTS = { "Discussion de l'équipe": ["Discussion de l'équipe", 'Discussion de l’équipe'] };
 const bouton = (/** @type {any} */ arbre, /** @type {string} */ titre) => arbre.root.findAll(
-  (/** @type {any} */ n) => n.props?.accessibilityLabel === titre && typeof n.props?.onPress === 'function' && n.type !== 'View',
+  (/** @type {any} */ n) => (DEBUTS[titre] || [titre]).some((debut) => String(n.props?.accessibilityLabel || '').startsWith(debut)) && typeof n.props?.onPress === 'function' && n.type !== 'View',
 )[0];
 
 afterEach(async () => {

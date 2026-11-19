@@ -129,9 +129,12 @@ afterEach(async () => {
 });
 
 describe('T-INVITE — la fiche d équipe', () => {
+  // ATTENDU CHANGÉ PAR PAGE-EQUIPE (19/11, règle d'Adel D276) : en tête, « nom du tournoi · date
+  // courte », sans le lieu (il est sur la fiche du tournoi).
   test('🔴 en tête : le tournoi, sa date et son lieu', async () => {
     const arbre = await monter();
-    expect(texte(arbre)).toContain('FoundClub x AR Soccer · sam 19/12/2026 · AR Soccer');
+    expect(texte(arbre)).toContain('FoundClub x AR Soccer · sam. 19 déc.');
+    expect(texte(arbre)).not.toContain('sam. 19 déc. · AR Soccer');
   });
 
   test('🔴 capitaine : « Partager le lien » envoie /i/tournament/<tournoi>?c=<code> avec la phrase de repli', async () => {
@@ -196,7 +199,10 @@ describe('T-FINITIONS2 — le lieu de la fiche d équipe', () => {
     });
     montes.push(arbre);
     const textes = arbre.root.findAll((/** @type {any} */ n) => typeof n.props?.children === 'string').map((/** @type {any} */ n) => n.props.children);
-    expect(textes.join('\n')).toContain('FoundClub x AR Soccer · sam 19/12/2026 · AR Soccer, 119 rue de la Rauze basse, 34070 Montpellier');
+    // ATTENDU CHANGÉ PAR PAGE-EQUIPE (19/11, règle d'Adel D276) : plus d'adresse sur la page d'équipe ;
+    // la garde demeure : jamais de JSON à l'écran.
+    expect(textes.join('\n')).toContain('FoundClub x AR Soccer · sam. 19 déc.');
+    expect(textes.join('\n')).not.toContain('119 rue de la Rauze basse');
     expect(textes.filter((/** @type {string} */ x) => x.includes('{"'))).toEqual([]);
   });
 });
@@ -215,6 +221,7 @@ test('🔴 T-FINITIONS2 — la fiche d équipe nomme le tournoi par son nom donn
     );
   });
   montes.push(arbre);
-  expect(texte(arbre)).toContain('TEST — FoundClub x AR Soccer · sam 19/12/2026');
+  // ATTENDU CHANGÉ PAR PAGE-EQUIPE (19/11, règle d'Adel D276) : la date courte, « sam. 19 déc. ».
+  expect(texte(arbre)).toContain('TEST — FoundClub x AR Soccer · sam. 19 déc.');
   expect(texte(arbre)).not.toContain('Tournoi - 05/12/2026');
 });

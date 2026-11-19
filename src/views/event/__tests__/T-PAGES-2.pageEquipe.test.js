@@ -462,7 +462,9 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
     const contenu = texte(arbre);
     // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (3a, 4a) : la liste s'appelle « Joueurs ».
     expect(contenu).toContain('Joueurs');
-    expect(contenu).toContain('2 joueurs');
+    // ATTENDU CHANGÉ PAR PAGE-EQUIPE (19/11, maquette 3a, ligne 2 « On suit ta reco ») : tournoi payant
+    // pas encore validé, le titre dit l'objectif, « 1 payé sur 5 pour valider » (plus « 2 joueurs »).
+    expect(contenu).toContain('1 payé sur 5 pour valider');
     expect(contenu).not.toContain('sur 8');
     expect(contenu).not.toContain('Roster actif');
     expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-free-slot' && typeof n.type === 'string')).toHaveLength(3);
@@ -519,9 +521,11 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
     expect(combien(arbre, ['Inviter un joueur'])).toBe(1);
   });
 
+  // ATTENDU CHANGÉ PAR PAGE-EQUIPE (19/11, règle d'Adel D276) : le petit lien « Voir les infos du
+  // tournoi » remplace « Retour au tournoi », toujours en haut.
   test('🔴 retour au tournoi EN HAUT : c’est le premier bouton de la page', async () => {
     const arbre = await monter(equipe(), 'u-cap');
-    expect(tousLesBoutons(arbre)[0].props.accessibilityLabel).toBe('Retour au tournoi');
+    expect(tousLesBoutons(arbre)[0].props.accessibilityLabel).toBe('Voir les infos du tournoi');
   });
 });
 
@@ -538,10 +542,14 @@ describe('T-PAGES-2 — joueur qui n’est pas capitaine (R6, R8)', () => {
     expect(combien(arbre, ['Payer ma place (20 €)'])).toBe(1);
   });
 
+  // ATTENDU CHANGÉ PAR PAGE-EQUIPE (19/11, maquette 10a, ligne 32 « On suit ta reco ») : sur téléphone,
+  // « Quitter l’équipe » suit la place du joueur, avant la liste ; il reste un seul bouton.
   test('🔴 R6 : « Quitter l’équipe » est le DERNIER bouton de la page', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
-    const tous = tousLesBoutons(arbre);
-    expect(tous[tous.length - 1].props.accessibilityLabel).toBe('Quitter l’équipe');
+    const [place, quitter, liste] = ordre(arbre, ['Ta place n’est pas encore payée', 'Quitter l’équipe', '"Joueurs"']);
+    expect(quitter).toBeGreaterThan(place);
+    expect(liste).toBeGreaterThan(quitter);
+    expect(combien(arbre, ['Quitter l’équipe'])).toBe(1);
   });
 
   test('🔴 R8 : « Payer ma place » ouvre la page de paiement DANS LE MÊME ONGLET (openUrlHere), pas une fenêtre', async () => {
@@ -668,8 +676,14 @@ describe('T-NOMS-EQUIPE (Adel « 3- B », D227, défaut M1331) — le roster vu 
       },
     ],
   });
+  // ADAPTÉ PAR PAGE-EQUIPE (19/11) : le nom d'une ligne défile (MarqueeText), qui le mesure dans une
+  // sonde invisible (`pointerEvents="none"`) ; on compte les noms affichés, pas la sonde.
+  const dansLaSonde = (/** @type {any} */ n) => {
+    for (let p = n.parent; p; p = p.parent) if (p.props?.pointerEvents === 'none') return true;
+    return false;
+  };
   const textes = (/** @type {any} */ arbre, /** @type {string} */ valeur) => arbre.root.findAll(
-    (/** @type {any} */ n) => n.type === 'Text' && n.props?.children === valeur,
+    (/** @type {any} */ n) => n.type === 'Text' && n.props?.children === valeur && !dansLaSonde(n),
   );
 
   test('🔴 le Roster actif montre « Prénom I. » de chaque joueur, pas « Participant »', async () => {

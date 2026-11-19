@@ -17,9 +17,15 @@ import { RouteNames } from '@/navigation/routeNames';
  * @param {object} props - Les propriétés.
  * @param {any} props.discussion - `team.discussion`.
  * @param {any} props.navigation - La navigation de l'écran.
+ * @param {number} [props.membres] - PAGE-EQUIPE (19/11, planche 4c) : le nombre de membres, dit
+ *   dans le bouton (« Discussion de l'équipe · 7 membres »).
+ * @param {boolean} [props.pleineLargeur] - PAGE-EQUIPE (planches 4c, 9b) : bouton à contour, sur
+ *   toute la largeur. Sans lui, le bouton d'avant (la carte « Mon équipe » de la fiche).
  * @returns {import('react').ReactElement | null} Le bloc, ou rien.
  */
-function TournamentTeamDiscussion({ discussion, navigation }) {
+function TournamentTeamDiscussion({
+  discussion, membres = 0, navigation, pleineLargeur = false,
+}) {
   const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   if (discussion?.ferme === true) {
@@ -35,10 +41,12 @@ function TournamentTeamDiscussion({ discussion, navigation }) {
     <View style={Spaces.gap[8]}>
       <Button
         onPress={() => navigation.navigate(RouteNames.Conversation, { chatId })}
-        size="sm"
-        style={{ alignSelf: 'flex-start' }}
-        title={t('tournamentTeamDetails.teamDiscussion', "Discussion de l'équipe")}
-        variant="Primary"
+        size={pleineLargeur ? undefined : 'sm'}
+        style={{ alignSelf: pleineLargeur ? 'stretch' : 'flex-start' }}
+        title={membres > 0
+          ? t('implEquipe.page.discussion', { count: membres })
+          : t('tournamentTeamDetails.teamDiscussion', "Discussion de l'équipe")}
+        variant={pleineLargeur ? 'Secondary' : 'Primary'}
       />
       {discussion?.ecriture === false ? (
         <Text style={[Fonts.p4, Fonts.neutral200]}>

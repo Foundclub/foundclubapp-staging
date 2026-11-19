@@ -29515,6 +29515,12 @@ export default {
   implEquipe: {
     invite: {
       back: 'Revenir aux deux choix',
+      // PAGE-EQUIPE (19/11, planche 3a, Android) : « Annuler » une invitation se confirme par son nom.
+      cancelConfirm: 'Annuler l’invitation',
+      cancelKeep: 'Garder l’invitation',
+      cancelText: 'Le joueur ne pourra plus rejoindre l’équipe avec cette invitation.',
+      cancelTitle: 'Annuler l’invitation ?',
+      clearSearch: 'Effacer la recherche',
       close: 'Fermer',
       copied: 'Lien copié : colle-le dans un message à ton joueur.',
       copy: 'Copier le lien',
@@ -29552,6 +29558,13 @@ export default {
       unpaidText: 'Ta place se libère pour un autre joueur. Tu n’as rien payé : il n’y a rien à rembourser.',
       unpaidTitle: 'Tu quittes l’équipe ?',
       writeAssistance: 'Écrire à l’Assistance',
+    },
+    // PAGE-EQUIPE (19/11, règle d'Adel D276, planches 4c et 9b) : le haut de la page d'équipe.
+    page: {
+      attendance: 'Seras-tu là le {{date}} ?',
+      discussion_one: 'Discussion de l’équipe · {{count}} membre',
+      discussion_other: 'Discussion de l’équipe · {{count}} membres',
+      seeTournament: 'Voir les infos du tournoi',
     },
     place: {
       dueTitle: 'Ta place n’est pas encore payée',
@@ -29614,6 +29627,8 @@ export default {
       invitedWaiting: 'en attente de sa réponse',
       paid: 'Payé',
       title: 'Joueurs',
+      toValidate_one: '{{count}} payé sur {{needed}} pour valider',
+      toValidate_other: '{{count}} payés sur {{needed}} pour valider',
     },
   },
   // IMPL-3-ORGA (18/11/2026) — la page de l organisateur du tournoi (planche 1).

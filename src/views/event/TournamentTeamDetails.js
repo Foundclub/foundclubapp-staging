@@ -18,11 +18,13 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { ASSISTANCE_CHAT_TYPE, ASSISTANCE_NOM } from '@/domains/messaging/assistance';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
@@ -48,20 +50,19 @@ import { searchScopedUsers, searchUsers } from '@/services/user/userService';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getApiErrorTranslation, getErrorStatus } from '@/utils/errors/displayError';
-import { getEventLocationText } from '@/utils/eventLocationText';
 
 import useOuvrirLAssistance from '../chat/useOuvrirLAssistance';
-import TournamentEssentials, { getTournamentEssentials } from './components/TournamentEssentials';
 import TournamentTeamProgress, {
   getTodoDetail,
   getTodoTitle,
   getTournamentTeamProgress,
 } from './components/TournamentTeamProgress';
-import { openTournamentTerms } from './components/tournamentTerms';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import { hasTournamentTeamForUser } from './tournamentJoinRules';
 import TournamentMemberConsent from './TournamentMemberConsent';
-import { TournamentMemberPlace } from './TournamentMemberPlace';
+import {
+  CopyPaymentLinkButton, getPlaceSizeLabel, PlaceStatusTag, TournamentMemberPlace,
+} from './TournamentMemberPlace';
 import TournamentTeamDiscussion from './TournamentTeamDiscussion';
 import {
   getTournamentAgeNotice,
@@ -85,6 +86,8 @@ const LARGEUR_DEUX_COLONNES = 860;
 const styles = {
   dashed: { borderStyle: /** @type {'dashed'} */ ('dashed') },
   leaveSeparator: { borderTopWidth: 1, paddingTop: 12 },
+  // PAGE-EQUIPE : une ligne de la liste continue des joueurs (le cadre est celui de la liste).
+  playerRow: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   spreadWrap: {
     flexWrap: /** @type {'wrap'} */ ('wrap'),
     justifyContent: /** @type {'space-between'} */ ('space-between'),
@@ -101,6 +104,21 @@ const styles = {
  * @returns {any} Le composant.
  */
 const parDefaut = (/** @type {any} */ module) => module?.default || module;
+
+/**
+ * PAGE-EQUIPE (19/11) — une date du tournoi en mots courts : « sam. 19 déc. » (en-tête, règle
+ * d'Adel D276) ou « 19 décembre » (« Seras-tu là le 19 décembre ? »).
+ * @param {string | null | undefined} value - La date du tournoi.
+ * @param {Intl.DateTimeFormatOptions} options - Les morceaux voulus.
+ * @returns {string} La date, ou '' si elle manque ou ne se lit pas.
+ */
+const dateEnMots = (value, options) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(localeDesFormats(), options);
+};
+const DATE_COURTE = { day: 'numeric', month: 'short', weekday: 'short' };
+const JOUR_ET_MOIS = { day: 'numeric', month: 'long' };
 
 /**
  * IMPL-2-EQUIPE — les deux fenêtres (« Inviter un joueur », « Ta place est payée »), chargées à la
@@ -124,7 +142,8 @@ const getMemberStatusMeta = (status, colors) => {
         'tournamentTeamDetails.present',
         'Présent',
       ),
-      tone: colors.success500,
+      // PAGE-EQUIPE (19/11, Adel « tout en bleu, pas de vert ») : « Présent » en bleu primaire.
+      tone: colors.primary500,
     };
   }
   if (normalized === 'absent') {
@@ -621,6 +640,23 @@ function TournamentTeamDetails({ navigation, route }) {
     );
   };
 
+  // PAGE-EQUIPE (19/11, planche 3a, fait de recette Android) : « Annuler » une invitation se
+  // confirme par « Annuler l'invitation ? », plus par « Retirer ce membre ». Même appel serveur.
+  const handleCancelInvite = (/** @type {string} */ memberId) => {
+    Alert.alert(
+      t('implEquipe.invite.cancelTitle'),
+      t('implEquipe.invite.cancelText'),
+      [
+        { style: 'cancel', text: t('implEquipe.invite.cancelKeep') },
+        {
+          onPress: () => removeMemberMutation.mutate(memberId),
+          style: 'destructive',
+          text: t('implEquipe.invite.cancelConfirm'),
+        },
+      ],
+    );
+  };
+
   const handleTransferCaptain = (memberId) => {
     Alert.alert(
       t('tournamentTeamDetails.makeCaptain', 'Nommer capitaine'),
@@ -718,7 +754,13 @@ function TournamentTeamDetails({ navigation, route }) {
     member?.user?.firstname, member?.user?.lastname,
   ].filter(Boolean).join(' ') || member?.displayName || t('tournamentTeamDetails.participant', 'Participant');
 
-  const renderMemberCard = (member, variant) => {
+  // PAGE-EQUIPE (19/11, planches 3a, 4a, 4b, 9g ; Adel décision 2) : un joueur actif = UNE ligne
+  // d'une liste continue (plus une carte chacun) : avatar, nom qui défile s'il est trop long
+  // (MarqueeText, immobile si l'appareil demande moins d'animations), présence et taille de maillot
+  // dessous, « Payé » / « À payer » à droite, menu à trois points. Invités et demandes gardent leur
+  // carte. « Copier le lien de paiement » passe dans le menu (sous la ligne sans menu).
+  const renderMemberCard = (member, variant, index = 0) => {
+    const isRow = variant === 'active';
     const isCaptain = normalizeTournamentText(member?.role) === 'captain';
     const memberStatusMeta = getMemberStatusMeta(member?.responseStatus, Colors);
     const isCurrentUserMember = member?.user?.documentId === currentUserDocumentId;
@@ -740,27 +782,56 @@ function TournamentTeamDetails({ navigation, route }) {
       roleLine = t('implEquipe.roster.invitedWaiting');
       roleTone = Colors.warning500;
     }
+    const place = isRow ? placesByMember.get(member?.documentId) : undefined;
+    const sizeLabel = getPlaceSizeLabel(place, t);
+    const copyUrl = place && place.status !== 'paid' && !place.isSelf ? place.paymentUrl || '' : '';
+    let nameNode = <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>;
+    if (variant === 'invited') {
+      nameNode = (
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('implEquipe.roster.invitedName', { name: nom, ...SANS_ECHAPPEMENT })}
+        </Text>
+      );
+    } else if (isRow) {
+      nameNode = <MarqueeText style={[Fonts.p2Bold, Fonts.neutral00]} text={nom} />;
+    }
 
     return (
       <View
         key={member?.documentId || member?.user?.documentId}
-        style={tournamentDs.styles.compactPanelCard}
+        style={isRow
+          ? [
+            styles.playerRow,
+            index > 0
+              ? { borderTopColor: tournamentDs.colors.borderSoft, borderTopWidth: 1 }
+              : null,
+          ]
+          : tournamentDs.styles.compactPanelCard}
         testID={`tournament-member-row-${member?.documentId}`}
       >
-        <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+        <View
+          style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}
+          testID={`tournament-member-line-${member?.documentId}`}
+        >
           <ProfileAvatar
             imageUrl={member?.user?.avatar?.url}
             name={nom}
-            size={42}
+            size={isRow ? 40 : 42}
           />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            {variant === 'invited' ? (
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('implEquipe.roster.invitedName', { name: nom, ...SANS_ECHAPPEMENT })}
-              </Text>
-            ) : <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>}
-            <Text style={[Fonts.p4, { color: roleTone }]}>{roleLine}</Text>
+          {/* Le nom qui défile est caché au lecteur d'écran (MarqueeText) : la colonne le dit. */}
+          <View
+            accessibilityLabel={[nom, roleLine, sizeLabel].filter(Boolean).join(', ')}
+            accessible
+            style={{ flex: 1, minWidth: 0 }}
+            testID={`tournament-member-name-${member?.documentId}`}
+          >
+            {nameNode}
+            <Text style={[Fonts.p4, Fonts.neutral200]}>
+              <Text style={{ color: roleTone }}>{roleLine}</Text>
+              {sizeLabel ? ` · ${sizeLabel}` : null}
+            </Text>
           </View>
+          {isRow ? <PlaceStatusTag compact place={place} /> : null}
           {canOpenMenu ? (
             <TouchableOpacity
               accessibilityLabel={t('tournamentTeamDetails.menu.open', 'Actions pour {{name}}', {
@@ -779,13 +850,7 @@ function TournamentTeamDetails({ navigation, route }) {
         </View>
         {/* T-AGE puis T-PARENT (15/11) : autorisation attendue / reçue, pas d'image. */}
         <TournamentMemberConsent member={member} />
-        {variant === 'active' ? (
-          <TournamentMemberPlace
-            compact
-            place={placesByMember.get(member?.documentId)}
-            showSelfPay={false}
-          />
-        ) : null}
+        {copyUrl && !canOpenMenu ? <CopyPaymentLinkButton paymentUrl={copyUrl} /> : null}
 
         {/* Maquette (c) : « Nommer capitaine » et « Retirer de l'équipe » rangés dans le menu de la
             ligne ; la confirmation (Alert) reste celle d'avant. */}
@@ -803,6 +868,7 @@ function TournamentTeamDetails({ navigation, route }) {
                 variant="SecondaryLight"
               />
             ) : null}
+            {copyUrl ? <CopyPaymentLinkButton paymentUrl={copyUrl} /> : null}
             <Button
               onPress={() => {
                 setOpenMenuFor('');
@@ -826,7 +892,7 @@ function TournamentTeamDetails({ navigation, route }) {
 
         {variant === 'invited' && canManageRoster ? (
           <Button
-            onPress={() => handleRemoveMember(member.documentId)}
+            onPress={() => handleCancelInvite(member.documentId)}
             size="sm"
             style={{ alignSelf: 'flex-start', borderColor: `${Colors.neutral300}55` }}
             textStyle={{ color: Colors.neutral100 }}
@@ -875,15 +941,16 @@ function TournamentTeamDetails({ navigation, route }) {
     );
   };
 
-  // T-INVITE (15/11) — « Ton inscription » : le tournoi, sa date et son lieu,
-  // au-dessus de l'équipe.
-  // T-FINITIONS2 (16/11) : le lieu par la règle commune (jamais le JSON de `locationDetails`).
+  // Règle d'Adel D276 (19/11) : sous le nom de l'équipe, « nom du tournoi · date courte », sans le
+  // lieu ; le reste est sur la fiche (« Voir les infos du tournoi »).
+  // T-FINITIONS2 (16/11) : le nom donné au tournoi (T-NOM) d'abord.
   const eventHeader = [
-    // T-FINITIONS2 (16/11) : le nom donné au tournoi (T-NOM) d'abord.
     resolveEventCustomName(team?.event) || team?.event?.name,
-    formatDateWithDayPrefix(team?.event?.date),
-    getEventLocationText(team?.event),
+    dateEnMots(team?.event?.date, DATE_COURTE),
   ].filter(Boolean).join(' · ');
+  const openTournament = () => navigation.navigate(RouteNames.EventDetails, {
+    eventId: tournamentEventId,
+  });
   const inviteLinkHint = {
     copie: t(
       'tournamentTeamDetails.inviteLink.copied',
@@ -925,7 +992,6 @@ function TournamentTeamDetails({ navigation, route }) {
     ? Math.max(0, rosterTarget - activeMembers.length)
     : 0;
   const todoItems = canManageRoster && !progress.isValidated ? progress.todo : [];
-  const essentials = getTournamentEssentials(team?.event);
   const entryFeeLabel = getTournamentEntryFeeLabel(team?.event);
   // IMPL-2-EQUIPE remplace T-SUITES-TOURNOI (points 7 et 8) : « Chercher un joueur » et « Inviter »
   // ouvrent une fenêtre LÀ OÙ L'ON EST ; plus besoin de défiler jusqu'à une carte.
@@ -991,6 +1057,8 @@ function TournamentTeamDetails({ navigation, route }) {
       return (
         <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
           <Button
+            icon="share"
+            iconPosition="before"
             isLoading={inviteLinkState === 'pending'}
             onPress={() => shareInviteLink()}
             size="sm"
@@ -998,6 +1066,8 @@ function TournamentTeamDetails({ navigation, route }) {
             variant="Primary"
           />
           <Button
+            icon="search"
+            iconPosition="before"
             onPress={openInviteSearch}
             size="sm"
             title={t('tournamentTeamDetails.todo.searchPlayer', 'Chercher un joueur')}
@@ -1008,32 +1078,6 @@ function TournamentTeamDetails({ navigation, route }) {
     }
     return null;
   };
-
-  const tournamentCard = (
-    <View
-      style={[...tournamentDs.styles.panelCard, Spaces.gap[12]]}
-      testID="tournament-team-tournament"
-    >
-      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-        {t('tournamentTeamDetails.tournamentCard.title', 'Le tournoi')}
-      </Text>
-      <TournamentEssentials items={essentials} />
-      <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-        <Button
-          onPress={openTournamentTerms}
-          size="sm"
-          title={t('tournamentTeamDetails.tournamentCard.terms', 'Conditions d’inscription')}
-          variant="SecondaryLight"
-        />
-        <Button
-          onPress={() => navigation.navigate(RouteNames.EventDetails, { eventId })}
-          size="sm"
-          title={t('tournamentTeamDetails.tournamentCard.seeTournament', 'Fiche du tournoi')}
-          variant="SecondaryLight"
-        />
-      </View>
-    </View>
-  );
 
   // IMPL-2-EQUIPE (9g, 9h) : « Recrutement », l'interrupteur « Ouverte aux demandes » et sa phrase
   // (avant : « Ouvrir / Fermer les demandes » dans la carte d'invitation). Même appel serveur.
@@ -1077,9 +1121,18 @@ function TournamentTeamDetails({ navigation, route }) {
       </View>
     ) : null;
 
+  // PAGE-EQUIPE (Adel décision 3, planches 4c, 9b) : « Discussion de l'équipe · N membres », bouton
+  // à contour pleine largeur, tout en haut (téléphone) ou en tête de la colonne de droite.
+  // SUPPOSÉ : le fil compte les joueurs actifs (team-chat.js côté serveur) ; un mineur que la règle
+  // tient dehors y manque, le nombre affiché reste celui de l'effectif.
   const discussionCard = team?.discussion ? (
-    <View style={tournamentDs.styles.panelCard}>
-      <TournamentTeamDiscussion discussion={team?.discussion} navigation={navigation} />
+    <View testID="tournament-team-discussion">
+      <TournamentTeamDiscussion
+        discussion={team?.discussion}
+        membres={activeMembers.length}
+        navigation={navigation}
+        pleineLargeur
+      />
     </View>
   ) : null;
 
@@ -1161,7 +1214,9 @@ function TournamentTeamDetails({ navigation, route }) {
                 : null,
             ].filter(Boolean).join('. ')}
           </Text>
+          {/* PAGE-EQUIPE (9a) : « Payer ma place (20 €) » sur toute la largeur. */}
           <TournamentMemberPlace
+            payFullWidth
             payLabel={amount ? t('implEquipe.place.payMine', { amount, ...SANS_ECHAPPEMENT }) : ''}
             place={myPlace}
           />
@@ -1196,6 +1251,8 @@ function TournamentTeamDetails({ navigation, route }) {
             {t('implEquipe.place.otherText', { needed: progress.needed })}
           </Text>
           <Button
+            icon="share"
+            iconPosition="before"
             isLoading={inviteLinkState === 'pending'}
             onPress={() => shareInviteLink()}
             size="sm"
@@ -1204,6 +1261,8 @@ function TournamentTeamDetails({ navigation, route }) {
             variant="Secondary"
           />
           <Button
+            icon="search"
+            iconPosition="before"
             onPress={openInviteSearch}
             size="sm"
             style={{ alignSelf: 'stretch' }}
@@ -1370,6 +1429,42 @@ function TournamentTeamDetails({ navigation, route }) {
   const fenetres = isInviteOpen || isPaidLeaveOpen || isTeamWithdrawOpen
     ? chargerLesFenetres() : null;
 
+  // PAGE-EQUIPE (planches 9b, 9d) : « Seras-tu là le 19 décembre ? » (avant « Ma réponse
+  // tournoi ») ; sur ordinateur, dans la colonne de droite. Mêmes boutons, même appel.
+  const jourDuTournoi = dateEnMots(team?.event?.date, JOUR_ET_MOIS);
+  const attendanceCard = canUpdateTournamentResponse ? (
+    <View
+      style={[...tournamentDs.styles.panelCard, Spaces.gap[12]]}
+      testID="tournament-team-attendance"
+    >
+      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+        {jourDuTournoi
+          ? t('implEquipe.page.attendance', { date: jourDuTournoi, ...SANS_ECHAPPEMENT })
+          : t('tournamentTeamDetails.myTournamentAnswer', 'Ma réponse tournoi')}
+      </Text>
+      <View style={[Alignments.row, Spaces.gap[12]]}>
+        <Button
+          disabled={respondMutation.isPending || teamIsLocked}
+          onPress={() => respondMutation.mutate('present')}
+          size="sm"
+          title={t('tournamentTeamDetails.present', 'Présent')}
+          variant={currentMemberStatus === 'present' ? 'Primary' : 'Secondary'}
+        />
+        <Button
+          disabled={respondMutation.isPending || teamIsLocked}
+          onPress={() => respondMutation.mutate('absent')}
+          size="sm"
+          style={currentMemberStatus === 'absent'
+            ? { backgroundColor: `${Colors.error500}12`, borderColor: `${Colors.error500}55` }
+            : { borderColor: `${Colors.error500}55` }}
+          textStyle={{ color: Colors.error500 }}
+          title={t('tournamentTeamDetails.absent', 'Absent')}
+          variant="SecondaryLight"
+        />
+      </View>
+    </View>
+  ) : null;
+
   const mainColumn = (
     <View style={[Spaces.gap[16], isWide ? { flex: 1, minWidth: 0 } : null]}>
       {teamIsLocked ? (
@@ -1404,6 +1499,8 @@ function TournamentTeamDetails({ navigation, route }) {
       ) : null}
 
       {todoCard}
+      {/* PAGE-EQUIPE (10a) : sur téléphone, « Quitter l'équipe » juste après sa place. */}
+      {isWide ? null : leaveLink}
 
       {currentMemberStatus === 'invited' ? (
         <View style={[...tournamentDs.styles.panelCard, Spaces.gap[12]]}>
@@ -1442,27 +1539,7 @@ function TournamentTeamDetails({ navigation, route }) {
         </View>
       ) : null}
 
-      {canUpdateTournamentResponse ? (
-        <View style={[...tournamentDs.styles.panelCard, Spaces.gap[12]]}>
-          <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-            {t('tournamentTeamDetails.myTournamentAnswer', 'Ma réponse tournoi')}
-          </Text>
-          <View style={[Alignments.row, Spaces.gap[12]]}>
-            <Button disabled={respondMutation.isPending || teamIsLocked} onPress={() => respondMutation.mutate('present')} size="sm" title={t('tournamentTeamDetails.present', 'Présent')} variant={currentMemberStatus === 'present' ? 'Primary' : 'Secondary'} />
-            <Button
-              disabled={respondMutation.isPending || teamIsLocked}
-              onPress={() => respondMutation.mutate('absent')}
-              size="sm"
-              style={currentMemberStatus === 'absent'
-                ? { backgroundColor: `${Colors.error500}12`, borderColor: `${Colors.error500}55` }
-                : { borderColor: `${Colors.error500}55` }}
-              textStyle={{ color: Colors.error500 }}
-              title={t('tournamentTeamDetails.absent', 'Absent')}
-              variant="SecondaryLight"
-            />
-          </View>
-        </View>
-      ) : null}
+      {isWide ? null : attendanceCard}
 
       {canRequestJoinTeam ? (
         <View
@@ -1514,11 +1591,17 @@ function TournamentTeamDetails({ navigation, route }) {
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('implEquipe.roster.title')}</Text>
           {/* T-SANS-PLAFOND (D239) : plus de « sur {{max}} » ; le seuil est dans la progression. */}
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {progress.isValidated && progress.isPaid
-              ? t('implEquipe.roster.countPaid', {
-                count: activeMembers.length, paid: Number(team?.payment?.paidCount) || 0,
-              })
-              : t('implEquipe.roster.count', { count: activeMembers.length })}
+            {(() => {
+              const paid = Number(team?.payment?.paidCount) || 0;
+              if (progress.isValidated && progress.isPaid) {
+                return t('implEquipe.roster.countPaid', { count: activeMembers.length, paid });
+              }
+              // PAGE-EQUIPE (3a) : l'objectif dans le titre, « 2 payés sur 5 pour valider ».
+              if (progress.isPaid && progress.needed > 0) {
+                return t('implEquipe.roster.toValidate', { count: paid, needed: progress.needed });
+              }
+              return t('implEquipe.roster.count', { count: activeMembers.length });
+            })()}
           </Text>
         </View>
         {team?.sourceType === 'club_team' ? (
@@ -1531,7 +1614,14 @@ function TournamentTeamDetails({ navigation, route }) {
             <Text style={[Fonts.p3, Fonts.neutral200]}>{t('tournamentTeamDetails.noActiveMemberInThe', 'Aucun membre actif dans le roster pour le moment.')}</Text>
           </View>
         ) : null}
-        {activeMembers.map((member) => renderMemberCard(member, 'active'))}
+        {activeMembers.length > 0 ? (
+          <View
+            style={[...tournamentDs.styles.panelCard, { paddingHorizontal: 0, paddingVertical: 4 }]}
+            testID="tournament-team-roster-list"
+          >
+            {activeMembers.map((member, index) => renderMemberCard(member, 'active', index))}
+          </View>
+        ) : null}
         {invitedMembers.map((member) => renderMemberCard(member, 'invited'))}
         {Array.from({ length: freeSlots }, (_, index) => (
           <View
@@ -1553,6 +1643,8 @@ function TournamentTeamDetails({ navigation, route }) {
               </Text>
             </View>
             <Button
+              icon="plus"
+              iconPosition="before"
               onPress={() => openInvite('choice', activeMembers.length + index + 1)}
               size="sm"
               title={t('tournamentTeamDetails.invite', 'Inviter')}
@@ -1564,6 +1656,8 @@ function TournamentTeamDetails({ navigation, route }) {
         {canManageRoster ? (
           <View testID="tournament-team-invite-button">
             <Button
+              icon="plus"
+              iconPosition="before"
               onPress={() => openInvite('choice', null)}
               style={{ alignSelf: 'stretch' }}
               title={t('implEquipe.roster.inviteAPlayer')}
@@ -1612,10 +1706,12 @@ function TournamentTeamDetails({ navigation, route }) {
       style={[Spaces.gap[16], isWide ? { width: 340 } : null]}
       testID="tournament-team-side"
     >
-      {tournamentCard}
-      {discussionCard}
+      {/* PAGE-EQUIPE (9d, 10f) : en tête de la colonne de droite, la discussion, la présence et
+          « Quitter l'équipe » ; plus de bloc du tournoi (règle d'Adel D276). */}
+      {isWide ? discussionCard : null}
+      {isWide ? attendanceCard : null}
+      {isWide ? leaveLink : null}
       {withdrawCard}
-      {leaveLink}
       {teamWithdrawLink}
     </View>
   );
@@ -1644,21 +1740,13 @@ function TournamentTeamDetails({ navigation, route }) {
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         >
-          {/* Maquette (c) : le retour au tournoi en haut (plus de « Revenir au tournoi » en bas). */}
-          <Button
-            onPress={() => navigation.navigate(RouteNames.EventDetails, { eventId })}
-            size="sm"
-            style={{ alignSelf: 'flex-start' }}
-            title={t('tournamentTeamDetails.back', 'Retour au tournoi')}
-            variant="SecondaryLight"
-          />
-          <View style={tournamentDs.styles.screenIntro}>
-            <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-              {currentMemberIsCaptain
-                ? t('tournamentTeamDetails.eyebrowCaptain', 'Équipe du tournoi · Tu es capitaine')
-                : t('tournamentTeamDetails.eyebrow', 'Équipe du tournoi')}
-            </Text>
-            <Text style={[Fonts.h2, Fonts.neutral00]}>
+          {/* Règle d'Adel D276 (19/11), qui passe avant les maquettes : le nom de l'équipe, « nom du
+              tournoi · date courte », le petit lien « Voir les infos du tournoi » (il remplace
+              « Retour au tournoi »), puis tout de suite la suite de la page. Plus d'adresse, plus de
+              bloc « Le tournoi ». « Tu es capitaine » se lit sur la ligne du capitaine (« Capitaine
+              · toi »). */}
+          <View style={Spaces.gap[4]} testID="tournament-team-header">
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
               {team?.name || t(
                 'tournamentTeamDetails.tournamentTeam',
                 'Équipe tournoi',
@@ -1674,11 +1762,27 @@ function TournamentTeamDetails({ navigation, route }) {
               </Text>
             ) : null}
             {eventHeader ? (
-              <Text style={[Fonts.p3, Fonts.neutral100]} testID="tournament-team-event-header">
+              <Text style={[Fonts.p3, Fonts.neutral200]} testID="tournament-team-event-header">
                 {eventHeader}
               </Text>
             ) : null}
+            <TouchableOpacity
+              accessibilityLabel={t('implEquipe.page.seeTournament')}
+              accessibilityRole="link"
+              hitSlop={{
+                bottom: 12, left: 8, right: 8, top: 8,
+              }}
+              onPress={openTournament}
+              style={{ alignSelf: 'flex-start', paddingVertical: 4 }}
+              testID="tournament-team-see-tournament"
+            >
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('implEquipe.page.seeTournament')}
+              </Text>
+            </TouchableOpacity>
           </View>
+          {/* PAGE-EQUIPE (Adel décision 3) : sur téléphone, la discussion tout en haut. */}
+          {isWide ? null : discussionCard}
 
           <View
             onLayout={(event) => {
