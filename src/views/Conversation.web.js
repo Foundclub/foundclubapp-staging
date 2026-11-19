@@ -2442,6 +2442,9 @@ function Conversation({ navigation, route }) {
       if (colleAuBasRef.current) fil.scrollTop = fil.scrollHeight;
     });
     observateur.observe(contenu);
+    // CHAT-SAISIE (18/11) — le fil RÉTRÉCIT quand le champ grandit (jusqu'à 5 lignes) : sans
+    // ceci, le dernier message passait sous le champ.
+    observateur.observe(fil);
     // Les gestes qui DECOLLENT le fil du bas : la molette vers le haut, le doigt, le clavier,
     // et un clic sur la barre de defilement elle-meme (il tombe sur le fil, pas sur un message).
     const decoller = () => { colleAuBasRef.current = false; };
@@ -2463,12 +2466,18 @@ function Conversation({ navigation, route }) {
     };
   }, [filCharge]);
 
-  // MSG1W §3.1 — la saisie grandit avec le texte, jusqu a 140 px, puis defile.
+  // MSG1W §3.1 — la saisie grandit avec le texte, puis defile.
+  // CHAT-SAISIE (18/11, D262) — jusqu a 5 lignes (Adel : « comme WhatsApp ») : 5 x 20 + la marge
+  // interne (11 + 11) + le bord (1 + 1). `scrollHeight` ne compte pas le bord, or le champ est
+  // en border-box : sans ces 2 px, une barre de defilement apparaissait des 2 lignes.
   useEffect(() => {
     const champ = saisieRef.current;
     if (!champ?.style) return;
+    const cinqLignes = (5 * 20) + 22 + 2;
     champ.style.height = 'auto';
-    champ.style.height = `${Math.min(140, Math.max(44, champ.scrollHeight || 0))}px`;
+    const voulue = (champ.scrollHeight || 0) + 2;
+    champ.style.height = `${Math.min(cinqLignes, Math.max(44, voulue))}px`;
+    champ.style.overflowY = voulue > cinqLignes ? 'auto' : 'hidden';
   }, [composerText]);
 
   // MSG1W §3.1 — le menu « + » se ferme par Echap ou par un clic a cote, comme la barre des
@@ -5839,7 +5848,7 @@ function Conversation({ navigation, route }) {
                     fontFamily: 'Montserrat-Regular, sans-serif',
                     fontSize: 16,
                     lineHeight: '20px',
-                    maxHeight: 140,
+                    maxHeight: (5 * 20) + 22 + 2,
                     minHeight: 44,
                     minWidth: 0,
                     outline: 'none',
