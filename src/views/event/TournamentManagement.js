@@ -796,6 +796,67 @@ function TournamentManagement({ navigation, route }) {
     );
   };
 
+  // ORGANISATEUR 8 (Adel Q5 « A », 19/11) : « Annuler » l'événement d'un tournoi quitte le menu de
+  // la fiche
+  // du site et vient ici, sous Réglages, à côté de « Clôturer ». Même geste que la fiche
+  // (EventDetails.web.js annulerLEvenement) : confirmation, POST /events/:id/cancel, la Ville
+  // prévenue le
+  // cas échéant, puis retour. ponytail: un tournoi n'a pas de série ; sans la feuille « cette
+  // séance /
+  // les suivantes », seule cette date est annulée. Sortie : CancelSeriesSheet si un tournoi
+  // récurrent naît.
+  const [annulationEnCours, setAnnulationEnCours] = useState(false);
+  const annulerLEvenement = () => {
+    Alert.alert(
+      t('eventDetails.modals.cancelEvent.title', 'Es-tu sûr·e de vouloir annuler cet événement ?'),
+      t(
+        'eventDetails.modals.cancelEvent.description',
+        'Une fois annulé, l’événement ne sera plus visible par les participant·e·s.',
+      ),
+      [
+        { style: 'cancel', text: t('tournamentManagement.cancel', 'Annuler') },
+        {
+          onPress: async () => {
+            setAnnulationEnCours(true);
+            try {
+              // Chargé au geste, comme « À la une » (eventService tire react-native-blob-util).
+              // eslint-disable-next-line global-require
+              const { cancelEvent } = require('@/services/event/eventService');
+              const reponse = await cancelEvent({ documentId: eventId });
+              await invalidate();
+              const prevenue = reponse?.meta?.collectivitePrevenue;
+              const revenir = () => navigation.goBack();
+              if (prevenue) {
+                Alert.alert(
+                  t('useEventMutations.villePrevenue.titre', 'C’est annulé'),
+                  t('useEventMutations.villePrevenue.corps', {
+                    defaultValue: 'La {{ville}} est prévenue : la place se libère.',
+                    ville: prevenue.collectiviteName
+                      || t('collectiviteDemandes.club.laVille', 'Ville'),
+                    ...SANS_ECHAPPEMENT,
+                  }),
+                  [{ onPress: revenir, text: 'OK' }],
+                );
+                return;
+              }
+              revenir();
+            } catch (/** @type {any} */ cause) {
+              Alert.alert(
+                t('common.error', 'Erreur'),
+                cause?.response?.data?.error?.message || cause?.message
+                  || t('implOrga.cancelEventError', 'L’événement n’a pas pu être annulé.'),
+              );
+            } finally {
+              setAnnulationEnCours(false);
+            }
+          },
+          style: 'destructive',
+          text: t('implOrga.cancelEventConfirm', 'Annuler l’événement'),
+        },
+      ],
+    );
+  };
+
   const surfaceDesLignes = {
     backgroundColor: withAlpha(Colors.primary900, 'F2'),
     borderColor: withAlpha(Colors.primary500, '3D'),
@@ -1010,6 +1071,15 @@ function TournamentManagement({ navigation, route }) {
           style={{ borderColor: `${Colors.error500}55` }}
           textStyle={{ color: Colors.error500 }}
           title={t('tournamentManagement.closeTheTournament', 'Clôturer le tournoi')}
+          variant="SecondaryLight"
+        />
+        <Button
+          isLoading={annulationEnCours}
+          onPress={annulerLEvenement}
+          size="sm"
+          style={{ borderColor: `${Colors.error500}55` }}
+          textStyle={{ color: Colors.error500 }}
+          title={t('implOrga.cancelEvent', 'Annuler l’événement')}
           variant="SecondaryLight"
         />
       </View>

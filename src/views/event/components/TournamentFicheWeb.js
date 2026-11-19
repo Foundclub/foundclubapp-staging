@@ -302,10 +302,12 @@ const maPlace = (team) => (Array.isArray(team?.payment?.members) ? team.payment.
  * @param {(teamId: string) => void} props.onOpenTeam - Ouvre la page de l'équipe.
  * @param {any} [props.tournamentConfig] - Le réglage du tournoi (si l'équipe lue ne le porte pas).
  * @param {FicheUi} props.ui - Les couleurs de la fiche.
+ * @param {boolean} [props.masquerVoir] - ORGANISATEUR 8 : « Mon équipe » est déjà au-dessus
+ *   (organisateur qui joue) ; la carte ne redit pas « Voir mon équipe ». « Payer ma place » reste.
  * @returns {import('react').ReactElement} La carte.
  */
 export function TournamentMyTeamCard({
-  onOpenTeam, role, team, tournamentConfig = {}, ui,
+  masquerVoir = false, onOpenTeam, role, team, tournamentConfig = {}, ui,
 }) {
   const { t } = useTranslation();
   const { data } = useGetTournamentTeam(team?.documentId || '');
@@ -356,15 +358,17 @@ export function TournamentMyTeamCard({
           tournamentConfig={equipe.event?.tournamentConfig || tournamentConfig}
         />
       ) : null}
-      <button
-        data-testid="tournament-my-team-primary"
-        onClick={principal.onClick}
-        style={{ ...ui.primaryButtonStyle, ...BOUTON_LARGE }}
-        type="button"
-      >
-        {principal.libelle}
-      </button>
-      {montreVoir ? (
+      {masquerVoir && principal.onClick === ouvrir ? null : (
+        <button
+          data-testid="tournament-my-team-primary"
+          onClick={principal.onClick}
+          style={{ ...ui.primaryButtonStyle, ...BOUTON_LARGE }}
+          type="button"
+        >
+          {principal.libelle}
+        </button>
+      )}
+      {montreVoir && !masquerVoir ? (
         <button
           onClick={ouvrir}
           style={{ ...ui.outlineButtonStyle, ...BOUTON_LARGE }}

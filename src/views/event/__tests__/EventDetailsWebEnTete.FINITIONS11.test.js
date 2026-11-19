@@ -289,12 +289,20 @@ describe('FINITIONS11 · point 1 — l en-tête des pages d événement du site'
 
   test.each([
     ['Entrainement', 'Entrainement du mardi'],
-    ['Tournoi', 'Tournoi de printemps'],
     ['Stage', 'Stage de Pâques'],
   ])('4 · %s : le même fil, le nom en titre, le drapeau « Signaler »', (typeName, nom) => {
     const root = mountScreen({ event: buildEvent({ name: nom, type: { name: typeName } }) });
     expect(textOf(fil(root)[0])).toBe(`Planning › ${typeName}`);
     expect(titre(root)).toBe(nom);
+    expect(drapeau(root)).toHaveLength(1);
+  });
+
+  // Avant : le cas « Tournoi » de la liste ci-dessus (le nom en h1). ORGANISATEUR 8 (19/11) : l'organisateur
+  // d'un tournoi lit le bandeau du joueur (EventHeader) ; le nom y est l'en-tête, le fil et le drapeau restent.
+  test('4 · Tournoi : le même fil, le nom dans le bandeau, le drapeau « Signaler »', () => {
+    const root = mountScreen({ event: buildEvent({ name: 'Tournoi de printemps', type: { name: 'Tournoi' } }) });
+    expect(textOf(fil(root)[0])).toBe('Planning › Tournoi');
+    expect(JSON.stringify(mounted.toJSON())).toContain('Tournoi de printemps');
     expect(drapeau(root)).toHaveLength(1);
   });
 

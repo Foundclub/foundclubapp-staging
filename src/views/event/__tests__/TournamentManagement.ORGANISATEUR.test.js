@@ -122,7 +122,9 @@ jest.mock('@/services/chat/chatService', () => ({
   createChatMessage: jest.fn(() => Promise.resolve({})),
   createWhisperChat: (/** @type {any[]} */ ...args) => mockWhisper(...args),
 }));
+const mockCancelEvent = jest.fn(() => Promise.resolve({ data: {} }));
 jest.mock('@/services/event/eventService', () => ({
+  cancelEvent: (/** @type {any[]} */ ...args) => mockCancelEvent(...args),
   requestFeatured: (/** @type {any[]} */ ...args) => mockRequestFeatured(...args),
 }));
 
@@ -420,5 +422,37 @@ describe('ORGANISATEUR 7 — la règle des payés et « ton équipe » (11b)', (
 
   test('🔴 l équipe dont l organisateur est capitaine dit « ton équipe »', async () => {
     expect(texte(await monter())).toContain('Capitaine : Karim Benali · ton équipe');
+  });
+});
+
+describe('ORGANISATEUR 8 (Adel Q5 « A ») — « Annuler l événement » sous Réglages, à côté de « Clôturer »', () => {
+  beforeEach(() => { mockCancelEvent.mockClear(); });
+
+  test('🔴 une fenêtre demande, puis l événement est annulé et l écran revient en arrière', async () => {
+    const arbre = await monter();
+    await toucher(parLibelle(arbre, 'Annuler l’événement'));
+    expect(mockCancelEvent).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Es-tu sûr·e de vouloir annuler cet événement ?',
+      'Une fois annulé, l\'événement ne sera plus visible par les participant·e·s.',
+      expect.any(Array),
+    );
+    await confirmerLaFenetre();
+    expect(mockCancelEvent).toHaveBeenCalledWith({ documentId: 'evt-1' });
+    expect(navigation.goBack).toHaveBeenCalled();
+  });
+
+  test('🔴 la Ville prévenue : le message est dit avant de revenir', async () => {
+    mockCancelEvent.mockResolvedValueOnce({ meta: { collectivitePrevenue: { collectiviteName: 'Ville de Montpellier' } } });
+    const arbre = await monter();
+    await toucher(parLibelle(arbre, 'Annuler l’événement'));
+    await confirmerLaFenetre();
+    expect(Alert.alert).toHaveBeenCalledWith('C’est annulé', 'La Ville de Montpellier est prévenue : la place se libère.', expect.any(Array));
+  });
+
+  test('caractérisant : le lecteur n a pas « Annuler l événement »', async () => {
+    mockGerant = false;
+    const arbre = await monter();
+    expect(parLibelle(arbre, 'Annuler l’événement')).toBeUndefined();
   });
 });

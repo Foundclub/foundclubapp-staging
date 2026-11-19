@@ -713,12 +713,23 @@ function EventDetails({ navigation, route }) {
   // équipes (le rôle Public n'a pas ce droit) : la fiche disait « 0 équipe / Aucune équipe n'est
   // encore inscrite » sur un tournoi qui en avait 5. Il lit la ligne du résumé public, avec le
   // seuil des 30 % (tournamentJoinRules).
-  // T-PAGES-3 (17/11, maquette DESIGN-TOURNOI-PAGES (a) et (b)) : qui n'organise pas CE tournoi
-  // (`canEdit` = canManageEvent) lit la fiche redessinée ; l'organisateur garde la sienne.
-  const vueJoueurDuTournoi = isTournamentEvent && !canEdit;
+  // T-PAGES-3 (17/11, maquette DESIGN-TOURNOI-PAGES (a) et (b)) : la fiche redessinée.
+  // Avant : `isTournamentEvent && !canEdit`, l'organisateur gardait l'ancienne fiche. ORGANISATEUR
+  // 8
+  // (19/11, cartes 11a / 11d, Adel Q5 « A » et Q6 « A ») : il lit la même, avec « Gérer le tournoi
+  // »
+  // (et « Mon équipe » s'il joue) en tête de la carte. Témoin : EventDetailsWeb.ORGANISATEUR8.
+  // ponytail: les branches `!vueJoueurDuTournoi` de blocDuTournoi ne sont plus atteintes par un
+  // tournoi ; gardées (aucun test ne prouve encore qu'aucun autre chemin n'y mène), à retirer
+  // ensuite.
+  const vueJoueurDuTournoi = isTournamentEvent;
+  const organisateurDuTournoi = isTournamentEvent && canEdit;
   // T-PAGES-3 point 3 (Adel « 4- A », 17/11) : le seuil des 30 % vaut pour TOUS les
-  // non-organisateurs, connectés compris (le serveur envoie le résumé à chaque lecteur).
-  const ligneEquipesDuVisiteur = vueJoueurDuTournoi ? getTournamentVisitorTeamsLine(event) : null;
+  // non-organisateurs, connectés compris (le serveur envoie le résumé à chaque lecteur) ;
+  // l'organisateur garde le vrai nombre.
+  const ligneEquipesDuVisiteur = vueJoueurDuTournoi && !canEdit
+    ? getTournamentVisitorTeamsLine(event)
+    : null;
   const facilityId = getEntityDocumentId(event?.facility);
   const eventLink = buildPublicEventUrl({ eventId });
   const participationLabel = getParticipationLabel(
@@ -1625,7 +1636,9 @@ function EventDetails({ navigation, route }) {
       note: postMatchAction.subtitle,
       onPress: openMatchStatsEditor,
     }] : []),
-    ...(canEdit ? [{
+    // ORGANISATEUR 8 (Adel Q5 « A ») : « Annuler » un tournoi est dans Gérer le tournoi, sous
+    // Réglages.
+    ...(canEdit && !organisateurDuTournoi ? [{
       disabled: annulerEvenement.isPending,
       icon: 'close',
       key: 'cancel',
@@ -2366,10 +2379,48 @@ function EventDetails({ navigation, route }) {
     statusLabel: etatDuBandeau, ...(tonDuBandeau ? { statusTone: tonDuBandeau } : {}),
   } : null;
   const erreurDeLaCarte = erreurEquipeTournoi || actionError;
+  // ORGANISATEUR 8 (11a, comme le téléphone, EventDetails.js organisateurQuiJoue) : l'organisateur
+  // qui a
+  // une équipe (capitaine ou membre) lit « Gérer le tournoi » et « Mon équipe » côte à côte ; sinon
+  // « Gérer le tournoi » seul. Ils remplacent « Piloter la compétition » et « Voir / Gérer mon
+  // équipe ».
+  const organisateurQuiJoue = organisateurDuTournoi && equipeInscriteDuLecteur;
+  const boutonsDeLOrganisateur = organisateurDuTournoi ? (
+    <div
+      data-testid={organisateurQuiJoue
+        ? 'tournament-organizer-player-actions'
+        : 'tournament-organizer-actions'}
+      style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}
+    >
+      <button
+        onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
+        style={{
+          ...(organisateurQuiJoue ? outlineButtonStyle : primaryButtonStyle),
+          flex: '1 1 160px',
+          minHeight: 44,
+        }}
+        type="button"
+      >
+        {t('implFiche.manageTournament', 'Gérer le tournoi')}
+      </button>
+      {organisateurQuiJoue ? (
+        <button
+          onClick={() => handleOpenTournamentTeam(equipeDuLecteur?.documentId)}
+          style={{ ...primaryButtonStyle, flex: '1 1 160px', minHeight: 44 }}
+          type="button"
+        >
+          {t('implFiche.myTeam', 'Mon équipe')}
+        </button>
+      ) : null}
+    </div>
+  ) : null;
   const carteDuTournoi = vueJoueurDuTournoi ? (
     <div data-testid="event-tournament-side" style={{ display: 'grid', gap: 16, minWidth: 0 }}>
+      {boutonsDeLOrganisateur}
       {equipeDuLecteur ? (
         <TournamentMyTeamCard
+          // « Mon équipe » est au-dessus : la carte ne redit pas « Voir mon équipe » (Payer reste).
+          masquerVoir={organisateurQuiJoue}
           onOpenTeam={handleOpenTournamentTeam}
           role={roleDuLecteur}
           team={equipeDuLecteur}
@@ -2394,11 +2445,16 @@ function EventDetails({ navigation, route }) {
           {/* T-REJOINDRE (D50) ; jamais pour l'organisateur (point 5) : récolte du train 12
               (chef, 17/11), la règle partagée isTournamentOrganizer (tournamentJoinRules.js,
               T-PAGES-6) décide, dans canAskToJoinTournamentTeam du panneau. */}
-          <TournamentJoinTeamPanel
-            event={event}
-            onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
-            teams={tournamentTeams}
-          />
+          {/* ORGANISATEUR 8 : l'organisateur lit maintenant cette carte ; le panneau reste au
+              joueur seul (T-PAGES-3 point 5), le témoin T-PAGES-3 (5) l'a vu se rendre pour
+              lui. */}
+          {organisateurDuTournoi ? null : (
+            <TournamentJoinTeamPanel
+              event={event}
+              onRequested={(team) => handleOpenTournamentTeam(team?.documentId)}
+              teams={tournamentTeams}
+            />
+          )}
         </TournamentSignUpCard>
       ) : null}
       {erreurDeLaCarte ? (
@@ -2438,7 +2494,7 @@ function EventDetails({ navigation, route }) {
   // Précision du chef (17/11) : sous le seuil des 30 %, la liste ne trahit pas le nombre
   // d'équipes : l'équipe du lecteur et celles qui cherchent un joueur (règle de T-REJOINDRE),
   // sans total.
-  const nombreDEquipesCache = vueJoueurDuTournoi && isTournamentTeamsCountHidden(event);
+  const nombreDEquipesCache = vueJoueurDuTournoi && !canEdit && isTournamentTeamsCountHidden(event);
   const equipesDeLaListe = nombreDEquipesCache
     ? tournamentTeams.filter((team) => (
       (equipeDuLecteur && team?.documentId === equipeDuLecteur.documentId)
@@ -2576,7 +2632,10 @@ function EventDetails({ navigation, route }) {
       {/* T-PAGES-3 : pour le joueur, ses gestes d'équipe (créer, inscrire l'équipe du club, voir
           ou gérer la sienne, répondre, suivre sa demande) et les conditions sont dans les cartes
           de la fiche ; ici reste « Voir la compétition ». */}
+      {/* ORGANISATEUR 8 : l'organisateur a « Gérer le tournoi » dans la carte ; « Piloter la
+          compétition » et « Modifier les paramètres » (ligne Réglages) ne sont plus redits ici. */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {organisateurDuTournoi ? null : (
         <button
           onClick={() => navigation.navigate(RouteNames.TournamentManagement, { eventId })}
           style={{
@@ -2598,7 +2657,8 @@ function EventDetails({ navigation, route }) {
             'Voir la compétition',
           )}
         </button>
-        {canEdit && !tournoiClos ? (
+        )}
+        {canEdit && !tournoiClos && !organisateurDuTournoi ? (
           <button
             onClick={() => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId })}
             style={primaryButtonStyle}
@@ -2894,7 +2954,8 @@ function EventDetails({ navigation, route }) {
                     }}
                     type="button"
                   >
-                    {t('eventDetails.openTheTeam', 'Ouvrir l équipe')}
+                    {/* Avant : « Ouvrir l équipe ». 1a (19/11) : « Voir l'équipe » partout. */}
+                    {t('implOrga.seeTeam', 'Voir l’équipe')}
                   </button>
                   {canEdit && status === 'pending' ? (
                     <>
@@ -3329,7 +3390,7 @@ function EventDetails({ navigation, route }) {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                     {/* IMPL-1-FICHE (6b) : « Terrain A » n'est plus montré au joueur
                         (l'organisateur le garde) ; le lieu réel est dans le bandeau et « L'essentiel ». */}
-                    {event?.facility?.name && !vueJoueurDuTournoi ? (
+                    {event?.facility?.name && (!vueJoueurDuTournoi || canEdit) ? (
                       <span style={{
                         background: pillSurfaceColor, borderRadius: 999, color: textColor, padding: '9px 14px',
                       }}
@@ -3710,7 +3771,7 @@ function EventDetails({ navigation, route }) {
                 <>
                   {/* T-PAGES-3b (point 2) : au téléphone, « Mon équipe » passe AVANT l'essentiel
                       (maquette b) ; la carte d'inscription le suit (maquette a). */}
-                  {!isDesktop && equipeDuLecteur ? carteDuTournoi : null}
+                  {!isDesktop && (equipeDuLecteur || organisateurDuTournoi) ? carteDuTournoi : null}
                   {/* IMPL-1-FICHE (6b) : une carte, une ligne par info, et « Ouvrir dans le GPS »
                       sous l'adresse (il quitte l'en-tête, devenu bandeau). */}
                   <TournamentEssentials
@@ -3727,7 +3788,7 @@ function EventDetails({ navigation, route }) {
                     items={essentielDuTournoi}
                     variant="liste"
                   />
-                  {!isDesktop && !equipeDuLecteur ? carteDuTournoi : null}
+                  {!isDesktop && !equipeDuLecteur && !organisateurDuTournoi ? carteDuTournoi : null}
                   {equipeDuLecteur ? null : <TournamentHowItWorks event={event} ui={uiDeLaFiche} />}
                   <TournamentBeforeSignUp
                     event={event}
@@ -4265,7 +4326,10 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              {canEdit ? (
+              {/* ORGANISATEUR 8 : un tournoi n'a plus de « Participer » ; sa liste vide (« Aucune
+                  demande en attente ») ne s'affiche plus dans la fiche redessinée. Pleine, elle
+                  reste. */}
+              {canEdit && !(organisateurDuTournoi && demandesEnAttente.length === 0) ? (
                 <>
                   <h3 style={{ ...sectionTitleStyle, fontSize: 18 }}>
                     {t('eventDetails.pendingRequests', 'Demandes en attente')}
