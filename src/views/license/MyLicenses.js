@@ -325,7 +325,7 @@ function ChildrenLicenses({ navigation }) {
     })),
   ], [comptes, fiches.data, licences.data]);
   const cotisations = enfants.map((enfant) => enfant.cotisation).filter(Boolean);
-  const titre = <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />;
+  const titre = <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes paiements')} />;
 
   if (liens.isLoading || fiches.isLoading || licences.isLoading) {
     return (
@@ -440,7 +440,7 @@ function OwnLicenses({ navigation }) {
   if (query.isLoading) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
+        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes paiements')} />
         <ListSkeleton />
       </ScreenContainer>
     );
@@ -452,7 +452,7 @@ function OwnLicenses({ navigation }) {
     const refuse = getErrorStatus(query.error) === 403;
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
+        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes paiements')} />
         <LicenseEmptyState
           action={refuse ? null : (
             <Button
@@ -484,7 +484,7 @@ function OwnLicenses({ navigation }) {
   if (!active.length && !archived.length) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
+        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes paiements')} />
         <LicenseEmptyState
           description={t(
             'myLicenses.empty.description',
@@ -497,7 +497,7 @@ function OwnLicenses({ navigation }) {
 
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-      <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
+      <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes paiements')} />
       {/* S9-bis : meme borne de hauteur que le detail — cf. le temoin
           `MyLicenseDetail.S9bis.defilement.test.js` pour la cause. */}
       <ScrollView

@@ -159,21 +159,23 @@ describe('T-PAIE — les places sur la fiche d équipe', () => {
   test('🔴 capitaine : « payé » / « à payer » par membre, le compteur, et un « Copier le lien de paiement » par place à payer', async () => {
     const arbre = await monter('capitaine');
     const contenu = texte(arbre);
-    expect(contenu).toContain('Place payée');
-    expect(contenu).toContain('Place à payer');
-    // T-PAGES-2 (17/11) : le compteur de la carte « Où en est l'équipe » s'écrit « 1 / 5 » (maquette c).
-    expect(contenu).toContain('1 / 5');
+    // ATTENDUS CHANGÉS PAR IMPL-2-EQUIPE (18/11, planches 4a et 9a) : la pastille de la ligne dit
+    // « Payé » / « À payer », et la carte « 1 place payée sur 5 » (au lieu de « 1 / 5 »).
+    expect(contenu).toContain('Payé');
+    expect(contenu).toContain('À payer');
+    expect(contenu).toContain('1 place payée sur 5');
     const copier = boutons(arbre, 'Copier le lien de paiement');
     expect(copier).toHaveLength(2);
     await act(async () => { await copier[0].props.onPress(); });
     expect(mockCopier).toHaveBeenCalledWith(LIEN_2);
-    expect(boutons(arbre, 'Payer ma place')).toHaveLength(0);
+    expect(boutons(arbre, 'Payer ma place (20 €)')).toHaveLength(0);
   });
 
   test('🔴 joueur connecté : « Payer ma place » ouvre SON lien, aucun lien des autres', async () => {
     const arbre = await monter('joueur');
     expect(boutons(arbre, 'Copier le lien de paiement')).toHaveLength(0);
-    const payer = boutons(arbre, 'Payer ma place');
+    // IMPL-2-EQUIPE (9a) : le bouton porte le prix.
+    const payer = boutons(arbre, 'Payer ma place (20 €)');
     expect(payer).toHaveLength(1);
     await act(async () => { await payer[0].props.onPress(); });
     expect(mockOpenUrl).toHaveBeenCalledWith(LIEN_2);
@@ -184,6 +186,7 @@ describe('T-PAIE — les places sur la fiche d équipe', () => {
     const contenu = texte(arbre);
     expect(contenu).not.toContain('Place payée');
     expect(contenu).not.toContain('Place à payer');
+    expect(contenu).not.toContain('À payer');
     expect(boutons(arbre, 'Copier le lien de paiement')).toHaveLength(0);
     expect(boutons(arbre, 'Payer ma place')).toHaveLength(0);
   });

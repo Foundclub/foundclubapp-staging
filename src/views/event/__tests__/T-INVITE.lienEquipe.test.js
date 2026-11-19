@@ -50,6 +50,8 @@ jest.mock('@/components/atoms/button/Button', () => {
 });
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => () => null);
 jest.mock('@/components/organisms/joinEventModal/JoinEventModal', () => () => null);
+// ADAPTÉ À IMPL-2-EQUIPE (3b) : la fenêtre « Inviter un joueur » (BottomModal) rend son contenu.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => (/** @type {any} */ props) => (props.isVisible ? props.children : null));
 jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => (/** @type {any} */ { children }) => children);
 jest.mock('@/components/templates/ScreenContainer', () => (/** @type {any} */ { children }) => children);
 jest.mock('@/services/tournamentTeam/tournamentTeamQueries', () => ({
@@ -134,7 +136,10 @@ describe('T-INVITE — la fiche d équipe', () => {
 
   test('🔴 capitaine : « Partager le lien » envoie /i/tournament/<tournoi>?c=<code> avec la phrase de repli', async () => {
     const arbre = await monter();
-    expect(texte(arbre)).toContain('Inviter des joueurs par lien');
+    // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (18/11, planche 3b) : la carte « Inviter des joueurs par lien »
+    // est remplacée par la fenêtre « Inviter un joueur » ; son « Partager le lien » (téléphone)
+    // envoie le même lien, avec le même message.
+    await act(async () => { await bouton(arbre, 'Inviter un joueur').props.onPress(); });
     await act(async () => { await bouton(arbre, 'Partager le lien').props.onPress(); });
     expect(mockCreateLink).toHaveBeenCalledWith('tt-1');
     const [{ message, url }] = mockShare.mock.calls[0];

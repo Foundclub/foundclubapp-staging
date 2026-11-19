@@ -115,6 +115,10 @@ jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
 jest.mock('@/services/teamInvite/teamInviteShare', () => ({
   shareTournamentTeamInviteLink: jest.fn(async () => ({ envoi: 'copie', url: 'https://x' })),
 }));
+// IMPL-2-EQUIPE (M1311) : la conversation « Assistance FoundClub » ouverte avec un message prérempli.
+jest.mock('@/services/chat/assistanceService', () => ({
+  ouvrirMaConversationAssistance: jest.fn(async () => ({ documentId: 'chat-assistance' })),
+}));
 jest.mock('@/services/chat/chatService', () => ({
   createWhisperChat: jest.fn(async () => ({ documentId: 'chat-1' })),
 }));
@@ -419,14 +423,18 @@ const tousLesBoutons = (/** @type {any} */ arbre) => arbre.root.findAll(
 );
 
 describe('T-PAGES-2 — capitaine (maquette c)', () => {
-  test('🔴 « Où en est l’équipe » : « 1 / 5 », la règle des 5 ; « À faire maintenant » avec « Trouver 3 joueurs » et le partage du lien', async () => {
+  // ATTENDUS CHANGÉS PAR IMPL-2-EQUIPE (18/11, planches 3a et 9a ; Adel « plus de “paiements” seul ») :
+  // « 1 place payée sur 5 », la phrase qui dit les places libres et ce qui valide l'équipe ;
+  // « Trouver 3 joueurs » devient « Il te faut une autre place payée ? », avec le partage du lien.
+  test('🔴 « Où en est l’équipe » : « 1 place payée sur 5 », les places libres, la règle ; « À faire maintenant » et le partage du lien', async () => {
     const arbre = await monter(payante('capitaine'), 'u-cap');
     const contenu = texte(arbre);
     expect(contenu).toContain('Où en est l’équipe');
-    expect(contenu).toContain('1 / 5');
-    expect(contenu).toContain('Pas encore validée : 1 place payée sur 5. Ton équipe est validée dès la 5ᵉ place payée.');
+    expect(contenu).toContain('1 place payée sur 5');
+    expect(contenu).toContain('3 places sont encore libres.');
+    expect(contenu).toContain('L’équipe sera validée quand les 5 premières places seront payées.');
     expect(contenu).toContain('À faire maintenant');
-    expect(contenu).toContain('Trouver 3 joueurs');
+    expect(contenu).toContain('Il te faut une autre place payée ?');
     expect(combien(arbre, ['Partager le lien d’invitation'])).toBe(1);
   });
 
@@ -434,7 +442,8 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
   test('🔴 effectif : « 2 joueurs » (plus de « sur 8 », D239), 3 lignes « Place libre » (jusqu’à 5), plus de « Roster actif »', async () => {
     const arbre = await monter(payante('capitaine'), 'u-cap');
     const contenu = texte(arbre);
-    expect(contenu).toContain('Effectif');
+    // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (3a, 4a) : la liste s'appelle « Joueurs ».
+    expect(contenu).toContain('Joueurs');
     expect(contenu).toContain('2 joueurs');
     expect(contenu).not.toContain('sur 8');
     expect(contenu).not.toContain('Roster actif');
@@ -471,7 +480,10 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
   });
 
   // T-SANS-PLAFOND (18/11, Adel D239) : pas de nombre maximum ; au-delà du seuil, des remplaçants.
-  test('🔴 D239 : 7 joueurs, 7 payés, plafond 8 en base : « 5 places payées sur 5 », « + 2 remplaçants », toujours les gestes d invitation', async () => {
+  // ATTENDUS CHANGÉS PAR IMPL-2-EQUIPE (18/11, planches 4b et 4c) : « Équipe validée », « 5 payés sur
+  // 5 : ton équipe joue le tournoi… », une seule liste « Joueurs » sans « remplaçant », et
+  // « Inviter un joueur » toujours visible.
+  test('🔴 D239 : 7 joueurs, 7 payés, plafond 8 en base : « Équipe validée », « 7 joueurs · 7 payés », pas de remplaçant, toujours « Inviter un joueur »', async () => {
     const team = payante('capitaine', { status: 'accepted' });
     const enPlus = [5, 6, 7, 8, 9].map((n) => ({
       documentId: `mb-${n}`, origin: 'invited', responseStatus: 'pending', role: 'member', user: { documentId: `u-${n}`, firstname: `Joueur${n}` },
@@ -481,11 +493,12 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
     const arbre = await monter(team, 'u-cap');
     const contenu = texte(arbre);
     expect(contenu).toContain('Équipe validée');
-    expect(contenu).toContain('5 places payées sur 5');
+    expect(contenu).toContain('5 payés sur 5 : ton équipe joue le tournoi. Tu peux encore ajouter des joueurs.');
     expect(contenu).not.toContain('7 places payées sur 5');
-    expect(contenu).toContain('+ 2 remplaçants');
+    expect(contenu).toContain('7 joueurs · 7 payés');
+    expect(contenu).not.toContain('remplaçant');
     expect(contenu).not.toContain('Équipe complète');
-    expect(combien(arbre, ['Partager le lien']) > 0).toBe(true);
+    expect(combien(arbre, ['Inviter un joueur'])).toBe(1);
   });
 
   test('🔴 retour au tournoi EN HAUT : c’est le premier bouton de la page', async () => {
@@ -495,31 +508,36 @@ describe('T-PAGES-2 — capitaine (maquette c)', () => {
 });
 
 describe('T-PAGES-2 — joueur qui n’est pas capitaine (R6, R8)', () => {
-  test('🔴 R6 : « Payer ma place » en tête, avec le prix, avant « Où en est l’équipe » ; un seul « Payer ma place »', async () => {
+  // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (18/11, planche 9a, validée après R6) : « Où en est l’équipe »
+  // d'abord, puis « Ta place n’est pas encore payée » et « Payer ma place (20 €) » ; un seul bouton.
+  test('🔴 9a : « Où en est l’équipe », puis « Payer ma place (20 €) », avec le prix ; un seul « Payer ma place »', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
-    const [payer, etat] = ordre(arbre, ['Payer ma place', 'Où en est l’équipe']);
-    expect(payer).toBeGreaterThan(-1);
-    expect(etat).toBeGreaterThan(payer);
+    const [payer, etat] = ordre(arbre, ['Payer ma place (20 €)', 'Où en est l’équipe']);
+    expect(etat).toBeGreaterThan(-1);
+    expect(payer).toBeGreaterThan(etat);
+    expect(texte(arbre)).toContain('Ta place n’est pas encore payée');
     expect(texte(arbre)).toContain('20 € par joueur');
-    expect(combien(arbre, ['Payer ma place'])).toBe(1);
+    expect(combien(arbre, ['Payer ma place (20 €)'])).toBe(1);
   });
 
   test('🔴 R6 : « Quitter l’équipe » est le DERNIER bouton de la page', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
     const tous = tousLesBoutons(arbre);
-    expect(tous[tous.length - 1].props.accessibilityLabel).toBe("Quitter l'équipe");
+    expect(tous[tous.length - 1].props.accessibilityLabel).toBe('Quitter l’équipe');
   });
 
   test('🔴 R8 : « Payer ma place » ouvre la page de paiement DANS LE MÊME ONGLET (openUrlHere), pas une fenêtre', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
-    await appuyer(arbre, ['Payer ma place']);
+    await appuyer(arbre, ['Payer ma place (20 €)']);
     expect(liens.default.openUrlHere).toHaveBeenCalledWith(LIEN_2);
     expect(liens.default.openUrl).not.toHaveBeenCalled();
   });
 
-  test('🔴 « 6- A » : « Pour te retirer ou céder ta place, écris-nous » ; le bouton ouvre l’Assistance FoundClub', async () => {
+  // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (18/11, planches 9b et 10a) : la phrase « Pour te retirer… »
+  // en double du bouton disparaît ; « Écrire à l’Assistance FoundClub » reste et ouvre l'Assistance.
+  test('🔴 9b, 10a : plus de « Pour te retirer ou céder ta place, écris-nous » ; « Écrire à l’Assistance FoundClub » ouvre l’Assistance', async () => {
     const arbre = await monter(payante('joueur'), 'u-2');
-    expect(texte(arbre)).toContain('Pour te retirer ou céder ta place, écris-nous');
+    expect(texte(arbre)).not.toContain('Pour te retirer ou céder ta place, écris-nous');
     await appuyer(arbre, ['Écrire à l’Assistance FoundClub']);
     expect(mockOuvrirAssistance).toHaveBeenCalled();
   });
@@ -556,15 +574,16 @@ describe('T-PAGES-2 — F22 : la raison de refus avant la déclaration', () => {
 });
 
 describe('T-PAGES-2 — relecture (17/11) : deux trous de la refonte', () => {
-  test('🔴 capitaine dont la place est due, équipe validée : « Payer ma place » reste, une seule fois, en tête', async () => {
+  // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (planche 9a) : « Où en est l’équipe » d'abord.
+  test('🔴 capitaine dont la place est due, équipe validée : « Payer ma place (20 €) » reste, une seule fois', async () => {
     const team = payante('capitaine', { status: 'accepted' });
     team.payment.members[0] = {
       isSelf: true, memberDocumentId: 'mb-1', paymentUrl: 'https://foundclub.app/licenses/pay/jeton-cap', status: 'due',
     };
     const arbre = await monter(team, 'u-cap');
-    expect(combien(arbre, ['Payer ma place'])).toBe(1);
-    const [payer, etat] = ordre(arbre, ['Payer ma place', 'Où en est l’équipe']);
-    expect(etat).toBeGreaterThan(payer);
+    expect(combien(arbre, ['Payer ma place (20 €)'])).toBe(1);
+    const [payer, etat] = ordre(arbre, ['Payer ma place (20 €)', 'Où en est l’équipe']);
+    expect(payer).toBeGreaterThan(etat);
   });
 
   test('🔴 tournoi gratuit sans effectif minimum : jamais « 2 / 0 »', async () => {
@@ -688,17 +707,25 @@ describe('T-SANS-PLAFOND (D239) — effectif au plafond en base, page du capitai
 
   test('🔴 effectif = plafond en base : « Inviter », « Partager le lien » et « Fermer les demandes » restent, pas d « Équipe complète »', async () => {
     const arbre = await monter(avecPlafond(actifs), 'u-cap');
-    ['Inviter', 'Partager le lien', 'Fermer les demandes'].forEach((geste) => {
+    // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (3b, 9g) : « Inviter un joueur » et l'interrupteur « Ouverte aux
+    // demandes » ; le lien de l'équipe est dans la fenêtre « Inviter un joueur ».
+    ['Inviter un joueur', 'Ouverte aux demandes'].forEach((geste) => {
       expect([geste, combien(arbre, [geste]) > 0]).toEqual([geste, true]);
     });
+    await appuyer(arbre, ['Inviter un joueur']);
+    expect(combien(arbre, ['Copier le lien']) > 0).toBe(true);
     expect(texte(arbre)).not.toContain('Équipe complète');
   });
 
   test('une place libre : « Inviter », « Partager le lien » et « Fermer les demandes » restent', async () => {
     const arbre = await monter(avecPlafond(actifs + 1), 'u-cap');
-    ['Inviter', 'Partager le lien', 'Fermer les demandes'].forEach((geste) => {
+    // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (3b, 9g) : « Inviter un joueur » et l'interrupteur « Ouverte aux
+    // demandes » ; le lien de l'équipe est dans la fenêtre « Inviter un joueur ».
+    ['Inviter un joueur', 'Ouverte aux demandes'].forEach((geste) => {
       expect([geste, combien(arbre, [geste]) > 0]).toEqual([geste, true]);
     });
+    await appuyer(arbre, ['Inviter un joueur']);
+    expect(combien(arbre, ['Copier le lien']) > 0).toBe(true);
     expect(texte(arbre)).not.toContain('Équipe complète');
   });
 });
@@ -753,84 +780,168 @@ describe('T-REGLES-EQUIPE — arrivée par la notification : la page défile jus
 // rien à l'œil : ils ouvraient la recherche dans la carte « Inviter un joueur », mais au téléphone
 // cette carte est dans la colonne de côté, rendue SOUS l'effectif, hors de l'écran. Ils ouvrent la
 // même recherche que l'« Inviter » de la carte, et la page défile jusqu'à elle.
-describe('T-SUITES — « Chercher un joueur » et « Inviter » d une place libre mènent à la recherche', () => {
-  const poser = async (/** @type {any} */ arbre, /** @type {string} */ testID, /** @type {number} */ y) => {
-    const vue = arbre.root.find((/** @type {any} */ n) => n.props?.testID === testID && typeof n.props?.onLayout === 'function');
-    await act(async () => {
-      vue.props.onLayout({
-        nativeEvent: {
-          layout: {
-            height: 100, width: 390, x: 0, y,
-          },
-        },
-      });
-    });
-  };
-  const poserLaPage = async (/** @type {any} */ arbre) => {
-    await poser(arbre, 'tournament-team-columns', 300);
-    await poser(arbre, 'tournament-team-side', 1400);
-    await poser(arbre, 'tournament-team-invite', 220);
-  };
-  const champsDeRecherche = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => /^Rechercher un joueur/.test(String(n.props?.placeholder || '')));
+// T-SUITES-TOURNOI (18/11, points 7, 8 et 13), REPRIS PAR IMPL-2-EQUIPE (planche 3b) : la recherche
+// et le lien ne sont plus dans une carte sous l'effectif (qu'il fallait faire défiler) ; « Chercher
+// un joueur » et « Inviter » ouvrent la fenêtre « Inviter un joueur » LÀ OÙ L'ON EST, et le champ
+// prend le focus (chef « A »). « Copier le lien » copie l'adresse seule, sur le site comme au
+// téléphone (planche 3b : WhatsApp, SMS, Copier).
+describe('T-SUITES, repris par IMPL-2-EQUIPE — « Chercher un joueur » et « Inviter » ouvrent la fenêtre', () => {
+  const champs = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.type === TextInput && n.props?.testID === 'tournament-invite-search-input');
   const cartesLibres = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-free-slot' && typeof n.type === 'string');
   const boutonDans = (/** @type {any} */ noeud, /** @type {string} */ libelle) => noeud.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === libelle && typeof n.props?.onPress === 'function' && n.type !== 'View')[0];
 
-  // Point 7 : « Chercher un joueur » (À faire maintenant).
-  test('🔴 7 « Chercher un joueur » : la recherche s ouvre, la page défile jusqu à elle, le champ prend le focus', async () => {
+  test('🔴 7 « Chercher un joueur » : la fenêtre s’ouvre sur la recherche, le champ prend le focus', async () => {
     const arbre = await monter(payante('capitaine'), 'u-cap');
-    const defiler = jest.spyOn(arbre.root.findByType(ScrollView).instance, 'scrollTo');
-    const focus = jest.spyOn(TextInput.prototype, 'focus').mockImplementation(() => {});
-    await poserLaPage(arbre);
-    expect(champsDeRecherche(arbre)).toHaveLength(0);
-    const bouton = boutonDans(arbre.root, 'Chercher un joueur');
-    await act(async () => { bouton.props.onPress(); });
-    expect(champsDeRecherche(arbre).length).toBeGreaterThan(0);
-    expect(defiler).toHaveBeenCalledWith({ animated: true, y: 1920 });
-    // Chef « A » (18/11) : défiler PUIS donner le focus au champ de recherche.
-    expect(focus).toHaveBeenCalled();
-    focus.mockRestore();
+    expect(champs(arbre)).toHaveLength(0);
+    await act(async () => { boutonDans(arbre.root, 'Chercher un joueur').props.onPress(); });
+    expect(champs(arbre)).toHaveLength(1);
+    expect(champs(arbre)[0].props.autoFocus).toBe(true);
   });
 
-  // Point 8 (précision du testeur, 444 à 1/5) : les 4 « Inviter » des places libres, à la suite,
-  // ouvraient la recherche hors de vue ; celui du bas (la carte « Inviter un joueur ») marchait.
-  test.each([0, 1, 2, 3])('🔴 8 « Inviter » de la place libre n° %i : même recherche, défilement et focus', async (rang) => {
+  test.each([0, 1, 2, 3])('🔴 8 « Inviter » de la place libre n° %i : la fenêtre à deux choix, avec le numéro de la place, puis la recherche', async (rang) => {
     const capitaineSeul = { ...payante('capitaine'), members: [equipe().members[0]] };
     const arbre = await monter(capitaineSeul, 'u-cap');
-    const defiler = jest.spyOn(arbre.root.findByType(ScrollView).instance, 'scrollTo');
-    const focus = jest.spyOn(TextInput.prototype, 'focus').mockImplementation(() => {});
-    await poserLaPage(arbre);
     expect(cartesLibres(arbre)).toHaveLength(4);
-    const bouton = boutonDans(cartesLibres(arbre)[rang], 'Inviter');
-    await act(async () => { bouton.props.onPress(); });
-    expect(champsDeRecherche(arbre).length).toBeGreaterThan(0);
-    expect(defiler).toHaveBeenCalledWith({ animated: true, y: 1920 });
-    expect(focus).toHaveBeenCalled();
-    focus.mockRestore();
+    await act(async () => { boutonDans(cartesLibres(arbre)[rang], 'Inviter').props.onPress(); });
+    expect(texte(arbre)).toContain(`Place ${rang + 2} de `);
+    expect(champs(arbre)).toHaveLength(0);
+    await act(async () => { boutonDans(arbre.root, 'Chercher un joueur FoundClub').props.onPress(); });
+    expect(champs(arbre)).toHaveLength(1);
   });
 });
 
-// T-SUITES-TOURNOI (18/11, point 13 ; testeur M1319) : sur le site, le partage du lien envoie le lien
-// ET le message. Un geste « Copier le lien » copie le lien SEUL ; le partage reste à côté.
-describe('T-SUITES (13) — « Copier le lien » sur le site', () => {
+describe('T-SUITES (13), repris par IMPL-2-EQUIPE — « Copier le lien » dans la fenêtre', () => {
   const { Platform } = jest.requireActual('react-native');
   const avant = Platform.OS;
   afterEach(() => { Platform.OS = avant; });
   const copier = (/** @type {any} */ arbre) => arbre.root.findAll((/** @type {any} */ n) => n.props?.accessibilityLabel === 'Copier le lien' && typeof n.props?.onPress === 'function' && n.type !== 'View')[0];
 
-  test('🔴 site : « Copier le lien » à côté de « Partager le lien », copie le lien seul et dit « Lien copié »', async () => {
+  test('🔴 site : « Copier le lien » copie le lien seul et dit « Lien copié » ; pas de SMS sur un ordinateur', async () => {
     Platform.OS = 'web';
     const arbre = await monter(payante('capitaine'), 'u-cap');
-    expect(combien(arbre, ['Partager le lien'])).toBeGreaterThan(0);
-    const bouton = copier(arbre);
-    expect(bouton).toBeDefined();
-    await act(async () => { bouton.props.onPress(); });
+    expect(copier(arbre)).toBeUndefined();
+    await appuyer(arbre, ['Inviter un joueur']);
+    expect(combien(arbre, ['WhatsApp'])).toBe(1);
+    expect(combien(arbre, ['SMS'])).toBe(0);
+    await act(async () => { await copier(arbre).props.onPress(); });
     expect(partageLien.shareTournamentTeamInviteLink).toHaveBeenCalledWith(expect.objectContaining({ lienSeul: true }));
     expect(texte(arbre)).toContain('Lien copié');
   });
 
-  test('téléphone : pas de « Copier le lien » (la feuille de partage du téléphone le propose déjà)', async () => {
+  // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (planche 3b) : au téléphone aussi, « Copier le lien », à côté de
+  // WhatsApp et SMS.
+  test('téléphone : WhatsApp, SMS et « Copier le lien »', async () => {
     Platform.OS = 'ios';
     const arbre = await monter(payante('capitaine'), 'u-cap');
-    expect(copier(arbre)).toBeUndefined();
+    await appuyer(arbre, ['Inviter un joueur']);
+    expect(combien(arbre, ['WhatsApp', 'SMS'])).toBe(2);
+    expect(copier(arbre)).toBeDefined();
+  });
+});
+
+// IMPL-2-EQUIPE (18/11/2026, planches 10c et 10d ; CGV § 5) — quitter avec une place PAYÉE : pas de
+// retrait d'un geste, la fenêtre « Ta place est payée » dit la règle du jour, et mène à l'Assistance.
+// L'horloge est figée (seule `Date`) : la page lit la vraie date du jour.
+describe('IMPL-2-EQUIPE — quitter avec une place payée (10c, 10d)', () => {
+  const NE_PAS_FIGER = ['nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'performance', 'hrtime'];
+  const payee = () => {
+    const team = payante('joueur');
+    team.event = { ...team.event, date: '2026-12-19T18:00:00.000Z' };
+    team.payment.members[1] = {
+      ...team.payment.members[1], jerseySize: 'L', paymentUrl: null, status: 'paid',
+    };
+    return team;
+  };
+  afterEach(() => { jest.useRealTimers(); });
+
+  test('🔴 10c (le 18/11) : remboursé en entier jusqu’au 5 décembre, « Écrire à l’Assistance », aucun retrait', async () => {
+    jest.useFakeTimers({
+      doNotFake: NE_PAS_FIGER, now: new Date('2026-11-18T12:00:00.000Z'),
+    });
+    const arbre = await monter(payee(), 'u-2');
+    expect(texte(arbre)).toContain('Ta place est payée');
+    expect(texte(arbre)).toContain('20 € · maillot taille L');
+    await appuyer(arbre, ['Quitter l’équipe']);
+    expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, tu es remboursé en entier : 20 €, sous 14 jours.');
+    await appuyer(arbre, ['Écrire à l’Assistance']);
+    // M1311 (chef, 19/11) : la conversation s'ouvre avec « je souhaite me retirer » prérempli.
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
+      brouillon: expect.stringContaining('je souhaite me retirer de l’équipe'), chatId: 'chat-assistance',
+    }));
+    expect(services.leaveTournamentTeam).not.toHaveBeenCalled();
+  });
+
+  test('🔴 10d (le 10/12) : plus remboursée depuis le 6 décembre, « Céder ma place » jusqu’au 17 décembre', async () => {
+    jest.useFakeTimers({
+      doNotFake: NE_PAS_FIGER, now: new Date('2026-12-10T12:00:00.000Z'),
+    });
+    const arbre = await monter(payee(), 'u-2');
+    await appuyer(arbre, ['Quitter l’équipe']);
+    const contenu = texte(arbre);
+    expect(contenu).toContain('Depuis le 6 décembre, ta place n’est plus remboursée.');
+    expect(contenu).toContain('Tu peux la céder à un autre joueur jusqu’au 17 décembre');
+    expect(combien(arbre, ['Céder ma place'])).toBe(1);
+    expect(services.leaveTournamentTeam).not.toHaveBeenCalled();
+  });
+
+  test('10b : sans paiement, la confirmation « Tu quittes l’équipe ? »', async () => {
+    const arbre = await monter(payante('joueur'), 'u-2');
+    await appuyer(arbre, ['Quitter l’équipe']);
+    const appel = alerte.mock.calls[alerte.mock.calls.length - 1];
+    expect(appel[0]).toBe('Tu quittes l’équipe ?');
+    expect(appel[2].map((/** @type {any} */ b) => b.text)).toEqual(['Rester dans l’équipe', 'Quitter l’équipe']);
+  });
+});
+
+// M1311 (testeur ; chef 19/11) — le capitaine ne pouvait ni retirer son équipe ni annuler son
+// inscription. « Retirer mon équipe » (rouge) : la règle des CGV § 5, puis la conversation
+// « Assistance FoundClub » avec le message prérempli ; le remboursement reste fait à la main (D233).
+describe('M1311 — le capitaine retire son équipe par l’Assistance', () => {
+  const NE_PAS_FIGER = ['nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame', 'requestIdleCallback', 'cancelIdleCallback', 'performance', 'hrtime'];
+  afterEach(() => { jest.useRealTimers(); });
+  const datee = () => {
+    const team = payante('capitaine');
+    team.event = { ...team.event, date: '2026-12-19T18:00:00.000Z' };
+    return team;
+  };
+
+  test('🔴 capitaine : « Retirer mon équipe », la règle, puis l’Assistance avec « je souhaite retirer mon équipe »', async () => {
+    jest.useFakeTimers({
+      doNotFake: NE_PAS_FIGER, now: new Date('2026-11-19T12:00:00.000Z'),
+    });
+    const arbre = await monter(datee(), 'u-cap');
+    await appuyer(arbre, ['Retirer mon équipe']);
+    expect(texte(arbre)).toContain('Jusqu’au 5 décembre inclus, chaque place payée est remboursée intégralement. Après, pas de remboursement, mais chaque joueur peut céder sa place jusqu’au 17 décembre.');
+    await appuyer(arbre, ['Écrire à l’Assistance']);
+    expect(navigation.navigate).toHaveBeenCalledWith(RouteNames.Conversation, expect.objectContaining({
+      brouillon: expect.stringContaining('je souhaite retirer mon équipe'), chatId: 'chat-assistance',
+    }));
+    const { brouillon } = navigation.navigate.mock.calls.find((/** @type {any[]} */ c) => c[0] === RouteNames.Conversation)[1];
+    expect(brouillon).toContain('FoundClub x AR Soccer');
+    expect(brouillon).toContain(datee().name);
+  });
+
+  test('un joueur ne voit pas « Retirer mon équipe »', async () => {
+    const arbre = await monter(payante('joueur'), 'u-2');
+    expect(combien(arbre, ['Retirer mon équipe'])).toBe(0);
+  });
+});
+
+// Contrat IMPL-5 (chef, 19/11) — un tiers reçoit `payment` sans `members`, et `membersSummary.list[]`
+// sans `paid` (`paidHidden: true`) : la page ne déduit jamais « non payé » d'un `paid` absent.
+describe('Contrat IMPL-5 — la page vue par un tiers', () => {
+  test('tiers : ni « À payer » ni « Payé » par joueur, ni nom de qui n’a pas payé ; le compte reste', async () => {
+    const team = payante('capitaine');
+    team.payment = {
+      currency: 'EUR', entryFeeCents: 2000, paidCount: 1, paidMembersToValidate: 5,
+    };
+    team.membersSummary = {
+      count: 2, list: [{ firstName: 'Capi', lastInitial: 'C', paidHidden: true }, { firstName: '', lastInitial: '', paidHidden: true }], paidCount: 1, pendingCount: 1,
+    };
+    const arbre = await monter(team, 'u-tiers');
+    const contenu = texte(arbre);
+    expect(contenu).toContain('1 place payée sur 5');
+    expect(contenu).not.toMatch(/À payer|n’a pas encore payé|n’ont pas encore payé/);
+    expect(contenu).not.toMatch(/(^| \| )Payé( \| |$)/);
   });
 });

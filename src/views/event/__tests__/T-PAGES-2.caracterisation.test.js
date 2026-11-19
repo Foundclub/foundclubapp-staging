@@ -161,7 +161,20 @@ const LIEN_2 = 'https://foundclub.app/licenses/pay/jeton-joueur-2';
  */
 // ADAPTÉ À LA REFONTE : le libellé du menu « Retirer de l’équipe » vaut « Retirer ».
 /** @type {Record<string, string[]>} */
-const ALIAS = { Retirer: ['Retirer de l’équipe'] };
+// ADAPTÉ À IMPL-2-EQUIPE (18/11, planches 3, 9g, 10) : « Annuler » dans la place de l'invité,
+// l'interrupteur « Ouverte aux demandes », « Partager le lien d’invitation » et « Chercher un joueur »
+// de « À faire maintenant » (la recherche est dans la fenêtre « Inviter un joueur »), « Quitter l’équipe »,
+// « Payer ma place (20 €) ».
+const ALIAS = {
+  "Annuler l'invitation": ['Annuler'],
+  'Fermer les demandes': ['Ouverte aux demandes'],
+  Inviter: ['Chercher un joueur'],
+  'Ouvrir les demandes': ['Ouverte aux demandes'],
+  'Partager le lien': ['Partager le lien d’invitation'],
+  'Payer ma place': ['Payer ma place (20 €)'],
+  "Quitter l'équipe": ['Quitter l’équipe'],
+  Retirer: ['Retirer de l’équipe'],
+};
 const avecAlias = (/** @type {string[]} */ libelles) => libelles.flatMap((l) => [l, ...(ALIAS[l] || [])]);
 const boutonsDe = (racine, libelles) => racine.findAll(
   (/** @type {any} */ n) => avecAlias(libelles).includes(n.props?.accessibilityLabel) && typeof n.props?.onPress === 'function' && n.type !== 'View',
@@ -190,7 +203,19 @@ const menusDe = (racine) => racine.findAll(
  * @param {string[]} libelles - Les libellés acceptés.
  */
 const appuyer = async (cible, libelles) => {
-  const [bouton] = boutonsDe(racineDe(cible), libelles);
+  let [bouton] = boutonsDe(racineDe(cible), libelles);
+  // ADAPTÉ À IMPL-2-EQUIPE (3b) : sans « À faire maintenant », la recherche et le lien sont dans la
+  // fenêtre « Inviter un joueur » : on l'ouvre, puis on y prend le geste.
+  /** @type {Record<string, string>} */
+  const dansLaFenetre = { Inviter: 'Chercher un joueur FoundClub', 'Partager le lien': 'Copier le lien' };
+  const etape = libelles.map((l) => dansLaFenetre[l]).find(Boolean);
+  if (!bouton && etape) {
+    const [ouvrir] = boutonsDe(racineDe(cible), ['Inviter un joueur']);
+    if (ouvrir) {
+      await act(async () => { await ouvrir.props.onPress(); });
+      [bouton] = boutonsDe(racineDe(cible), [etape]);
+    }
+  }
   if (!bouton) throw new Error(`Aucun bouton parmi : ${libelles.join(' / ')}`);
   await act(async () => { await bouton.props.onPress(); });
 };
@@ -202,7 +227,8 @@ const appuyer = async (cible, libelles) => {
  * @returns {any} Le nœud de la ligne.
  */
 const ligne = (arbre, nom) => {
-  const [etiquette] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text' && n.props?.children === nom);
+  // ADAPTÉ À IMPL-2-EQUIPE (3a) : l'invité s'affiche « Invité : <nom> » dans sa place.
+  const [etiquette] = arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text' && [`Invité : ${nom}`, nom].includes(n.props?.children));
   if (!etiquette) throw new Error(`Aucune ligne pour ${nom}`);
   const aUnBouton = (/** @type {any} */ n) => n.findAll((/** @type {any} */ m) => typeof m.props?.accessibilityLabel === 'string' && typeof m.props?.onPress === 'function').length > 0;
   // ADAPTÉ À LA REFONTE : la carte d'un membre porte `tournament-member-row-<id>` ; on la prend
@@ -392,7 +418,10 @@ describe('T-PAGES-2 — capitaine : les actions sur les lignes de joueurs', () =
     expect(combien(arbre, ['Capitaine', 'Nommer capitaine'])).toBe(1);
     expect(combien(arbre, ['Retirer'])).toBe(1);
     // La ligne isolée par `ligne` ne déborde pas sur ses voisines.
-    expect(combien(ligne(arbre, 'Deux'), ["Annuler l'invitation", 'Accepter', 'Voir le profil'])).toBe(0);
+    // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (planche 4b) : le menu d'un joueur porte maintenant « Voir le
+    // profil » ; la ligne ne déborde toujours pas sur ses voisines (ni invitation, ni demande).
+    expect(combien(ligne(arbre, 'Deux'), ["Annuler l'invitation", 'Accepter'])).toBe(0);
+    expect(combien(ligne(arbre, 'Deux'), ['Voir le profil'])).toBe(1);
     expect(combien(ligne(arbre, 'Quatre'), ['Retirer', 'Capitaine', 'Nommer capitaine'])).toBe(0);
   });
 
@@ -431,7 +460,9 @@ describe('T-PAGES-2 — capitaine : les actions sur les lignes de joueurs', () =
   test('5 ter. sans `viewerCanWrite` : pas de « Écrire », « Voir le profil » reste', async () => {
     const arbre = await monter(equipe({}, {}), 'u-cap');
     expect(combien(arbre, ['Écrire'])).toBe(0);
-    expect(combien(arbre, ['Voir le profil'])).toBe(1);
+    // ATTENDU CHANGÉ PAR IMPL-2-EQUIPE (planche 4b) : 1 sur la demande de mb-4, + 1 dans le menu de
+    // chaque joueur actif hors capitaine (mb-2).
+    expect(combien(ligne(arbre, 'Quatre'), ['Voir le profil'])).toBe(1);
   });
 });
 

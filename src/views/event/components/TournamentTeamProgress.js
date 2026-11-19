@@ -209,6 +209,58 @@ export const getMissingLine = ({ missingPayments, missingPlayers }) => {
 };
 
 /**
+ * IMPL-2-EQUIPE (18/11, planches 3a, 4a, 9a, 10a ; Adel « plus de “paiements” seul ») — la phrase
+ * de la page d'équipe : QUI n'a pas encore payé, les places libres avant le seuil, puis ce qui
+ * valide l'équipe. Les noms viennent de `payment.members` (le serveur ne le rend qu'aux membres et
+ * à qui gère l'équipe) : sans lui, pas de phrase. « toi » pour le lecteur (`isSelf`), le prénom
+ * pour les autres (sinon le premier mot de `displayName`, « Prénom I. ») ; un nom illisible fait
+ * taire la liste, jamais le nombre.
+ * @param {object} params - L'équipe telle que la page la reçoit.
+ * @param {any[]} [params.members] - `team.members`.
+ * @param {any} [params.payment] - `team.payment`.
+ * @param {string} [params.teamStatus] - `team.status` (`accepted` = validée : pas de phrase).
+ * @returns {string | null} La phrase, ou `null`.
+ */
+export const getUnpaidSentence = ({ members = [], payment = null, teamStatus = '' }) => {
+  /** @type {any[] | null} */
+  const places = Array.isArray(payment?.members) ? payment.members : null;
+  if (!places || normalizeTournamentText(teamStatus) === 'accepted') return null;
+  const actifs = (Array.isArray(members) ? members : [])
+    .filter((member) => isTournamentActiveMemberStatus(member?.responseStatus));
+  const parMembre = new Map(actifs.map((member) => [member?.documentId, member]));
+  const prenom = (/** @type {any} */ place) => {
+    if (place?.isSelf) return i18next.t('implEquipe.progress.you');
+    const member = parMembre.get(place?.memberDocumentId);
+    return String(member?.user?.firstname || '').trim()
+      || String(member?.displayName || '').trim().split(/\s+/)[0] || '';
+  };
+  const dues = places.filter((place) => place?.status !== 'paid')
+    .sort((a, b) => Number(Boolean(b?.isSelf)) - Number(Boolean(a?.isSelf)));
+  const needed = Number(payment?.paidMembersToValidate) > 0
+    ? Number(payment.paidMembersToValidate) : 5;
+  const morceaux = [];
+  if (dues.length > 0) {
+    const noms = dues.map(prenom);
+    let liste = '';
+    if (noms.every(Boolean)) {
+      liste = noms.length === 1 ? noms[0] : i18next.t('implEquipe.progress.and', {
+        a: noms.slice(0, -1).join(', '), b: noms[noms.length - 1], ...SANS_ECHAPPEMENT,
+      });
+    }
+    const qui = i18next.t('implEquipe.progress.unpaid', { count: dues.length });
+    morceaux.push(liste
+      ? i18next.t('implEquipe.progress.unpaidNames', {
+        names: liste, who: qui, ...SANS_ECHAPPEMENT,
+      })
+      : `${qui}.`);
+  }
+  const libres = Math.max(0, needed - actifs.length);
+  if (libres > 0) morceaux.push(i18next.t('implEquipe.progress.free', { count: libres }));
+  morceaux.push(i18next.t('implEquipe.progress.rule', { count: needed, needed }));
+  return morceaux.join(' ');
+};
+
+/**
  * La carte « Où en est l'équipe ».
  * @param {object} props - Les propriétés.
  * @param {any[]} [props.members] - `team.members`.
@@ -219,11 +271,14 @@ export const getMissingLine = ({ missingPayments, missingPlayers }) => {
  * @param {boolean} [props.viewerIsMember] - Le lecteur est dans l'équipe (ou la gère) : faux pour
  *   un visiteur ou un parent, la carte ne lui dit ni « Ton équipe » ni ce qu'il manque.
  * @param {import('react').ReactNode} [props.footer] - Un pied (le bouton « Voir mon équipe »).
+ * @param {boolean} [props.detailed] - IMPL-2 : la carte de la PAGE D'ÉQUIPE (« N places payées sur
+ *   5 », « N places à payer », qui n'a pas payé). Sans elle (fiche du tournoi), le texte d'avant.
+ * @param {boolean} [props.noLimitHint] - IMPL-2 (4a) : « Pas de limite de joueurs… » (qui gère).
  * @returns {import('react').ReactElement} La carte.
  */
 function TournamentTeamProgress({
-  footer = null, members = [], payment = null, showTodo = false, teamStatus = '',
-  tournamentConfig = {}, viewerIsMember = true,
+  detailed = false, footer = null, members = [], noLimitHint = false, payment = null,
+  showTodo = false, teamStatus = '', tournamentConfig = {}, viewerIsMember = true,
 }) {
   const { t } = useTranslation();
   const {
@@ -235,7 +290,67 @@ function TournamentTeamProgress({
   const progress = getTournamentTeamProgress({
     members, payment, teamStatus, tournamentConfig,
   });
-  const tone = progress.isValidated ? Colors.success500 : Colors.warning500;
+  if (detailed && progress.isPaid) {
+    const aPayer = Math.max(0, progress.needed - progress.done);
+    const phrase = viewerIsMember ? getUnpaidSentence({ members, payment, teamStatus }) : null;
+    let texte = phrase;
+    if (progress.isValidated) {
+      texte = t('implEquipe.progress.validatedText', {
+        needed: progress.needed, ...SANS_ECHAPPEMENT,
+      });
+    } else if (!viewerIsMember) {
+      texte = t('tournamentTeamProgress.ruleNeutral', {
+        count: progress.done, needed: progress.needed, ...SANS_ECHAPPEMENT,
+      });
+    }
+    const pastille = progress.isValidated
+      ? t('tournamentTeamProgress.validated')
+      : t('implEquipe.progress.toPay', { count: aPayer });
+    const pastilleTon = progress.isValidated ? Colors.primary500 : Colors.warning500;
+    return (
+      <View
+        style={[
+          ...ds.styles.panelCard, Spaces.gap[8],
+          progress.isValidated
+            ? { backgroundColor: `${Colors.primary500}14`, borderColor: `${Colors.primary500}80` }
+            : null,
+        ]}
+        testID="tournament-team-progress"
+      >
+        <View
+          style={[
+            Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8],
+            { flexWrap: 'wrap' },
+          ]}
+        >
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('tournamentTeamProgress.title')}</Text>
+          <Tag
+            style={ds.getToneTagStyle(pastilleTon)}
+            text={pastille}
+            textColor="neutral00"
+            textStyle={{ color: pastilleTon }}
+          />
+        </View>
+        <Text style={[Fonts.h4Bold, Fonts.neutral00]} testID="tournament-team-progress-count">
+          {progress.isValidated
+            ? t('implEquipe.progress.validatedTitle')
+            : t('implEquipe.progress.paidOn', { count: progress.done, needed: progress.needed })}
+        </Text>
+        <TrainingProgressBar color={Colors.primary500} ratio={progress.ratio} />
+        {texte ? (
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="tournament-team-progress-sentence">
+            {texte}
+          </Text>
+        ) : null}
+        {noLimitHint && !progress.isValidated ? (
+          <Text style={[Fonts.p3, Fonts.neutral100]}>{t('implEquipe.progress.noLimit')}</Text>
+        ) : null}
+        {footer}
+      </View>
+    );
+  }
+  // IMPL-2 (Adel 18/11, « plus aucun vert ») : la pastille et la barre « validée » passent au bleu.
+  const tone = progress.isValidated ? Colors.primary500 : Colors.warning500;
   const missing = progress.isValidated || !viewerIsMember ? null : getMissingLine(progress);
   let regle = null;
   if (progress.isPaid) {
@@ -279,7 +394,7 @@ function TournamentTeamProgress({
             </Text>
           </View>
           <TrainingProgressBar
-            color={progress.isValidated ? Colors.success500 : Colors.primary500}
+            color={Colors.primary500}
             ratio={progress.ratio}
           />
         </>
@@ -303,7 +418,7 @@ function TournamentTeamProgress({
                 <Text
                   style={[
                     Fonts.p3Bold,
-                    { color: item.kind === 'selfPaid' ? Colors.success500 : Colors.neutral00 },
+                    { color: item.kind === 'selfPaid' ? Colors.primary500 : Colors.neutral00 },
                   ]}
                 >
                   {getTodoTitle(item)}

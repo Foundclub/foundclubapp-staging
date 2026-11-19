@@ -307,14 +307,14 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
   it.each([
     ['player', [
       'Mes réservations', 'Mes complexes favoris',
-      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
+      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes paiements',
       'Mes enfants', 'Gérer mes alertes', ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
     // TUTOE (27/10) : le guide Entraîneur se relance d'ici (règle 7 du pack).
     ['coach', [
       'Voir le détail des offres',
       'Mes réservations', 'Mes complexes favoris',
-      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
+      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes paiements',
       'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
       'Changer de compte', 'Personnes bloquées', 'Confidentialité', 'Guide entraîneur·e',
       'Nous contacter', 'Déconnexion', 'Supprimer mon compte',
@@ -323,7 +323,7 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
     ['president', [
       'Voir le détail des offres',
       'Mes réservations', 'Mes complexes favoris',
-      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes cotisations',
+      'Ma carte de collection', 'Voir mon profil', 'Historique sportif', 'Mes paiements',
       'Mes enfants', 'Gérer mes alertes', 'Gérer mes demandes',
       'Changer de compte', 'Personnes bloquées', 'Confidentialité',
       'Guide dirigeant·eS’ouvre dès que ton club est rattaché à ton compte.',
@@ -339,7 +339,7 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
     // PAR-L7 (13/10, design parent E02, D1 A) — SA FAMILLE D'ABORD : « Mes enfants » ouvre la
     // section, puis son profil, ses alertes, et sa carte de collection en dernier (planche 1).
     ['parent', [
-      'Mes enfants', 'Mes cotisations', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
+      'Mes enfants', 'Mes paiements', 'Voir mon profil', 'Modifier mon profil', 'Gérer mes alertes',
       'Ma carte de collection', 'Mes réservations', 'Mes complexes favoris',
       ...COMPTE, 'Déconnexion', 'Supprimer mon compte',
     ]],
@@ -361,10 +361,11 @@ describe('A17 + A21 — « Mon compte » reçoit les cases que l accueil abandon
     ]);
   });
 
-  it('« Mes cotisations » ouvre la liste des cotisations', () => {
+  // IMPL-2-EQUIPE (chef « Q1 : A », 19/11) : l'entrée s'appelle comme l'écran qu'elle ouvre, « Mes paiements ».
+  it('« Mes paiements » ouvre la liste des cotisations et des places de tournoi', () => {
     const { arbre, navigation } = monter('player');
 
-    appuyerSur(arbre, 'Mes cotisations');
+    appuyerSur(arbre, 'Mes paiements');
 
     expect(navigation.navigate.mock.calls).toEqual([[RouteNames.MyLicenses]]);
   });
@@ -399,7 +400,7 @@ describe('A17 + A21 — aucune destination de l accueil n est perdue', () => {
     ['Historique sportif', ['player', 'coach', 'president', 'superAdmin'], 'Historique sportif',
       ouvre(RouteNames.HistoryWizardCategory, { resetContext: true })],
     ['Gérer mes alertes', TOUS, 'Gérer mes alertes', ouvre(RouteNames.SearchAlerts)],
-    ['Mes cotisations', ['player', 'coach', 'president', 'parent'], 'Mes cotisations',
+    ['Mes paiements', ['player', 'coach', 'president', 'parent'], 'Mes paiements',
       ouvre(RouteNames.MyLicenses)],
     ['Changer de compte', TOUS, 'Changer de compte', ({ arbre }) => {
       expect(rangees(arbre)).toContain('Ajouter un compte');
