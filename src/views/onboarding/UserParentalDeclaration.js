@@ -80,7 +80,13 @@ function UserParentalDeclaration({ navigation, route }) {
       return RouteNames.UserAddress;
     }
 
+    // INSCRIPTION-CODE : la SUIVANTE, pas la première due. L'activité vient avant « Qui es-tu ? » ;
+    // passée (« Je ne trouve pas mon activité »), elle reste due et y renverrait en boucle.
+    const indexDeLaCase = views.find(
+      (view) => view.route === RouteNames.UserParentalDeclaration,
+    )?.index || 0;
     return views.find((view) => view.canShow
+      && view.index > indexDeLaCase
       && view.route !== RouteNames.UserName
       && view.route !== RouteNames.UserParentalDeclaration)?.route
       || getPostOnboardingHomeRoute();

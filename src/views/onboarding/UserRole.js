@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { familleDuSport } from '@/domains/activity/familleDuSport';
 import {
-  getOnboardingViews, getRoleDocumentIdByKey, markOnboardingStarted,
+  getOnboardingViews, getRoleDocumentIdByKey, markOnboardingStarted, resolveNextOnboardingRoute,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { aUneDemandeDeGestion } from '@/domains/collectivite/collectiviteAccueil';
@@ -148,8 +148,11 @@ function UserRole({ navigation }) {
       // l'ancien profil en mémoire). Plus rien de dû : la sortie habituelle.
       const roleChoisi = (Array.isArray(roles) ? roles : [])
         .find((r) => r?.documentId === role);
-      const suite = getOnboardingViews({ ...userData, role: roleChoisi || userData?.role })
-        .views.find((view) => view.canShow && view.route !== RouteNames.UserRole)?.route;
+      // La SUIVANTE après le rôle, pas la première due : l'activité passée resterait due.
+      const suite = resolveNextOnboardingRoute({
+        currentRoute: RouteNames.UserRole,
+        views: getOnboardingViews({ ...userData, role: roleChoisi || userData?.role }).views,
+      });
       navigation.navigate(suite || getPostOnboardingHomeRoute());
     },
   });

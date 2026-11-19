@@ -52,7 +52,7 @@ function OnboardingRadioRow({
       // liste a cocher. Le role suit la forme, sinon un lecteur d'ecran annonce
       // « bouton radio » sur une liste ou plusieurs reponses sont possibles.
       accessibilityRole={multi ? 'checkbox' : 'radio'}
-      accessibilityState={{ checked, disabled }}
+      accessibilityState={disabled ? { checked, disabled } : { checked }}
       disabled={disabled}
       onPress={onPress}
       style={[
