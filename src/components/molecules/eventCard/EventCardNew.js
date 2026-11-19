@@ -601,7 +601,9 @@ function EventCardNew({
     getDisplayLabel(item?.tournamentSection),
     // T-FINITIONS-3 (16/11) : « À partir de {minAge} ans » remplace l'âge de la catégorie d'un
     // tournoi à âge minimum.
-    ageMinimumDuTournoi ? '' : getTournamentCategoryLabel(item, getDisplayLabel(item?.tournamentCategory)),
+    ageMinimumDuTournoi
+      ? ''
+      : getTournamentCategoryLabel(item, getDisplayLabel(item?.tournamentCategory)),
   ].filter(Boolean).join(' • ');
   const teamName = item?.team?.name
     || (isTournamentEvent && item?.tournamentScopeMode === 'autonomous' ? 'Tournoi autonome' : '');
@@ -635,7 +637,9 @@ function EventCardNew({
     ageMinimumDuTournoi
       ? {
         cle: 'age',
-        texte: i18next.t('implFiche.fromAge', 'Dès {{minAge}} ans', { minAge: ageMinimumDuTournoi }),
+        texte: i18next.t('implFiche.fromAge', 'Dès {{minAge}} ans', {
+          minAge: ageMinimumDuTournoi,
+        }),
       }
       : null,
   ].filter(Boolean) : [];
@@ -1041,7 +1045,10 @@ function EventCardNew({
                   style={[
                     styles.tournamentTag,
                     pastille.cle === 'etat'
-                      ? { backgroundColor: withAlpha(Colors.primary500, 0.16), borderColor: 'transparent' }
+                      ? {
+                        backgroundColor: withAlpha(Colors.primary500, 0.16),
+                        borderColor: 'transparent',
+                      }
                       : { borderColor: withAlpha(Colors.neutral00, 0.24) },
                   ]}
                 >

@@ -358,7 +358,9 @@ const AVANT = {
     titres: ['Tournoi Montpellier', 'Infos rapides', 'Mode tournoi', 'Équipes invitées'],
   },
   organisateur: {
-    boutons: ['Planning', 'Partager', '', "Gérer l'événement", 'Voir mon équipe', 'Piloter la compétition', 'Modifier les paramètres', 'Gérer mon équipe', "Conditions d'inscription", 'Ouvrir l’équipe', 'Valider', 'Refuser', 'Ouvrir l’équipe', 'Valider', 'Refuser'],
+    // FICHE-TOURNOI (19/11, 6b, site au téléphone) : plus de fil ni de drapeau ; « Signaler » est
+    // le dernier choix de « Gérer l'événement ».
+    boutons: ['Partager', "Gérer l'événement", 'Voir mon équipe', 'Piloter la compétition', 'Modifier les paramètres', 'Gérer mon équipe', "Conditions d'inscription", 'Ouvrir l’équipe', 'Valider', 'Refuser', 'Ouvrir l’équipe', 'Valider', 'Refuser'],
     mots: ['Infos rapides', 'Mode tournoi', 'Mix clubs', 'Capacité', 'Joueurs attendus', 'Équipe validée au 5ᵉ joueur payé', 'Mon statut'],
     pastilles: ['Terrain A', 'Équipe validée au 5ᵉ joueur payé'],
     titres: ['Tournoi Montpellier', 'Demandes en attente', 'Infos rapides', 'Mode tournoi', 'Équipes invitées'],
@@ -391,40 +393,43 @@ test.each(LECTEURS.filter(([nom]) => nom === 'organisateur'))('T-PAGES-3 (0) car
 // sont les cartes de TournamentTeamsPublic (toute la carte s'ouvre) : ni `h1`, ni `span` arrondi,
 // ni bouton « Ouvrir l’équipe » du DOM. Témoins : EventHeader.IMPL-1.bandeau.test.js,
 // TournamentTeamsPublic.IMPL-1.test.js, web/tests/components/impl-1-fiche.spec.ts.
+// FICHE-TOURNOI (19/11/2026, 6b, site au téléphone) : plus de fil « Planning › … » ; le drapeau
+// (« ») devient le menu « ⋯ » qui porte « Signaler ». Témoin : EventDetailsWeb.FICHE-TOURNOI.test.js.
 const APRES = {
   capitaine: {
-    boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
     mots: ['équipes attendues', 'Mon équipe'],
     pastilles: [],
     titres: ['Recette Site 333', 'Avant le match', 'Les équipes'],
   },
   invité: {
-    boutons: ['Planning', 'Partager', '', 'Répondre à mon invitation', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Répondre à mon invitation', 'Lire les conditions d’inscription', 'Voir la compétition'],
     mots: ['équipes attendues', 'Mon équipe'],
     pastilles: [],
     titres: ['Recette Site 333', 'Avant le match', 'Les équipes'],
   },
   'joueur sans équipe': {
-    boutons: ['Planning', 'Partager', '', 'Créer mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Créer mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
     mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire', 'Rejoindre une équipe'],
     pastilles: [],
     titres: ['Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
   },
   membre: {
-    boutons: ['Planning', 'Partager', '', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Voir mon équipe', 'Lire les conditions d’inscription', 'Voir la compétition'],
     mots: ['équipes attendues', 'Mon équipe'],
     pastilles: [],
     titres: ['Recette Site 333', 'Avant le match', 'Les équipes'],
   },
   'trop jeune': {
-    boutons: ['Planning', 'Partager', '', 'Lire les conditions d’inscription', 'Voir la compétition'],
+    boutons: ['Partager', '⋯', 'Lire les conditions d’inscription', 'Voir la compétition'],
     mots: ['équipes attendues', 'Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire'],
     pastilles: [],
     titres: ['Ce tournoi est ouvert à partir de 16 ans', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
   },
   visiteur: {
     boutons: ['Retour', 'Partager', 'Créer mon équipe', 'J’ai déjà un compte', 'Lire les conditions d’inscription', 'Voir la compétition'],
-    mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire'],
+    // FICHE-TOURNOI (8a) : « Rejoindre une équipe » aussi pour le visiteur (bloc du seuil).
+    mots: ['équipes attendues', 'Comment ça marche', 'Avant de t’inscrire', 'Rejoindre une équipe'],
     pastilles: [],
     titres: ['Inscris ton équipe', 'Comment ça marche', 'Avant de t’inscrire', 'Les équipes'],
   },
@@ -571,7 +576,8 @@ test.each([
   expect(texte(arbre.root)).not.toMatch(/[0-9] effectifs? à revoir/);
   act(() => mounted.unmount());
   arbre = monter(fiche([EQUIPE_OUVERTE], { tournamentTeamsSummary: { expectedCount: 24, registeredCount: 8 } }), compte);
-  expect(parTestId(arbre, 'event-tournament-visitor-teams').map(texte)).toEqual(['8 équipes inscrites sur 24']);
+  // FICHE-TOURNOI (8b) : au seuil, la ligne dit aussi les places libres.
+  expect(parTestId(arbre, 'event-tournament-visitor-teams').map(texte)).toEqual(['8 équipes inscrites · 16 places libres']);
 });
 
 test('T-PAGES-3 (3) caractérisant — l organisateur garde le vrai nombre (compteurs), sans la ligne des 30 %', () => {

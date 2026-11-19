@@ -605,7 +605,8 @@ test('🔴 T-REJ visiteur — 5 inscrites sur 24 (sous 30 %) : « 24 équipes at
 
 test('🔴 T-REJ visiteur — 8 inscrites sur 24 (30 %, arrondi au supérieur) : « 8 équipes inscrites sur 24 » ; sans capacité : aucune ligne', () => {
   expect(ligneVisiteur(monter(tournoiPublic({ expectedCount: 24, registeredCount: 8 }), VISITEUR)))
-    .toEqual(['8 équipes inscrites sur 24']);
+    // FICHE-TOURNOI (8b) : au seuil, la ligne dit aussi les places libres.
+    .toEqual(['8 équipes inscrites · 16 places libres']);
   act(() => mounted.unmount());
   mounted = null;
   const sansCapacite = monter(TOURNOI_19_12({ tournamentTeams: undefined, tournamentTeamsSummary: { expectedCount: null, registeredCount: 5 } }), VISITEUR);

@@ -5932,8 +5932,9 @@ function EventDetails({ navigation, route }) {
   });
   // FIN-EVENEMENTS p131 : un tournoi clôturé se lit seulement, sur la fiche comme au pilotage.
   const hasManageActions = manageChips.length > 0 && !tournoiClos;
-  // FICHE-TOURNOI (19/11/2026, écrans 6b et 9f, maquette) — la fiche d'un tournoi : « Partager » en
-  // haut à droite, et « Signaler » passe dans le menu ⋯ (après les actions de gestion, s'il y en a).
+  // FICHE-TOURNOI (19/11/2026, écrans 6b et 9f, maquette) — la fiche d'un tournoi : « Partager »
+  // en haut à droite, et « Signaler » passe dans le menu ⋯ (après les actions de gestion, s'il y
+  // en a).
   // Les autres types d'événement gardent le drapeau. Témoin : EventDetails.T-PAGES-4.ficheTournoi
   // « FICHE-TOURNOI · 6b ».
   const ficheDuTournoi = isTournamentEvent && !isStageDayEvent;
@@ -6045,8 +6046,9 @@ function EventDetails({ navigation, route }) {
 
     if (isTournamentEvent && !isStageDayEvent) {
       let nombreDEquipesDeLOnglet = NaN;
-      if (canEdit) nombreDEquipesDeLOnglet = Number(getTournamentRegisteredTeamsCount({ tournamentTeams }));
-      else if (isTournamentTeamsCountShown(event)) {
+      if (canEdit) {
+        nombreDEquipesDeLOnglet = Number(getTournamentRegisteredTeamsCount({ tournamentTeams }));
+      } else if (isTournamentTeamsCountShown(event)) {
         nombreDEquipesDeLOnglet = Number(getTournamentRegisteredTeamsCount(event));
       }
       return [
@@ -8119,8 +8121,10 @@ function EventDetails({ navigation, route }) {
                 style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}
                 testID="event-tournament-teams-summary"
               >
-                {/* FICHE-TOURNOI (8b) : « 9 équipes inscrites · 15 places libres » dès le seuil. */}
-                {canEdit ? teamsSummary : (getTournamentTeamsTabLine(event) || ligneEquipesDuTournoi)}
+                {/* FICHE-TOURNOI (8b) : « 9 équipes inscrites · 15 places libres » au seuil. */}
+                {canEdit
+                  ? teamsSummary
+                  : (getTournamentTeamsTabLine(event) || ligneEquipesDuTournoi)}
               </Text>
             </View>
             {canEdit && tournamentTeamCounters.warning > 0 ? (
@@ -8981,8 +8985,8 @@ function EventDetails({ navigation, route }) {
             ) : null}
             {/* T-PAGES-4 (17/11) : L'essentiel, puis l'inscription (a) ; « Mon équipe » est
                 sous le bandeau (T-PAGES-4b). */}
-            {/* FICHE-TOURNOI (19/11, 6b et 9f, maquette) : sur un tournoi, les onglets juste sous le
-                bandeau et « Mon équipe » ; l'essentiel, l'inscription, « Rejoindre une équipe »,
+            {/* FICHE-TOURNOI (19/11, 6b et 9f, maquette) : sur un tournoi, les onglets juste
+                sous le bandeau et « Mon équipe » ; l'essentiel, l'inscription, « Rejoindre une équipe »,
                 « Comment ça marche » et « Avant de t'inscrire » restent, dans l'onglet Aperçu
                 (l'onglet Équipes s'ouvre sur la liste). */}
             {ficheDuTournoi ? renderDetailsTabs() : null}

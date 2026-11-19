@@ -3085,9 +3085,9 @@ function EventDetails({ navigation, route }) {
                 {/* 🧭 FINITIONS11 · point 1 (planche P3-match-ordi) — le fil d'Ariane
                     « Planning › Match » remplace « Retour » pour un membre connecté ; un
                     visiteur, qui n'a pas de planning, garde « Retour ». */}
-                {/* FICHE-TOURNOI (19/11, 6b, site) : sur un téléphone, la fiche d'un tournoi n'a plus
-                    le fil « Planning › … » (une ligne de plus avant le titre) ; « Partager » reste à
-                    droite. Sur un ordinateur, le fil reste (6d). */}
+                {/* FICHE-TOURNOI (19/11, 6b, site) : sur un téléphone, la fiche d'un tournoi
+                    n'a plus le fil « Planning › … » (une ligne de plus avant le titre) ;
+                    « Partager » reste à droite. Sur un ordinateur, le fil reste (6d). */}
                 {isSignedIn && hasEvent && !filDuTournoiMasque ? (
                   <nav
                     aria-label={t('eventDetails.breadcrumb.label', 'Fil d’Ariane')}
@@ -3189,7 +3189,9 @@ function EventDetails({ navigation, route }) {
                             : { ...outlineButtonStyle, minWidth: 44, padding: '10px 14px' }}
                           type="button"
                         >
-                          {showManageMenu ? t('eventDetails.managePanel.title', 'Gérer l’événement') : '⋯'}
+                          {showManageMenu
+                            ? t('eventDetails.managePanel.title', 'Gérer l’événement')
+                            : '⋯'}
                         </button>
                         {isManageMenuOpen ? (
                           <div

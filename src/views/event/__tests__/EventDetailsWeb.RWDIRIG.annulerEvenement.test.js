@@ -511,7 +511,10 @@ describe('FIN-EVENEMENTS p131 · un tournoi clôturé', () => {
     mountScreen({ event: TOURNOI_CLOS() });
     const texte = texteDe();
 
-    expect(texte).not.toContain('"aria-haspopup":"menu"');
+    // FICHE-TOURNOI (19/11, 6b) : au téléphone, le menu « ⋯ » d'un tournoi ne porte plus que
+    // « Signaler » ; aucune action de gestion.
+    expect(texte).not.toContain('Gérer l’événement');
+    expect(texte).toContain('"aria-label":"Plus d’actions"');
     expect(texte).not.toContain('"Modifier"');
     expect(texte).not.toMatch(/Composition d.[eé]quipes/);
   });
