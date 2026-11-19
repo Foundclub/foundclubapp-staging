@@ -227,13 +227,19 @@ function TournamentInviteSheet({
   return (
     <BottomModal
       close={onClose}
+      // IMPL-2C (19/11, recette 48 écart 6) : la croix « Fermer » (`common.close`),
+      // cachée par défaut.
+      hideCloseButton={false}
       isVisible={isVisible}
       webPresentation={isWide ? 'dialog' : undefined}
     >
       <View testID="tournament-invite-sheet">
         {/* L'en-tête dans le contenu : visible dans la feuille comme dans la fenêtre du site. */}
         <View style={[Spaces.gap[4], Spaces.paddingBottom[12]]}>
-          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
+          {/* La place de la croix, en haut à droite : le titre ne passe pas dessous. */}
+          <View
+            style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8], { paddingRight: 40 }]}
+          >
             {mode === 'search' && initialMode === 'choice' ? (
               <TouchableOpacity
                 accessibilityLabel={t('implEquipe.invite.back')}
