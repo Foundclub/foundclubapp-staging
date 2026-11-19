@@ -233,6 +233,9 @@ function UserSport({ navigation }) {
 
   // « Je ne trouve pas mon activité » (V02) : V1 et V2 ne disent pas ce qu'il fait ; le chemin sûr
   // est celui de l'ancien « Passer » : continuer sans activité, rien d'enregistré (mots d'avant).
+  // Choix confirmé par le chef d'orchestre (19/11, option A).
+  // ponytail: l'activité manquante n'est dite à personne. Un jour : un champ « dis-nous laquelle »
+  // envoyé à l'Assistance.
   const handleSkip = () => {
     // D23 - sauter le sport saute AUSSI le poste.
     const afterSport = getNextOnboardingRoute(RouteNames.UserSport);
