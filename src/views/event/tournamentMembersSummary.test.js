@@ -80,6 +80,7 @@ describe('T-JOUEURS — la carte d\'une équipe de tournoi', () => {
 
   // ORGA-MINIS (aa786bba) : la carte du site était dans le code mort de l'organisateur
   // (ORGANISATEUR 8), retirée ; le site montre les équipes par TournamentTeamsPublic.
+  // Avant : « les deux cartes (app et site) », sur EventDetails.js et EventDetails.web.js.
   test('la carte de l app lit ce résumé', () => {
     ['EventDetails.js'].forEach((fichier) => {
       const source = fs.readFileSync(path.join(__dirname, fichier), 'utf8');

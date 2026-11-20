@@ -720,6 +720,7 @@ describe('MSG1A — §3.5 feuille « Ajouter »', () => {
       'poll',
       'event',
       // ASSISTANCE-MINEURS-CLUB (D271, 7b14c897) : « Envoyer un club » avant le lieu.
+      // Avant : event, location, contact (pas d'entrée « club »).
       'club',
       'location',
       'contact',

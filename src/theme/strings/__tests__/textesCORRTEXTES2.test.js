@@ -95,6 +95,7 @@ const ACCORDEES = {
   'cmLicensesDashboard.alerts.resyncDone.message': 'views/license/CMLicensesDashboard.js',
   // ORGA-MINIS (aa786bba) : approved2, invitationS, requestS et teamS n'avaient d'appel que dans
   // le code mort du bloc du tournoi de EventDetails.web.js (ORGANISATEUR 8), retiré.
+  // Avant : ces 4 clefs étaient listées ici pour views/event/EventDetails.web.js.
   'eventDetails.approvedPending': 'views/event/EventDetails.js',
   'eventDetails.assignmentS': 'views/event/EventDetails.js',
   'eventDetails.externalSpotsSetting': 'views/event/EventDetails.web.js',

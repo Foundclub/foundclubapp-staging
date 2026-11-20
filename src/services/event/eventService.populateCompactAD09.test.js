@@ -99,6 +99,7 @@ describe('AD09 - le populate compact des cartes d evenement', () => {
       'league_match',
       'missings',
       // ORGANISATEUR-VISIBLE (D258, d43f7c9a) : « Proposé par Prénom N. », trois champs nommés.
+      // Avant : 13 relations, sans organizer.
       'organizer',
       'parentEvent',
       'participationRequests',

@@ -34,6 +34,7 @@ describe('confirmerLeRefus', () => {
     'views/event/EventDetails.js',
     // ORGA-MINIS (aa786bba) : la liste de l'organisateur du site était du code mort
     // (ORGANISATEUR 8), retirée de EventDetails.web.js.
+    // Avant : 'views/event/EventDetails.web.js' dans la liste.
     'views/event/TournamentManagement.js',
     'views/event/components/EventTeamAudiencesSection.js',
     'views/friendlyMatch/components/FriendlyMatchApplicationCard.js',
