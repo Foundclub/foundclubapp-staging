@@ -186,16 +186,10 @@ const rendre = (/** @type {any} */ params = {}) => {
   return { navigation, tree: /** @type {any} */ (arbre) };
 };
 
-const pressableParTexte = (tree, libelle) => tree.root
-  .findAllByType(TouchableOpacity)
-  .find((node) => node.findAllByType(Text)
-    .some((texte) => String(texte.props.children) === libelle));
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockState.current = etatVierge();
 });
-
 
 const texte = (tree, testID) => tree.root.findAll(
   (node) => node.type === Text && node.props.testID === testID,
