@@ -312,9 +312,10 @@ function TournamentTeamDetails({ navigation, route }) {
     && !currentMemberIsCaptain
     && !teamIsLocked,
   );
-  // RETOUCHES-R50 (9d, 20/11) : le capitaine répond lui aussi à « Seras-tu là … ? » (le serveur
-  // accepte tout membre actif) ; la carte n'offre que « Présent » / « Absent ». Avant :
-  // `&& !currentMemberIsCaptain`. Témoin : __tests__/TournamentTeamDetails.R50-9d.presenceDuCapitaine.test.js.
+  // RETOUCHES-R50 (9d, 20/11) : le capitaine répond lui aussi à « Seras-tu là … ? » (le
+  // serveur accepte tout membre actif) ; la carte n'offre que « Présent » / « Absent ».
+  // Avant : `&& !currentMemberIsCaptain`.
+  // Témoin : __tests__/TournamentTeamDetails.R50-9d.presenceDuCapitaine.test.js.
   const canUpdateTournamentResponse = Boolean(
     currentMember
     && isTournamentActiveMemberStatus(currentMember?.responseStatus),
@@ -469,8 +470,8 @@ function TournamentTeamDetails({ navigation, route }) {
   const phraseDErreur = (/** @type {any} */ erreur, /** @type {string} */ repli) => (
     getApiErrorTranslation(erreur) || erreur?.message || repli
   );
-  // RETOUCHES-R50 (20/11) : un refus ATTENDU du serveur (validation, 400 : « Ce tournoi est ouvert à
-  // partir de 16 ans ») s'intitule « Pas possible » ; une panne garde « Erreur ».
+  // RETOUCHES-R50 (20/11) : un refus ATTENDU du serveur (validation, 400 : « Ce tournoi est
+  // ouvert à partir de 16 ans ») s'intitule « Pas possible » ; une panne garde « Erreur ».
   // Témoin : __tests__/TournamentTeamDetails.R50.pasPossible.test.js.
   const titreDErreur = (/** @type {any} */ erreur) => (getErrorStatus(erreur) === 400
     ? t('implEquipe.notPossible', 'Pas possible')
@@ -557,8 +558,8 @@ function TournamentTeamDetails({ navigation, route }) {
         "Impossible d'inviter ce joueur.",
       )));
     },
-    // RETOUCHES-R50 (3c, 20/11) : la recherche RESTE après l'invitation ; l'équipe relue, la ligne du
-    // joueur passe à « Invité » (avant : la recherche vidée faisait disparaître la ligne).
+    // RETOUCHES-R50 (3c, 20/11) : la recherche RESTE après l'invitation ; l'équipe relue, la
+    // ligne du joueur passe à « Invité » (avant : la recherche vidée la faisait disparaître).
     // Témoin : __tests__/TournamentTeamDetails.R50-3c.inviteVuDansLaLigne.test.js.
     onSuccess: invalidate,
   });

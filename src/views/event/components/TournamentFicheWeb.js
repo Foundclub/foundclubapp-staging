@@ -409,9 +409,10 @@ export const withTournamentTeamsLine = (items, event, line) => {
 /**
  * Précision du chef (17/11) : sous le seuil des 30 % (`TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT`,
  * tournamentJoinRules), un non-organisateur ne lit le nombre d'équipes NULLE PART, liste comprise.
- * RETOUCHES-R50 (20/11, écran 8b) : la règle du téléphone (EventDetails.js, `listeDesEquipesMasquee`) :
- * masquée seulement avec une capacité CONNUE et le seuil pas atteint. Avant, une capacité inconnue
- * masquait aussi la liste : l'onglet Équipes du site n'en montrait aucune sur 21 inscrites.
+ * RETOUCHES-R50 (20/11, écran 8b) : la règle du téléphone (EventDetails.js,
+ * `listeDesEquipesMasquee`) : masquée seulement avec une capacité CONNUE et le seuil pas
+ * atteint. Avant, une capacité inconnue masquait aussi la liste : l'onglet Équipes du site
+ * n'en montrait aucune sur 21 inscrites.
  * Témoin : __tests__/RETOUCHES-R50.8b.listeDesEquipesDuSite.test.js.
  * @param {any} event - Le tournoi.
  * @returns {boolean} Vrai si la liste ne garde que l'équipe du lecteur et celles qui cherchent.

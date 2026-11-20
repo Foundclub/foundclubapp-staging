@@ -64,8 +64,9 @@ import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
 const SEUIL_PAR_DEFAUT = 5;
 
 /**
- * RETOUCHES-R50 (20/11, file RETOUCHES-RECETTE-50) : l'état d'une équipe ; sa date d'archivage seule
- * suffit à la dire retirée (le serveur la compte ainsi : tournament-teams-summary.js), jamais « Validée ».
+ * RETOUCHES-R50 (20/11, file RETOUCHES-RECETTE-50) : l'état d'une équipe ; sa date
+ * d'archivage seule suffit à la dire retirée (le serveur la compte ainsi :
+ * tournament-teams-summary.js), jamais « Validée ».
  * @param {any} equipe - L'équipe du tableau de bord.
  * @returns {string} `archived`, ou le statut normalisé (`pending` par défaut).
  */
@@ -340,7 +341,8 @@ function TournamentOrganizerBoard({
       }),
       t(
         'implOrga.archiveBody',
-        'L’équipe sort de la liste des équipes inscrites ; son historique est gardé. Tu la retrouves dans « Retirées ».',
+        'L’équipe sort de la liste des équipes inscrites ; son historique est gardé. '
+          + 'Tu la retrouves dans « Retirées ».',
       ),
       [
         { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },

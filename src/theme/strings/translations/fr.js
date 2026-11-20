@@ -29706,8 +29706,9 @@ export default {
   },
   // IMPL-3-ORGA (18/11/2026) — la page de l organisateur du tournoi (planche 1).
   implOrga: {
-    // RETOUCHES-R50 (1b, Adel « 2- A ») : l’écran dit « Retirer » ; derrière, c’est l’archivage (historique gardé).
-    archiveBody: 'L’équipe sort de la liste des équipes inscrites ; son historique est gardé. Tu la retrouves dans « Retirées ».',
+    // RETOUCHES-R50 (1b, Adel « 2- A ») : l’écran dit « Retirer » ; derrière, l’archivage.
+    archiveBody: 'L’équipe sort de la liste des équipes inscrites ; son historique est gardé. '
+      + 'Tu la retrouves dans « Retirées ».',
     archiveConfirm: 'Retirer',
     archiveTitle: 'Retirer {{name}} ?',
     cancelEvent: 'Annuler l’événement',

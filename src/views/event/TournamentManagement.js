@@ -1103,8 +1103,10 @@ function TournamentManagement({ navigation, route }) {
             style={tournamentDs.getPillStyle(selected)}
           >
             <Text style={[Fonts.p4Bold, selected ? Fonts.primary100 : Fonts.neutral200]}>
-              {/* RETOUCHES-R50 (1b) : chez l'organisateur, une équipe archivée se dit « retirée ». */}
-              {option.value === 'archived' ? t('implOrga.filterRemoved', 'Retirées') : option.label}
+              {/* RETOUCHES-R50 (1b) : chez l'organisateur, une équipe archivée est « retirée ». */}
+              {option.value === 'archived'
+                ? t('implOrga.filterRemoved', 'Retirées')
+                : option.label}
             </Text>
           </TouchableOpacity>
         );

@@ -294,9 +294,10 @@ function TournamentTeamProgress({
     const aPayer = Math.max(0, progress.needed - progress.done);
     const phrase = viewerIsMember ? getUnpaidSentence({ members, payment, teamStatus }) : null;
     let texte = phrase;
-    // RETOUCHES-R50 (8e) : hors de l'équipe, jamais « ton équipe » ni « Tu peux encore ajouter… ».
+    // RETOUCHES-R50 (8e) : hors de l'équipe, ni « ton équipe » ni « Tu peux encore ajouter… ».
     if (progress.isValidated) {
-      texte = t(viewerIsMember ? 'implEquipe.progress.validatedText' : 'implEquipe.progress.validatedTextNeutral', {
+      const cle = viewerIsMember ? 'validatedText' : 'validatedTextNeutral';
+      texte = t(`implEquipe.progress.${cle}`, {
         needed: progress.needed, ...SANS_ECHAPPEMENT,
       });
     } else if (!viewerIsMember) {
