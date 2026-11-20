@@ -29715,6 +29715,8 @@ export default {
         clubsDeActivite: 'Voir les clubs de {{activite}} près de chez toi',
         clubsDeActiviteVille: 'Voir les clubs de {{activite}} près de {{ville}}',
         essais: 'Voir les séances d’essai et les détections ouvertes',
+        essaisCulture: 'Voir les cours d’essai ouverts',
+        essaisNature: 'Voir les séances découverte ouvertes',
         phrase: 'Ton compte est prêt. Tu n’as pas encore de club : on t’aide à en trouver un.',
         sortie: 'Trouver un club',
       },

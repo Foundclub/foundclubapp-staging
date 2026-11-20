@@ -202,6 +202,21 @@ describe('B2 — joueur sans club', () => {
     expect(textes(rendre().tree)).toContain('Voir les clubs de football près de chez toi');
   });
 
+  it('hors compétition (danse) : ni détection ni poste ni numéro, la carte sans terrain', () => {
+    mockUser.current = { ...LINA, jerseyNumber: 7, preferredSport: 'Danse' };
+    const lus = textes(rendre().tree);
+    expect(lus).toContain('Voir les cours d’essai ouverts');
+    expect(lus.join(' ')).not.toContain('détection');
+    expect(lus).toContain('DANSE');
+    expect(lus).toContain('VILLE');
+    expect(lus).not.toContain('7');
+  });
+
+  it('nature (spéléologie) : « séances découverte »', () => {
+    mockUser.current = { ...LINA, preferredSport: 'Spéléologie' };
+    expect(textes(rendre().tree)).toContain('Voir les séances découverte ouvertes');
+  });
+
   describe('sur le site', () => {
     let plateforme;
     beforeEach(() => { plateforme = jest.replaceProperty(Platform, 'OS', 'web'); });

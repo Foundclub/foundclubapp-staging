@@ -3,7 +3,7 @@ import {
   Image, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { familleDuSport } from '@/domains/activity/familleDuSport';
+import { estDeCompetition, familleDuSport } from '@/domains/activity/familleDuSport';
 import { computeAge, extractCity } from '@/domains/playerCard/cardModel';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -74,6 +74,8 @@ const REPLIS = {
   'sansClub.clubsDeActivite': 'Voir les clubs de {{activite}} près de chez toi',
   'sansClub.clubsDeActiviteVille': 'Voir les clubs de {{activite}} près de {{ville}}',
   'sansClub.essais': 'Voir les séances d’essai et les détections ouvertes',
+  'sansClub.essaisCulture': 'Voir les cours d’essai ouverts',
+  'sansClub.essaisNature': 'Voir les séances découverte ouvertes',
   'sansClub.phrase': 'Ton compte est prêt. Tu n’as pas encore de club : on t’aide à en trouver un.',
   'sansClub.sortie': 'Trouver un club',
   titre: 'Bienvenue, {{prenom}}',
@@ -124,6 +126,9 @@ function BienvenueParCas({
   const ville = extractCity(userData?.address) || '';
   const nomDuClub = String(cas.club?.name || '').trim();
   const premierEnfant = String(enfants?.[0]?.firstname || '').trim();
+  // La carte « sans terrain ni numéro » (B3) vaut aussi pour un pratiquant SANS club (B2).
+  const carteSansTerrain = cas.cas === 'pratiquant'
+    || (cas.cas === 'sansClub' && !estDeCompetition(activite));
 
   // Le rendez-vous du club selon la famille : « sorties » (nature), « cours » (culture).
   let rendezVous = tr('rendezVous.autre');
@@ -206,7 +211,10 @@ function BienvenueParCas({
         cle: 'essais',
         icone: Images.calendar,
         onPress: versEvenements,
-        texte: tr('sansClub.essais'),
+        // Hors compétition (planche B3) : ni « détection » ni « séances d'essai » de club sportif.
+        texte: (famille === 'culture' && tr('sansClub.essaisCulture'))
+          || (famille === 'nature' && tr('sansClub.essaisNature'))
+          || tr('sansClub.essais'),
       },
     ];
     sortie = { onPress: versRecherche, titre: tr('sansClub.sortie') };
@@ -276,12 +284,12 @@ function BienvenueParCas({
     else if (nomDuClub) valeurClub = nomDuClub;
     const niveau = String(userData?.bestLevel?.name || userData?.bestLevel || '').trim() || '—';
     // B3 : la carte « sans terrain ni numéro » (planche) : NIVEAU, VILLE, CLUB.
-    const cases = cas.cas === 'pratiquant'
+    const cases = carteSansTerrain
       ? [[tr('carte.niveau'), niveau], [tr('carte.ville'), ville || '—'],
         [tr('carte.club'), valeurClub]]
       : [[tr('carte.age'), age === null ? '—' : tr('carte.ans', { age })],
         [tr('carte.niveau'), niveau], [tr('carte.club'), valeurClub]];
-    const sousTitre = [activite, cas.cas === 'pratiquant' ? '' : userData?.position]
+    const sousTitre = [activite, carteSansTerrain ? '' : userData?.position]
       .map((x) => String(x || '').trim()).filter(Boolean).join(' · ');
     return (
       <View
@@ -311,7 +319,7 @@ function BienvenueParCas({
               </Text>
             ) : null}
           </View>
-          {cas.cas !== 'pratiquant' && numero ? (
+          {!carteSansTerrain && numero ? (
             <Text style={[Fonts.h1Bold, { color: withAlpha(Colors.primary500, 0.35) }]}>
               {numero}
             </Text>

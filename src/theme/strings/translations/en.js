@@ -27921,6 +27921,8 @@ export default {
         clubsDeActivite: 'See {{activite}} clubs near you',
         clubsDeActiviteVille: 'See {{activite}} clubs near {{ville}}',
         essais: 'See open trial sessions and tryouts',
+        essaisCulture: 'See open trial classes',
+        essaisNature: 'See open discovery sessions',
         phrase: "Your account is ready. You don't have a club yet: we'll help you find one.",
         sortie: 'Find a club',
       },
