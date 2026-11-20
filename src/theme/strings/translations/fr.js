@@ -10723,8 +10723,6 @@ export default {
     answerMyInvitation: 'Répondre à mon invitation',
     approve: 'Valider',
     approved: 'Validée',
-    approved2_one: 'validée',
-    approved2_other: 'validées',
     approvedPending_one: '{{accepted}} validée · {{pending}} en attente',
     approvedPending_other: '{{accepted}} validées · {{pending}} en attente',
     archived: 'Archivée',
@@ -11121,8 +11119,6 @@ export default {
     iMIn: 'Je participe !',
     iMPresent: 'Je suis présent',
     individualFeedback: 'Retour individuel',
-    invitationS_one: 'invitation',
-    invitationS_other: 'invitations',
     invitedTeam: 'Équipe invitée',
     invitedTeams: {
       externalBadge: 'Ouvert à tous',
@@ -11474,8 +11470,6 @@ export default {
     reportFinalisedOn: 'Rapport finalise le {{date}}',
     // eslint-disable-next-line max-len
     reportYourDelayBeforeArriving: "Signale ton retard avant d'arriver. Tu confirmeras ensuite ton arrivée réelle.",
-    requestS_one: 'demande',
-    requestS_other: 'demandes',
     requestSent: 'Demande envoyée',
     resetTheCheckIn: 'Réinitialiser le pointage',
     resume: 'Reprendre',
@@ -11587,8 +11581,6 @@ export default {
     teamLineUpPublished: "Composition d'équipes publiée",
     teamName: 'Nom de l’équipe',
     teamReport: 'Bilan équipe',
-    teamS_one: 'équipe',
-    teamS_other: 'équipes',
     teams: 'Équipes',
     // FINITIONS (recette du 28/09) — plus de « (s) » : l'écran passe `count`.
     teamSPublished: '{{count}} équipes publiées',
