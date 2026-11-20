@@ -467,6 +467,12 @@ function TournamentTeamDetails({ navigation, route }) {
   const phraseDErreur = (/** @type {any} */ erreur, /** @type {string} */ repli) => (
     getApiErrorTranslation(erreur) || erreur?.message || repli
   );
+  // RETOUCHES-R50 (20/11) : un refus ATTENDU du serveur (validation, 400 : « Ce tournoi est ouvert à
+  // partir de 16 ans ») s'intitule « Pas possible » ; une panne garde « Erreur ».
+  // Témoin : __tests__/TournamentTeamDetails.R50.pasPossible.test.js.
+  const titreDErreur = (/** @type {any} */ erreur) => (getErrorStatus(erreur) === 400
+    ? t('implEquipe.notPossible', 'Pas possible')
+    : t('common.error', 'Erreur'));
 
   // IMPL-2C (19/11, émulateur 48 b) : chaque action de la page dit son erreur elle-même ; le filet
   // global (src/app/queryClient.js, MutationCache) se tait, sinon une 2ᵉ alerte « Accès refusé. »
@@ -479,10 +485,7 @@ function TournamentTeamDetails({ navigation, route }) {
       respondToTournamentTeam(teamId, responseStatus)
     ),
     onError: (mutationError) => {
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToUpdateYourAnswer',
         'Impossible de mettre à jour ta réponse.',
       )));
@@ -494,10 +497,7 @@ function TournamentTeamDetails({ navigation, route }) {
     meta: SANS_FILET,
     mutationFn: (/** @type {string} */ status) => respondToTournamentInvitation(teamId, status),
     onError: (mutationError) => {
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToAnswerThisInvitation',
         'Impossible de répondre à cette invitation.',
       )));
@@ -526,10 +526,7 @@ function TournamentTeamDetails({ navigation, route }) {
     meta: SANS_FILET,
     mutationFn: (/** @type {string} */ memberId) => removeTournamentTeamMember(teamId, memberId),
     onError: (mutationError) => {
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToRemoveThisMember',
         'Impossible de retirer ce membre.',
       )));
@@ -541,10 +538,7 @@ function TournamentTeamDetails({ navigation, route }) {
     meta: SANS_FILET,
     mutationFn: (memberId) => transferTournamentTeamCaptain(teamId, memberId),
     onError: (mutationError) => {
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToTransferTheCaptaincy',
         'Impossible de transférer le capitanat.',
       )));
@@ -556,10 +550,7 @@ function TournamentTeamDetails({ navigation, route }) {
     meta: SANS_FILET,
     mutationFn: (userDocumentId) => inviteTournamentTeamMember(teamId, userDocumentId),
     onError: (mutationError) => {
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToInviteThisPlayer',
         "Impossible d'inviter ce joueur.",
       )));
@@ -574,10 +565,7 @@ function TournamentTeamDetails({ navigation, route }) {
     meta: SANS_FILET,
     mutationFn: ({ memberId, status }) => reviewTournamentJoinRequest(teamId, memberId, status),
     onError: (mutationError) => {
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToProcessThisRequest',
         'Impossible de traiter cette demande.',
       )));
@@ -595,10 +583,7 @@ function TournamentTeamDetails({ navigation, route }) {
         Alert.alert(t('common.error', 'Erreur'), t('implEquipe.recruit.forbidden'));
         return;
       }
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToUpdateThisOption',
         'Impossible de mettre à jour cette option.',
       )));
@@ -610,10 +595,7 @@ function TournamentTeamDetails({ navigation, route }) {
     meta: SANS_FILET,
     mutationFn: () => leaveTournamentTeam(teamId),
     onError: (mutationError) => {
-      Alert.alert(t(
-        'common.error',
-        'Erreur',
-      ), phraseDErreur(mutationError, t(
+      Alert.alert(titreDErreur(mutationError), phraseDErreur(mutationError, t(
         'tournamentTeamDetails.unableToLeaveThisTeam',
         'Impossible de quitter cette équipe.',
       )));

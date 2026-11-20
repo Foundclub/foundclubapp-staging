@@ -29625,6 +29625,8 @@ export default {
       unpaidTitle: 'Tu quittes l’équipe ?',
       writeAssistance: 'Écrire à l’Assistance',
     },
+    // RETOUCHES-R50 : le titre d’un refus attendu (âge…), au lieu de « Erreur ».
+    notPossible: 'Pas possible',
     // PAGE-EQUIPE (19/11, règle d'Adel D276, planches 4c et 9b) : le haut de la page d'équipe.
     page: {
       attendance: 'Seras-tu là le {{date}} ?',

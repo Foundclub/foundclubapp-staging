@@ -27823,6 +27823,7 @@ export default {
       unpaidTitle: 'Leave the team?',
       writeAssistance: 'Write to Support',
     },
+    notPossible: 'Not possible',
     page: {
       attendance: 'Will you be there on {{date}}?',
       discussion_one: 'Team chat · {{count}} member',
