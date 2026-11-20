@@ -636,11 +636,12 @@ function MyLicenseDetail({ navigation, route }) {
   // 📐 S9-ter — LES MESURES DU FLOTTANT, ECRITES UNE SEULE FOIS.
   // Un calque RECOUVRE : le degagement du contenu et la position du bouton
   // doivent venir du MEME calcul, sinon ils divergent au premier reglage.
-  // RECOLTE-APP-51 (M1365) : sur le SITE, la barre du bas est la (coque `AppShell`, hors console) ; le
-  // bouton se pose au-dessus, comme les autres flottants du site. Le telephone n a pas de barre ici.
-  // ponytail: 132 = `WEB_FLOATING_DOCK_CLEARANCE` de navigation/commonOptions.js, recopie : importer
-  // ce module tire react-navigation dans les temoins de l ecran. Sortie : sortir la constante dans un
-  // module sans dependance.
+  // RECOLTE-APP-51 (M1365) : sur le SITE, la barre du bas est la (coque `AppShell`, hors
+  // console) ; le bouton se pose au-dessus, comme les autres flottants du site. Le telephone
+  // n a pas de barre ici.
+  // ponytail: 132 = `WEB_FLOATING_DOCK_CLEARANCE` de navigation/commonOptions.js, recopie :
+  // importer ce module tire react-navigation dans les temoins de l ecran. Sortie : sortir la
+  // constante dans un module sans dependance.
   const floatingBottom = (Platform.OS === 'web' ? 132 : 0) + insets.bottom + 12;
   const floatingClearance = showActionBar ? 52 + floatingBottom + 24 : 32;
 

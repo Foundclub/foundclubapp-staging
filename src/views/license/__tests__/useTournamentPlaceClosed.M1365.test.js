@@ -1,3 +1,4 @@
+/* eslint-disable max-len -- données de témoin sur une ligne */
 import renderer, { act } from 'react-test-renderer';
 
 import { useTournamentPlaceClosed } from '../useTournamentTeamName';
@@ -18,7 +19,11 @@ const lire = (/** @type {any[] | null} */ equipes, eventId = 'evt-1', isSuccess 
   mockFiche = { data: equipes ? { tournamentTeams: equipes } : null, isSuccess };
   /** @type {any} */
   let resultat;
-  const Sonde = () => { resultat = useTournamentPlaceClosed(eventId); return null; };
+  /**
+   * Sonde : lit la règle dans un vrai rendu.
+   * @returns {null} rien à l écran
+   */
+  function Sonde() { resultat = useTournamentPlaceClosed(eventId); return null; }
   act(() => { renderer.create(<Sonde />); });
   return resultat;
 };

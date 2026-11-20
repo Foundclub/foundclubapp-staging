@@ -6,6 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import useAuth from '@/domains/auth/useAuth';
+
 import {
   getTournamentViewerMember,
   isTournamentActiveMemberStatus,
@@ -15,8 +16,8 @@ import {
 import { EVENT_DETAIL_STALE_MS } from '@/services/event/eventCacheDurations';
 
 /**
- * Les equipes du tournoi telles que la fiche les rend au lecteur (ses equipes y sont toutes, quel que
- * soit leur statut : IMPL-5E, admin `selectTournamentTeamsForReader`).
+ * Les equipes du tournoi telles que la fiche les rend au lecteur (ses equipes y sont toutes, quel
+ * que soit leur statut : IMPL-5E, admin `selectTournamentTeamsForReader`).
  * @param {string} eventId l evenement du tournoi
  * @returns {{ isSuccess: boolean, teams: any[] }} les equipes, et si la fiche a ete lue
  */
@@ -51,16 +52,17 @@ export default function useTournamentTeamName(eventId, viewerId) {
 }
 
 /**
- * RECOLTE-APP-51 (20/11, M1365 bis) — LA PLACE DU LECTEUR NE SE PAIE PLUS : toutes ses equipes du tournoi
- * (celles ou il est membre actif) sont refusees ou retirees (archivees). C est la regle du serveur
- * (`isClosedTeam`, refus TOURNAMENT_TEAM_CLOSED), lue sur la fiche du tournoi.
- * Preuve POSITIVE seulement : fiche non lue (chargement, erreur, pas d evenement) ou une equipe active
- * (place transferee, D282) => `false`, la page reste comme avant (le serveur refuse de toute facon).
- * ponytail: `/licenses/me` ne dit pas l equipe de la place ; on la deduit des equipes du lecteur. Un
- * joueur dont l equipe active est ailleurs mais dont la place non payee est restee sur l equipe refusee
- * verra encore « Payer » (refus du serveur). Sortie : un drapeau `tournamentTeamClosed` rendu par
- * `getMine` / `getMineAssignment` (lot admin).
- * @param {string} eventId l evenement du tournoi (`campaign.targetConfig.eventId`), vide hors tournoi
+ * RECOLTE-APP-51 (20/11, M1365 bis) — LA PLACE DU LECTEUR NE SE PAIE PLUS : toutes ses equipes du
+ * tournoi (celles ou il est membre actif) sont refusees ou retirees (archivees). C est la regle du
+ * serveur (`isClosedTeam`, refus TOURNAMENT_TEAM_CLOSED), lue sur la fiche du tournoi. Preuve
+ * POSITIVE seulement : fiche non lue (chargement, erreur, pas d evenement) ou une equipe active
+ * (place transferee, D282) => `false`, la page reste comme avant (le serveur refuse de toute
+ * facon). ponytail: `/licenses/me` ne dit pas l equipe de la place ; on la deduit des equipes du
+ * lecteur. Un joueur dont l equipe active est ailleurs mais dont la place non payee est restee sur
+ * l equipe refusee verra encore « Payer » (refus du serveur). Sortie : un drapeau
+ * `tournamentTeamClosed` rendu par `getMine` / `getMineAssignment` (lot admin).
+ * @param {string} eventId l evenement du tournoi (`campaign.targetConfig.eventId`), vide hors
+ * tournoi
  * @returns {boolean} vrai si la place ne se paie plus
  */
 export function useTournamentPlaceClosed(eventId) {

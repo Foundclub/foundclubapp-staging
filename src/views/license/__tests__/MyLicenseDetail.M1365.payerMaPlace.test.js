@@ -109,7 +109,6 @@ const monter = (/** @type {any} */ a) => {
     .map((/** @type {any} */ n) => [].concat(n.props.children).flat(9).join('').replace(/\s/g, ' '));
 };
 
-
 const PLACE = {
   amountDueCents: 2000,
   amountPaidCents: 0,
@@ -124,7 +123,9 @@ const PLACE = {
   installments: [],
   payments: [],
   receipts: [],
-  reminders: [{ amountRequestedCents: 2000, channel: 'push', documentId: 'rel-1', message: 'Il te reste 20,00 € à payer pour ta place dans l’équipe Test ouverte.', sentAt: '2026-11-19T10:00:00.000Z' }],
+  reminders: [{
+    amountRequestedCents: 2000, channel: 'push', documentId: 'rel-1', message: 'Il te reste 20,00 € à payer pour ta place dans l’équipe Test ouverte.', sentAt: '2026-11-19T10:00:00.000Z',
+  }],
   securePaymentToken: 'jeton-1',
   status: 'pending',
 };
