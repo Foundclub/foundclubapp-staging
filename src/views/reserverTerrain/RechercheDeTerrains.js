@@ -303,7 +303,8 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     .map((/** @type {any} */ carte) => filtrerLHeure(carte, heure))
     .filter((/** @type {any} */ carte) => texteValide || carte.slots.length > 0);
   const dateLue = recherche?.data?.date || jour || aujourdhui;
-  // FC-4 PAGE (20/11, planches 5c et 5d, option B) : les pages créées par FoundClub du rayon, rendues
+  // FC-4 PAGE (20/11, planches 5c et 5d, option B) : les pages créées par FoundClub du rayon,
+  // rendues
   // à part par le serveur (FC-1), jamais en recherche par nom (le nom les trouve déjà). Un serveur
   // d'avant ne rend pas la clé : rien. Témoin : __tests__/EP01.recherche.test.js (FC-4).
   const aussiPresDeToi = !texteValide && Array.isArray(recherche?.data?.aussiPresDeToi)

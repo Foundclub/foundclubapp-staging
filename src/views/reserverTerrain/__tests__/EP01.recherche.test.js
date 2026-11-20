@@ -524,7 +524,7 @@ describe('FC-4 — la rubrique « Aussi près de toi » (option B)', () => {
     slug: 'padel-club-des-pins',
   });
 
-  it('après la liste : le titre, sa ligne, la carte « Réserver sur son site », qui ouvre la page', async () => {
+  it('après la liste : titre, ligne, « Réserver sur son site », la page s’ouvre', async () => {
     mockRecherche = {
       ...mockRecherche,
       data: { ...mockRecherche.data, aussiPresDeToi: [PAGE] },
@@ -532,7 +532,10 @@ describe('FC-4 — la rubrique « Aussi près de toi » (option B)', () => {
     const arbre = await monter();
     const vus = lisibles(arbre);
     expect(vus).toEqual(expect.arrayContaining([
-      'Aussi près de toi', 'réservation sur leur site', 'Padel Club des Pins', 'Réserver sur son site',
+      'Aussi près de toi',
+      'réservation sur leur site',
+      'Padel Club des Pins',
+      'Réserver sur son site',
     ]));
     // Les complexes réservables d'abord.
     expect(vus.indexOf('Le Five de Montrivage')).toBeLessThan(vus.indexOf('Aussi près de toi'));
@@ -542,7 +545,7 @@ describe('FC-4 — la rubrique « Aussi près de toi » (option B)', () => {
     });
   });
 
-  it('aucun complexe réservable près de moi : la rubrique reste, sous le message du vide', async () => {
+  it('aucun complexe réservable près de moi : la rubrique reste, sous le vide', async () => {
     mockRecherche = {
       ...mockRecherche,
       data: { aussiPresDeToi: [PAGE], complexes: [], date: '2026-10-14' },

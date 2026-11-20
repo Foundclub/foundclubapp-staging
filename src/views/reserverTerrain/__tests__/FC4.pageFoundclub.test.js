@@ -6,12 +6,14 @@ import ReserverComplexe from '@/views/reserverTerrain/ReserverComplexe';
 import { lisibles, pressable } from '@/testSupport/temoinComplexe';
 import { complexePublic } from '@/testSupport/temoinReserver';
 
-// FC-4 PAGE (20/11/2026, planches FICHES-COMPLEXES 1 et 2, validées par Adel) — LA PAGE D'UN COMPLEXE
+// FC-4 PAGE (20/11/2026, planches FICHES-COMPLEXES 1 et 2, validées par Adel) — LA PAGE D'UN
+// COMPLEXE
 // CRÉÉE PAR FOUNDCLUB (`pageFoundclub: true`, calculé par le serveur FC-1 : aucun gérant).
 // Avant : la page promettait une réservation sur FoundClub (« Complexe de réservation », onglet
 // « Réserver » vide, « n'ouvre pas encore ses terrains », règles de réservation, canal) et cachait
 // le téléphone derrière « Infos ».
-// Après : le bandeau « Page créée par FoundClub… », la pastille « Complexe », une carte « Réserver »
+// Après : le bandeau « Page créée par FoundClub… », la pastille « Complexe », une carte « Réserver
+// »
 // (« Réserver sur le site du complexe » et « Appeler », ou « Appeler » seul), une seule page sans
 // onglets, les horaires (ou leur texte, ou « appelle le complexe »), « Le mot du complexe » gardé,
 // « Une info est fausse ? Signale-le ». Un complexe réservable ne change pas.
@@ -57,7 +59,9 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => (
     const { Text: Texte, View: Vue } = jest.requireActual('react-native');
     return (
       <Vue testID="segments">
-        {options.map((/** @type {any} */ option) => <Texte key={option.value}>{option.label}</Texte>)}
+        {options.map((/** @type {any} */ option) => (
+          <Texte key={option.value}>{option.label}</Texte>
+        ))}
       </Vue>
     );
   }
@@ -126,7 +130,7 @@ beforeEach(() => {
 });
 
 describe('FC-4 — la page d’un complexe créée par FoundClub (planches 1 et 2)', () => {
-  it('1a — le bandeau, la pastille « Complexe », la carte « Réserver » et son grand bouton', async () => {
+  it('1a — bandeau, pastille « Complexe », carte « Réserver » et son grand bouton', async () => {
     const arbre = await monter();
     const textes = lisibles(arbre);
     expect(textes).toEqual(expect.arrayContaining([
@@ -142,7 +146,7 @@ describe('FC-4 — la page d’un complexe créée par FoundClub (planches 1 et 
     expect(Linking.openURL).toHaveBeenCalledWith(RESERVATION);
   });
 
-  it('1a/1b — une seule page : ni onglets, ni « n’ouvre pas encore », ni règles, ni canal', async () => {
+  it('1a/1b — une seule page : ni onglets, ni « n’ouvre pas », ni règles, ni canal', async () => {
     mockRelation = { canal: null, favori: false };
     const arbre = await monter();
     const textes = lisibles(arbre);
@@ -161,7 +165,7 @@ describe('FC-4 — la page d’un complexe créée par FoundClub (planches 1 et 
     ]));
   });
 
-  it('rien ne disparaît sans être déplacé : « Le mot du complexe » reste, hors des règles', async () => {
+  it('rien ne disparaît sans être déplacé : « Le mot du complexe » reste', async () => {
     const arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'Le mot du complexe', 'Arrive 10 minutes avant, chasubles à l’accueil.',
@@ -187,7 +191,9 @@ describe('FC-4 — la page d’un complexe créée par FoundClub (planches 1 et 
   });
 
   it('horaires : leur texte, sinon « Horaires : appelle le complexe »', async () => {
-    mockComplexe = pageFoundclub({ openingHours: null, openingHoursNote: 'Tous les jours de 10 h à 23 h.' });
+    mockComplexe = pageFoundclub({
+      openingHours: null, openingHoursNote: 'Tous les jours de 10 h à 23 h.',
+    });
     let arbre = await monter();
     expect(lisibles(arbre)).toEqual(expect.arrayContaining([
       'Horaires d’accueil', 'Tous les jours de 10 h à 23 h.',
@@ -204,7 +210,7 @@ describe('FC-4 — la page d’un complexe créée par FoundClub (planches 1 et 
     expect(lisibles(arbre)).toContain('Signaler ce complexe');
   });
 
-  it('1d — ordinateur : la carte « Réserver » à droite, plus de « Réserver · aujourd’hui »', async () => {
+  it('1d — ordinateur : « Réserver » à droite, sans « Réserver · aujourd’hui »', async () => {
     mockOrdinateur = true;
     const arbre = await monter();
     expect(lisibles(arbre)).not.toContain('Réserver · aujourd’hui');
@@ -212,7 +218,7 @@ describe('FC-4 — la page d’un complexe créée par FoundClub (planches 1 et 
     expect(cartesReserver(arbre)).toHaveLength(1);
   });
 
-  it('E6 — un complexe réservable (`pageFoundclub` absent) garde la page d’aujourd’hui', async () => {
+  it('E6 — un complexe réservable (sans `pageFoundclub`) garde sa page', async () => {
     mockComplexe = { data: complexePublic(), isLoading: false };
     const arbre = await monter();
     const textes = lisibles(arbre);

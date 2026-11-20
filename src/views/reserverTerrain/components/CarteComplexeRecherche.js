@@ -156,7 +156,10 @@ function CarteComplexeRecherche({
         <Text style={[Fonts.p3Bold, Fonts.primary200]} testID="carte-reserver-sur-son-site">
           {String(carte?.externalBookingUrl || '').trim()
             ? t('reserverTerrain.recherche.reserverSurSonSite', 'Réserver sur son site')
-            : t('reserverTerrain.recherche.reserverAupresDuComplexe', 'Réserver auprès du complexe')}
+            : t(
+              'reserverTerrain.recherche.reserverAupresDuComplexe',
+              'Réserver auprès du complexe',
+            )}
         </Text>
       ) : null}
       {!montres.length && carte?.bientotReservable && !pageFoundclub ? (

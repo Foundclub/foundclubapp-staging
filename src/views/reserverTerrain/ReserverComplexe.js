@@ -757,7 +757,8 @@ function ReserverComplexe() {
     Linking.openURL(`tel:${telephone}`).catch(() => {});
   };
 
-  // FC-4 (planche 1a) : le bandeau d'une page créée par FoundClub (le texte d'Adel, au vouvoiement).
+  // FC-4 (planche 1a) : le bandeau d'une page créée par FoundClub (le texte d'Adel, au
+  // vouvoiement).
   // « C'est mon complexe » arrive avec le formulaire (2ᵉ partie du lot, route FC-3).
   const bandeauPageFoundclub = pageFoundclub ? (
     <View
@@ -954,7 +955,8 @@ function ReserverComplexe() {
   let page = etat;
   if (!page && complexe && pageFoundclub && surOrdinateur) {
     // FC-4 (planche 1d) : la page que le mail ouvre ; la carte « Réserver » remplace la colonne
-    // « Réserver · aujourd'hui ». Les terrains (s'il y en a) et « Ils cherchent des joueurs » restent.
+    // « Réserver · aujourd'hui ». Les terrains (s'il y en a) et « Ils cherchent des joueurs »
+    // restent.
     page = (
       <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
         <View style={{ flex: 1, gap: 16, minWidth: 0 }}>

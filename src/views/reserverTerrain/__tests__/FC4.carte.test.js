@@ -51,7 +51,7 @@ const PAGE = {
 };
 
 describe('FC-4 — la carte d’une page FoundClub dans la recherche (5b)', () => {
-  it('avec un lien : « Réserver sur son site », pastille « Complexe », plus de « Bientôt réservable »', () => {
+  it('avec un lien : « Réserver sur son site », pastille « Complexe »', () => {
     const textes = lisibles(monter(carteDeRecherche(PAGE)));
     expect(textes).toEqual(expect.arrayContaining(['Réserver sur son site', 'Complexe']));
     expect(textes).not.toContain('Bientôt réservable');
@@ -65,9 +65,12 @@ describe('FC-4 — la carte d’une page FoundClub dans la recherche (5b)', () =
     expect(textes).not.toContain('Bientôt réservable');
   });
 
-  it('E6 — un complexe d’avant (sans `pageFoundclub`) : « Bientôt réservable », comme aujourd’hui', () => {
-    const textes = lisibles(monter(carteDeRecherche({ bientotReservable: true, freeSlotsCount: 0, slots: [] })));
-    expect(textes).toEqual(expect.arrayContaining(['Bientôt réservable', 'Complexe de réservation']));
+  it('E6 — sans `pageFoundclub` : « Bientôt réservable », comme aujourd’hui', () => {
+    const carte = carteDeRecherche({ bientotReservable: true, freeSlotsCount: 0, slots: [] });
+    const textes = lisibles(monter(carte));
+    expect(textes).toEqual(expect.arrayContaining([
+      'Bientôt réservable', 'Complexe de réservation',
+    ]));
     expect(textes).not.toContain('Réserver sur son site');
   });
 });
