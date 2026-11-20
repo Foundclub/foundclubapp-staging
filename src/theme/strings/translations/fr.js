@@ -29541,6 +29541,74 @@ export default {
     actions: {
       go: 'Allons-y !',
     },
+    // INSCRIPTION-CODE-4 (20/11/2026, planche V2 B1-B5 « ok ») — les cinq « Bienvenue ».
+    cas: {
+      allerAccueil: 'Aller à mon accueil',
+      carte: {
+        age: 'Âge',
+        ans: '{{age}} ans',
+        aucun: 'Aucun',
+        club: 'Club',
+        enAttente: 'En attente',
+        niveau: 'Niveau',
+        ville: 'Ville',
+      },
+      coach: {
+        entrainement: 'Créer ton premier entraînement',
+        inviter: 'Inviter tes joueurs par un lien',
+        offreGratuite: 'Offre gratuite',
+        offresApres: 'Les offres payantes viennent après, seulement si tu en as besoin.',
+        phrase: 'Ton compte de coach est prêt. Le club a reçu ta demande pour les {{equipe}}.',
+        phraseSansEquipe: 'Ton compte de coach est prêt.',
+        uneEquipe: '1 équipe',
+        voirOffres: 'Voir les offres',
+      },
+      joueurAvecClub: {
+        photo: 'Compléter ta carte : il manque ta photo',
+        phrase: 'Ton compte est prêt. {{club}} a reçu ta demande.',
+        voir: 'Voir les matchs et les entraînements près de chez toi',
+      },
+      notifications: 'Reste informé·e des nouveautés grâce aux notifications.',
+      parent: {
+        declarer: 'Déclarer ton enfant',
+        declarerUnAutre: 'Déclarer un autre enfant',
+        // eslint-disable-next-line max-len
+        phrase: 'Ton compte de parent est prêt. {{enfant}} est déclaré·e : tu réponds à ses convocations à sa place.',
+        // eslint-disable-next-line max-len
+        phrasePlusieurs: 'Ton compte de parent est prêt. Tes {{nombre}} enfants sont déclaré·es : tu réponds à leurs convocations à leur place.',
+        // eslint-disable-next-line max-len
+        phraseSansEnfant: 'Ton compte de parent est prêt. Déclare ton enfant : tu répondras à ses convocations à sa place.',
+        sortie: 'Trouver son club',
+        trouverLeClubDe: 'Trouver le club de {{activite}} de {{enfant}}',
+        trouverLeClubDeEnfant: 'Trouver le club de {{enfant}}',
+        trouverUnClub: 'Trouver un club pour ton enfant',
+      },
+      peuxFaire: 'Ce que tu peux faire maintenant',
+      phraseMembre: 'Ton compte est prêt. Tu fais partie de {{club}}.',
+      pratiquant: {
+        ecrire: 'Écrire au club',
+        // eslint-disable-next-line max-len
+        phrase: 'Ton compte est prêt. Ton club a reçu ta demande : tu verras ses {{rendezVous}} dès qu’il t’aura accepté.',
+        voir: 'Voir les sorties ouvertes près de chez toi',
+        voirAutre: 'Voir les activités ouvertes près de chez toi',
+        voirCulture: 'Voir les cours ouverts près de chez toi',
+      },
+      rendezVous: {
+        autre: 'activités',
+        culture: 'cours',
+        nature: 'sorties',
+      },
+      sansClub: {
+        clubs: 'Voir les clubs près de chez toi',
+        clubsDeActivite: 'Voir les clubs de {{activite}} près de chez toi',
+        clubsDeActiviteVille: 'Voir les clubs de {{activite}} près de {{ville}}',
+        essais: 'Voir les séances d’essai et les détections ouvertes',
+        phrase: 'Ton compte est prêt. Tu n’as pas encore de club : on t’aide à en trouver un.',
+        sortie: 'Trouver un club',
+      },
+      titre: 'Bienvenue, {{prenom}}',
+      titreSansPrenom: 'Bienvenue',
+    },
     descriptions: {
       club: {
         bold: '- Rejoins un club',

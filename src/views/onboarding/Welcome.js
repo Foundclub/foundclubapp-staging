@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Platform, ScrollView, Text, View,
@@ -9,6 +10,7 @@ import {
   getUserRoleKey,
   markOnboardingComplete,
 } from '@/domains/auth/authUseCases';
+import { casDeBienvenue } from '@/domains/auth/casDeBienvenue';
 import useAuth from '@/domains/auth/useAuth';
 import { getActiveTrial } from '@/domains/subscription/subscriptionBilling';
 import {
@@ -23,7 +25,10 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import FormScreenContainer from '@/components/templates/FormScreenContainer';
+import BienvenueParCas from '@/views/onboarding/components/BienvenueParCas';
 import OnboardingStateView from '@/views/onboarding/components/OnboardingStateView';
+
+import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 
 import { useTour } from '@/context/TourContext';
 
@@ -45,6 +50,7 @@ function Welcome({ navigation }) {
     clubVerificationSummary,
     entitlementsSummary,
     getPostOnboardingHomeRoute,
+    inviteTeamPlayers,
     refetchUserData,
     subscriptionAccessLevel,
     subscriptionSummary,
@@ -58,6 +64,14 @@ function Welcome({ navigation }) {
     .toLowerCase() === 'fc_trial_club';
   const { startTour } = useTour();
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
+  // INSCRIPTION-CODE-4 (20/11, planche V2 B1-B5) : le « Bienvenue » du cas (joueur, pratiquant,
+  // coach, parent). Dirigeant et super-admin : pas de cas, l'écran d'aujourd'hui (décision n° 1).
+  // Le coach ouvre les offres d'aujourd'hui, ENTIÈRES, par « Voir les offres » (décision n° 5).
+  const cas = casDeBienvenue({ roleKey, userData });
+  const [offresOuvertes, setOffresOuvertes] = useState(false);
+  const { data: enfantsDeclares } = /** @type {{ data?: any[] }} */ (
+    useGetMyDeclaredChildren({ enabled: roleKey === 'parent' })
+  );
   // FINITIONS-T8 point 7 (« 201 A », 10/11) : un coach dont le CLUB est couvert par le cadeau du
   // dirigeant (même juge que le bandeau de quota) le lit ici, au lieu de « Commence gratuitement ».
   const couverture = roleKey === 'coach' && !isClubGift ? getCoveringEntitlement({
@@ -314,6 +328,29 @@ function Welcome({ navigation }) {
   // (docs/PLAN_TOUR_GUIDE_V2_2026_07_10.md).
   const handleStartTour = () => leaveOnboarding(roleKey === 'president' ? 'president' : 'coach');
 
+  // INSCRIPTION-CODE-4 — une action du « Bienvenue » sort du tunnel VERS son écran, l'accueil
+  // dessous (le retour arrière ramène à l'accueil, jamais au tunnel ; cf. BOUCLE-ACCUEIL).
+  const allerVers = (/** @type {string} */ route, /** @type {any} */ params) => {
+    finalizeOnboarding();
+    const accueil = getPostOnboardingHomeRoute();
+    if (Platform.OS === 'web' && typeof navigation?.replace === 'function') {
+      navigation.replace(accueil);
+      navigation.navigate(route, params);
+      return;
+    }
+    navigation.reset({
+      index: 1,
+      routes: [{ name: accueil }, { name: route, ...(params ? { params } : {}) }],
+    });
+  };
+  // Décision n° 4 : l'invitation attend une équipe ACCEPTÉE (trainedTeams).
+  const equipeAcceptee = userData?.trainedTeams?.[0];
+  const inviter = equipeAcceptee?.documentId ? () => inviteTeamPlayers({
+    clubName: equipeAcceptee.club?.name || userData?.club?.name,
+    teamId: equipeAcceptee.documentId,
+    teamName: equipeAcceptee.name,
+  }) : null;
+
   // Une etape du rail : la colonne de gauche porte la pastille et le trait qui
   // relie a l'etape suivante, la carte porte le contenu. Seule la 1re est
   // ACQUISE (pastille pleine + coche) : c'est ce contraste qui dessine un
@@ -434,7 +471,24 @@ function Welcome({ navigation }) {
       ]}
       contentWidth="readable"
     >
-      {canShowSubscriptionWelcome ? (
+      {cas && !(cas.cas === 'coach' && offresOuvertes) ? (
+        <BienvenueParCas
+          cas={cas}
+          enfants={Array.isArray(enfantsDeclares) ? enfantsDeclares : []}
+          // Tour guidé obligatoire (10/07/2026) : ses lignes ne court-circuitent pas le tour.
+          lignesDuCoachSortent={!shouldOfferGuidedTour}
+          // « 110- A » et « 201 A » : pendant un cadeau, pas de « 1 équipe » ; la phrase du cadeau.
+          offreCadeau={isClubGift || isCoachClubGift ? sousTitre : null}
+          onAccueil={cas.cas === 'coach' && shouldOfferGuidedTour
+            ? handleStartTour
+            : handleContinue}
+          onAller={allerVers}
+          onInviter={inviter}
+          onVoirOffres={() => setOffresOuvertes(true)}
+          userData={userData}
+        />
+      ) : null}
+      {(!cas || (cas.cas === 'coach' && offresOuvertes)) && canShowSubscriptionWelcome ? (
         <>
           {/* Titre HORS defilement : apres 6 etapes, il ne doit plus partir au
               premier geste. Le sous-titre est degraisse (p2 au lieu de h4Bold) —
@@ -498,7 +552,10 @@ function Welcome({ navigation }) {
             ) : null}
           </View>
         </>
-      ) : (
+      ) : null}
+      {/* Avant INSCRIPTION-CODE-4, l'écran du joueur et du parent. Il reste le repli d'un rôle
+          sans cas ni offres (compte sans rôle connu) : rien n'est retiré. */}
+      {!cas && !canShowSubscriptionWelcome ? (
         <>
           <ScrollView
             contentContainerStyle={[Spaces.gap[40]]}
@@ -536,7 +593,7 @@ function Welcome({ navigation }) {
             />
           </View>
         </>
-      )}
+      ) : null}
     </FormScreenContainer>
   );
 }

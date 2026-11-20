@@ -31,9 +31,12 @@ jest.mock('@/config/fonctionsMasquees', () => Object.defineProperty(
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
-    ),
+    // INSCRIPTION-CODE-4 : les textes des cas B passent `{ defaultValue, …valeurs }`.
+    t: (/** @type {string} */ key, /** @type {any} */ fallback) => {
+      const repli = typeof fallback === 'string' ? fallback : fallback?.defaultValue;
+      if (typeof repli !== 'string') return key;
+      return repli.replace(/{{(\w+)}}/g, (_, k) => String(fallback?.[k] ?? ''));
+    },
   }),
 }));
 
@@ -65,12 +68,20 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// INSCRIPTION-CODE-4 (20/11) : `casDeBienvenue` lit les vraies règles du compte (club demandé).
 jest.mock('@/domains/auth/authUseCases', () => ({
+  ...jest.requireActual('@/domains/auth/authUseCases'),
   getUserRoleKey: () => mockRole.current,
   markOnboardingComplete: (/** @type {string} */ id) => mockMarkOnboardingComplete(id),
 }));
 
 const mockSubscriptionSummary = { current: /** @type {any} */ (null) };
+// INSCRIPTION-CODE-4 : le compte est réglable (un joueur avec un club demandé, pour B1).
+const COMPTE_D23 = { documentId: 'user-d23', firstname: 'Lina', role: { name: 'Entraineur' } };
+const mockUserData = { current: /** @type {any} */ (COMPTE_D23) };
+jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
+  useGetMyDeclaredChildren: () => ({ data: [] }),
+}));
 // FINITIONS-T8 point 7 : la couverture du club (droits du compte, niveau d'accès).
 const mockCouverture = {
   current: /** @type {{ entitlementsSummary: any; subscriptionAccessLevel: any }} */ ({
@@ -86,7 +97,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
     refetchUserData: jest.fn(),
     subscriptionAccessLevel: mockCouverture.current.subscriptionAccessLevel,
     subscriptionSummary: mockSubscriptionSummary.current,
-    userData: { documentId: 'user-d23', role: { name: 'Entraineur' } },
+    userData: mockUserData.current,
     userDataError: null,
     userDataLoading: false,
   }),
@@ -147,12 +158,19 @@ jest.mock('@/domains/tour/tourCatalog', () => {
   };
 });
 
+// INSCRIPTION-CODE-4 (décision du chef n° 5, 20/11) — Avant : le coach arrivait DIRECTEMENT sur
+// les offres. Il arrive sur son « Bienvenue » (B4) et les ouvre, ENTIÈRES, par « Voir les offres ».
+// Ces cas décrivent le bloc des offres : `rendre` presse donc ce lien quand il est là.
 const rendre = () => {
   const navigation = { navigate: jest.fn(), replace: jest.fn(), reset: jest.fn() };
   let arbre;
   act(() => {
     arbre = renderer.create(<Welcome navigation={/** @type {any} */ (navigation)} />);
   });
+  const lien = /** @type {any} */ (arbre).root.findAllByType(TouchableOpacity)
+    .find((node) => node.findAllByType(Text)
+      .some((texte) => String(texte.props.children) === 'Voir les offres'));
+  if (lien) act(() => { lien.props.onPress(); });
   return { navigation, tree: /** @type {any} */ (arbre) };
 };
 
@@ -171,6 +189,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockStartTour.mockReturnValue(true);
   mockRole.current = 'coach';
+  mockUserData.current = COMPTE_D23;
 });
 
 describe('Welcome — l`ecran ne se saute plus tout seul (D23 ⑤)', () => {
@@ -248,9 +267,19 @@ describe('Welcome — c`est LUI qui lance le tour guide, sur action (D23 ⑤)', 
   it.each([
     ['coach', 'Démarrer le tour guidé', 'coach'],
     ['president', 'Démarrer le tour guidé', 'president'],
-    ['player', 'welcome.actions.go', 'player'],
+    // INSCRIPTION-CODE-4 — Avant : « Allons-y ! » (welcome.actions.go). Le joueur avec un club (B1)
+    // a « Aller à mon accueil », qui lance le même tour léger.
+    ['player', 'Aller à mon accueil', 'player'],
   ])('%s : la pile repart de l accueil APRES le depart du guide', (role, libelle, profil) => {
     mockRole.current = role;
+    if (role === 'player') {
+      mockUserData.current = {
+        ...COMPTE_D23,
+        clubMembershipRequests: [
+          { club: { documentId: 'c1', name: 'US Exemple' }, state: 'pending' },
+        ],
+      };
+    }
     const { navigation, tree } = rendre();
     act(() => { pressableParTexte(tree, libelle).props.onPress(); });
 
@@ -442,11 +471,16 @@ describe('Welcome — l ecran de bienvenue parle a la BONNE personne', () => {
     expect(lus).toContain('ton enfant');
   });
 
-  it('un JOUEUR, lui, garde exactement ce qu il lisait', () => {
+  // INSCRIPTION-CODE-4 (planche V2 B2, 20/11) — Avant : « un JOUEUR garde exactement ce qu il
+  // lisait » (« … progresse dans ta carrière sportive »). Les 4 phrases sont DÉPLACÉES en lignes
+  // d'action (chercher un club, les séances d'essai et détections) ; la notification reste en bas.
+  it('un JOUEUR sans club lit son cas B2 : chercher un club, les essais, les notifications', () => {
     mockRole.current = 'player';
     const lus = textes(rendre().tree).join(' | ');
 
-    expect(lus).toContain('ta carrière sportive');
+    expect(lus).toContain('Voir les clubs près de chez toi');
+    expect(lus).toContain('Voir les séances d’essai et les détections ouvertes');
+    expect(lus).toContain('Reste informé·e des nouveautés grâce aux notifications.');
   });
 });
 
