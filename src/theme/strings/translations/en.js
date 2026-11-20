@@ -20515,9 +20515,9 @@ export default {
     recherche: {
       apresMidi: '12 pm – 6 pm',
       aucunCreneauFiltres: 'No slot for these filters',
+      aujourdhui: 'Today',
       aussiPresDeToi: 'Also near you',
       aussiPresDeToiSousTitre: 'booking on their website',
-      aujourdhui: 'Today',
       autoriser: 'Allow my location',
       autourDeLaVille: 'Search around {{ville}}',
       autourDeMoi: 'Around me',

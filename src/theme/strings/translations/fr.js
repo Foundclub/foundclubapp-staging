@@ -21297,9 +21297,9 @@ export default {
     recherche: {
       apresMidi: '12 h – 18 h',
       aucunCreneauFiltres: 'Aucun créneau pour ces filtres',
+      aujourdhui: 'Aujourd’hui',
       aussiPresDeToi: 'Aussi près de toi',
       aussiPresDeToiSousTitre: 'réservation sur leur site',
-      aujourdhui: 'Aujourd’hui',
       autoriser: 'Autoriser ma position',
       autourDeLaVille: 'Chercher autour de {{ville}}',
       autourDeMoi: 'Autour de moi',
