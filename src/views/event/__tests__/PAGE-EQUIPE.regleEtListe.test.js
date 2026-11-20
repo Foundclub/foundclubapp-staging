@@ -725,6 +725,12 @@ describe('RELANCER-B — « Relancer » un joueur qui n’a pas payé', () => {
     expect(params.brouillon).toBe(`Salut Deux ! Il te reste ta place à payer pour le tournoi FoundClub x AR Soccer : ${LIEN_2}`);
     expect(alerte).not.toHaveBeenCalled();
   });
+  // Récolte train 17 (RELANCER-B × DEUX-EQUIPES-2) : une équipe refusée n'a plus rien à payer
+  // (DEUX-EQUIPES-2, point 5 ; le serveur refuse le paiement, TOURNAMENT_TEAM_CLOSED) : personne à relancer.
+  test('🔴 équipe refusée : aucun « Relancer », même pour le capitaine', async () => {
+    const arbre = await monter({ ...datee(payante('capitaine')), status: 'declined' }, 'u-cap');
+    expect(combien(arbre, ['Relancer'])).toBe(0);
+  });
   test('un joueur qui n’est pas capitaine ne voit aucun « Relancer »', async () => {
     const arbre = await monter(datee(payante('joueur')), 'u-2');
     expect(combien(arbre, ['Relancer'])).toBe(0);

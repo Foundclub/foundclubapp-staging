@@ -817,8 +817,10 @@ function TournamentTeamDetails({ navigation, route }) {
     // du serveur (âge inconnu, blocage) s'affichent tels quels (writeToRequester).
     // ponytail: un capitaine qui encadre le club du mineur aurait le droit d'écrire ; il voit le
     // bouton grisé (l'app ne sait pas qui encadre). Sortie : un `viewerCanWrite` rendu par membre.
+    // Récolte train 17 : une équipe refusée n'a plus rien à payer (DEUX-EQUIPES-2), donc pas de relance.
     const peutRelancer = Boolean(
-      isRow && currentMemberIsCaptain && place && place.status !== 'paid' && !place.isSelf
+      isRow && currentMemberIsCaptain && !teamIsDeclined && place && place.status !== 'paid'
+      && !place.isSelf
       && member?.user?.documentId,
     );
     const estMineur = member?.parentalConsentPending === true
