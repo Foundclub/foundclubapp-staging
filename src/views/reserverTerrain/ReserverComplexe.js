@@ -797,6 +797,8 @@ function ReserverComplexe() {
           onPress={() => {
             Linking.openURL(siteComplet(lienDeReservation)).catch(() => {});
           }}
+          // Planche 1a : le libellé tient sur une ligne, sans icône (16 px le coupait à 375 px).
+          textStyle={Fonts.p2Bold}
           title={t(
             'reserverTerrain.complexe.pageFoundclub.reserverSurLeSite',
             'Réserver sur le site du complexe',
