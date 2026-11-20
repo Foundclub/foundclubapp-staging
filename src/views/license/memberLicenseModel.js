@@ -136,8 +136,10 @@ export const getMemberStatusTone = (Colors, status) => ({
   overdue: Colors.error500,
   // PAIEMENTS-10E : bleu, plus de vert (Adel 19/11, « tout en bleu, cotisations comprises »).
   paid: Colors.primary500,
-  partial: Colors.primary500,
-  pending: Colors.primary500,
+  // PAIEMENTS-10E (chef 20/11, 3 B) : ce qui reste à payer en ambre, jeton de « 1 place à payer »
+  // sur l accueil (TournamentTeamSheet) ; « Payée » reste bleu, on ne lit plus seulement le mot.
+  partial: Colors.warning400,
+  pending: Colors.warning400,
   waived: Colors.neutral300,
 }[status] || Colors.primary500);
 

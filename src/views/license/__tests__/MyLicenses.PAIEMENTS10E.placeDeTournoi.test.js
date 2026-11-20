@@ -219,6 +219,24 @@ describe('PAIEMENTS-10E — la place du tournoi dans « Mes paiements » (planch
   });
 });
 
+describe('PAIEMENTS-10E — « En attente » / « À payer » en ambre (chef 20/11, question 3 B)', () => {
+  test('le jeton ambre de l’accueil (« 1 place à payer », warning400) ; « Payée » reste bleu', () => {
+    expect(getMemberStatusTone(Colors, 'pending')).toBe(Colors.warning400);
+    expect(getMemberStatusTone(Colors, 'partial')).toBe(Colors.warning400);
+    expect(getMemberStatusTone(Colors, 'paid')).toBe(Colors.primary500);
+  });
+
+  test('une place à payer : la pastille « EN ATTENTE » est écrite en ambre', () => {
+    monter([{
+      ...PLACE, amountPaidCents: 0, amountRemainingCents: 2000, payments: [], status: 'pending',
+    }]);
+    const mot = arbre.root.findAll((/** @type {any} */ n) => n.type === 'Text' && texteDe(n) === 'EN ATTENTE')[0];
+    // La couleur qui s'applique : la dernière du tableau de styles.
+    const couleurs = [].concat(mot.props.style).flat(9).map((s) => s?.color).filter(Boolean);
+    expect(couleurs[couleurs.length - 1]).toBe(Colors.warning400);
+  });
+});
+
 describe('PAIEMENTS-10E — la vue d’un parent (lecture seule, FIN-PARENT)', () => {
   test('la place payée de l’enfant : « Place de Léo Garnier », mais pas de « Voir le reçu » (la carte ne s’ouvre pas)', () => {
     mockCompte = { accountRoleKey: 'parent', userData: { documentId: 'u-parent', firstname: 'Paul', lastname: 'Garnier' } };
