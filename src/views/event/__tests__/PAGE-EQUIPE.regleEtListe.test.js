@@ -731,6 +731,10 @@ describe('RELANCER-B — « Relancer » un joueur qui n’a pas payé', () => {
     const arbre = await monter({ ...datee(payante('capitaine')), status: 'declined' }, 'u-cap');
     expect(combien(arbre, ['Relancer'])).toBe(0);
   });
+  test('🔴 équipe retirée (archivée) : aucun « Relancer » non plus', async () => {
+    const arbre = await monter({ ...datee(payante('capitaine')), archivedAt: '2026-11-19T09:00:00.000Z', status: 'archived' }, 'u-cap');
+    expect(combien(arbre, ['Relancer'])).toBe(0);
+  });
   test('un joueur qui n’est pas capitaine ne voit aucun « Relancer »', async () => {
     const arbre = await monter(datee(payante('joueur')), 'u-2');
     expect(combien(arbre, ['Relancer'])).toBe(0);
