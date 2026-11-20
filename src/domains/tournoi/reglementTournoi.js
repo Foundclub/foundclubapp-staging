@@ -11,7 +11,7 @@
 import { ADRESSE_DU_COMPLEXE } from './conditionsTournoi';
 
 /** La ligne de titre du règlement, affichée sous « Règlement du tournoi ». */
-export const EN_TETE_DU_REGLEMENT = 'Règlement du tournoi FoundClub x AR Soccer — samedi 19 décembre 2026, à partir de 19 h (v4, 18/11)';
+export const EN_TETE_DU_REGLEMENT = 'Règlement du tournoi FoundClub x AR Soccer — samedi 19 décembre 2026, à partir de 19 h (v6, 20/11)';
 
 /**
  * Les sections du règlement, dans l'ordre : ses paragraphes et son `titre` (null pour l'introduction).
@@ -32,7 +32,7 @@ export const SECTIONS_DU_REGLEMENT = Object.freeze([
       'Changements illimités et volants, à hauteur de son banc, sans arrêter le jeu (le gardien change à l\'arrêt de jeu).',
       'Il faut 4 joueurs au minimum pour commencer ou continuer un match.',
       'Un joueur ne joue que pour une seule équipe, et seulement s\'il a payé sa place. Un capitaine par équipe, majeur, désigné à l\'inscription ou par l\'organisateur.',
-      'La place payée suit le joueur. S\'il change d\'équipe dans le même tournoi, il ne repaie pas : sa place passe dans la nouvelle équipe, et l\'ancienne équipe compte un joueur payé de moins (conditions d\'inscription, § 3). Une équipe validée ne redescend pas : un joueur payé ne peut pas la quitter si elle passe ainsi sous 5 joueurs payés. Il peut partir dès qu\'un 6ᵉ joueur a payé. La même règle vaut quand le capitaine retire un joueur payé.',
+      'La place payée suit le joueur. S\'il change d\'équipe dans le même tournoi, il ne repaie pas : sa place passe dans la nouvelle équipe, et l\'ancienne équipe compte un joueur payé de moins (conditions d\'inscription, § 3). Une équipe validée ne redescend pas : un joueur payé ne peut pas la quitter si elle passe ainsi sous 5 joueurs payés. Il peut partir dès qu\'un 6ᵉ joueur a payé. La même règle vaut quand le capitaine retire un joueur payé. Exception : l\'organisateur peut retirer un joueur payé, même si l\'équipe passe sous 5, pour un retrait remboursé (conditions § 5), une exclusion (§ 3) ou une autorisation parentale manquante. Après la clôture, l\'équipe joue avec les joueurs qui restent.',
       'Âge : 16 ans révolus le 19/12/2026. De 16 à 17 ans, l\'autorisation parentale est obligatoire, sinon le joueur ne joue pas (voir les conditions d\'inscription).',
       'Chaussures de salle ou moulées, pas de crampons. Protège-tibias conseillés. Chaque joueur porte le maillot du tournoi, offert et remis à l’accueil (19 h - 19 h 20), dans la limite des tailles et des stocks ; à défaut, il porte une chasuble de la couleur de son équipe.',
     ],

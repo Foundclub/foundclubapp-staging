@@ -16,7 +16,8 @@ const REGLE_D63 = 'Une équipe validée ne redescend pas : un joueur payé ne pe
 
 describe('DEUX-EQUIPES-2 — conditions d’inscription', () => {
   test('🔴 § 3 : la place payée suit le joueur, puis la règle D63 (phrase du chef du tournoi)', () => {
-    expect(PARAGRAPHES_DES_CONDITIONS).toContain(`${REGLE_DU_JOUEUR}. ${REGLE_D63}`);
+    // DEUX-EQUIPES-3 (20/11, D65 = B) : l'exception de l'organisateur suit dans le même paragraphe ; avant : toContain exact.
+    expect(PARAGRAPHES_DES_CONDITIONS.some((p) => p.startsWith(`${REGLE_DU_JOUEUR}. ${REGLE_D63}`))).toBe(true);
   });
 
   test('🔴 § 5 : changer d’équipe ne rembourse plus, la place passe dans la nouvelle équipe', () => {
@@ -30,7 +31,7 @@ describe('DEUX-EQUIPES-2 — conditions d’inscription', () => {
   });
 
   test('🔴 nouvelle date (convention D247 : la date suit le dernier changement)', () => {
-    expect(VERSION_DES_CONDITIONS).toBe('Version du 19 novembre 2026');
+    expect(VERSION_DES_CONDITIONS).toBe('Version du 20 novembre 2026'); // DEUX-EQUIPES-3 (20/11) : D65 = B, avant : 'Version du 19 novembre 2026'
     expect(PARAGRAPHES_DES_CONDITIONS[1]).toBe(VERSION_DES_CONDITIONS);
   });
 });
@@ -39,11 +40,12 @@ describe('DEUX-EQUIPES-2 — règlement', () => {
   const equipe = SECTIONS_DU_REGLEMENT.find((section) => section.titre === '1. L\'équipe');
 
   test('🔴 § 1 : même règle, renvoi au § 3 des conditions, puis D63', () => {
-    expect(equipe.paragraphes).toContain(`${REGLE_DU_JOUEUR} (conditions d'inscription, § 3). ${REGLE_D63}`);
+    // DEUX-EQUIPES-3 (20/11, D65 = B) : l'exception suit dans le même paragraphe ; avant : toContain exact.
+    expect(equipe.paragraphes.some((p) => p.startsWith(`${REGLE_DU_JOUEUR} (conditions d'inscription, § 3). ${REGLE_D63}`))).toBe(true);
     expect(equipe.paragraphes.join('\n')).not.toContain('attachée à l\'équipe');
   });
 
   test('l’en-tête du règlement ne change pas (le chef du tournoi n’a pas changé sa version)', () => {
-    expect(EN_TETE_DU_REGLEMENT.endsWith('(v4, 18/11)')).toBe(true);
+    expect(EN_TETE_DU_REGLEMENT.endsWith('(v6, 20/11)')).toBe(true); // DEUX-EQUIPES-3 (20/11) : avant '(v4, 18/11)'
   });
 });

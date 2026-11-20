@@ -29615,6 +29615,15 @@ export default {
       teamRuleGeneric: 'Le remboursement des places suit les conditions d’inscription.',
       teamTitle: 'Retirer ton équipe ?',
     },
+    retraitPaye: {
+      afterClosing: 'Son équipe passera sous 5 joueurs payés. Elle jouera avec les joueurs qui restent.',
+      // eslint-disable-next-line max-len
+      beforeClosing: "Son équipe passera sous 5 joueurs payés et ne sera plus validée. Elle a jusqu'au 10 décembre à 23 h 59 pour se compléter.",
+      cancel: 'Annuler',
+      confirm: 'Retirer le joueur',
+      refundLine: "Le remboursement ne part pas d'ici : il se fait à part, dans Stripe.",
+      title: 'Retirer ce joueur payé ?',
+    },
     roster: {
       count_one: '{{count}} joueur',
       count_other: '{{count}} joueurs',

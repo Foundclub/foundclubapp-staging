@@ -11,8 +11,9 @@
  */
 
 /** La ligne de version, affichée sous le titre. */
-// DEUX-EQUIPES-2 (19/11) : D282 (la place suit le joueur) et D63 ; avant : « Version du 18 novembre 2026 » (D247).
-export const VERSION_DES_CONDITIONS = 'Version du 19 novembre 2026';
+// DEUX-EQUIPES-3 (20/11) : D65 = B (l'organisateur retire un joueur payé, § 3) ; avant : « Version du 19 novembre 2026 »
+// (DEUX-EQUIPES-2 : D282 et D63), puis « Version du 18 novembre 2026 » (D247).
+export const VERSION_DES_CONDITIONS = 'Version du 20 novembre 2026';
 
 /**
  * D48 (17/11/2026) — L'ADRESSE DU COMPLEXE, en UN seul endroit du code : lue par les conditions (§ 1), le
@@ -40,7 +41,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   'Une équipe est validée quand 5 de ses joueurs ont payé. Les équipes sont validées dans l\'ordre où elles atteignent 5 joueurs payés, dans la limite de 24 équipes. Le tournoi se joue à un nombre pair d\'équipes (règlement § 4).',
   'Joueurs seuls ou à 2-4 : Found Club forme des équipes avec les joueurs en attente, dans l\'ordre d\'inscription, par niveau déclaré, dès que 5 joueurs payés peuvent être réunis, en gardant ensemble ceux qui se sont inscrits ensemble.',
   'Condition : l\'inscription d\'un joueur ne vaut que si son équipe compte 5 joueurs payés le 10 décembre 2026 à 23 h 59. À défaut, son inscription est annulée et il est remboursé intégralement, sans frais, sous 14 jours.',
-  'La place payée suit le joueur. S\'il change d\'équipe dans le même tournoi, il ne repaie pas : sa place passe dans la nouvelle équipe, et l\'ancienne équipe compte un joueur payé de moins. Une équipe validée ne redescend pas : un joueur payé ne peut pas la quitter si elle passe ainsi sous 5 joueurs payés. Il peut partir dès qu\'un 6ᵉ joueur a payé. La même règle vaut quand le capitaine retire un joueur payé.',
+  'La place payée suit le joueur. S\'il change d\'équipe dans le même tournoi, il ne repaie pas : sa place passe dans la nouvelle équipe, et l\'ancienne équipe compte un joueur payé de moins. Une équipe validée ne redescend pas : un joueur payé ne peut pas la quitter si elle passe ainsi sous 5 joueurs payés. Il peut partir dès qu\'un 6ᵉ joueur a payé. La même règle vaut quand le capitaine retire un joueur payé. Cette règle ne s\'applique pas quand l\'organisateur retire un joueur, dans trois cas : retrait remboursé demandé au plus tard le 5 décembre 2026 (§ 5), exclusion prévue au règlement (§ 3), autorisation parentale manquante (§ 9). L\'équipe peut alors passer sous 5 joueurs payés. Avant la clôture, elle a jusqu\'au 10 décembre 2026 à 23 h 59 pour se compléter ; à défaut, elle n\'est pas validée et ses places sont remboursées (§ 5). Après la clôture, elle joue avec les joueurs qui restent.',
   '4. Pas de droit de rétractation',
   'Le tournoi est une activité de loisir à une date fixée : le délai de rétractation de 14 jours ne s\'applique pas (article L221-28, 12°, du Code de la consommation). Le joueur le confirme avant de payer. Les cas de remboursement sont ceux des § 3 et § 5.',
   '5. Annulation et remboursement',

@@ -27815,6 +27815,15 @@ export default {
       teamRuleGeneric: 'Refunds of the spots follow the registration terms.',
       teamTitle: 'Withdraw your team?',
     },
+    retraitPaye: {
+      afterClosing: 'Their team will drop below 5 paid players. It will play with the players who remain.',
+      // eslint-disable-next-line max-len
+      beforeClosing: 'Their team will drop below 5 paid players and will no longer be confirmed. It has until 10 December at 11:59 pm to fill up.',
+      cancel: 'Cancel',
+      confirm: 'Remove the player',
+      refundLine: 'The refund is not sent from here: it is done separately, in Stripe.',
+      title: 'Remove this paid player?',
+    },
     roster: {
       count_one: '{{count}} player',
       count_other: '{{count}} players',

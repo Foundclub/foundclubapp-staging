@@ -60,7 +60,7 @@ import TournamentTeamProgress, {
 } from './components/TournamentTeamProgress';
 import { openTournamentTerms } from './components/tournamentTerms';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
-import { hasTournamentTeamForUser } from './tournamentJoinRules';
+import { hasTournamentTeamForUser, isTournamentRegistrationClosed } from './tournamentJoinRules';
 import TournamentMemberConsent from './TournamentMemberConsent';
 import { TournamentMemberPlace } from './TournamentMemberPlace';
 import TournamentTeamDiscussion from './TournamentTeamDiscussion';
@@ -116,6 +116,24 @@ const chargerLesFenetres = () => ({
   // eslint-disable-next-line global-require
   TournamentInviteSheet: parDefaut(require('./components/TournamentInviteSheet')),
 });
+
+/**
+ * DEUX-EQUIPES-3 (20/11/2026, D65 = B) — vrai si retirer `member` fait passer l'équipe VALIDÉE sous le seuil de
+ * places payées : même règle que la garde du serveur (tournament-payment.js `guardPaidDeparture`) — équipe
+ * `accepted`, la place du membre payée, le membre compté (pas d'autorisation parentale attendue) et
+ * `paidCount − 1 < paidMembersToValidate`.
+ * @param {any} team - L'équipe (avec son bloc `payment`).
+ * @param {any} member - Le membre retiré.
+ * @param {any} place - Sa place (`payment.members`), ou undefined.
+ * @returns {boolean} Vrai si l'équipe passerait sous le seuil.
+ */
+const retraitPasseSousLeSeuil = (team, member, place) => {
+  const seuil = Number(team?.payment?.paidMembersToValidate) || 5;
+  return normalizeTournamentText(team?.status) === 'accepted'
+    && place?.status === 'paid'
+    && member?.parentalConsentPending !== true
+    && (Number(team?.payment?.paidCount) || 0) - 1 < seuil;
+};
 
 const getMemberStatusMeta = (status, colors) => {
   const normalized = normalizeTournamentText(status);
@@ -224,6 +242,9 @@ function TournamentTeamDetails({ navigation, route }) {
   const [isPaidLeaveOpen, setIsPaidLeaveOpen] = useState(false);
   // M1311 (chef, 19/11) : la fenêtre « Retirer ton équipe ? » du capitaine.
   const [isTeamWithdrawOpen, setIsTeamWithdrawOpen] = useState(false);
+  // DEUX-EQUIPES-3 (D65 = B) : le membre payé que l'organisateur ou le SuperAdmin va retirer (fenêtre
+  // « Retirer ce joueur payé ? »), ou ''.
+  const [paidRemovalFor, setPaidRemovalFor] = useState('');
   // T-INVITE (15/11) : « Inviter des joueurs » par lien ; sur un ordinateur le lien est copié,
   // l'écran le dit. États : '' | 'pending' | 'copie' | 'echec'.
   const [inviteLinkState, setInviteLinkState] = useState('');
@@ -280,6 +301,11 @@ function TournamentTeamDetails({ navigation, route }) {
   // refuse le paiement : TOURNAMENT_TEAM_CLOSED) ; « Retirer mon équipe » reste au capitaine.
   const teamIsDeclined = normalizeTournamentText(team?.status) === 'declined';
   const canManageRoster = canManageTeam && !teamIsLocked && !teamIsDeclined;
+  // DEUX-EQUIPES-3 (20/11, D65 = B) : l'organisateur du tournoi et le SuperAdmin retirent un joueur (le serveur
+  // les laisse passer la garde D63) ; ils n'ont pas le reste de la gestion de l'effectif.
+  const isTournamentManager = accountRoleKey === 'superAdmin' || (Boolean(currentUserDocumentId)
+    && team?.event?.organizer?.documentId === currentUserDocumentId);
+  const canRemoveMembers = canManageRoster || (isTournamentManager && !teamIsLocked && !teamIsDeclined);
   const canLeaveTeam = Boolean(
     currentMember
     && isTournamentActiveMemberStatus(currentMember?.responseStatus)
@@ -606,6 +632,11 @@ function TournamentTeamDetails({ navigation, route }) {
   ]);
 
   const handleRemoveMember = (memberId) => {
+    const membre = allMembers.find((/** @type {any} */ item) => item?.documentId === memberId);
+    if (isTournamentManager && retraitPasseSousLeSeuil(team, membre, placesByMember.get(memberId))) {
+      setPaidRemovalFor(memberId);
+      return;
+    }
     Alert.alert(
       t('tournamentTeamDetails.removeThisMember', 'Retirer ce membre'),
       t(
@@ -721,7 +752,7 @@ function TournamentTeamDetails({ navigation, route }) {
     const memberStatusMeta = getMemberStatusMeta(member?.responseStatus, Colors);
     const isCurrentUserMember = member?.user?.documentId === currentUserDocumentId;
     const nom = memberName(member);
-    const canOpenMenu = variant === 'active' && canManageRoster && !isCaptain;
+    const canOpenMenu = variant === 'active' && canRemoveMembers && !isCaptain;
     const menuOpen = canOpenMenu && openMenuFor === member?.documentId;
     let roleLine = memberStatusMeta.label;
     let roleTone = memberStatusMeta.tone;
@@ -801,15 +832,17 @@ function TournamentTeamDetails({ navigation, route }) {
                 variant="SecondaryLight"
               />
             ) : null}
-            <Button
-              onPress={() => {
-                setOpenMenuFor('');
-                handleTransferCaptain(member.documentId);
-              }}
-              size="sm"
-              title={t('tournamentTeamDetails.makeCaptain', 'Nommer capitaine')}
-              variant="Secondary"
-            />
+            {canManageRoster ? (
+              <Button
+                onPress={() => {
+                  setOpenMenuFor('');
+                  handleTransferCaptain(member.documentId);
+                }}
+                size="sm"
+                title={t('tournamentTeamDetails.makeCaptain', 'Nommer capitaine')}
+                variant="Secondary"
+              />
+            ) : null}
             <Button
               onPress={() => {
                 setOpenMenuFor('');
@@ -1365,7 +1398,45 @@ function TournamentTeamDetails({ navigation, route }) {
     </View>
   );
 
-  const fenetres = isInviteOpen || isPaidLeaveOpen || isTeamWithdrawOpen
+  // DEUX-EQUIPES-3 (D65 = B) — « Retirer ce joueur payé ? » (organisateur, SuperAdmin) : phrases du chef du
+  // tournoi ; le texte dépend de la clôture des inscriptions (interrupteur de l'organisateur).
+  const paidRemovalContent = (
+    <View style={Spaces.gap[12]} testID="tournament-team-remove-paid">
+      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('implEquipe.retraitPaye.title')}</Text>
+      <Text style={[Fonts.p2, Fonts.neutral200]}>
+        {isTournamentRegistrationClosed(team?.event)
+          ? t('implEquipe.retraitPaye.afterClosing')
+          : t('implEquipe.retraitPaye.beforeClosing')}
+      </Text>
+      <View
+        style={[
+          ...tournamentDs.styles.insetPanelCard,
+          { backgroundColor: `${Colors.warning500}14`, borderColor: `${Colors.warning500}66` },
+        ]}
+      >
+        <Text style={[Fonts.p2Bold, Fonts.warning500]}>{t('implEquipe.retraitPaye.refundLine')}</Text>
+      </View>
+      <Button
+        isLoading={removeMemberMutation.isPending}
+        onPress={() => {
+          const memberId = paidRemovalFor;
+          setPaidRemovalFor('');
+          removeMemberMutation.mutate(memberId);
+        }}
+        style={{ alignSelf: 'stretch' }}
+        title={t('implEquipe.retraitPaye.confirm')}
+        variant="DangerFilled"
+      />
+      <Button
+        onPress={() => setPaidRemovalFor('')}
+        style={{ alignSelf: 'stretch' }}
+        title={t('implEquipe.retraitPaye.cancel')}
+        variant="Ghost"
+      />
+    </View>
+  );
+
+  const fenetres = isInviteOpen || isPaidLeaveOpen || isTeamWithdrawOpen || paidRemovalFor
     ? chargerLesFenetres() : null;
 
   const mainColumn = (
@@ -1730,6 +1801,15 @@ function TournamentTeamDetails({ navigation, route }) {
             webPresentation={isWide ? 'dialog' : undefined}
           >
             {teamWithdrawContent}
+          </fenetres.BottomModal>
+        ) : null}
+        {fenetres && paidRemovalFor ? (
+          <fenetres.BottomModal
+            close={() => setPaidRemovalFor('')}
+            isVisible
+            webPresentation={isWide ? 'dialog' : undefined}
+          >
+            {paidRemovalContent}
           </fenetres.BottomModal>
         ) : null}
 
