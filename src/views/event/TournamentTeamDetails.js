@@ -312,10 +312,12 @@ function TournamentTeamDetails({ navigation, route }) {
     && !currentMemberIsCaptain
     && !teamIsLocked,
   );
+  // RETOUCHES-R50 (9d, 20/11) : le capitaine répond lui aussi à « Seras-tu là … ? » (le serveur
+  // accepte tout membre actif) ; la carte n'offre que « Présent » / « Absent ». Avant :
+  // `&& !currentMemberIsCaptain`. Témoin : __tests__/TournamentTeamDetails.R50-9d.presenceDuCapitaine.test.js.
   const canUpdateTournamentResponse = Boolean(
     currentMember
-    && isTournamentActiveMemberStatus(currentMember?.responseStatus)
-    && !currentMemberIsCaptain,
+    && isTournamentActiveMemberStatus(currentMember?.responseStatus),
   );
   // PARENT-TOURNOI-LECTURE-2 (31/10) : un compte Parent LIT l'équipe ; rejoindre lui est refusé.
   const canRequestJoinTeam = Boolean(
