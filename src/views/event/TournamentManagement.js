@@ -1134,6 +1134,8 @@ function TournamentManagement({ navigation, route }) {
       // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
       // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
       bottomInsetMode="scroll-edge"
+      // DESIGN-DENSITE (20/11, Adel d2) : marge de page 16 / 24 / 40 (recette 51 b, 1a : 24).
+      densePadding
     >
       <WithDataWrapper
         data={dashboard}
