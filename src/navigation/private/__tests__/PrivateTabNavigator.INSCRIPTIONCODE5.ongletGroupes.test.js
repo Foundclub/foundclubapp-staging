@@ -54,7 +54,9 @@ jest.mock('@/domains/messaging/useUnreadMessages', () => ({
 }));
 jest.mock('@/context/ClubScopeContext', () => ({ useClubScope: () => ({}) }));
 jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ bottom: 0, left: 0, right: 0, top: 0 }),
+  useSafeAreaInsets: () => ({
+    bottom: 0, left: 0, right: 0, top: 0,
+  }),
 }));
 jest.mock('../stacks/SearchStack', () => () => null);
 jest.mock('@/theme/themeContext', () => {

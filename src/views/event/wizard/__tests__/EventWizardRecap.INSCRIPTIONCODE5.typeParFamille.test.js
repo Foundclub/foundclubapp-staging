@@ -75,7 +75,6 @@ jest.mock('@/domains/auth/useAuth', () => {
   };
 });
 
-
 jest.mock('@/domains/event/useEvent', () => ({
   __esModule: true,
   default: () => ({

@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { Platform, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Welcome from '../Welcome';

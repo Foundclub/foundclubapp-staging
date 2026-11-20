@@ -49,11 +49,11 @@ import {
   isBookingEventType,
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
+import { familleDeLEvenement, nomAfficheDuType } from '@/domains/event/nomDuTypeAffiche';
 import {
   getCurrentUserEventParticipationState,
   isPendingParticipationRequest,
 } from '@/domains/event/participationState';
-import { familleDeLEvenement, nomAfficheDuType } from '@/domains/event/nomDuTypeAffiche';
 import { canDeclareLatePresence, isArrivalTrackingEnabled } from '@/domains/event/presenceRule';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
