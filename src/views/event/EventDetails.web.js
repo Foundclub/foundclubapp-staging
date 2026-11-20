@@ -4449,7 +4449,7 @@ function EventDetails({ navigation, route }) {
                     {[
                       {
                         label: 'Type',
-                        value: event?.type?.name || t('eventDetails.notSet', 'Non défini'),
+                        value: nomDuTypeAffiche || t('eventDetails.notSet', 'Non défini'),
                       },
                       // T-FICHE (14/11) : un tournoi autonome n'a pas d'équipe, seulement un club
                       // (`event.club`) → « Organisateur » ; ni équipe ni club → ligne masquée.
