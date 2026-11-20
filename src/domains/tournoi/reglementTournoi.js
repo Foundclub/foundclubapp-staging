@@ -11,7 +11,7 @@
 import { ADRESSE_DU_COMPLEXE } from './conditionsTournoi';
 
 /** La ligne de titre du règlement, affichée sous « Règlement du tournoi ». */
-export const EN_TETE_DU_REGLEMENT = 'Règlement du tournoi FoundClub x AR Soccer — samedi 19 décembre 2026, à partir de 19 h (v4, 18/11)';
+export const EN_TETE_DU_REGLEMENT = 'Règlement du tournoi FoundClub x AR Soccer — samedi 19 décembre 2026, à partir de 19 h (v5, 19/11)';
 
 /**
  * Les sections du règlement, dans l'ordre : ses paragraphes et son `titre` (null pour l'introduction).

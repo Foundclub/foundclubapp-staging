@@ -43,7 +43,9 @@ describe('DEUX-EQUIPES-2 — règlement', () => {
     expect(equipe.paragraphes.join('\n')).not.toContain('attachée à l\'équipe');
   });
 
-  test('l’en-tête du règlement ne change pas (le chef du tournoi n’a pas changé sa version)', () => {
-    expect(EN_TETE_DU_REGLEMENT.endsWith('(v4, 18/11)')).toBe(true);
+  // Récolte train 17 (20/11) : le chef du tournoi passe le règlement en v5, datée du 19/11 (D282 et D63).
+  // Avant : « l’en-tête du règlement ne change pas », '(v4, 18/11)'.
+  test('🔴 l’en-tête du règlement passe en v5, 19/11 (décision du chef du tournoi)', () => {
+    expect(EN_TETE_DU_REGLEMENT.endsWith('(v5, 19/11)')).toBe(true);
   });
 });
