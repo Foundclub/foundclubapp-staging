@@ -237,7 +237,8 @@ describe('ORGANISATEUR 1 — « Archiver l équipe » demande une confirmation (
     await toucher(parTestID(arbre, 'orga-menu-eq-pantheres'));
     await toucher(parTestID(arbre, 'orga-archiver-eq-pantheres'));
     expect(mockReview).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalledWith('Archiver Les Panthères ?', expect.any(String), expect.any(Array));
+    // RETOUCHES-R50 (1b, Adel « 2- A », 20/11) : le geste se dit « Retirer » ; il archive toujours.
+    expect(Alert.alert).toHaveBeenCalledWith('Retirer Les Panthères ?', expect.any(String), expect.any(Array));
     await confirmerLaFenetre();
     expect(mockReview).toHaveBeenCalledWith('eq-pantheres', 'archived');
   });

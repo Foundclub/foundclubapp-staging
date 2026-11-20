@@ -62,6 +62,16 @@ import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
 // et « ton équipe ». Témoin : TournamentManagement.ORGANISATEUR.test.js.
 
 const SEUIL_PAR_DEFAUT = 5;
+
+/**
+ * RETOUCHES-R50 (20/11, file RETOUCHES-RECETTE-50) : l'état d'une équipe ; sa date d'archivage seule
+ * suffit à la dire retirée (le serveur la compte ainsi : tournament-teams-summary.js), jamais « Validée ».
+ * @param {any} equipe - L'équipe du tableau de bord.
+ * @returns {string} `archived`, ou le statut normalisé (`pending` par défaut).
+ */
+const statutDeLEquipe = (equipe) => (equipe?.archivedAt
+  ? 'archived'
+  : normalizeTournamentText(equipe?.status) || 'pending');
 const CIBLE = 44;
 
 /**
@@ -324,20 +334,20 @@ function TournamentOrganizerBoard({
   const confirmerLArchivage = (/** @type {any} */ equipe) => {
     Alert.alert(
       t('implOrga.archiveTitle', {
-        defaultValue: 'Archiver {{name}} ?',
+        defaultValue: 'Retirer {{name}} ?',
         name: equipe?.name || '',
         ...SANS_ECHAPPEMENT,
       }),
       t(
         'implOrga.archiveBody',
-        'L’équipe sort de la liste des équipes inscrites. Tu la retrouves dans « Archivées ».',
+        'L’équipe sort de la liste des équipes inscrites ; son historique est gardé. Tu la retrouves dans « Retirées ».',
       ),
       [
         { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
         {
           onPress: () => revue.mutate({ equipe, status: 'archived' }),
           style: 'destructive',
-          text: t('implOrga.archiveConfirm', 'Archiver'),
+          text: t('implOrga.archiveConfirm', 'Retirer'),
         },
       ],
     );
@@ -351,7 +361,8 @@ function TournamentOrganizerBoard({
       return { couleur: Colors.error500, texte: t('tournamentUtils.declined', 'Refusée') };
     }
     if (statut === 'archived') {
-      return { couleur: Colors.neutral300, texte: t('tournamentUtils.archived', 'Archivée') };
+      // RETOUCHES-R50 (1b) : « Retirer l'équipe » dans le menu, « Retirée » sur la pastille.
+      return { couleur: Colors.neutral300, texte: t('implOrga.statusRemoved', 'Retirée') };
     }
     return {
       couleur: Colors.warning400,
@@ -440,7 +451,7 @@ function TournamentOrganizerBoard({
 
   const lignesDuMenu = (/** @type {any} */ equipe, /** @type {any} */ ligne) => {
     const id = String(equipe?.documentId || '');
-    const statut = normalizeTournamentText(equipe?.status) || 'pending';
+    const statut = statutDeLEquipe(equipe);
     const aRelancer = Number(ligne?.unpaidCount) || 0;
     const actif = !['archived', 'declined'].includes(statut);
     const capitaineId = String(ligne?.captain?.documentId || '');
@@ -474,7 +485,7 @@ function TournamentOrganizerBoard({
       statut !== 'archived' ? {
         action: fermerPuis(() => confirmerLArchivage(equipe)),
         icone: 'boxArchive',
-        libelle: t('implOrga.menuArchive', 'Archiver l’équipe'),
+        libelle: t('implOrga.menuArchive', 'Retirer l’équipe'),
         testID: `orga-archiver-${id}`,
       } : null,
       // Avant : une équipe validée ne se refusait pas (CGV partie I § 3, planche 1b). Décision
@@ -560,7 +571,7 @@ function TournamentOrganizerBoard({
   const lectureDeLEquipe = (equipe) => {
     const id = String(equipe?.documentId || '');
     const ligne = ligneParEquipe.get(id) || null;
-    const statut = normalizeTournamentText(equipe?.status) || 'pending';
+    const statut = statutDeLEquipe(equipe);
     const nomDuCapitaine = [ligne?.captain?.firstName, ligne?.captain?.lastName]
       .filter(Boolean).join(' ');
     // 11b : l'organisateur capitaine d'une équipe la reconnaît (« · ton équipe »).

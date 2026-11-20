@@ -27137,7 +27137,7 @@ export default {
     // eslint-disable-next-line max-len
     afterPublishingTheSportsStructure: 'Après publication, la structure sportive sera verrouillée. Seuls les horaires, installations et scores resteront modifiables.',
     approve: 'Valider',
-    archiveTheTeam: 'Archiver l’équipe',
+    archiveTheTeam: 'Retirer l’équipe',
     automatic: 'Automatique',
     bracketGenerated: 'Tableau final généré',
     cancel: 'Annuler',
@@ -29704,9 +29704,10 @@ export default {
   },
   // IMPL-3-ORGA (18/11/2026) — la page de l organisateur du tournoi (planche 1).
   implOrga: {
-    archiveBody: 'L’équipe sort de la liste des équipes inscrites. Tu la retrouves dans « Archivées ».',
-    archiveConfirm: 'Archiver',
-    archiveTitle: 'Archiver {{name}} ?',
+    // RETOUCHES-R50 (1b, Adel « 2- A ») : l’écran dit « Retirer » ; derrière, c’est l’archivage (historique gardé).
+    archiveBody: 'L’équipe sort de la liste des équipes inscrites ; son historique est gardé. Tu la retrouves dans « Retirées ».',
+    archiveConfirm: 'Retirer',
+    archiveTitle: 'Retirer {{name}} ?',
     cancelEvent: 'Annuler l’événement',
     cancelEventConfirm: 'Annuler l’événement',
     cancelEventError: 'L’événement n’a pas pu être annulé.',
@@ -29736,12 +29737,13 @@ export default {
     featuredSent: 'Demande envoyée',
     featuredSentBody: 'Tu seras prévenu quand le tournoi sera à la une.',
     featuredTitle: 'Mettre le tournoi à la une ?',
+    filterRemoved: 'Retirées',
     freeSpots_one: '{{count}} place libre',
     freeSpots_other: '{{count}} places libres',
     matchesScheduled_one: '{{count}} programmé',
     matchesScheduled_other: '{{count}} programmés',
     menuApprove: 'Valider l’équipe',
-    menuArchive: 'Archiver l’équipe',
+    menuArchive: 'Retirer l’équipe',
     menuDecline: 'Refuser l’équipe',
     menuRemind: 'Relancer ceux qui n’ont pas payé ({{count}})',
     menuWriteCaptain: 'Écrire au capitaine',
@@ -29776,6 +29778,7 @@ export default {
     settingsHint: 'prix, âge, maillot, équipes, date, lieu',
     settingsHintTeams: 'prix, âge, maillot, {{count}} équipes, date, lieu',
     share: 'Partager le tournoi',
+    statusRemoved: 'Retirée',
     statusWaitingPayments: 'En attente des paiements',
     summaryUnavailable: 'Les paiements et l’interrupteur des inscriptions sont réservés à '
       + 'l’organisateur du tournoi.',
