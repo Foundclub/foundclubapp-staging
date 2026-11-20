@@ -212,3 +212,65 @@ describe('getTournamentClosure', () => {
     expect(getTournamentClosure(null)).toEqual({ closedAt: undefined, isClosed: false });
   });
 });
+
+/* eslint-disable max-len -- titres de témoins en phrases (même parade que les fiches) */
+// DEUX-EQUIPES (19/11/2026, recette 49, M1362 / M1363) — la règle partagée des équipes du lecteur.
+describe('getViewerTournamentTeams (DEUX-EQUIPES)', () => {
+  const { getViewerTournamentTeams } = jest.requireActual('./tournamentUtils');
+  const REFUSEE = {
+    captainUser: { documentId: 'u-979' }, documentId: 'eq-33', members: [], status: 'declined',
+  };
+  const OU_IL_JOUE = {
+    documentId: 'eq-32', members: [], status: 'accepted', viewerMembership: { responseStatus: 'pending' },
+  };
+  const INVITE = {
+    documentId: 'eq-32', members: [], status: 'accepted', viewerMembership: { responseStatus: 'invited' },
+  };
+  const ids = (/** @type {any} */ r) => ({
+    declined: r.declinedTeam?.documentId || null,
+    managed: r.managedTeam?.documentId || null,
+    member: r.memberTeam?.documentId || null,
+    pending: r.pendingTeam?.documentId || null,
+  });
+
+  test('refusée (capitaine) + active (joueur) : l active est son équipe, la refusée est signalée', () => {
+    expect(ids(getViewerTournamentTeams([REFUSEE, OU_IL_JOUE], 'u-979'))).toEqual({
+      declined: 'eq-33', managed: null, member: 'eq-32', pending: null,
+    });
+  });
+
+  test('refusée (capitaine) + invitation : l invitation n est pas masquée', () => {
+    expect(ids(getViewerTournamentTeams([REFUSEE, INVITE], 'u-979'))).toEqual({
+      declined: 'eq-33', managed: null, member: null, pending: 'eq-32',
+    });
+  });
+
+  test('refusée dont la liste des membres est rendue (capitaine membre actif) + active : même choix', () => {
+    const refuseeAvecMembres = { ...REFUSEE, members: [{ responseStatus: 'pending', user: { documentId: 'u-979' } }] };
+    expect(ids(getViewerTournamentTeams([refuseeAvecMembres, OU_IL_JOUE], 'u-979'))).toEqual({
+      declined: 'eq-33', managed: null, member: 'eq-32', pending: null,
+    });
+  });
+
+  test('seule la refusée : elle reste son équipe (comportement d avant), et signalée', () => {
+    expect(ids(getViewerTournamentTeams([REFUSEE], 'u-979'))).toEqual({
+      declined: 'eq-33', managed: 'eq-33', member: null, pending: null,
+    });
+  });
+
+  test('archivée (capitaine) + active : l active passe, l archivée n est pas « refusée »', () => {
+    const archivee = { ...REFUSEE, archivedAt: '2026-11-19T10:00:00.000Z', status: 'pending' };
+    expect(ids(getViewerTournamentTeams([archivee, OU_IL_JOUE], 'u-979'))).toEqual({
+      declined: null, managed: null, member: 'eq-32', pending: null,
+    });
+  });
+
+  test('capitaine d une équipe active : inchangé ; tournoi clos : plus d équipe gérée ; sans compte : rien', () => {
+    const active = { ...REFUSEE, status: 'pending' };
+    expect(ids(getViewerTournamentTeams([active], 'u-979')).managed).toBe('eq-33');
+    expect(ids(getViewerTournamentTeams([active], 'u-979', { managementClosed: true })).managed).toBeNull();
+    expect(ids(getViewerTournamentTeams([active], ''))).toEqual({
+      declined: null, managed: null, member: null, pending: null,
+    });
+  });
+});

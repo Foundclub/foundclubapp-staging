@@ -706,3 +706,51 @@ test('T-PAGES-3 (3) seuil caractérisant — à partir de 30 %, la liste complè
   act(() => mounted.unmount());
   expect(nomsListes(monter(fiche([EQUIPE_OUVERTE, EQUIPE_COMPLETE]), ORGANISATEUR)).sort()).toEqual(['Les Complets', 'On te trouve une place']);
 });
+
+// DEUX-EQUIPES (19/11/2026, recette 49, M1362 / M1363) — le compte 002 est capitaine de SON équipe,
+// refusée par l'organisateur, et a accepté l'invitation de « Recette Site 333 ». La fiche le
+// reconnaissait d'abord comme capitaine (sans regarder le statut) : il ne voyait plus que l'équipe
+// refusée. La charge est celle que le serveur envoie (event.ts : vue « à moi » de l'équipe refusée
+// avec `captainUser`, `viewerMembership` seulement sur l'équipe non refusée).
+const EQUIPE_REFUSEE_DU_LECTEUR = {
+  captainUser: { documentId: 'joueur-1' }, documentId: 'equipe-33', members: [], name: 'EMU Test 002', sourceType: 'custom_team', status: 'declined',
+};
+
+test('🔴 DEUX-EQUIPES (M1362) refusée + équipe où il joue : la carte et « Voir mon équipe » vont à l équipe où il joue ; le bandeau dit la refusée', () => {
+  const ouIlJoue = equipeDuLecteur({ documentId: 'equipe-32', status: 'accepted', viewerMembership: { responseStatus: 'pending' } });
+  const arbre = monter(fiche([EQUIPE_REFUSEE_DU_LECTEUR, ouIlJoue]), SEUL_18_ANS);
+  const carte = unSeul(arbre, 'tournament-my-team-card');
+  expect(texte(carte)).toContain('Recette Site 333');
+  expect(texte(carte)).not.toContain('EMU Test 002');
+  act(() => { unSeul(arbre, 'tournament-my-team-primary').props.onClick(); });
+  expect(mockNavigate).toHaveBeenLastCalledWith('TournamentTeamDetails', { eventId: 'event-1', teamId: 'equipe-32' });
+  expect(texte(unSeul(arbre, 'tournament-declined-team-notice'))).toBe('Ton équipe EMU Test 002 a été refusée par l’organisateur.');
+});
+
+test('🔴 DEUX-EQUIPES (M1363) refusée + invitation ailleurs : la carte montre l invitation, jamais masquée', () => {
+  const invite = equipeDuLecteur({ documentId: 'equipe-32', status: 'accepted', viewerMembership: { responseStatus: 'invited' } });
+  const arbre = monter(fiche([EQUIPE_REFUSEE_DU_LECTEUR, invite]), SEUL_18_ANS);
+  const carte = unSeul(arbre, 'tournament-my-team-card');
+  expect(texte(carte)).toContain('Mon équipe · Invitation');
+  expect(texte(carte)).toContain('Recette Site 333');
+  expect(boutonsPleins(carte)).toEqual(['Répondre à mon invitation']);
+  expect(parTestId(arbre, 'tournament-declined-team-notice')).toHaveLength(1);
+});
+
+test('DEUX-EQUIPES caractérisant — seule l équipe refusée : elle reste sa carte « Mon équipe · Capitaine » (inchangé)', () => {
+  const arbre = monter(fiche([EQUIPE_OUVERTE, EQUIPE_REFUSEE_DU_LECTEUR]), SEUL_18_ANS);
+  const carte = unSeul(arbre, 'tournament-my-team-card');
+  expect(texte(carte)).toContain('Mon équipe · Capitaine');
+  expect(texte(carte)).toContain('EMU Test 002');
+  expect(parTestId(arbre, 'tournament-sign-up-card')).toHaveLength(0);
+});
+
+test('🔴 DEUX-EQUIPES — seule l équipe refusée : le bandeau la dit, à sa place, au-dessus de sa carte', () => {
+  const arbre = monter(fiche([EQUIPE_OUVERTE, EQUIPE_REFUSEE_DU_LECTEUR]), SEUL_18_ANS);
+  expect(texte(unSeul(arbre, 'tournament-declined-team-notice'))).toContain('EMU Test 002');
+});
+
+test('DEUX-EQUIPES — capitaine d une équipe active : pas de bandeau', () => {
+  const arbre = monter(fiche([EQUIPE_OUVERTE, CAPITAINE_EQUIPE]), SEUL_18_ANS);
+  expect(parTestId(arbre, 'tournament-declined-team-notice')).toHaveLength(0);
+});

@@ -1676,3 +1676,56 @@ describe('FICHE-TOURNOI · 8a — « Rejoindre une équipe » du visiteur, dans 
     expect(textes(root)).not.toContain('Rejoindre une équipe');
   });
 });
+
+// DEUX-EQUIPES (19/11/2026, recette 49, M1362 / M1363) — capitaine d'une équipe REFUSÉE et joueur
+// (ou invité) d'une autre : la fiche le reconnaissait d'abord comme capitaine, sans regarder le statut.
+// Charge du serveur (event.ts) : l'équipe refusée avec `captainUser`, `viewerMembership` sur l'autre.
+describe('DEUX-EQUIPES — l équipe active passe avant l équipe refusée', () => {
+  const REFUSEE = {
+    captainUser: { documentId: 'joueur-002' }, documentId: 'eq-refusee', members: [], name: 'EMU Test 002', sourceType: 'custom_team', status: 'declined',
+  };
+  const avec = (/** @type {any} */ autre) => ({
+    auth: compte('joueur-002'),
+    event: TOURNOI({ tournamentTeams: [REFUSEE, autre] }),
+  });
+  const appuyerEnBas = (/** @type {any} */ root) => {
+    const [barre] = parTestID(root, 'tournament-bottom-bar');
+    act(() => { barre.findAllByType(TouchableOpacity)[0].props.onPress(); });
+  };
+
+  test('🔴 joueur de « Les Lions » : sa carte, « Voir mon équipe » ouvre Les Lions, le bandeau dit la refusée', () => {
+    mockTeamQuery.data = null;
+    mockNavigate.mockClear();
+    const root = monter(avec({ ...LIONS, status: 'accepted', viewerMembership: { responseStatus: 'pending' } }));
+    const [carte] = parTestID(root, 'tournament-fiche-my-team');
+    expect(textes(carte)).toEqual(expect.arrayContaining(['Les Lions']));
+    expect(textes(carte).join(' ')).not.toContain('EMU Test 002');
+    expect(barreDe(root)).toEqual(['Voir mon équipe']);
+    appuyerEnBas(root);
+    expect(JSON.stringify(mockNavigate.mock.calls.at(-1))).toContain('eq-lions');
+    const [bandeau] = parTestID(root, 'tournament-declined-team-notice');
+    expect(textes(bandeau)).toEqual(['Ton équipe EMU Test 002 a été refusée par l’organisateur.']);
+  });
+
+  test('🔴 invité par « Les Lions » : l invitation n est jamais masquée', () => {
+    mockTeamQuery.data = null;
+    const root = monter(avec({ ...LIONS, viewerMembership: { responseStatus: 'invited' } }));
+    const [carte] = parTestID(root, 'tournament-fiche-my-team');
+    expect(textes(carte)).toEqual(expect.arrayContaining(['Les Lions', 'Répondre à mon invitation']));
+    expect(barreDe(root)).toEqual(['Répondre à mon invitation']);
+    expect(parTestID(root, 'tournament-declined-team-notice')).toHaveLength(1);
+  });
+
+  test('caractérisant — seule l équipe refusée : sa carte et « Voir mon équipe » (inchangé), plus le bandeau', () => {
+    mockTeamQuery.data = null;
+    const root = monter(avec(LIONS));
+    const [carte] = parTestID(root, 'tournament-fiche-my-team');
+    expect(textes(carte)).toEqual(expect.arrayContaining(['EMU Test 002']));
+    expect(barreDe(root)).toEqual(['Voir mon équipe']);
+  });
+
+  test('capitaine d une équipe active : pas de bandeau', () => {
+    mockTeamQuery.data = null;
+    expect(parTestID(monter(LECTEURS.capitaine()), 'tournament-declined-team-notice')).toHaveLength(0);
+  });
+});
