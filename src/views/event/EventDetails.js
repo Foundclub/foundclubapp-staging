@@ -260,6 +260,7 @@ import {
   isTournamentTeamsCountShown,
 } from './tournamentTeamsCount';
 import {
+  blocksAnotherTournamentTeam,
   canRegisterSourceTeamToTournament,
   formatTournamentPlayersShortList,
   getTournamentCategoryLabel,
@@ -1260,10 +1261,11 @@ function EventDetails({ navigation, route }) {
     && !tropJeunePourLeTournoi
     && event?.tournamentConfig?.allowCustomTeams !== false
     && userData?.documentId
-    && !currentUserTournamentTeam
+    // DEUX-EQUIPES-2 (19/11) : une équipe refusée ou archivée ne bloque plus (règle du serveur).
+    && !blocksAnotherTournamentTeam(currentUserTournamentTeam)
     && !currentUserPendingTournamentTeam
     // T-PAGES-4 (R11) : un capitaine que la fiche ne connaît que par `captainUser`.
-    && !managedTournamentTeam,
+    && !blocksAnotherTournamentTeam(managedTournamentTeam),
   );
   const canRegisterTournamentSourceTeam = Boolean(
     isTournamentEvent

@@ -52,6 +52,7 @@ import { formatDateWithDayPrefix } from '@/utils/date';
 import { getApiErrorTranslation, getErrorStatus } from '@/utils/errors/displayError';
 
 import useOuvrirLAssistance from '../chat/useOuvrirLAssistance';
+import TournamentDeclinedTeamNotice from './components/TournamentDeclinedTeamNotice';
 import TournamentTeamProgress, {
   getTodoDetail,
   getTodoTitle,
@@ -258,10 +259,16 @@ function TournamentTeamDetails({ navigation, route }) {
 
   const currentUserDocumentId = userData?.documentId || '';
   // T-PAIE : les places d'un tournoi payant (absent pour un tournoi gratuit ou un vieux serveur).
+  // DEUX-EQUIPES-2 : équipe refusée, le statut payé / à payer reste lisible, plus aucun lien.
   const placesByMember = useMemo(() => new Map(
     (team?.payment?.members || [])
-      .map((/** @type {any} */ place) => [place?.memberDocumentId, place]),
-  ), [team?.payment?.members]);
+      .map((/** @type {any} */ place) => [
+        place?.memberDocumentId,
+        normalizeTournamentText(team?.status) === 'declined'
+          ? { ...place, paymentUrl: null }
+          : place,
+      ]),
+  ), [team?.payment?.members, team?.status]);
   const allMembers = useMemo(
     () => (Array.isArray(team?.members) ? team.members : [])
       .filter((member) => normalizeTournamentText(member?.responseStatus) !== 'removed'),
@@ -288,7 +295,10 @@ function TournamentTeamDetails({ navigation, route }) {
   const teamIsClosed = normalizeTournamentText(team?.event?.sessionStatus) === 'closed'
     || team?.event?.isActive === false;
   const teamIsLocked = teamIsArchived || teamIsClosed;
-  const canManageRoster = canManageTeam && !teamIsLocked;
+  // DEUX-EQUIPES-2 (19/11, point 5) : équipe refusée = plus rien à payer ni à recruter (le serveur
+  // refuse le paiement : TOURNAMENT_TEAM_CLOSED) ; « Retirer mon équipe » reste au capitaine.
+  const teamIsDeclined = normalizeTournamentText(team?.status) === 'declined';
+  const canManageRoster = canManageTeam && !teamIsLocked && !teamIsDeclined;
   const canLeaveTeam = Boolean(
     currentMember
     && isTournamentActiveMemberStatus(currentMember?.responseStatus)
@@ -343,7 +353,9 @@ function TournamentTeamDetails({ navigation, route }) {
   }), [allMembers, team?.payment, team?.status, tournamentConfig]);
   const myPlace = (team?.payment?.members || []).find((/** @type {any} */ place) => place?.isSelf)
     || null;
-  const myPlaceDue = Boolean(myPlace && myPlace.status !== 'paid' && myPlace.paymentUrl);
+  const myPlaceDue = Boolean(
+    !teamIsDeclined && myPlace && myPlace.status !== 'paid' && myPlace.paymentUrl,
+  );
   const isCurrentActiveMember = Boolean(
     currentMember && isTournamentActiveMemberStatus(currentMember?.responseStatus),
   );
@@ -1328,7 +1340,7 @@ function TournamentTeamDetails({ navigation, route }) {
   const fermerEtEcrire = () => ecrireALAssistance(brouillon('implEquipe.retrait.draftMe'));
 
   // M1311 — « Retirer mon équipe » (capitaine) : la règle des conditions (CGV § 5), puis l'Assistance.
-  const canWithdrawTeam = canManageRoster && currentMemberIsCaptain;
+  const canWithdrawTeam = canManageTeam && !teamIsLocked && currentMemberIsCaptain;
   const teamWithdrawLink = canWithdrawTeam ? (
     <Button
       onPress={() => setIsTeamWithdrawOpen(true)}
@@ -1471,6 +1483,7 @@ function TournamentTeamDetails({ navigation, route }) {
 
   const mainColumn = (
     <View style={[Spaces.gap[16], isWide ? { flex: 1, minWidth: 0 } : null]}>
+      {teamIsDeclined ? <TournamentDeclinedTeamNotice team={team} /> : null}
       {teamIsLocked ? (
         <View
           style={[

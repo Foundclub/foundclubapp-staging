@@ -1973,6 +1973,13 @@ export default {
     TEAM_TRAINER_REQUIRED: 'At least one coach is required for each team.',
     TEAM_TRAINER_SET_REQUIRED: 'A coaching staff is required.',
     title: 'Error',
+    // DEUX-EQUIPES-2 (19/11) — server refusals on a tournament team (`details.code`).
+    TOURNAMENT_PAID_THRESHOLD_LEAVE:
+      'Your team would drop below 5 paid players. You can leave as soon as a 6th player has paid.',
+    TOURNAMENT_PAID_THRESHOLD_REMOVE:
+      'The team would drop below 5 paid players: remove this player once a 6th one has paid.',
+    TOURNAMENT_TEAM_CLOSED:
+      'This team was declined or withdrawn from the tournament: its place can no longer be paid.',
     TRAINER_ALREADY_IN_CLUB: 'You’re already part of a club. Leave it from its page before joining this one.',
     TRAINER_HAS_TEAMS: 'The coach is associated with teams.',
     TRAINER_IS_UNIQUE_TEAM_TRAINER: "The coach is the team's only coach.",
@@ -17033,6 +17040,7 @@ export default {
     card: {
       instalments_one: '{{count}} instalment',
       instalments_other: '{{count}} instalments',
+      transferred: 'Place transferred from {{from}} to {{to}} on {{date}}',
     },
     children: {
       empty: 'No child declared yet.',

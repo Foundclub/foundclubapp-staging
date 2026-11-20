@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -47,6 +48,7 @@ import {
   currencyOf,
   describeAssignmentContext,
   describeTotalsLine,
+  formatMemberDate,
   getMemberStatusTone,
   getPaidRatio,
   groupAssignmentsByClub,
@@ -229,6 +231,18 @@ function AssignmentCard({ assignment, onPress }) {
       </View>
       {/* ⛔ Pas de barre quand il n y a rien a progresser (cotisation exemptee). */}
       {isWaived ? null : <MemberProgressBar height={6} ratio={getPaidRatio(assignment)} />}
+      {/* DEUX-EQUIPES-2 (D282) : la place payée a suivi le joueur dans sa nouvelle équipe
+          (`tournamentTransfer`, /licenses/me). */}
+      {assignment?.tournamentTransfer?.toTeamName ? (
+        <Text style={[type.meta, Fonts.neutral300]} testID="my-licenses-place-transferred">
+          {t('myLicenses.card.transferred', {
+            date: formatMemberDate(assignment.tournamentTransfer.at),
+            from: assignment.tournamentTransfer.fromTeamName || '',
+            to: assignment.tournamentTransfer.toTeamName,
+            ...SANS_ECHAPPEMENT,
+          })}
+        </Text>
+      ) : null}
       {installmentCount > 1 ? (
         <Text style={[type.meta, Fonts.neutral400]}>
           {t('myLicenses.card.instalments', {

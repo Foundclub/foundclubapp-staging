@@ -1954,6 +1954,15 @@ export default {
     MEMBER_ROLE_PROTECTED_ACCOUNT: 'Le rôle de ce compte ne se change pas depuis cet écran.',
     MEMBER_ROLE_SELF_DEMOTION: 'Tu ne peux pas te retirer toi-même la direction du club.',
     MEMBER_ROLE_TEAM_NOT_IN_CLUB: "Cette équipe n'appartient pas au club.",
+    // DEUX-EQUIPES-2 (19/11) — refus du serveur sur une équipe de tournoi (`details.code`),
+    // phrases du chef du tournoi (D63 « A ») ; le seuil de 5 est celui du tournoi du 19/12.
+    TOURNAMENT_PAID_THRESHOLD_LEAVE:
+      'Ton équipe passerait sous 5 joueurs payés. '
+      + 'Tu pourras la quitter dès qu’un 6ᵉ joueur aura payé.',
+    TOURNAMENT_PAID_THRESHOLD_REMOVE:
+      'L’équipe passerait sous 5 joueurs payés : retire ce joueur dès qu’un 6ᵉ aura payé.',
+    TOURNAMENT_TEAM_CLOSED:
+      'Cette équipe a été refusée ou retirée du tournoi : sa place ne se paie plus.',
 
     // Validation errors
     INVALID_FIELD_FORMAT: 'Format de champ invalide.',
@@ -17843,6 +17852,8 @@ export default {
     card: {
       instalments_one: '{{count}} échéance',
       instalments_other: '{{count}} échéances',
+      // DEUX-EQUIPES-2 (D282) : la place payée suit le joueur.
+      transferred: 'Place transférée de {{from}} vers {{to}} le {{date}}',
     },
     children: {
       empty: 'Aucun enfant déclaré pour l’instant.',

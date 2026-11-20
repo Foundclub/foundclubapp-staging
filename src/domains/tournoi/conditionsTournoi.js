@@ -11,7 +11,8 @@
  */
 
 /** La ligne de version, affichée sous le titre. */
-export const VERSION_DES_CONDITIONS = 'Version du 18 novembre 2026';
+// DEUX-EQUIPES-2 (19/11) : D282 (la place suit le joueur) et D63 ; avant : « Version du 18 novembre 2026 » (D247).
+export const VERSION_DES_CONDITIONS = 'Version du 19 novembre 2026';
 
 /**
  * D48 (17/11/2026) — L'ADRESSE DU COMPLEXE, en UN seul endroit du code : lue par les conditions (§ 1), le
@@ -39,7 +40,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   'Une équipe est validée quand 5 de ses joueurs ont payé. Les équipes sont validées dans l\'ordre où elles atteignent 5 joueurs payés, dans la limite de 24 équipes. Le tournoi se joue à un nombre pair d\'équipes (règlement § 4).',
   'Joueurs seuls ou à 2-4 : Found Club forme des équipes avec les joueurs en attente, dans l\'ordre d\'inscription, par niveau déclaré, dès que 5 joueurs payés peuvent être réunis, en gardant ensemble ceux qui se sont inscrits ensemble.',
   'Condition : l\'inscription d\'un joueur ne vaut que si son équipe compte 5 joueurs payés le 10 décembre 2026 à 23 h 59. À défaut, son inscription est annulée et il est remboursé intégralement, sans frais, sous 14 jours.',
-  'La place payée est attachée à l\'équipe. Après le paiement, on ne change d\'équipe qu\'avec l\'accord de Found Club ; le joueur paie alors sa place dans la nouvelle équipe, et l\'ancienne lui est remboursée intégralement sous 14 jours.',
+  'La place payée suit le joueur. S\'il change d\'équipe dans le même tournoi, il ne repaie pas : sa place passe dans la nouvelle équipe, et l\'ancienne équipe compte un joueur payé de moins. Une équipe validée ne redescend pas : un joueur payé ne peut pas la quitter si elle passe ainsi sous 5 joueurs payés. Il peut partir dès qu\'un 6ᵉ joueur a payé. La même règle vaut quand le capitaine retire un joueur payé.',
   '4. Pas de droit de rétractation',
   'Le tournoi est une activité de loisir à une date fixée : le délai de rétractation de 14 jours ne s\'applique pas (article L221-28, 12°, du Code de la consommation). Le joueur le confirme avant de payer. Les cas de remboursement sont ceux des § 3 et § 5.',
   '5. Annulation et remboursement',
@@ -47,7 +48,7 @@ export const PARAGRAPHES_DES_CONDITIONS = Object.freeze([
   'Found Club annule le tournoi (pas assez d\'équipes le 06/12, complexe indisponible, autre raison) : remboursement intégral. Si le joueur le préfère, report de sa place sur le tournoi suivant.',
   'L\'équipe n\'a pas 5 joueurs payés le 10/12 à 23 h 59 (§ 3) : remboursement intégral.',
   'Nombre d\'équipes impair à la clôture : la dernière équipe validée ne peut pas être complétée et ne joue pas (règlement § 4) : remboursement intégral.',
-  'Le joueur change d\'équipe avec l\'accord de Found Club (§ 3) : remboursement intégral de l\'ancienne place.',
+  'Le joueur change d\'équipe dans le même tournoi (§ 3) : aucun remboursement ; sa place payée passe dans la nouvelle équipe.',
   'Le joueur se retire jusqu\'au 5 décembre 2026 inclus : remboursement intégral.',
   'Le joueur se retire après le 5 décembre, ou ne vient pas : pas de remboursement. Il peut céder sa place à un autre joueur jusqu\'au 17/12, par FoundClub : le nouveau joueur paie sa place et le premier est remboursé.',
   'Un joueur de 16 ou 17 ans sans autorisation parentale à l\'accueil (§ 9) : il ne joue pas ; remboursement intégral.',
