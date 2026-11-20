@@ -21297,6 +21297,8 @@ export default {
     recherche: {
       apresMidi: '12 h – 18 h',
       aucunCreneauFiltres: 'Aucun créneau pour ces filtres',
+      aussiPresDeToi: 'Aussi près de toi',
+      aussiPresDeToiSousTitre: 'réservation sur leur site',
       aujourdhui: 'Aujourd’hui',
       autoriser: 'Autoriser ma position',
       autourDeLaVille: 'Chercher autour de {{ville}}',
@@ -21349,6 +21351,8 @@ export default {
       positionTexte: 'Autorise ta position pour voir les terrains libres près de toi, triés par distance.',
       positionTitre: 'Des terrains autour de toi',
       reessayer: 'Réessayer',
+      reserverAupresDuComplexe: 'Réserver auprès du complexe',
+      reserverSurSonSite: 'Réserver sur son site',
       retirerLeSport: '{{sport}} : retirer ce filtre',
       rienTrouve: 'Aucun terrain pour « {{texte}} » autour de toi.',
       rienTrouveTexte: 'Essaie un nom de complexe, une autre ville, ou élargis la distance.',

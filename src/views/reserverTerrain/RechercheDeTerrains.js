@@ -303,6 +303,12 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     .map((/** @type {any} */ carte) => filtrerLHeure(carte, heure))
     .filter((/** @type {any} */ carte) => texteValide || carte.slots.length > 0);
   const dateLue = recherche?.data?.date || jour || aujourdhui;
+  // FC-4 PAGE (20/11, planches 5c et 5d, option B) : les pages créées par FoundClub du rayon, rendues
+  // à part par le serveur (FC-1), jamais en recherche par nom (le nom les trouve déjà). Un serveur
+  // d'avant ne rend pas la clé : rien. Témoin : __tests__/EP01.recherche.test.js (FC-4).
+  const aussiPresDeToi = !texteValide && Array.isArray(recherche?.data?.aussiPresDeToi)
+    ? recherche.data.aussiPresDeToi.filter((/** @type {any} */ carte) => carte?.slug)
+    : [];
   const carteChoisie = cartes.find((/** @type {any} */ carte) => (
     carte.slug === epingleChoisie
   )) || null;
@@ -856,6 +862,28 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
     padding: 16,
   };
   const variante = recherche?.error ? varianteDEchec(recherche.error) : null;
+  // FC-4 (5c, 5d) : la rubrique « Aussi près de toi », sous la liste (ou sous le message du vide).
+  const rubriqueAussiPresDeToi = aussiPresDeToi.length ? (
+    <View style={{ gap: 12 }} testID="recherche-aussi-pres-de-toi">
+      <View style={[Alignments.row, Alignments.wrap, { alignItems: 'baseline', gap: 8 }]}>
+        <Text accessibilityRole="header" style={[Fonts.h5Bold, Fonts.neutral00]}>
+          {t('reserverTerrain.recherche.aussiPresDeToi', 'Aussi près de toi')}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('reserverTerrain.recherche.aussiPresDeToiSousTitre', 'réservation sur leur site')}
+        </Text>
+      </View>
+      {aussiPresDeToi.map((/** @type {any} */ carte) => (
+        <CarteComplexeRecherche
+          carte={carte}
+          key={`aussi-${carte.slug}`}
+          onCreneau={() => ouvrirLeComplexe(carte)}
+          onOuvrir={() => ouvrirLeComplexe(carte)}
+        />
+      ))}
+    </View>
+  ) : null;
+  let listeLue = false;
   let corps;
   if (!centre && !texteValide) {
     corps = (
@@ -977,6 +1005,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
       </View>
     );
   } else if (!cartes.length) {
+    listeLue = true;
     const elargir = distanceSuivante && centre ? (
       <Button
         onPress={() => setDistanceKm(distanceSuivante)}
@@ -1068,6 +1097,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
       </View>
     );
   } else if (surOrdinateur) {
+    listeLue = true;
     // OR2 : la liste à gauche (la carte de l'épingle touchée en tête), la carte à droite.
     const enTete = carteChoisie
       ? [carteChoisie, ...cartes.filter((/** @type {any} */ carte) => carte !== carteChoisie)]
@@ -1097,6 +1127,7 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
       </View>
     );
   } else if (!enCarte) {
+    listeLue = true;
     corps = (
       <View style={{ gap: 12 }}>
         {cartes.map((/** @type {any} */ carte) => (
@@ -1107,6 +1138,14 @@ function RechercheDeTerrains({ refreshSignal = 0, screenActive = true, visiteur 
             onOuvrir={() => ouvrirLeComplexe(carte)}
           />
         ))}
+      </View>
+    );
+  }
+  if (listeLue && rubriqueAussiPresDeToi) {
+    corps = (
+      <View style={{ gap: 24 }}>
+        {corps}
+        {rubriqueAussiPresDeToi}
       </View>
     );
   }

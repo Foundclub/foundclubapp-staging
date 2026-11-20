@@ -54,6 +54,9 @@ function CarteComplexeRecherche({
     Alignments, ApplicationStyle, Colors, Fonts, Images,
   } = useTheme();
   const nom = String(carte?.name || '');
+  // FC-4 PAGE (20/11, planche 5b) : une page créée par FoundClub (serveur FC-1) ne promet pas de
+  // réservation FoundClub. Témoin : __tests__/FC4.carte.test.js.
+  const pageFoundclub = carte?.pageFoundclub === true;
   const creneaux = Array.isArray(carte?.slots) ? carte.slots : [];
   const montres = creneaux.slice(0, PUCES_MAX);
   const enPlus = Math.max(0, Number(carte?.freeSlotsCount || creneaux.length) - montres.length);
@@ -103,7 +106,7 @@ function CarteComplexeRecherche({
           <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
             <Text numberOfLines={2} style={[Fonts.h5Bold, Fonts.neutral00]}>{nom}</Text>
             <View style={[Alignments.row, Alignments.wrap, Alignments.alignCenter, { gap: 8 }]}>
-              <BadgeComplexe />
+              <BadgeComplexe court={pageFoundclub} />
               {distance ? <Text style={[Fonts.p3Bold, Fonts.neutral100]}>{distance}</Text> : null}
             </View>
             {sports ? <Text style={[Fonts.p3, Fonts.neutral200]}>{sports}</Text> : null}
@@ -149,12 +152,19 @@ function CarteComplexeRecherche({
       ) : null}
       {/* CORR-RESA (70 B, 82 B) : une carte sans créneau dit pourquoi — aucun terrain encore ouvert
           (« Bientôt réservable »), ou aucun créneau pour les filtres choisis. */}
-      {!montres.length && carte?.bientotReservable ? (
+      {!montres.length && pageFoundclub ? (
+        <Text style={[Fonts.p3Bold, Fonts.primary200]} testID="carte-reserver-sur-son-site">
+          {String(carte?.externalBookingUrl || '').trim()
+            ? t('reserverTerrain.recherche.reserverSurSonSite', 'Réserver sur son site')
+            : t('reserverTerrain.recherche.reserverAupresDuComplexe', 'Réserver auprès du complexe')}
+        </Text>
+      ) : null}
+      {!montres.length && carte?.bientotReservable && !pageFoundclub ? (
         <Text style={[Fonts.p3Bold, Fonts.primary200]} testID="carte-bientot-reservable">
           {t('reserverTerrain.recherche.bientotReservable', 'Bientôt réservable')}
         </Text>
       ) : null}
-      {!montres.length && !carte?.bientotReservable && !carte?.phoneOnly ? (
+      {!montres.length && !carte?.bientotReservable && !carte?.phoneOnly && !pageFoundclub ? (
         <Text style={[Fonts.p3, Fonts.neutral200]} testID="carte-aucun-creneau">
           {t('reserverTerrain.recherche.aucunCreneauFiltres', 'Aucun créneau pour ces filtres')}
         </Text>

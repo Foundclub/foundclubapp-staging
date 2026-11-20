@@ -20515,6 +20515,8 @@ export default {
     recherche: {
       apresMidi: '12 pm – 6 pm',
       aucunCreneauFiltres: 'No slot for these filters',
+      aussiPresDeToi: 'Also near you',
+      aussiPresDeToiSousTitre: 'booking on their website',
       aujourdhui: 'Today',
       autoriser: 'Allow my location',
       autourDeLaVille: 'Search around {{ville}}',
@@ -20564,6 +20566,8 @@ export default {
       positionTexte: 'Allow your location to see free pitches near you, sorted by distance.',
       positionTitre: 'Pitches around you',
       reessayer: 'Try again',
+      reserverAupresDuComplexe: 'Book with the venue',
+      reserverSurSonSite: 'Book on their website',
       retirerLeSport: '{{sport}}: remove this filter',
       rienTrouve: 'No pitch for “{{texte}}” around you.',
       rienTrouveTexte: 'Try a venue name, another town, or widen the distance.',

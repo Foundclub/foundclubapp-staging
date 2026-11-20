@@ -509,3 +509,55 @@ describe('BH16 P13-17 — un complexe arrive sans liste de créneaux', () => {
     expect(arbre.toJSON()).not.toBeNull();
   });
 });
+
+// FC-4 PAGE (20/11/2026, planches FICHES-COMPLEXES 5c, 5d, option B validée par Adel) — « Aussi
+// près de toi » : les pages créées par FoundClub du rayon (`aussiPresDeToi`, serveur FC-1), après
+// les complexes réservables, en recherche « près de moi » ; un serveur d'avant ne rend pas la clé.
+describe('FC-4 — la rubrique « Aussi près de toi » (option B)', () => {
+  const PAGE = carteDeRecherche({
+    bientotReservable: true,
+    externalBookingUrl: 'https://padel-des-pins.fr/reserver',
+    freeSlotsCount: 0,
+    name: 'Padel Club des Pins',
+    pageFoundclub: true,
+    slots: [],
+    slug: 'padel-club-des-pins',
+  });
+
+  it('après la liste : le titre, sa ligne, la carte « Réserver sur son site », qui ouvre la page', async () => {
+    mockRecherche = {
+      ...mockRecherche,
+      data: { ...mockRecherche.data, aussiPresDeToi: [PAGE] },
+    };
+    const arbre = await monter();
+    const vus = lisibles(arbre);
+    expect(vus).toEqual(expect.arrayContaining([
+      'Aussi près de toi', 'réservation sur leur site', 'Padel Club des Pins', 'Réserver sur son site',
+    ]));
+    // Les complexes réservables d'abord.
+    expect(vus.indexOf('Le Five de Montrivage')).toBeLessThan(vus.indexOf('Aussi près de toi'));
+    await appuyer(arbre, 'Padel Club des Pins : voir le complexe');
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.ReserverComplexe, {
+      slug: 'padel-club-des-pins',
+    });
+  });
+
+  it('aucun complexe réservable près de moi : la rubrique reste, sous le message du vide', async () => {
+    mockRecherche = {
+      ...mockRecherche,
+      data: { aussiPresDeToi: [PAGE], complexes: [], date: '2026-10-14' },
+    };
+    const arbre = await monter();
+    expect(lisibles(arbre)).toEqual(expect.arrayContaining([
+      'Aussi près de toi', 'Padel Club des Pins',
+    ]));
+  });
+
+  it('E6 — serveur d’avant (pas de clé) ou liste vide : pas de rubrique', async () => {
+    let arbre = await monter();
+    expect(lisibles(arbre)).not.toContain('Aussi près de toi');
+    mockRecherche = { ...mockRecherche, data: { ...mockRecherche.data, aussiPresDeToi: [] } };
+    arbre = await monter();
+    expect(lisibles(arbre)).not.toContain('Aussi près de toi');
+  });
+});
