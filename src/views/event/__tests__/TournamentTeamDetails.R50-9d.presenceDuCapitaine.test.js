@@ -396,3 +396,19 @@ describe('RETOUCHES-R50 9d : le capitaine répond lui aussi à « Seras-tu là �
     expect(texte(arbre)).not.toContain('Quitter l’équipe');
   });
 });
+
+// RETOUCHES-R50 (4c, commentaire d'Adel « il manque le bouton inviter ») : la photo 4c est celle d'un
+// MEMBRE (joueur 777) ; la maquette, celle du capitaine. Le capitaine d'une équipe VALIDÉE garde
+// « Inviter un joueur » sous la liste ; un membre ne l'a pas (le serveur refuse : inviteMember demande
+// de gérer l'équipe) — question posée au chef.
+describe('RETOUCHES-R50 4c : « Inviter un joueur » sous la liste', () => {
+  test('caractérisant : le capitaine d’une équipe validée a « Inviter un joueur »', async () => {
+    const arbre = await monter(equipe({ status: 'accepted' }), 'u-cap');
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-invite-button').length).toBeGreaterThan(0);
+  });
+
+  test('caractérisant : un membre ne l’a pas', async () => {
+    const arbre = await monter(equipe({ status: 'accepted' }), 'u-2');
+    expect(arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'tournament-team-invite-button')).toHaveLength(0);
+  });
+});
