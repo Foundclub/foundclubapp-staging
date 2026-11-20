@@ -89,6 +89,13 @@ const styles = {
   leaveSeparator: { borderTopWidth: 1, paddingTop: 12 },
   // PAGE-EQUIPE : une ligne de la liste continue des joueurs (le cadre est celui de la liste).
   playerRow: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
+  // RELANCER-B : sous le nom (avatar 40 + écart 12), le bouton puis, grisé, sa raison.
+  remindRow: {
+    alignItems: /** @type {'center'} */ ('center'),
+    flexDirection: /** @type {'row'} */ ('row'),
+    gap: 8,
+    marginLeft: 52,
+  },
   spreadWrap: {
     flexWrap: /** @type {'wrap'} */ ('wrap'),
     justifyContent: /** @type {'space-between'} */ ('space-between'),
@@ -740,7 +747,8 @@ function TournamentTeamDetails({ navigation, route }) {
       screen: RouteNames.UserDetails,
     });
   };
-  const writeToRequester = async (/** @type {string} */ userId) => {
+  // RELANCER-B : `brouillon` (facultatif) est déposé dans le champ du fil, jamais envoyé.
+  const writeToRequester = async (/** @type {string} */ userId, brouillon = '') => {
     try {
       // Chargé à la demande (comme le lien d'invitation) : les suites de la fiche n'en simulent
       // pas le réseau.
@@ -748,7 +756,10 @@ function TournamentTeamDetails({ navigation, route }) {
       const { createWhisperChat } = require('@/services/chat/chatService');
       const chat = await createWhisperChat([userId]);
       if (chat?.documentId) {
-        navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
+        navigation.navigate(
+          RouteNames.Conversation,
+          brouillon ? { brouillon, chatId: chat.documentId } : { chatId: chat.documentId },
+        );
       }
     } catch (/** @type {any} */ writeError) {
       Alert.alert(
@@ -799,6 +810,31 @@ function TournamentTeamDetails({ navigation, route }) {
     const place = isRow ? placesByMember.get(member?.documentId) : undefined;
     const sizeLabel = getPlaceSizeLabel(place, t);
     const copyUrl = place && place.status !== 'paid' && !place.isSelf ? place.paymentUrl || '' : '';
+    // RELANCER-B (Adel « 5- B », 19/11) — maquette 3a : le capitaine relance un joueur qui n'a pas
+    // payé, sans cloche, par le fil direct (créé ou retrouvé par le serveur) et un message
+    // prérempli qu'il envoie lui-même. Un mineur (marqué par l'autorisation parentale) n'a pas de
+    // tête-à-tête avec un adulte (minor-chat-guard) : bouton grisé et sa raison. Les autres refus
+    // du serveur (âge inconnu, blocage) s'affichent tels quels (writeToRequester).
+    // ponytail: un capitaine qui encadre le club du mineur aurait le droit d'écrire ; il voit le
+    // bouton grisé (l'app ne sait pas qui encadre). Sortie : un `viewerCanWrite` rendu par membre.
+    const peutRelancer = Boolean(
+      isRow && currentMemberIsCaptain && place && place.status !== 'paid' && !place.isSelf
+      && member?.user?.documentId,
+    );
+    const estMineur = member?.parentalConsentPending === true
+      || member?.parentalConsentReceived === true;
+    const relancer = () => {
+      if (estMineur) return;
+      writeToRequester(member.user.documentId, t(
+        copyUrl ? 'implEquipe.roster.remindDraft' : 'implEquipe.roster.remindDraftNoLink',
+        {
+          event: resolveEventCustomName(team?.event) || team?.event?.name || '',
+          link: copyUrl,
+          name: member?.user?.firstname || nom,
+          ...SANS_ECHAPPEMENT,
+        },
+      ));
+    };
     let nameNode = <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{nom}</Text>;
     if (variant === 'invited') {
       nameNode = (
@@ -864,6 +900,22 @@ function TournamentTeamDetails({ navigation, route }) {
         </View>
         {/* T-AGE puis T-PARENT (15/11) : autorisation attendue / reçue, pas d'image. */}
         <TournamentMemberConsent member={member} />
+        {peutRelancer ? (
+          <View style={styles.remindRow} testID={`tournament-member-remind-${member?.documentId}`}>
+            <Button
+              disabled={estMineur}
+              onPress={relancer}
+              size="sm"
+              title={t('implEquipe.roster.remind')}
+              variant="SecondaryLight"
+            />
+            {estMineur ? (
+              <Text style={[Fonts.p4, Fonts.neutral200, { flex: 1 }]}>
+                {t('implEquipe.roster.remindMinor')}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
         {copyUrl && !canOpenMenu ? <CopyPaymentLinkButton paymentUrl={copyUrl} /> : null}
 
         {/* Maquette (c) : « Nommer capitaine » et « Retirer de l'équipe » rangés dans le menu de la
