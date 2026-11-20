@@ -557,10 +557,10 @@ function TournamentTeamDetails({ navigation, route }) {
         "Impossible d'inviter ce joueur.",
       )));
     },
-    onSuccess: async () => {
-      setMemberSearchQuery('');
-      await invalidate();
-    },
+    // RETOUCHES-R50 (3c, 20/11) : la recherche RESTE après l'invitation ; l'équipe relue, la ligne du
+    // joueur passe à « Invité » (avant : la recherche vidée faisait disparaître la ligne).
+    // Témoin : __tests__/TournamentTeamDetails.R50-3c.inviteVuDansLaLigne.test.js.
+    onSuccess: invalidate,
   });
 
   const reviewJoinRequestMutation = useMutation({
