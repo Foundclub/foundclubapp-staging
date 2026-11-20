@@ -33,6 +33,13 @@ const mockOuvrirUrl = jest.fn();
 const mockTelecharger = jest.fn(() => Promise.resolve({ opened: true, outcome: 'downloads' }));
 const mockMutationFigee = { isPending: false, mutate: jest.fn(), mutateAsync: jest.fn() };
 
+// RECOLTE-APP-51 (M1365 bis) : l équipe de la place se lit sur la fiche du tournoi (react-query + compte
+// connecté) ; ici, une place qui se paie (comportement d avant).
+jest.mock('../useTournamentTeamName', () => ({
+  __esModule: true,
+  default: () => '',
+  useTournamentPlaceClosed: () => false,
+}));
 jest.mock('@/services/license/licenseQueries', () => ({
   createLicenseCheckout: jest.fn(),
   declareExternalLicensePayment: jest.fn(),

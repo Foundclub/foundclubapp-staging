@@ -101,6 +101,7 @@ import {
   MemberTopBar,
   memberType,
 } from './memberLicenseUi';
+import { useTournamentPlaceClosed } from './useTournamentTeamName';
 
 // Les cinq etats de ligne d echeance, leur glyphe et leur mot.
 const INSTALLMENT_GLYPHS = {
@@ -259,6 +260,11 @@ function MyLicenseDetail({ navigation, route }) {
     [assignments, routeAssignmentId],
   );
   const current = assignmentQuery.data || fromList || null;
+  // RECOLTE-APP-51 (M1365 bis, testeur recette 50) : la place d une equipe refusee ou retiree ne se
+  // paie plus (serveur : TOURNAMENT_TEAM_CLOSED) — ni « Payer », ni relance, ni lien du payeur.
+  const placeClosed = useTournamentPlaceClosed(
+    isTournamentPlace(current) ? String(current?.campaign?.targetConfig?.eventId || '') : '',
+  );
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -603,7 +609,7 @@ function MyLicenseDetail({ navigation, route }) {
   );
   // Une relance ne se dessine QUE si elle a quelque chose a dire, et jamais
   // pendant qu une declaration attend (regle d existence du pack).
-  const reminders = status === 'manual_review' ? [] : (current?.reminders || []);
+  const reminders = status === 'manual_review' || placeClosed ? [] : (current?.reminders || []);
   // « Encaisse » = le club a vraiment recu l argent. Une declaration en attente
   // n est pas un paiement : elle vit dans l echeancier, en bordure tiretee.
   const payments = (current?.payments || [])
@@ -617,7 +623,7 @@ function MyLicenseDetail({ navigation, route }) {
     && requiredRequests.every(
       (item) => submissionByRequestId.get(licenseKeyOf(item))?.status === 'validated',
     );
-  const isOpen = !isCampaignPaused && !isSettledAssignment(current);
+  const isOpen = !isCampaignPaused && !isSettledAssignment(current) && !placeClosed;
   const canPayOnline = onlineMethods.length > 0 && isOpen;
   const canDeclare = manualMethods.length > 0 && isOpen;
   // T-PAGES-A, point 3 (17/11) — une PLACE DE TOURNOI ne se paie pas ici (Stripe seul, et
@@ -670,6 +676,15 @@ function MyLicenseDetail({ navigation, route }) {
         {current?.discountReason || t(
           'myLicenseDetail.amountCard.footer.cancelled',
           'Cette cotisation a été annulée par le club.',
+        )}
+      </Text>
+    );
+  } else if (placeClosed) {
+    cardFooter = (
+      <Text style={[type.rowState, Fonts.neutral300]}>
+        {t(
+          'APIerrors.TOURNAMENT_TEAM_CLOSED',
+          'Cette équipe a été refusée ou retirée du tournoi : sa place ne se paie plus.',
         )}
       </Text>
     );
@@ -736,7 +751,7 @@ function MyLicenseDetail({ navigation, route }) {
     // ⛔ Il a demande de retirer LE BOUTON, pas la fonctionnalite — et il y a de
     // l argent derriere. L entree est donc GENERALISEE : elle n est plus reservee
     // au cas « le club encaisse en ligne », elle apparait des que le lien existe.
-    payerLink
+    payerLink && !placeClosed
       ? {
         glyph: 'creditCard',
         label: t('myLicenseDetail.menu.someonePays', 'Quelqu’un paie pour moi'),

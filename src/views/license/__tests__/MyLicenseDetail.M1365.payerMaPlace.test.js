@@ -148,3 +148,20 @@ describe('M1365 — « Payer ma place » au-dessus de la barre du site', () => {
     expect(basDuCalque()).toBe(12);
   });
 });
+
+describe('M1365 bis — la place d’une équipe fermée ne se paie plus', () => {
+  test('🔴 équipe refusée ou retirée : ni « Payer », ni relance, ni « Quelqu’un paie pour moi » ; la phrase de l’équipe fermée', () => {
+    mockPlaceFermee = true;
+    monter(PLACE);
+    expect(arbre.root.findAllByType(WebFloatingOverlay)).toHaveLength(0);
+    const texte = toutLeTexte();
+    expect(texte).toContain('Cette équipe a été refusée ou retirée du tournoi : sa place ne se paie plus.');
+    expect(texte).not.toMatch(/Payer|Tu peux payer|Relance du club|Il te reste|Quelqu’un paie pour moi/);
+  });
+
+  test('contrôle : équipe ouverte, « Payer ma place » et la relance restent', () => {
+    monter(PLACE);
+    expect(arbre.root.findAllByType(WebFloatingOverlay)).toHaveLength(1);
+    expect(toutLeTexte()).toContain('Relance du club');
+  });
+});
