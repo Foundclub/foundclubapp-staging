@@ -29,7 +29,8 @@ function TournamentDeclinedTeamNotice({ team }) {
       testID="tournament-declined-team-notice"
     >
       <Text style={[Fonts.p3, { color: Colors.error700 }]}>
-        {/* DEUX-EQUIPES-2 : le nom vient du serveur, une apostrophe ne devient pas « &#39; » (FINITIONS3). */}
+        {/* DEUX-EQUIPES-2 : le nom vient du serveur ; */}
+        {/* une apostrophe ne devient pas « &#39; » (FINITIONS3). */}
         {t('tournamentUtils.ownTeamDeclined', { name: team?.name || '', ...SANS_ECHAPPEMENT })}
       </Text>
     </View>

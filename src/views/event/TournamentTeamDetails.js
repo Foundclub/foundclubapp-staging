@@ -245,7 +245,9 @@ function TournamentTeamDetails({ navigation, route }) {
     (team?.payment?.members || [])
       .map((/** @type {any} */ place) => [
         place?.memberDocumentId,
-        normalizeTournamentText(team?.status) === 'declined' ? { ...place, paymentUrl: null } : place,
+        normalizeTournamentText(team?.status) === 'declined'
+          ? { ...place, paymentUrl: null }
+          : place,
       ]),
   ), [team?.payment?.members, team?.status]);
   const allMembers = useMemo(

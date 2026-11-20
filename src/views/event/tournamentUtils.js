@@ -293,7 +293,9 @@ export const isTournamentTeamSetAside = (team) => Boolean(team?.archivedAt)
  * @param {any} team - Une équipe du lecteur (ou null).
  * @returns {boolean} Vrai si elle compte encore.
  */
-export const blocksAnotherTournamentTeam = (team) => Boolean(team) && !isTournamentTeamSetAside(team);
+export const blocksAnotherTournamentTeam = (team) => (
+  Boolean(team) && !isTournamentTeamSetAside(team)
+);
 
 /**
  * DEUX-EQUIPES (19/11, recette 49, M1362 / M1363) — LES ÉQUIPES DU LECTEUR DANS UN TOURNOI, une seule
