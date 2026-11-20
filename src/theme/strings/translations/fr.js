@@ -16950,6 +16950,7 @@ export default {
       overdue: 'en retard',
       paid: 'soldée',
       partial: '{{paidAmount}} payés sur {{dueAmount}}',
+      placePaidOn: 'payée le {{date}}',
       waived: '{{amount}} offerts par le club',
     },
     fallbacks: {
@@ -16993,6 +16994,8 @@ export default {
       clubs_other: '{{count}} clubs',
       fees_one: '{{count}} cotisation',
       fees_other: '{{count}} cotisations',
+      places_one: '{{count}} place de tournoi',
+      places_other: '{{count}} places de tournoi',
       season: 'saison {{season}}',
     },
   },
@@ -17826,6 +17829,11 @@ export default {
       title: 'Paiements',
       titleFallback: 'Paiement',
     },
+    // PAIEMENTS-10E (19/11, planche 10e) : le détail d'une place de tournoi.
+    place: {
+      paidOverline: 'PLACE RÉGLÉE',
+      title: 'Ma place',
+    },
     receipt: {
       download: 'Télécharger le reçu',
       generate: 'Générer mon reçu',
@@ -17873,6 +17881,13 @@ export default {
     },
     group: {
       upToDate: 'à jour',
+    },
+    // PAIEMENTS-10E (19/11, planche 10e) : la carte d'une place de tournoi.
+    place: {
+      receipt: 'Voir le reçu',
+      subtitle: 'Place de {{name}} · équipe {{team}}',
+      subtitleNoTeam: 'Place de {{name}}',
+      subtitleTeamOnly: 'Équipe {{team}}',
     },
     // IMPL-2-EQUIPE (18/11, planche 10e) : la place d'un tournoi et les cotisations au même endroit.
     title: 'Mes paiements',

@@ -79,6 +79,7 @@ import {
   hasInstallmentPlan,
   installmentOrderOf,
   isSettledAssignment,
+  isTournamentPlace,
   licenseKeyOf,
 } from './memberLicenseModel';
 import {
@@ -140,7 +141,8 @@ function AmountCard({ assignment, footer }) {
   const paid = Number(assignment?.amountPaidCents) || 0;
 
   let headlineStyle = Fonts.neutral00;
-  if (status === 'paid') headlineStyle = Fonts.success500;
+  // PAIEMENTS-10E : bleu, plus de vert (Adel 19/11, cotisations comprises).
+  if (status === 'paid') headlineStyle = Fonts.primary500;
   else if (status === 'cancelled') headlineStyle = Fonts.neutral400;
   else if (status === 'waived') headlineStyle = Fonts.neutral300;
 
@@ -196,7 +198,10 @@ function AmountCard({ assignment, footer }) {
         <MemberStatusPill status={assignment.status} />
       </View>
       <Text style={[type.overline, { color: Colors.neutral500 }]}>
-        {getMemberStatusOverline(assignment.status)}
+        {/* PAIEMENTS-10E (planche 10e) : une place payée dit « PLACE RÉGLÉE ». */}
+        {isTournamentPlace(assignment) && status === 'paid'
+          ? t('myLicenseDetail.place.paidOverline', 'PLACE RÉGLÉE')
+          : getMemberStatusOverline(assignment.status)}
       </Text>
       <Text style={[
         type.headline,
@@ -755,10 +760,10 @@ function MyLicenseDetail({ navigation, route }) {
       <MemberTopBar
         onBack={goBack}
         onMenu={() => setMenuVisible(true)}
-        title={t(
-          'myLicenseDetail.header.title',
-          'Ma cotisation',
-        )}
+        title={isTournamentPlace(current)
+          // PAIEMENTS-10E (liste de fidélité, écran 10e) : le détail d une place dit « Ma place ».
+          ? t('myLicenseDetail.place.title', 'Ma place')
+          : t('myLicenseDetail.header.title', 'Ma cotisation')}
       />
       {/*
         S9-bis / defaut 1 — POURQUOI CE `Alignments.fill` N EST PAS DECORATIF.
@@ -826,7 +831,7 @@ function MyLicenseDetail({ navigation, route }) {
                 declared: Colors.warning500,
                 due: Colors.warning400,
                 late: Colors.error500,
-                paid: Colors.success500,
+                paid: Colors.primary500,
                 upcoming: Colors.neutral400,
               };
               return (
@@ -882,7 +887,7 @@ function MyLicenseDetail({ navigation, route }) {
             {isDossierComplete ? (
               <MemberRow
                 glyph="circleCheck"
-                glyphColor={Colors.success500}
+                glyphColor={Colors.primary500}
                 onPress={() => setDossierExpanded((open) => !open)}
                 state={[
                   t('myLicenseDetail.dossier.licenceValidated', 'Licence validée'),
@@ -910,7 +915,7 @@ function MyLicenseDetail({ navigation, route }) {
                   <MemberRow
                     glyph="idCard"
                     glyphColor={fileUrlOf(officialLicenseDocument)
-                      ? Colors.success500
+                      ? Colors.primary500
                       : Colors.neutral300}
                 // 🩹 UN ETAT, PAS UNE ABSENCE. « Ta licence n est pas encore
                 // disponible » ne disait pas QUI bloque. ⚠️ L ouverture S8 du
@@ -996,7 +1001,7 @@ function MyLicenseDetail({ navigation, route }) {
                         dashed={Boolean(submission) && submission?.status !== 'validated'}
                         glyph={submission?.status === 'validated' ? 'fileCheck' : 'fileArrowUp'}
                         glyphColor={submission?.status === 'validated'
-                          ? Colors.success500
+                          ? Colors.primary500
                           : Colors.warning400}
                         state={refusalReason || state}
                         stateColor={refusalReason ? Colors.error300 : undefined}
@@ -1192,7 +1197,7 @@ function MyLicenseDetail({ navigation, route }) {
                 <MemberRow
                   amount={formatLicenseMoney(payment.amountCents, payment.currency || currency)}
                   glyph={glyphForPaymentMethod(payment.method)}
-                  glyphColor={Colors.success500}
+                  glyphColor={Colors.primary500}
                   key={licenseKeyOf(payment)}
                   // ⛔ UNE LIGNE SANS RECU NE MONTRE PAS DE BOUTON MORT : elle
                   // dit pourquoi il n y en a pas.
