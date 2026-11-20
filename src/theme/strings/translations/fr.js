@@ -29655,6 +29655,8 @@ export default {
       unpaid_other: '{{count}} joueurs n’ont pas encore payé leur place',
       unpaidNames: '{{who}} : {{names}}.',
       validatedText: '{{needed}} payés sur {{needed}} : ton équipe joue le tournoi. Tu peux encore ajouter des joueurs.',
+      // RETOUCHES-R50 (8e) : la même, lue par quelqu’un qui n’est pas de l’équipe.
+      validatedTextNeutral: '{{needed}} payés sur {{needed}} : l’équipe joue le tournoi.',
       validatedTitle: 'Équipe validée',
       you: 'toi',
     },

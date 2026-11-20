@@ -27852,6 +27852,7 @@ export default {
       unpaid_other: '{{count}} players have not paid their spot yet',
       unpaidNames: '{{who}}: {{names}}.',
       validatedText: '{{needed}} paid out of {{needed}}: your team plays the tournament. You can still add players.',
+      validatedTextNeutral: '{{needed}} paid out of {{needed}}: the team plays the tournament.',
       validatedTitle: 'Team validated',
       you: 'you',
     },
