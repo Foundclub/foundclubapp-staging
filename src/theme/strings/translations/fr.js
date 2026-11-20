@@ -29616,6 +29616,7 @@ export default {
       teamTitle: 'Retirer ton équipe ?',
     },
     retraitPaye: {
+      // eslint-disable-next-line max-len
       afterClosing: 'Son équipe passera sous 5 joueurs payés. Elle jouera avec les joueurs qui restent.',
       // eslint-disable-next-line max-len
       beforeClosing: "Son équipe passera sous 5 joueurs payés et ne sera plus validée. Elle a jusqu'au 10 décembre à 23 h 59 pour se compléter.",

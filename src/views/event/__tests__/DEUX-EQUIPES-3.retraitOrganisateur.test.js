@@ -387,7 +387,7 @@ const LIGNE_FIXE = "Le remboursement ne part pas d'ici : il se fait à part, dan
  * @param {{ payes?: number, cloturees?: boolean, status?: string }} [options] - Payés, inscriptions fermées, statut.
  * @returns {any} L'équipe.
  */
-const equipeValidee = ({ payes = 5, cloturees = false, status = 'accepted' } = {}) => {
+const equipeValidee = ({ cloturees = false, payes = 5, status = 'accepted' } = {}) => {
   const noms = ['Capi', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six'];
   return {
     ...equipe({ status }),

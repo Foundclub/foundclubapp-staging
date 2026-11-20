@@ -27817,7 +27817,6 @@ export default {
     },
     retraitPaye: {
       afterClosing: 'Their team will drop below 5 paid players. It will play with the players who remain.',
-      // eslint-disable-next-line max-len
       beforeClosing: 'Their team will drop below 5 paid players and will no longer be confirmed. It has until 10 December at 11:59 pm to fill up.',
       cancel: 'Cancel',
       confirm: 'Remove the player',

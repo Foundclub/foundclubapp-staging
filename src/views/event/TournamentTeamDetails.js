@@ -118,9 +118,9 @@ const chargerLesFenetres = () => ({
 });
 
 /**
- * DEUX-EQUIPES-3 (20/11/2026, D65 = B) — vrai si retirer `member` fait passer l'équipe VALIDÉE sous le seuil de
- * places payées : même règle que la garde du serveur (tournament-payment.js `guardPaidDeparture`) — équipe
- * `accepted`, la place du membre payée, le membre compté (pas d'autorisation parentale attendue) et
+ * DEUX-EQUIPES-3 (20/11/2026, D65 = B) — vrai si retirer `member` fait passer l'équipe VALIDÉE
+ * sous le seuil de places payées : même règle que la garde du serveur (tournament-payment.js
+ * `guardPaidDeparture`) — équipe `accepted`, la place du membre payée, le membre compté (pas d'autorisation parentale attendue) et
  * `paidCount − 1 < paidMembersToValidate`.
  * @param {any} team - L'équipe (avec son bloc `payment`).
  * @param {any} member - Le membre retiré.
@@ -242,8 +242,8 @@ function TournamentTeamDetails({ navigation, route }) {
   const [isPaidLeaveOpen, setIsPaidLeaveOpen] = useState(false);
   // M1311 (chef, 19/11) : la fenêtre « Retirer ton équipe ? » du capitaine.
   const [isTeamWithdrawOpen, setIsTeamWithdrawOpen] = useState(false);
-  // DEUX-EQUIPES-3 (D65 = B) : le membre payé que l'organisateur ou le SuperAdmin va retirer (fenêtre
-  // « Retirer ce joueur payé ? »), ou ''.
+  // DEUX-EQUIPES-3 (D65 = B) : le membre payé que l'organisateur ou le SuperAdmin va retirer
+  // (fenêtre « Retirer ce joueur payé ? »), ou ''.
   const [paidRemovalFor, setPaidRemovalFor] = useState('');
   // T-INVITE (15/11) : « Inviter des joueurs » par lien ; sur un ordinateur le lien est copié,
   // l'écran le dit. États : '' | 'pending' | 'copie' | 'echec'.
@@ -301,11 +301,13 @@ function TournamentTeamDetails({ navigation, route }) {
   // refuse le paiement : TOURNAMENT_TEAM_CLOSED) ; « Retirer mon équipe » reste au capitaine.
   const teamIsDeclined = normalizeTournamentText(team?.status) === 'declined';
   const canManageRoster = canManageTeam && !teamIsLocked && !teamIsDeclined;
-  // DEUX-EQUIPES-3 (20/11, D65 = B) : l'organisateur du tournoi et le SuperAdmin retirent un joueur (le serveur
-  // les laisse passer la garde D63) ; ils n'ont pas le reste de la gestion de l'effectif.
+  // DEUX-EQUIPES-3 (20/11, D65 = B) : l'organisateur du tournoi et le SuperAdmin retirent un
+  // joueur (le serveur les laisse passer la garde D63) ; ils n'ont pas le reste de la gestion
+  // de l'effectif.
   const isTournamentManager = accountRoleKey === 'superAdmin' || (Boolean(currentUserDocumentId)
     && team?.event?.organizer?.documentId === currentUserDocumentId);
-  const canRemoveMembers = canManageRoster || (isTournamentManager && !teamIsLocked && !teamIsDeclined);
+  const canRemoveMembers = canManageRoster
+    || (isTournamentManager && !teamIsLocked && !teamIsDeclined);
   const canLeaveTeam = Boolean(
     currentMember
     && isTournamentActiveMemberStatus(currentMember?.responseStatus)
@@ -633,7 +635,8 @@ function TournamentTeamDetails({ navigation, route }) {
 
   const handleRemoveMember = (memberId) => {
     const membre = allMembers.find((/** @type {any} */ item) => item?.documentId === memberId);
-    if (isTournamentManager && retraitPasseSousLeSeuil(team, membre, placesByMember.get(memberId))) {
+    const place = placesByMember.get(memberId);
+    if (isTournamentManager && retraitPasseSousLeSeuil(team, membre, place)) {
       setPaidRemovalFor(memberId);
       return;
     }
@@ -1398,8 +1401,9 @@ function TournamentTeamDetails({ navigation, route }) {
     </View>
   );
 
-  // DEUX-EQUIPES-3 (D65 = B) — « Retirer ce joueur payé ? » (organisateur, SuperAdmin) : phrases du chef du
-  // tournoi ; le texte dépend de la clôture des inscriptions (interrupteur de l'organisateur).
+  // DEUX-EQUIPES-3 (D65 = B) — « Retirer ce joueur payé ? » (organisateur, SuperAdmin) : phrases
+  // du chef du tournoi ; le texte dépend de la clôture des inscriptions (interrupteur de
+  // l'organisateur).
   const paidRemovalContent = (
     <View style={Spaces.gap[12]} testID="tournament-team-remove-paid">
       <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('implEquipe.retraitPaye.title')}</Text>
@@ -1414,7 +1418,9 @@ function TournamentTeamDetails({ navigation, route }) {
           { backgroundColor: `${Colors.warning500}14`, borderColor: `${Colors.warning500}66` },
         ]}
       >
-        <Text style={[Fonts.p2Bold, Fonts.warning500]}>{t('implEquipe.retraitPaye.refundLine')}</Text>
+        <Text style={[Fonts.p2Bold, Fonts.warning500]}>
+          {t('implEquipe.retraitPaye.refundLine')}
+        </Text>
       </View>
       <Button
         isLoading={removeMemberMutation.isPending}
