@@ -90,18 +90,20 @@ function Button({
   };
   const normalizedSize = size === 'small' ? 'sm' : size;
   const isSmall = normalizedSize === 'sm';
+  // DESIGN-DENSITE (20/11/2026, Adel densite_go d3 = A) : le petit bouton passe de 39 à 44 px, la
+  // cible tactile minimale (Apple, Google ; règle de densité point 7). Il garde sa marge de 12.
   const sizeStyle = isSmall
     ? {
       borderRadius: 12,
-      height: 39,
+      height: 44,
       paddingHorizontal: 12,
     }
     : null;
   const sizeIconStyle = isSmall
     ? {
       borderRadius: 12,
-      height: 39,
-      width: 39,
+      height: 44,
+      width: 44,
     }
     : null;
   const sizeTextStyle = isSmall ? Fonts.p2Bold : null;

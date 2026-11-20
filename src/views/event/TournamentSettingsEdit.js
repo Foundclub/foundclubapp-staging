@@ -338,10 +338,13 @@ function TournamentSettingsEdit({ navigation, route }) {
 
   return (
     <ScreenContainer
+      // DESIGN-DENSITE (20/11, Adel d2) : la marge de page de la règle (16 / 24 / 40), posée une
+      // seule fois ici ; le retour et le contenu n'en rajoutent plus (avant : 24 + 24).
+      densePadding
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
-      <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
+      <View style={[Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
         {/* REPRISE-EVENEMENTS 130 : même retour que la fiche d'un match, sans s'étirer.
             IMPL-3-ORGA (check-list page 1, point 7) : sur le téléphone, la pile
             (EventStack.js) dessine déjà son retour ; l'écran n'en ajoute plus un second et

@@ -134,21 +134,38 @@ export const createTournamentDesignSystem = ({
           textAlignVertical: 'top',
         },
       ],
+      // DESIGN-DENSITE (20/11, Adel d1 = A, règle point 1) : une sous-partie DANS une carte se
+      // sépare par un trait fin, pas par un deuxième cadre (recette 51 b : carte dans la carte,
+      // texte à 78 px du bord à 375 px). Les tuiles côte à côte et les fenêtres gardent
+      // `insetPanelCard`.
+      nestedSection: [
+        Spaces.paddingTop[12],
+        Spaces.gap[8],
+        {
+          backgroundColor: 'transparent',
+          borderColor: borderSoft,
+          borderTopWidth: 1,
+        },
+      ],
+      // DESIGN-DENSITE (règle point 4) : coins de 16 et bord à 24 % (avant : 24 et 33 %), comme
+      // les cartes `.cd` de la maquette.
       panelCard: [
         ApplicationStyle.card,
-        ApplicationStyle.borderRadius24,
+        ApplicationStyle.borderRadius16,
         ApplicationStyle.borderWidth1,
         Spaces.padding[16],
         Spaces.gap[12],
         {
           backgroundColor: panelSurface,
-          borderColor: borderStrong,
+          borderColor: borderSoft,
         },
       ],
+      // DESIGN-DENSITE (règle points 2 et 6) : la marge de page est posée UNE fois par le
+      // conteneur (`ScreenContainer densePadding`) ; le contenu n'en rajoute pas (avant : 24 de
+      // plus, soit 48 px avant la première carte). 12 px entre deux blocs (avant : 24).
       screenContent: [
-        Spaces.paddingHorizontal[24],
         Spaces.paddingBottom[40],
-        Spaces.gap[24],
+        Spaces.gap[12],
       ],
       screenIntro: Spaces.gap[8],
       sectionStack: Spaces.gap[16],

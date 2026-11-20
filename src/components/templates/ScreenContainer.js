@@ -9,6 +9,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { margeDePage } from '@/theme/densite';
 import useTheme from '@/theme/themeContext';
 
 import { getFloatingTabBarScenePaddingBottom } from '@/navigation/commonOptions';
@@ -76,6 +77,8 @@ const toScrollableContentStyle = (styles) => {
  * @param {string[] | null} [props.gradient]
  * @param {boolean} [props.withHeaderPadding]
  * @param {boolean} [props.responsivePadding] Alias prioritaire de `responsiveHorizontalPadding`.
+ * @param {boolean} [props.densePadding] DESIGN-DENSITE (20/11, Adel d1 + d2) — marge de page de la
+ *   règle de densité (16 téléphone, 24 tablette, 40 ordinateur). OPT-IN, prioritaire.
  * @param {boolean} [props.fillHeight] SITE UNIQUEMENT (`ScreenContainer.web.js`, COMPOMSG) :
  *   le gabarit du site n'etire pas son contenu sans lui. Ici, le conteneur remplit
  *   DEJA toute la hauteur : la valeur est lue pour que les ecrans partages puissent
@@ -92,6 +95,7 @@ function ScreenContainer({
   boundedHeight = false,
   children,
   contentContainerStyle = [],
+  densePadding = false,
   // eslint-disable-next-line no-unused-vars -- ignore sur l'iPhone, voir la JSDoc.
   fillHeight = false,
   gradient = null, // Default to no gradient
@@ -110,7 +114,8 @@ function ScreenContainer({
   const headerHeightNative = useContext(HeaderHeightContext) || 0;
   const { width } = useWindowDimensions();
   const isResponsivePaddingEnabled = responsivePadding ?? responsiveHorizontalPadding;
-  const horizontalPadding = isResponsivePaddingEnabled && width <= 375 ? 16 : 24;
+  let horizontalPadding = isResponsivePaddingEnabled && width <= 375 ? 16 : 24;
+  if (densePadding) horizontalPadding = margeDePage(width);
   const safeStyle = Array.isArray(style) ? style : [style];
   const safeContentContainerStyle = Array.isArray(contentContainerStyle)
     ? contentContainerStyle

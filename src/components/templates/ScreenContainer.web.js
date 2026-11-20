@@ -7,6 +7,7 @@ import useTheme from '@/theme/themeContext';
 import { BarreDeTitreDuSiteContext } from '@/components/templates/BarreDeTitreDuSite';
 
 import { BREAKPOINTS } from '@/responsive';
+import { margeDePage } from '@/theme/densite';
 
 const CONTENT_WIDTHS = {
   content: 960,
@@ -46,6 +47,9 @@ const resolveContentWidth = (contentWidth) => {
  * @param {boolean | number} [props.desktopMinHeight]
  * @param {boolean} [props.responsiveHorizontalPadding]
  * @param {boolean} [props.responsivePadding]
+ * @param {boolean} [props.densePadding] DESIGN-DENSITE (20/11, Adel d1 + d2) — la marge de page de la
+ *   règle de densité : 16 téléphone, 24 tablette, 40 ordinateur. OPT-IN en vague 0 (écrans du
+ *   tournoi) ; prioritaire sur `responsivePadding`.
  * @param {string[]} [props.gradient]
  * @param {'none' | 'card'} [props.surface]
  * @param {boolean} [props.withHeaderPadding]
@@ -67,6 +71,7 @@ function ScreenContainer({
   children,
   contentContainerStyle = [],
   contentWidth = 'wide',
+  densePadding = false,
   desktopAlignment = 'top',
   desktopMinHeight,
   fillHeight = false,
@@ -94,7 +99,9 @@ function ScreenContainer({
   const isTabletOrDesktop = width >= BREAKPOINTS.tablet;
   const isDesktop = width >= BREAKPOINTS.desktop;
   let horizontalPadding = 24;
-  if (isResponsivePaddingEnabled) {
+  if (densePadding) {
+    horizontalPadding = margeDePage(width);
+  } else if (isResponsivePaddingEnabled) {
     if (width >= 1440) {
       horizontalPadding = 56;
     } else if (width >= 1280) {

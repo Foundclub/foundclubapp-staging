@@ -107,6 +107,7 @@ const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ even
  *   } | null;
  *   tournamentHero?: {
  *     showFacility?: boolean, statusLabel?: string | null, statusTone?: string | null,
+ *     bandeau?: { hauteur: number, marge: number, rayon: number } | null,
  *   } | null;
  * }} props
  */
@@ -435,15 +436,25 @@ function EventHeader({
         : null,
       pastilleAge,
     ].filter(Boolean);
+    // DESIGN-DENSITE (20/11, Adel d2, règle point 8) : l'écran qui montre la fiche dit au bandeau
+    // la marge de sa page. Téléphone : bord à bord (la marge en négatif), sans coins, 236 px ;
+    // ordinateur : la colonne, 280 px, coins de 20. Sans consigne (fiche de l'app) : comme avant.
+    const consigne = tournamentHero?.bandeau || null;
+    const rayonDuBandeau = consigne ? consigne.rayon : 24;
+    const styleDuBandeau = consigne ? {
+      borderRadius: consigne.rayon,
+      marginHorizontal: consigne.marge ? -consigne.marge : 0,
+      minHeight: consigne.hauteur,
+    } : null;
     return (
       <View style={Spaces.gap[12]} testID="event-header-tournament-banner">
         <ImageBackground
-          imageStyle={{ borderRadius: 24 }}
+          imageStyle={{ borderRadius: rayonDuBandeau }}
           resizeMode="cover"
           source={/** @type {any} */ (BG_TOURNAMENT)}
           style={[ApplicationStyle.borderRadius24, {
             justifyContent: 'flex-end', minHeight: 184, overflow: 'hidden',
-          }]}
+          }, styleDuBandeau]}
         >
           {photoDuBandeau ? (
             <Image
@@ -453,7 +464,7 @@ function EventHeader({
               resizeMode="cover"
               source={{ uri: photoDuBandeau.uri }}
               style={{
-                borderRadius: 24, bottom: 0, left: 0, position: 'absolute', right: 0, top: 0,
+                borderRadius: rayonDuBandeau, bottom: 0, left: 0, position: 'absolute', right: 0, top: 0,
               }}
               testID="event-header-venue-photo"
             />

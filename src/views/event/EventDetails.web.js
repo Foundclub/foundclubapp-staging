@@ -42,6 +42,8 @@ import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
+import { withAlpha } from '@/theme/colors';
+import { DENSITE, margeDePage } from '@/theme/densite';
 
 import { SvgIcon } from '@/components/atoms/SvgIcon/SvgIcon';
 import FacilityClosureBanner from '@/components/molecules/facilityClosure/FacilityClosureBanner';
@@ -1539,7 +1541,21 @@ function EventDetails({ navigation, route }) {
 
   const activeParticipationRequestId = getEntityDocumentId(participationState?.activeRequest);
   const heroImage = getImageUrl(event?.team?.club?.logo?.url || event?.team?.club?.sponsor?.logo?.url || '');
-  const sectionBackground = 'rgba(6, 19, 29, 0.76)';
+  // DESIGN-DENSITE (20/11/2026, Adel densite_go d1 + d2, vague 0) : la fiche d'un TOURNOI suit la
+  // règle de densité (un seul cadre, marge de page 16 / 24 / 40, coins 16, écarts 12, photo bord à
+  // bord). Recette 51 b à 375 px : 3 cadres gris de 20 + 22 + 22 px autour de « Mon équipe ». Les
+  // autres événements gardent leurs sections jusqu'à la vague 1. Témoin :
+  // __tests__/EventDetailsWeb.DESIGN-DENSITE.cadres.test.js.
+  const ficheDense = isTournamentEvent;
+  const sectionBackground = ficheDense ? withAlpha(Colors.primary900, 0.95) : 'rgba(6, 19, 29, 0.76)';
+  /** Une section qui ENGLOBE d'autres cartes : plus de cadre sur une fiche dense (règle point 1). */
+  const sansCadre = (/** @type {Record<string, any>} */ style) => (ficheDense ? {
+    ...style, background: 'transparent', border: 0, borderRadius: 0, overflow: 'visible', padding: 0,
+  } : style);
+  /** Une carte seule : 16 de padding, coins de 16, 12 entre ses lignes (règle point 4). */
+  const carteDense = (/** @type {Record<string, any>} */ style) => (ficheDense ? {
+    ...style, borderRadius: DENSITE.carteRayon, gap: DENSITE.ecartBlocs, padding: DENSITE.cartePadding,
+  } : style);
   const borderColor = 'rgba(255,255,255,0.08)';
   const textColor = Colors?.neutral00 || '#ffffff';
   const mutedTextColor = Colors?.neutral300 || '#adb1b2';
@@ -2370,7 +2386,13 @@ function EventDetails({ navigation, route }) {
     etatDuBandeau = t('implFiche.registrationsClosed');
     tonDuBandeau = 'warning';
   } else if (inscriptionsOuvertes) etatDuBandeau = t('eventDetails.header.registrationOpen');
+  // DESIGN-DENSITE (règle point 8) : la photo bord à bord au téléphone (la marge de la page en
+  // négatif), la largeur de la colonne au-delà (280 px, coins de 20).
+  const consigneDuBandeau = isTablet
+    ? { hauteur: DENSITE.photoHauteurOrdinateur, marge: 0, rayon: DENSITE.photoRayonOrdinateur }
+    : { hauteur: DENSITE.photoHauteurTelephone, marge: margeDePage(width), rayon: 0 };
   const bandeauDuTournoi = vueJoueurDuTournoi ? {
+    bandeau: consigneDuBandeau,
     statusLabel: etatDuBandeau, ...(tonDuBandeau ? { statusTone: tonDuBandeau } : {}),
   } : null;
   const erreurDeLaCarte = erreurEquipeTournoi || actionError;
@@ -2514,14 +2536,14 @@ function EventDetails({ navigation, route }) {
   const blocDuTournoi = isTournamentEvent ? (
     <div
       data-event-section="tournament"
-      style={{
+      style={sansCadre({
         background: sectionBackground,
         border: `1px solid ${borderColor}`,
         borderRadius: 24,
         display: 'grid',
-        gap: 14,
+        gap: ficheDense ? DENSITE.ecartBlocs : 14,
         padding: 22,
-      }}
+      })}
     >
       {/* ORGA-MINIS (19/11) : le bloc ne garde que ce que lit tout lecteur d'un tournoi. Les
           anciennes branches de l'organisateur (titre « Mode tournoi », réglages, compteurs,
@@ -2595,10 +2617,11 @@ function EventDetails({ navigation, route }) {
     <ScreenContainer
       bgImage="bg2"
       contentWidth="wide"
+      densePadding={ficheDense}
       responsivePadding
       style={{ paddingBottom: 32 }}
     >
-      <div style={{ color: textColor, display: 'grid', gap: 24 }}>
+      <div style={{ color: textColor, display: 'grid', gap: ficheDense ? DENSITE.ecartBlocs : 24 }}>
         {fromEventCreation ? (
           <section
             style={{
@@ -2690,12 +2713,12 @@ function EventDetails({ navigation, route }) {
         ) : null}
         <section
           data-event-section="overview"
-          style={{
+          style={sansCadre({
             background: sectionBackground,
             border: `1px solid ${borderColor}`,
             borderRadius: 28,
             overflow: 'hidden',
-          }}
+          })}
         >
           <div
             style={{
@@ -2705,7 +2728,7 @@ function EventDetails({ navigation, route }) {
               gridTemplateColumns: isDesktop && hasEvent && !vueJoueurDuTournoi ? 'minmax(0, 1.2fr) 320px' : 'minmax(0, 1fr)',
             }}
           >
-            <div style={{ display: 'grid', gap: 18, padding: isTablet ? 32 : 22 }}>
+            <div style={{ display: 'grid', gap: ficheDense ? DENSITE.ecartBlocs : 18, padding: ficheDense ? 0 : (isTablet ? 32 : 22) }}>
               <div style={{
                 alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between',
               }}
@@ -3364,15 +3387,15 @@ function EventDetails({ navigation, route }) {
         ) : null}
 
         {!isLoading && event && !isCancelled ? (
-          <div style={{ display: 'grid', gap: 24, gridTemplateColumns: isDesktop && !colonnePrincipaleVide ? 'minmax(0, 1.15fr) minmax(300px, 0.85fr)' : 'minmax(0, 1fr)' }}>
+          <div style={{ display: 'grid', gap: ficheDense ? (isDesktop ? DENSITE.ecartColonnes : DENSITE.ecartBlocs) : 24, gridTemplateColumns: isDesktop && !colonnePrincipaleVide ? (ficheDense ? `minmax(0, 1fr) ${DENSITE.colonneLaterale}px` : 'minmax(0, 1.15fr) minmax(300px, 0.85fr)') : 'minmax(0, 1fr)' }}>
             {/* PARTWEB — `alignContent: 'start'` sur les DEUX colonnes : une grille
                 s'etire a la hauteur de la colonne voisine, et ses blocs avec — la
                 liste des participants, longue, creusait des trous dans « Infos rapides ». */}
             <section
               data-testid="event-main-column"
-              style={{
-                alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: colonnePrincipaleVide ? 'none' : 'grid', gap: 18, minWidth: 0, padding: 22,
-              }}
+              style={sansCadre({
+                alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: colonnePrincipaleVide ? 'none' : 'grid', gap: ficheDense ? DENSITE.ecartBlocs : 18, minWidth: 0, padding: 22,
+              })}
             >
               {vueJoueurDuTournoi ? (
                 <>
@@ -4033,7 +4056,7 @@ function EventDetails({ navigation, route }) {
               {surLOngletDuTournoi('tournamentTeams') ? blocDuTournoi : null}
             </section>
 
-            <section style={{ alignContent: 'start', display: 'grid', gap: 24, minWidth: 0 }}>
+            <section style={{ alignContent: 'start', display: 'grid', gap: ficheDense ? DENSITE.ecartBlocs : 24, minWidth: 0 }}>
               {vueJoueurDuTournoi && isDesktop ? (
                 <div style={{ alignSelf: 'start', position: 'sticky', top: 24, zIndex: 1 }}>
                   {carteDuTournoi}
@@ -4158,9 +4181,9 @@ function EventDetails({ navigation, route }) {
               ) : null}
               {/* T-PAGES-3 point 4 : « Infos rapides » (capacité, joueurs attendus) reste à l organisateur. */}
               {vueJoueurDuTournoi ? null : (
-                <div style={{
+                <div style={carteDense({
                   background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
-                }}
+                })}
                 >
                   <h2 style={sectionTitleStyle}>{t('eventDetails.quickInfo', 'Infos rapides')}</h2>
                   <div style={{ display: 'grid', gap: 12 }}>
@@ -4240,9 +4263,9 @@ function EventDetails({ navigation, route }) {
 
               {/* T-PAGES-3 : sur un tournoi, « Aucune équipe invitée » ne s'écrit plus au joueur. */}
               {vueJoueurDuTournoi && invitedTeams.length === 0 ? null : (
-                <div style={{
+                <div style={carteDense({
                   background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
-                }}
+                })}
                 >
                   <h2 style={sectionTitleStyle}>
                     {t('eventDetails.invitedTeams2', 'Équipes invitées')}

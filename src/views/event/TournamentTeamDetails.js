@@ -1258,7 +1258,9 @@ function TournamentTeamDetails({ navigation, route }) {
       ) : null}
       {myPlaceDue ? (
         <View
-          style={[...tournamentDs.styles.insetPanelCard, Spaces.gap[8]]}
+          // DESIGN-DENSITE (20/11) : une sous-partie de « À faire maintenant », séparée par un trait
+          // fin, plus un cadre dans le cadre. Les encarts d'état colorés (place payée, retrait) restent.
+          style={[...tournamentDs.styles.nestedSection, Spaces.gap[8]]}
           testID="tournament-team-my-place"
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{t('implEquipe.place.dueTitle')}</Text>
@@ -1301,7 +1303,7 @@ function TournamentTeamDetails({ navigation, route }) {
         </View>
       ) : null}
       {showOtherPlace ? (
-        <View style={[...tournamentDs.styles.insetPanelCard, Spaces.gap[8]]}>
+        <View style={[...tournamentDs.styles.nestedSection, Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{t('implEquipe.place.otherTitle')}</Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
             {t('implEquipe.place.otherText', { needed: progress.needed })}
@@ -1334,7 +1336,7 @@ function TournamentTeamDetails({ navigation, route }) {
       {otherTodo.map((/** @type {any} */ item) => {
         const detail = getTodoDetail(item);
         return (
-          <View key={item.kind} style={[...tournamentDs.styles.insetPanelCard, Spaces.gap[8]]}>
+          <View key={item.kind} style={[...tournamentDs.styles.nestedSection, Spaces.gap[8]]}>
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{getTodoTitle(item)}</Text>
             {detail ? <Text style={[Fonts.p4, Fonts.neutral200]}>{detail}</Text> : null}
             {renderTodoActions(item)}
@@ -1780,6 +1782,8 @@ function TournamentTeamDetails({ navigation, route }) {
       // DEFILEMENT-LOT1 (règle A) : pile au-dessus des onglets, pas de barre ici ; le cadre ne
       // garde rien en bas, la fin du défilement laisse sa marge et le retrait commun.
       bottomInsetMode="scroll-edge"
+      // DESIGN-DENSITE (20/11, Adel d2) : la marge de page de la règle (16 / 24 / 40), une seule fois.
+      densePadding
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >

@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 
+import { DENSITE } from '@/theme/densite';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { useGetTournamentTeam } from '@/services/tournamentTeam/tournamentTeamQueries';
@@ -48,13 +49,24 @@ const BOUTON_LARGE = {
 const styleDeCarte = (ui, accent = false) => ({
   background: ui.sectionBackground,
   border: `1px solid ${accent ? ui.accentColor : ui.borderColor}`,
-  borderRadius: 24,
+  // DESIGN-DENSITE (20/11, Adel d1 + d2, règle point 4) : padding 16, coins 16, 12 entre les
+  // lignes (avant : 22, 24 et 14), comme les cartes de la maquette 6b.
+  borderRadius: DENSITE.carteRayon,
   boxSizing: 'border-box',
   display: 'grid',
-  gap: 14,
+  gap: DENSITE.ecartBlocs,
   minWidth: 0,
-  padding: 22,
+  padding: DENSITE.cartePadding,
 });
+
+/**
+ * DESIGN-DENSITE (règle point 1) : un groupe SANS cadre, pour un bloc qui contient déjà sa carte
+ * (« Mon équipe » : la carte d'avancement est la carte ; avant, elle était dans un deuxième cadre).
+ * @type {import('react').CSSProperties}
+ */
+const STYLE_DE_GROUPE = {
+  boxSizing: 'border-box', display: 'grid', gap: DENSITE.ecartBlocs, minWidth: 0,
+};
 
 /**
  * Le seuil de validation d'une équipe payante (5 par défaut, comme le serveur).
@@ -335,7 +347,7 @@ export function TournamentMyTeamCard({
   }
   const montreVoir = principal.onClick !== ouvrir;
   return (
-    <section data-testid="tournament-my-team-card" style={styleDeCarte(ui, true)}>
+    <section data-testid="tournament-my-team-card" style={STYLE_DE_GROUPE}>
       <span style={{
         color: ui.accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
       }}

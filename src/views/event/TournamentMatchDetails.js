@@ -295,10 +295,13 @@ function TournamentMatchDetails({ navigation, route }) {
 
   return (
     <ScreenContainer
+      // DESIGN-DENSITE (20/11, Adel d2) : la marge de page de la règle (16 / 24 / 40), posée une
+      // seule fois ici ; le retour et le contenu n'en rajoutent plus (avant : 24 + 24).
+      densePadding
       // 🤖 ANDROIDBAR-3 — un champ en bas : sur Android 15+, le clavier ne rétrécit plus l'écran.
       keyboardAvoiding
     >
-      <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
+      <View style={[Spaces.paddingTop[24], Spaces.paddingBottom[12]]}>
         {/* REPRISE-EVENEMENTS 130 : une vue web étire ses enfants ; le bouton garde sa taille. */}
         <HeaderBackButton onPress={() => navigation.goBack()} style={{ alignSelf: 'flex-start' }} />
       </View>
