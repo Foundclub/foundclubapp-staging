@@ -5,7 +5,7 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { useGetTournamentTeam } from '@/services/tournamentTeam/tournamentTeamQueries';
 
-import { TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT } from '../tournamentJoinRules';
+import { getTournamentTeamsCapacity, isTournamentTeamsCountShown } from '../tournamentTeamsCount';
 import { getTournamentEntryFeeLabel, getTournamentMinAge } from '../tournamentUtils';
 import TournamentTeamProgress from './TournamentTeamProgress';
 import { isPaidTournament } from './tournamentTerms';
@@ -409,23 +409,16 @@ export const withTournamentTeamsLine = (items, event, line) => {
 /**
  * Précision du chef (17/11) : sous le seuil des 30 % (`TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT`,
  * tournamentJoinRules), un non-organisateur ne lit le nombre d'équipes NULLE PART, liste comprise.
- * Même calcul que `getTournamentVisitorTeamsLine` : capacité du résumé (ou `maxTeams`), inscrites
- * du résumé, seuil arrondi au supérieur. Capacité inconnue : le nombre reste caché.
- * ponytail: recalcule ici le seuil de la règle (tournamentJoinRules ne l'expose pas en booléen, et
- * le fichier est à T-PAGES-6) ; sortie : un `isTournamentTeamsCountShown(event)` exporté là-bas.
+ * RETOUCHES-R50 (20/11, écran 8b) : la règle du téléphone (EventDetails.js, `listeDesEquipesMasquee`) :
+ * masquée seulement avec une capacité CONNUE et le seuil pas atteint. Avant, une capacité inconnue
+ * masquait aussi la liste : l'onglet Équipes du site n'en montrait aucune sur 21 inscrites.
+ * Témoin : __tests__/RETOUCHES-R50.8b.listeDesEquipesDuSite.test.js.
  * @param {any} event - Le tournoi.
- * @returns {boolean} Vrai si le nombre d'équipes doit rester caché.
+ * @returns {boolean} Vrai si la liste ne garde que l'équipe du lecteur et celles qui cherchent.
  */
-export const isTournamentTeamsCountHidden = (event) => {
-  const summary = event?.tournamentTeamsSummary || {};
-  const capacite = Math.round(Number(summary.expectedCount ?? event?.tournamentConfig?.maxTeams));
-  if (!Number.isFinite(capacite) || capacite <= 0) return true;
-  const inscrites = summary.registeredCount === null || summary.registeredCount === undefined
-    ? NaN
-    : Math.round(Number(summary.registeredCount));
-  const seuil = Math.ceil((capacite * TOURNAMENT_VISITOR_TEAMS_THRESHOLD_PERCENT) / 100);
-  return !(Number.isFinite(inscrites) && inscrites >= seuil);
-};
+export const isTournamentTeamsCountHidden = (event) => Boolean(
+  getTournamentTeamsCapacity(event) && !isTournamentTeamsCountShown(event),
+);
 
 /**
  * « 3 joueurs · 0 payé · 0 en attente » → « 3 joueurs » : un compteur de personnes à 0 disparaît
