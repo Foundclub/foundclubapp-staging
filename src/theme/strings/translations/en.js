@@ -12748,6 +12748,7 @@ export default {
     combat: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groups',
         evenementsSousTitre: 'Trial sessions, classes, competitions…',
         mesEquipes: 'My groups',
         reservationsSousTitre: 'Book a hall or a dojo.',
@@ -12790,6 +12791,7 @@ export default {
     culture: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groups',
         evenementsSousTitre: 'Trial classes, workshops, shows…',
         mesEquipes: 'My groups',
         reservationsSousTitre: 'Book a hall, a studio or a stage.',
@@ -12846,6 +12848,7 @@ export default {
     individuel: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groups',
         evenementsSousTitre: 'Tryouts, trial sessions, competitions…',
         mesEquipes: 'My groups',
         reservationsSousTitre: 'Book a facility slot.',
@@ -12888,6 +12891,7 @@ export default {
     nature: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groups',
         evenementsSousTitre: 'Discovery sessions, outings, gatherings…',
         mesEquipes: 'My groups',
         reservationsSousTitre: 'Book a slot or a site.',

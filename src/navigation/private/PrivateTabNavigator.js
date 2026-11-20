@@ -69,7 +69,14 @@ function PrivateTabNavigator() {
   let teamTabLabel = familleDesMots
     ? t(`familles.${familleDesMots}.accueil.mesEquipes`)
     : t('menu.myTeams');
-  if (canManageTeam && hasMultisportAccess && !isSectionScope) teamTabLabel = t('menu.myClub');
+  // INSCRIPTION-CODE-5 : le dock affiche le mot COURT (`visualLabel`) ; « Groupes » par famille.
+  let teamTabVisualLabel = familleDesMots
+    ? t(`familles.${familleDesMots}.accueil.equipesDock`)
+    : t('menuDock.myTeams', 'Équipes');
+  if (canManageTeam && hasMultisportAccess && !isSectionScope) {
+    teamTabLabel = t('menu.myClub');
+    teamTabVisualLabel = t('menuDock.myClub', 'Club');
+  }
 
   /**
    * Render tab bar icon.
@@ -192,9 +199,7 @@ function PrivateTabNavigator() {
               label: teamTabLabel,
               renderTabBarIcon,
               tourTargetId: 'dock.teams',
-              visualLabel: canManageTeam && hasMultisportAccess && !isSectionScope
-                ? t('menuDock.myClub', 'Club')
-                : t('menuDock.myTeams', 'Équipes'),
+              visualLabel: teamTabVisualLabel,
             }),
           }}
         />

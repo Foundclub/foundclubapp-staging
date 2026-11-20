@@ -13548,6 +13548,7 @@ export default {
     combat: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groupes',
         evenementsSousTitre: 'Séances d’essai, cours, compétitions…',
         mesEquipes: 'Mes groupes',
         reservationsSousTitre: 'Réserve une salle ou un dojo.',
@@ -13590,6 +13591,7 @@ export default {
     culture: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groupes',
         evenementsSousTitre: 'Cours d’essai, ateliers, spectacles…',
         mesEquipes: 'Mes groupes',
         reservationsSousTitre: 'Réserve une salle, un studio ou une scène.',
@@ -13646,6 +13648,7 @@ export default {
     individuel: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groupes',
         evenementsSousTitre: 'Détections, séances d’essai, compétitions…',
         mesEquipes: 'Mes groupes',
         reservationsSousTitre: 'Réserve un créneau d’installation.',
@@ -13688,6 +13691,7 @@ export default {
     nature: {
       // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
       accueil: {
+        equipesDock: 'Groupes',
         evenementsSousTitre: 'Séances découverte, sorties, rassemblements…',
         mesEquipes: 'Mes groupes',
         reservationsSousTitre: 'Réserve un créneau ou un site.',
