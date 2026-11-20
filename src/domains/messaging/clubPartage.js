@@ -21,7 +21,7 @@ export const compositionDuClubPartage = (club) => ({
 
 /**
  * Le texte du message, le même que celui que le serveur écrit.
- * @param {(key: string, fallback: string, options?: object) => string} t - La traduction.
+ * @param {any} t - La traduction (`TFunction` de react-i18next).
  * @param {string | undefined} nom - Le nom du club.
  * @returns {string} « Club : <nom> ».
  */

@@ -456,7 +456,9 @@ function TournamentTeamDetails({ navigation, route }) {
 
   const respondMutation = useMutation({
     meta: SANS_FILET,
-    mutationFn: (responseStatus) => respondToTournamentTeam(teamId, responseStatus),
+    mutationFn: (/** @type {string} */ responseStatus) => (
+      respondToTournamentTeam(teamId, responseStatus)
+    ),
     onError: (mutationError) => {
       Alert.alert(t(
         'common.error',
@@ -471,7 +473,7 @@ function TournamentTeamDetails({ navigation, route }) {
 
   const respondInvitationMutation = useMutation({
     meta: SANS_FILET,
-    mutationFn: (status) => respondToTournamentInvitation(teamId, status),
+    mutationFn: (/** @type {string} */ status) => respondToTournamentInvitation(teamId, status),
     onError: (mutationError) => {
       Alert.alert(t(
         'common.error',
@@ -503,7 +505,7 @@ function TournamentTeamDetails({ navigation, route }) {
 
   const removeMemberMutation = useMutation({
     meta: SANS_FILET,
-    mutationFn: (memberId) => removeTournamentTeamMember(teamId, memberId),
+    mutationFn: (/** @type {string} */ memberId) => removeTournamentTeamMember(teamId, memberId),
     onError: (mutationError) => {
       Alert.alert(t(
         'common.error',
@@ -1621,7 +1623,9 @@ function TournamentTeamDetails({ navigation, route }) {
             style={[...tournamentDs.styles.panelCard, { paddingHorizontal: 0, paddingVertical: 4 }]}
             testID="tournament-team-roster-list"
           >
-            {activeMembers.map((member, index) => renderMemberCard(member, 'active', index))}
+            {activeMembers.map((member, /** @type {number} */ index) => (
+              renderMemberCard(member, 'active', index)
+            ))}
           </View>
         ) : null}
         {invitedMembers.map((member) => renderMemberCard(member, 'invited'))}

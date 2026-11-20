@@ -59,7 +59,7 @@ function ConversationClubPicker({ navigation, route }) {
     [data?.pages, texte],
   );
 
-  const choisir = useCallback((club) => {
+  const choisir = useCallback((/** @type {any} */ club) => {
     const documentId = String(club?.documentId || '').trim();
     if (!documentId || !chatId) return;
     navigation.navigate(RouteNames.Conversation, {
@@ -68,7 +68,7 @@ function ConversationClubPicker({ navigation, route }) {
     });
   }, [chatId, navigation]);
 
-  const message = (libelle) => (
+  const message = (/** @type {string} */ libelle) => (
     <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
       {libelle}
     </Text>

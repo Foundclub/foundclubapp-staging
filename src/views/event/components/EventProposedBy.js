@@ -10,7 +10,7 @@ import useTheme from '@/theme/themeContext';
  * fiche (téléphone). Rien quand le serveur ne rend pas de prénom, ni sur un tournoi
  * (voir `libelleOrganisateur`).
  * @param {{ event: any }} props - l'événement de la fiche.
- * @returns {JSX.Element|null} La ligne, ou rien.
+ * @returns {import('react').ReactElement|null} La ligne, ou rien.
  */
 function EventProposedBy({ event }) {
   const { t } = useTranslation();

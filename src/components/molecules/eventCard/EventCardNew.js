@@ -635,7 +635,7 @@ function EventCardNew({
   const nomDeCategorie = getDisplayLabel(
     item?.team?.category || item?.tournamentCategory || item?.category,
   );
-  let teamCategory = nomDeCategorie;
+  let teamCategory = /** @type {string | null | undefined} */ (nomDeCategorie);
   if (isTournamentEvent) {
     teamCategory = ageMinimumDuTournoi ? '' : getTournamentCategoryLabel(item, nomDeCategorie);
   }

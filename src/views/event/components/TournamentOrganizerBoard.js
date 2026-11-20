@@ -657,7 +657,7 @@ function TournamentOrganizerBoard({
           }]}
         >
           <GlyphIcon color={Colors.primary600} name="check" size={18} />
-          <Text style={[Fonts.p3Bold, { color: Colors.primary900, flex: 1 }]}>{avis.texte}</Text>
+          <Text style={[Fonts.p3Bold, { color: Colors.primary900, flex: 1 }]}>{avis?.texte}</Text>
         </View>
       ) : null}
     </>
