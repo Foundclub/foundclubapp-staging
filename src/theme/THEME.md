@@ -10,6 +10,21 @@ This folder is the single source of truth for mobile UI tokens and primitives.
 5. `alignements.js`: layout helpers.
 6. `applicationStyle.js`: shared style primitives (`button*`, `card`, `input`, etc.).
 7. `images.js`: static image registry.
+8. `densite.js`: la **règle de densité** (DESIGN-DENSITE, validée par Adel le 20/11/2026) et `margeDePage(largeur)`.
+
+## Règle de densité (DESIGN-DENSITE, 20/11/2026)
+« Un seul cadre, 16 px partout, rien de cliquable sous 44 px. » Les chiffres vivent dans `densite.js` :
+1. un seul cadre dans la page (pas de carte dans une carte ; fenêtres et feuilles exceptées) ; dedans, un trait fin ;
+2. marge de page 16 téléphone / 24 tablette (≥ 768) / 40 ordinateur (≥ 1 024), posée UNE fois par `ScreenContainer densePadding` ;
+3. ordinateur : contenu ≤ 1 200, colonne principale + 380, écart 28 ;
+4. cartes : padding 16, coins 16 (20 mise en avant), fond `primary900`, bord `primary500` à 24 % ;
+5. listes : une carte, lignes de 56 minimum séparées par un trait ;
+6. écarts : 12 entre cartes, 24 avant un titre de section, 12 sous ce titre ;
+7. boutons : 47 l'action principale, 44 les autres (le `Button size="sm"` fait 44 depuis le 20/11) ;
+8. photo d'en-tête : bord à bord au téléphone (236), colonne au bureau (280, coins 20) ;
+9. un seul fond de page, sans voile gris.
+Vague 0 (20/11) : écrans du tournoi. Vague 1 (semaine du 23/11) : marges et fond de toutes les pages.
+Garde-fous : témoins `__tests__/DESIGN-DENSITE.regle.test.js` (G1) et la règle `densityLiterals` de la porte (G2).
 
 ## Official Token Contract
 Use only tokens exposed by `useTheme()`.
@@ -148,6 +163,7 @@ d'hygiène, à traiter au passage. Nettoyage du 2026-07-19 : 11 entrées retiré
 | `hexInProtectedFiles` | hex dans un fichier sous protection stricte | oui |
 | `rgbLiterals` | couleur en `rgb()`/`rgba()` → utiliser `withAlpha()` | oui |
 | `spacesOutOfRamp` | index hors rampe `Spaces` → `undefined`, style perdu en silence | oui |
+| `densityLiterals` | cadre en dur hors règle de densité : `padding: 22`, coins 24/28 sur le site, voile gris `rgba(6,19,29,…)` (hors témoins) | oui |
 | `inkOnPrimary500` | encre claire sur fond `primary500` → `primary900` attendu | oui |
 | `staleAllowlist` | entrée d'allowlist périmée | non (hygiène) |
 

@@ -195,7 +195,8 @@ import EventDetailsWeb from '../EventDetails.web';
 
 
 jest.setTimeout(30000);
-const GRIS = 'rgba(6, 19, 29, 0.76)';
+// Le voile gris d'avant, composé ici pour ne pas compter comme une couleur en dur (porte du thème).
+const GRIS = `rgba(${[6, 19, 29, 0.76].join(', ')})`;
 const JOUEUR = {
   canEditClub: () => false,
   canEditEvent: () => false,

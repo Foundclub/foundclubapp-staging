@@ -12,6 +12,13 @@ import ScreenContainerSite from '../ScreenContainer.web';
 // Mesuré sur la recette 51 b : page d'équipe 24 + 24 = 48 px avant la première carte.
 // ==========================================================================
 
+let mockLargeur = 375;
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => ({
+    fontScale: 1, height: 800, scale: 2, width: mockLargeur,
+  }),
+}));
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
     bottom: 0, left: 0, right: 0, top: 0,
@@ -40,7 +47,6 @@ jest.mock('@/theme/themeContext', () => {
 const montes = [];
 afterEach(() => {
   act(() => { montes.splice(0).forEach((arbre) => arbre.unmount()); });
-  jest.restoreAllMocks();
 });
 
 /**
@@ -51,9 +57,7 @@ afterEach(() => {
  * @returns {number}
  */
 const margeA = (Conteneur, largeur, props) => {
-  jest.spyOn(ReactNative, 'useWindowDimensions').mockReturnValue({
-    fontScale: 1, height: 800, scale: 2, width: largeur,
-  });
+  mockLargeur = largeur;
   /** @type {any} */
   let arbre;
   act(() => {

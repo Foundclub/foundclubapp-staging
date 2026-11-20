@@ -233,6 +233,37 @@ const findSpacesViolations = (files, spacesContract) => {
  * @param {Map<string, string>} colorLookup - Hex -> jeton, pour nommer la couleur.
  * @returns {{file: string, line: number, message: string}[]} - Constats.
  */
+// DESIGN-DENSITE (20/11/2026, G2, Adel densite_go d5 = A) : les cadres « en dur » qui ont empilé
+// deux ou trois cadres de 22 à 28 px sur le site (recette 51 b : « Mon équipe » à 66 px du bord au
+// lieu de 16). La règle de densité (src/theme/densite.js) veut une carte de 16, coins 16, et pas de
+// voile gris. Cliquet neuf : le plafond est le compte du jour, il ne peut que baisser. Les témoins
+// (__tests__, *.test.js) ne comptent pas.
+const densityLiteralPatterns = [
+  { label: 'padding: 22 (carte de 16 attendue)', regex: /\bpadding:\s*22\b/g },
+  { label: 'coins de 24 ou 28 en dur sur le site (16 attendu)', regex: /\bborderRadius:\s*2[48]\b/g, webOnly: true },
+  { label: 'voile gris rgba(6, 19, 29, …) (une carte primary900 attendue)', regex: /rgba\(\s*6\s*,\s*19\s*,\s*29\b/g },
+];
+const isTestFile = (relPath) => /(^|\/)__tests__\/|\.test\.(js|jsx|ts|tsx)$/.test(relPath);
+const findDensityLiterals = (files) => {
+  const violations = [];
+  files.forEach((filePath) => {
+    const relPath = toRelative(filePath);
+    if (isTestFile(relPath)) return;
+    const isWeb = /\.web\.(js|jsx|ts|tsx)$/.test(relPath);
+    const lines = read(filePath).split(/\r?\n/);
+    lines.forEach((line, index) => {
+      densityLiteralPatterns.forEach(({ label, regex, webOnly }) => {
+        if (webOnly && !isWeb) return;
+        regex.lastIndex = 0;
+        while (regex.exec(line) !== null) {
+          violations.push({ file: relPath, line: index + 1, message: label });
+        }
+      });
+    });
+  });
+  return violations;
+};
+
 const findRgbViolations = (files, allowlist, colorLookup) => {
   const violations = [];
   const rgbRegex = /\brgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*([0-9.]+)\s*)?\)/g;
@@ -440,6 +471,11 @@ const rules = [
   },
   {
     blocking: true,
+    id: 'densityLiterals',
+    title: 'Cadres en dur hors regle de densite (padding 22, coins 24/28 du site, voile gris)',
+  },
+  {
+    blocking: true,
     id: 'inkOnPrimary500',
     title: 'Encre claire sur fond primary500 (primary900 attendu)',
   },
@@ -465,6 +501,7 @@ const run = () => {
   const hexAllowlist = loadHexAllowlist();
 
   const findingsByRule = {
+    densityLiterals: findDensityLiterals(sourceFiles),
     hexInProtectedFiles: findHexViolations(),
     hexOutsideAllowlist: findHexFileViolations(sourceFiles, hexAllowlist),
     inkOnPrimary500: findInkOnPrimaryViolations(sourceFiles),
