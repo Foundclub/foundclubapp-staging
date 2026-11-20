@@ -19,6 +19,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { isClubAudienceEvent } from '@/domains/event/clubAudience';
 import { estDuClubOrganisateur, resolveEventCustomName } from '@/domains/event/eventDisplayName';
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import { familleDeLEvenement, motifDuType, nomAfficheDuType } from '@/domains/event/nomDuTypeAffiche';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
 import useEvent from '@/domains/event/useEvent';
@@ -80,11 +81,18 @@ export const getBackgroundImage = (typeName, Images, isStageEvent = false) => {
  * Libéllé du chip type, selon le tableau du handoff (tour 3b).
  * @param {string | undefined} typeName - Nom du type d'événement.
  * @param {any} eventItem - Événement affiché.
+ * @param {string | null} [famille] - INSCRIPTION-CODE-5 : la famille aux mots propres de
+ *   l'événement (`familleDeLEvenement`) ; sans elle, les libellés d'aujourd'hui.
  * @returns {string} - Libellé du chip type.
  */
-export const getHeaderTitle = (typeName, eventItem) => {
+export const getHeaderTitle = (typeName, eventItem, famille = null) => {
   const normalizedType = normalizeTypeName(typeName);
-  if (normalizedType.includes('match')) return 'MATCH';
+  // Hors sports collectifs et raquette, le mot de la famille (« SORTIE ») ; « Match amical »,
+  // « Réservation », « Autre » et l'« Entraînement OUVERT » (un état) gardent le leur.
+  const motDeLaFamille = famille && motifDuType(typeName)
+    ? nomAfficheDuType(typeName, famille, i18next.t).toUpperCase()
+    : '';
+  if (normalizedType.includes('match')) return motDeLaFamille || 'MATCH';
   if (normalizedType.includes('entrainement')) {
     const trainingConfig = resolveTrainingOpenConfig({
       ...(eventItem || {}),
@@ -94,17 +102,21 @@ export const getHeaderTitle = (typeName, eventItem) => {
     if (trainingConfig?.isOpenTraining && externalLimit > 0) {
       return i18next.t('eventCardNew.openTraining', 'Entraînement OUVERT');
     }
-    return i18next.t('eventCardNew.training', 'ENTRAINEMENT');
+    return motDeLaFamille || i18next.t('eventCardNew.training', 'ENTRAINEMENT');
   }
   // Libellés du chip type — tableau du handoff « Cartes Rechercher » (tour 3b).
   if (normalizedType.includes('detection')) {
-    return i18next.t('eventCardNew.detectionTrial', 'DÉTECTION / ESSAI');
+    return motDeLaFamille || i18next.t('eventCardNew.detectionTrial', 'DÉTECTION / ESSAI');
   }
   if (normalizedType.includes('reservation')) {
     return i18next.t('eventCardNew.booking', 'RÉSERVATION');
   }
-  if (normalizedType.includes('tournoi')) return i18next.t('eventCardNew.tournament', 'TOURNOI');
-  if (normalizedType.includes('stage')) return i18next.t('eventCardNew.trainingCamp', 'STAGE');
+  if (normalizedType.includes('tournoi')) {
+    return motDeLaFamille || i18next.t('eventCardNew.tournament', 'TOURNOI');
+  }
+  if (normalizedType.includes('stage')) {
+    return motDeLaFamille || i18next.t('eventCardNew.trainingCamp', 'STAGE');
+  }
   return typeName?.toUpperCase() || i18next.t('eventCardNew.event', 'ÉVÉNEMENT');
 };
 
@@ -547,7 +559,8 @@ function EventCardNew({
   const isShareMode = mode === 'share';
   const isTeamFocusedCard = displayProfile === 'teamFocused' && !isShareMode && !isReservation;
   const backgroundImage = getBackgroundImage(typeName, Images, isStageEvent);
-  const headerTitle = getHeaderTitle(typeName, item);
+  const familleDesMots = familleDeLEvenement(item, userData?.preferredSport);
+  const headerTitle = getHeaderTitle(typeName, item, familleDesMots);
 
   // Sponsors
   const sponsors = item?.club?.sponsor || item?.team?.club?.sponsor || [];
@@ -659,7 +672,8 @@ function EventCardNew({
   // deux fois sous le titre (sous-titre, puis cette ligne) : un morceau déjà dit n'est pas redit.
   const morceauxDuSousTitre = String(secondaryTitle || '').split(' • ').filter(Boolean);
   const teamMetaLine = isTeamFocusedCard
-    ? [typeName, matchContextLabel, defaultTeamMetaLine].filter(Boolean).join(' • ')
+    ? [nomAfficheDuType(typeName, familleDesMots, t), matchContextLabel, defaultTeamMetaLine]
+      .filter(Boolean).join(' • ')
     : defaultTeamMetaLine
       .split(' • ')
       .filter((morceau) => morceau && !(isTournamentEvent && morceauxDuSousTitre.includes(morceau)))

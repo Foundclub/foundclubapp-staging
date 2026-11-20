@@ -45,6 +45,8 @@ const REPLIS = {
   'joueurAvecClub.photo': 'Compléter ta carte : il manque ta photo',
   'joueurAvecClub.phrase': 'Ton compte est prêt. {{club}} a reçu ta demande.',
   'joueurAvecClub.voir': 'Voir les matchs et les entraînements près de chez toi',
+  'joueurAvecClub.voirCombat': 'Voir les cours et les compétitions près de chez toi',
+  'joueurAvecClub.voirIndividuel': 'Voir les entraînements et les compétitions près de chez toi',
   notifications: 'Reste informé·e des nouveautés grâce aux notifications.',
   'parent.declarer': 'Déclarer ton enfant',
   'parent.declarerUnAutre': 'Déclarer un autre enfant',
@@ -180,7 +182,11 @@ function BienvenueParCas({
           cle: 'evenements',
           icone: Images.calendar,
           onPress: versEvenements,
-          texte: tr('joueurAvecClub.voir'),
+          // INSCRIPTION-CODE-5 (point b) : « matchs et entraînements » en sport collectif et en
+          // raquette seulement ; le judo et la natation disent les mots de leur famille.
+          texte: (famille === 'combat' && tr('joueurAvecClub.voirCombat'))
+            || (famille === 'individuel' && tr('joueurAvecClub.voirIndividuel'))
+            || tr('joueurAvecClub.voir'),
         },
       ];
     if (cle === 'joueurAvecClub' && !(userData?.avatar?.url || userData?.avatarUrl)) {

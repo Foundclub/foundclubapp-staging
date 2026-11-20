@@ -53,6 +53,7 @@ import {
   getCurrentUserEventParticipationState,
   isPendingParticipationRequest,
 } from '@/domains/event/participationState';
+import { familleDeLEvenement, nomAfficheDuType } from '@/domains/event/nomDuTypeAffiche';
 import { canDeclareLatePresence, isArrivalTrackingEnabled } from '@/domains/event/presenceRule';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
@@ -8829,7 +8830,11 @@ function EventDetails({ navigation, route }) {
             >
               <Tag
                 style={{}}
-                text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsAvecVerdict)}
+                text={buildTypeTagLabel(
+                  // INSCRIPTION-CODE-5 : le mot de la famille de l'événement (« SORTIE »).
+                  nomAfficheDuType(event?.type?.name, familleDeLEvenement(event, userData?.preferredSport), t),
+                  typeTagSegmentsAvecVerdict,
+                )}
                 textStyle={Fonts.p2}
               />
               {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est

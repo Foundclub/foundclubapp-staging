@@ -22,6 +22,7 @@ import {
   withConvocationResponses,
 } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import { familleDeLEvenement, nomAfficheDuType } from '@/domains/event/nomDuTypeAffiche';
 import {
   getCurrentUserEventParticipationState,
   isPendingParticipationRequest,
@@ -1130,9 +1131,16 @@ function EventDetails({ navigation, route }) {
   // 🏷️ ST-MATCH (écran 1) — la pastille porte l'étape et le verdict : « MATCH · TERMINÉ ·
   // VICTOIRE » (mêmes mots que le téléphone).
   // FINITIONS15 point 9e : la même règle que le téléphone (un score connu dit la fin).
+  // INSCRIPTION-CODE-5 (point a) : le type se dit avec les mots de la famille de l'événement
+  // (« Sortie » en spéléologie) ; le type du serveur reste lu partout ailleurs.
+  const nomDuTypeAffiche = nomAfficheDuType(
+    event?.type?.name,
+    familleDeLEvenement(event, userData?.preferredSport),
+    t,
+  );
   const matchTypeTag = isMatchEvent
     ? [
-      event?.type?.name || 'Match',
+      nomDuTypeAffiche || 'Match',
       ...resolveMatchTagSegments({
         horlogeConnue: serverClockMs !== null,
         isFinished: isMatchFinished,
@@ -1160,7 +1168,7 @@ function EventDetails({ navigation, route }) {
   const headerTitle = isMatchEvent && headerClubName && matchOpponentName
     ? `${headerClubName} — ${matchOpponentName}`
     // T-FINITIONS2 (16/11, M1295) : le nom donné (T-NOM) d'abord, comme le fil d'Ariane.
-    : resolveEventCustomName(event) || event?.name || event?.type?.name
+    : resolveEventCustomName(event) || event?.name || nomDuTypeAffiche
       || t('eventDetails.eventFallback', 'Événement');
   const {
     data: staffCompositionPayload,
@@ -3094,7 +3102,7 @@ function EventDetails({ navigation, route }) {
                     <span aria-hidden="true">›</span>
                     <span>
                       {resolveEventCustomName(event)
-                        || event?.type?.name
+                        || nomDuTypeAffiche
                         || t('eventDetails.eventFallback', 'Événement')}
                     </span>
                   </nav>
@@ -3259,7 +3267,7 @@ function EventDetails({ navigation, route }) {
                           textTransform: 'uppercase',
                         }}
                         >
-                          {event?.type?.name || t('eventDetails.eventFallback', 'Événement')}
+                          {nomDuTypeAffiche || t('eventDetails.eventFallback', 'Événement')}
                         </span>
                       ) : null}
                       <h1 style={{

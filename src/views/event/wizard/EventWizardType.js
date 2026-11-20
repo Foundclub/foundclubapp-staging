@@ -9,6 +9,7 @@ import {
 
 import { familleAuxMotsPropres } from '@/domains/activity/familleDuSport';
 import useAuth from '@/domains/auth/useAuth';
+import { motifDuType, nomAfficheDuType } from '@/domains/event/nomDuTypeAffiche';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -98,7 +99,8 @@ const getTypeDescription = (normalized) => {
 // sports collectifs et raquette, le TITRE et la description AFFICHÉS prennent les mots de la
 // famille (« Sortie », « Cours / Atelier »…). Le type reste l'objet du serveur : le choix, les
 // motifs `includes` et le grisage de « Réservation » ne changent pas.
-const MOTIFS_PAR_FAMILLE = ['detection', 'entrainement', 'match', 'stage', 'tournoi'];
+// INSCRIPTION-CODE-5 : la règle (motifs, mots) vit dans `domains/event/nomDuTypeAffiche.js`,
+// partagée avec le récapitulatif, le détail et les cartes.
 
 /** La rangee « Match amical » : une PORTE vers le tunnel League, pas un type. */
 const CLE_MATCH_AMICAL = 'porte-match-amical';
@@ -259,7 +261,7 @@ function EventWizardType({ navigation, route }) {
       // AA10 ① — le type serveur homonyme ne s'affiche pas : c'est la PORTE
       // ci-dessus qu'Adel garde. Voir `TYPE_SERVEUR_MATCH_AMICAL`.
       if (normalized === TYPE_SERVEUR_MATCH_AMICAL) return;
-      const motif = famille ? MOTIFS_PAR_FAMILLE.find((m) => normalized.includes(m)) : null;
+      const motif = famille ? motifDuType(type?.name) : null;
       rows.push({
         description: motif
           ? t(`familles.${famille}.evenements.${motif}.description`)
@@ -276,7 +278,7 @@ function EventWizardType({ navigation, route }) {
         tag: normalized.includes('reservation')
           ? t('eventWizard.steps.type.comingSoonTag', 'Bientôt disponible')
           : '',
-        title: motif ? t(`familles.${famille}.evenements.${motif}.titre`) : type?.name,
+        title: motif ? nomAfficheDuType(type?.name, famille, t) : type?.name,
         tourTargetId: normalized === 'entrainement' ? 'eventWizard.type.training' : undefined,
       });
       // Une seule porte, meme si le serveur venait a servir deux types

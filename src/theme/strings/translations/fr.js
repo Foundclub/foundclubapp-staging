@@ -29683,6 +29683,8 @@ export default {
         photo: 'Compléter ta carte : il manque ta photo',
         phrase: 'Ton compte est prêt. {{club}} a reçu ta demande.',
         voir: 'Voir les matchs et les entraînements près de chez toi',
+        voirCombat: 'Voir les cours et les compétitions près de chez toi',
+        voirIndividuel: 'Voir les entraînements et les compétitions près de chez toi',
       },
       notifications: 'Reste informé·e des nouveautés grâce aux notifications.',
       parent: {

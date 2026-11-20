@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { familleAuxMotsPropres } from '@/domains/activity/familleDuSport';
 import useAuth from '@/domains/auth/useAuth';
 import {
   applyClubAudienceToFormData,
@@ -24,6 +25,7 @@ import {
   isTrainingEventType,
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
+import { nomAfficheDuType } from '@/domains/event/nomDuTypeAffiche';
 import useEvent from '@/domains/event/useEvent';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
@@ -398,6 +400,7 @@ function EventWizardRecap({ navigation }) {
     clubVerificationSummary,
     freeUsageSummary,
     subscriptionAccessLevel,
+    userData,
   } = useAuth();
   const { dispatch, state } = useEventWizard();
   const { createReccurrentEventPayload, createStageEventPayload } = useEvent();
@@ -538,7 +541,14 @@ function EventWizardRecap({ navigation }) {
     }
   };
 
-  const typeValue = state.type?.name || recapNotSet;
+  // INSCRIPTION-CODE-5 (point a) : le mot que l'étape « Type » vient d'afficher (la famille du
+  // LECTEUR, comme elle) ; le type envoyé reste celui du serveur.
+  const nomDuTypeAffiche = nomAfficheDuType(
+    state.type?.name,
+    familleAuxMotsPropres(userData?.preferredSport),
+    t,
+  );
+  const typeValue = nomDuTypeAffiche || recapNotSet;
   const teamValue = isTournament && state.tournamentScopeMode === 'autonomous'
     ? t('eventWizardRecap.standaloneTournament', 'Tournoi autonome')
     : (state.team?.name || recapNotSet);
@@ -2180,7 +2190,7 @@ function EventWizardRecap({ navigation }) {
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={clubVerificationSummary?.clubDocumentId || null}
-        contextLabel={state.type?.name || t('eventWizardRecap.yourEvent', 'Ton événement')}
+        contextLabel={nomDuTypeAffiche || t('eventWizardRecap.yourEvent', 'Ton événement')}
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}

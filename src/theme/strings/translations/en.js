@@ -27893,6 +27893,8 @@ export default {
         photo: 'Complete your card: your photo is missing',
         phrase: 'Your account is ready. {{club}} has received your request.',
         voir: 'See matches and training sessions near you',
+        voirCombat: 'See classes and competitions near you',
+        voirIndividuel: 'See training sessions and competitions near you',
       },
       notifications: 'Stay up to date with notifications.',
       parent: {

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { familleDeLEvenement } from '@/domains/event/nomDuTypeAffiche';
 import {
   lieuAOuvrir,
   presenceDansLeFil,
@@ -223,7 +224,11 @@ function EventMessageBubble({
         <View style={[styles.puce, { backgroundColor: withAlpha(Colors.chatBar, 0.82) }]}>
           <View style={[styles.pucePoint, { backgroundColor: couleurDuType }]} />
           <Text numberOfLines={1} style={[styles.puceTexte, { color: couleurDuType }]}>
-            {getHeaderTitle(typeName, evenement).toUpperCase()}
+            {getHeaderTitle(
+              typeName,
+              evenement,
+              familleDeLEvenement(evenement, userData?.preferredSport),
+            ).toUpperCase()}
           </Text>
         </View>
       </View>
