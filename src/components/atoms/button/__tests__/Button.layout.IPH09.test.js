@@ -81,10 +81,12 @@ describe('IPH09 — une boîte stable pour les libellés avec icône', () => {
     },
   );
 
-  test.each(['sm', 'small'])('%s conserve la taille compacte et le texte à 14pt', (size) => {
+  // DESIGN-DENSITE (20/11/2026, Adel densite_go d3 = A) : le petit bouton passe de 39 à 44 px,
+  // la cible tactile minimale ; il garde sa marge de 12 et son texte à 14pt.
+  test.each(['sm', 'small'])('%s : 44 px de haut (cible tactile), marge compacte, texte à 14pt', (size) => {
     const { root, touchable, tree } = mount({ icon: 'check', size, title: 'Valider' });
     expect(StyleSheet.flatten(touchable.props.style))
-      .toMatchObject({ height: 39, paddingHorizontal: 12 });
+      .toMatchObject({ height: 44, paddingHorizontal: 12 });
     expect(StyleSheet.flatten(root.findByType(Text).props.style).fontSize).toBe(14);
     act(() => tree.unmount());
   });
