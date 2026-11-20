@@ -13546,11 +13546,39 @@ export default {
   // INSCRIPTION-CODE (19/11/2026, V2 2.1, v2_03 « ok ») : les mots de chaque famille d'activité.
   familles: {
     combat: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Séances d’essai, cours, compétitions…',
+        mesEquipes: 'Mes groupes',
+        reservationsSousTitre: 'Réserve une salle ou un dojo.',
+      },
       descriptions: {
         coach: 'J’enseigne ou j’entraîne un ou plusieurs groupes',
         parent: 'Mon enfant pratique, je suis ses cours',
         player: 'Je pratique en club, ou je cherche un club',
         president: 'Je gère le club : licences, planning, salles',
+      },
+      evenements: {
+        detection: {
+          description: 'Un cours d’essai pour de nouveaux pratiquants',
+          titre: "Séance d'essai",
+        },
+        entrainement: {
+          description: 'Cours ou entraînement de ton groupe',
+          titre: 'Cours / Entraînement',
+        },
+        match: {
+          description: 'Combat ou compétition officielle',
+          titre: 'Combat / Compétition',
+        },
+        stage: {
+          description: 'Plusieurs séances sur plusieurs jours',
+          titre: 'Stage',
+        },
+        tournoi: {
+          description: 'Tournoi, open ou gala, sur une ou plusieurs journées',
+          titre: 'Tournoi / Gala',
+        },
       },
       roles: {
         coach: 'Professeur·e / Coach',
@@ -13560,11 +13588,39 @@ export default {
       },
     },
     culture: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Cours d’essai, ateliers, spectacles…',
+        mesEquipes: 'Mes groupes',
+        reservationsSousTitre: 'Réserve une salle, un studio ou une scène.',
+      },
       descriptions: {
         coach: 'Je donne des cours ou j’anime un atelier',
         parent: 'Mon enfant prend des cours, je suis son planning',
         player: 'Je prends des cours, ou je cherche une école',
         president: 'Je gère l’association : inscriptions, salles',
+      },
+      evenements: {
+        detection: {
+          description: 'Un premier cours pour découvrir l’activité',
+          titre: "Cours d'essai",
+        },
+        entrainement: {
+          description: 'Cours, atelier ou répétition de ton groupe',
+          titre: 'Cours / Atelier',
+        },
+        match: {
+          description: 'Spectacle, représentation ou concert',
+          titre: 'Spectacle / Représentation',
+        },
+        stage: {
+          description: 'Plusieurs séances sur plusieurs jours',
+          titre: 'Stage / Masterclass',
+        },
+        tournoi: {
+          description: 'Plusieurs groupes sur une ou plusieurs journées',
+          titre: 'Festival / Gala',
+        },
       },
       roles: {
         coach: 'Professeur·e / Animateur·rice',
@@ -13588,11 +13644,39 @@ export default {
       },
     },
     individuel: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Détections, séances d’essai, compétitions…',
+        mesEquipes: 'Mes groupes',
+        reservationsSousTitre: 'Réserve un créneau d’installation.',
+      },
       descriptions: {
         coach: 'J’entraîne un ou plusieurs groupes',
         parent: 'Mon enfant pratique, je suis ses compétitions',
         player: 'Je m’entraîne en club, ou je cherche un club',
         president: 'Je gère le club : licences, planning',
+      },
+      evenements: {
+        detection: {
+          description: 'Ouvre ton groupe à de nouveaux sportifs',
+          titre: "Détection / Séance d'essai",
+        },
+        entrainement: {
+          description: 'Séance classique pour ton groupe',
+          titre: 'Entraînement',
+        },
+        match: {
+          description: 'Compétition officielle ou rencontre',
+          titre: 'Compétition',
+        },
+        stage: {
+          description: 'Plusieurs séances sur plusieurs jours',
+          titre: 'Stage',
+        },
+        tournoi: {
+          description: 'Plusieurs sportifs sur une ou plusieurs journées',
+          titre: 'Tournoi',
+        },
       },
       roles: {
         coach: 'Coach',
@@ -13602,11 +13686,39 @@ export default {
       },
     },
     nature: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Séances découverte, sorties, rassemblements…',
+        mesEquipes: 'Mes groupes',
+        reservationsSousTitre: 'Réserve un créneau ou un site.',
+      },
       descriptions: {
         coach: 'J’encadre des sorties ou des initiations',
         parent: 'Mon enfant pratique, je suis ses sorties',
         player: 'Je pratique en club, ou je cherche un club',
         president: 'Je gère le club : adhésions, calendrier',
+      },
+      evenements: {
+        detection: {
+          description: 'Une première sortie pour découvrir l’activité',
+          titre: 'Séance découverte',
+        },
+        entrainement: {
+          description: 'Séance habituelle de ton groupe',
+          titre: 'Séance',
+        },
+        match: {
+          description: 'Sortie sur le terrain, avec un point de rendez-vous',
+          titre: 'Sortie',
+        },
+        stage: {
+          description: 'Plusieurs jours, sur un ou plusieurs sites',
+          titre: 'Stage / Camp',
+        },
+        tournoi: {
+          description: 'Plusieurs groupes réunis sur une ou plusieurs journées',
+          titre: 'Rassemblement',
+        },
       },
       roles: {
         coach: 'Encadrant·e',

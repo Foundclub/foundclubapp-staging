@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { familleAuxMotsPropres } from '@/domains/activity/familleDuSport';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { pendingDeciderLabel } from '@/domains/event/pendingDeciderLabel';
@@ -1547,6 +1548,11 @@ function HomeHubContent({ auth, navigation, route }) {
   // « Navigation rapide » : « Equipes » et « Messages » sont deux onglets de la
   // barre du bas, ces deux raccourcis doublaient donc une destination existante.
 
+  // INSCRIPTION-CODE-4 (20/11, v2_09, planche V2 4.1) — le dessin de l'accueil ne change pas :
+  // hors sports collectifs et raquette, des MOTS suivent la famille de l'activité (le rôle sous
+  // ACCUEIL, les sous-titres « Événement » et « Réservations », « Mes groupes »).
+  const familleDesMots = familleAuxMotsPropres(userData?.preferredSport);
+
   const roleLabel = useMemo(() => {
     if (isCoach) return t('homeHub.roles.coach', 'Coach / Prof');
     if (isPresident) return t('homeHub.roles.president', 'Dirigeant');
@@ -1557,8 +1563,9 @@ function HomeHubContent({ auth, navigation, route }) {
     // durait depuis le 03/09 : faute de clef `homeHub.roles.parent`, un parent
     // lisait « JOUEUR » sous le titre de son propre accueil.
     if (isParent) return t('homeHub.roles.parent', 'Parent');
+    if (familleDesMots) return t(`familles.${familleDesMots}.roles.player`);
     return t('homeHub.roles.player', 'Pratiquant / Joueur');
-  }, [isCoach, isParent, isPresident, isSuperAdmin, t]);
+  }, [familleDesMots, isCoach, isParent, isPresident, isSuperAdmin, t]);
 
   // D72 — le rayon de tete change de nom avec le role : « Gerer mon club » pour
   // le dirigeant, « Mon club » pour l'entraineur (il n'administre pas, il y
@@ -1580,7 +1587,12 @@ function HomeHubContent({ auth, navigation, route }) {
       { id: TutorialIds.PROFILE_EDIT, label: t('homeHub.cards.profile.edit.title', 'Modifier mon profil') },
       { id: TutorialIds.HISTORY_WIZARD, label: t('homeHub.cards.profile.history.title', 'Historique sportif') },
       { id: TutorialIds.PLANNING, label: t('homeHub.cards.quick.planning.title', 'Mon planning') },
-      { id: TutorialIds.MY_TEAMS, label: t('homeHub.cards.quick.teams.title', 'Mes équipes') },
+      {
+        id: TutorialIds.MY_TEAMS,
+        label: familleDesMots
+          ? t(`familles.${familleDesMots}.accueil.mesEquipes`)
+          : t('homeHub.cards.quick.teams.title', 'Mes équipes'),
+      },
       { id: TutorialIds.MESSAGING, label: t('homeHub.cards.quick.chat.title', 'Messagerie') },
       { id: TutorialIds.ACCOUNT_SWITCHER_MODAL, label: t('homeHub.cards.account.switch.title', 'Changer de compte') },
       { id: TutorialIds.LOGOUT_CONFIRMATION, label: t('homeHub.cards.account.logout.title', 'Déconnexion') },
@@ -1594,7 +1606,7 @@ function HomeHubContent({ auth, navigation, route }) {
     }
 
     return options;
-  }, [isCoach, isPresident, t]);
+  }, [familleDesMots, isCoach, isPresident, t]);
 
   const scrollDownLabel = t('homeHubTutorial.actions.scrollDown', 'Descendre');
   const makeTutorial = useCallback((
@@ -2412,7 +2424,9 @@ function HomeHubContent({ auth, navigation, route }) {
         icon: 'calendar',
         key: 'search-events',
         onPress: () => navigation.navigate(RouteNames.SearchEvents),
-        subtitle: t('homeHub.cards.search.events.subtitle'),
+        subtitle: familleDesMots
+          ? t(`familles.${familleDesMots}.accueil.evenementsSousTitre`)
+          : t('homeHub.cards.search.events.subtitle'),
         title: t('homeHub.cards.search.events.title'),
         tutorial: makeTutorial('searchEvents', 10, 'Rechercher un événement', 'Trouve des événements sportifs en utilisant les filtres de recherche.'),
       },
@@ -2431,7 +2445,9 @@ function HomeHubContent({ auth, navigation, route }) {
         icon: 'stadium',
         key: 'search-reservations',
         onPress: () => navigation.navigate(RouteNames.SearchReservations),
-        subtitle: t('homeHub.cards.search.reservations.subtitle'),
+        subtitle: familleDesMots
+          ? t(`familles.${familleDesMots}.accueil.reservationsSousTitre`)
+          : t('homeHub.cards.search.reservations.subtitle'),
         title: t('homeHub.cards.search.reservations.title'),
         tutorial: makeTutorial('searchReservations', 12, 'Rechercher une réservation', 'Accèdes aux réservations et filtre selon ton activité.'),
       },
@@ -2630,6 +2646,7 @@ function HomeHubContent({ auth, navigation, route }) {
     return cards.filter(estAfficheeSurLAccueil);
   }, [
     Colors.primary500,
+    familleDesMots,
     hasManageSection,
     homeAlerts,
     homeCounters,

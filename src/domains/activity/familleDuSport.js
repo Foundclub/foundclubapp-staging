@@ -194,3 +194,22 @@ export const estDeCompetition = (nom) => {
   const famille = familleDuSport(nom);
   return famille === null || FAMILLES_DE_COMPETITION.includes(famille);
 };
+
+/**
+ * INSCRIPTION-CODE-4 (20/11, v2_09 « oui il faut adapter et surtout les types d'évènement ») —
+ * les familles dont l'accueil et les types d'événement parlent avec leurs mots (planche V2 4.1,
+ * 4.2). Sports collectifs et raquette gardent les mots d'aujourd'hui.
+ */
+export const FAMILLES_AUX_MOTS_PROPRES = Object.freeze([
+  'combat', 'culture', 'individuel', 'nature',
+]);
+
+/**
+ * La famille dont il faut prendre les mots (clés `familles.<famille>.accueil|evenements`).
+ * @param {unknown} nom Le nom de l'activité (`preferredSport`).
+ * @returns {Famille | null} La famille, ou `null` : les mots d'aujourd'hui.
+ */
+export const familleAuxMotsPropres = (nom) => {
+  const famille = familleDuSport(nom);
+  return famille && FAMILLES_AUX_MOTS_PROPRES.includes(famille) ? famille : null;
+};

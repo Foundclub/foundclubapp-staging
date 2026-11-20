@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { familleAuxMotsPropres } from '@/domains/activity/familleDuSport';
 import useAuth from '@/domains/auth/useAuth';
 // hooks
 import useUnreadMessages from '@/domains/messaging/useUnreadMessages';
@@ -62,9 +63,13 @@ function PrivateTabNavigator() {
 
     return require('@/views/team/MyTeamList').default;
   };
-  const teamTabLabel = canManageTeam && hasMultisportAccess && !isSectionScope
-    ? t('menu.myClub')
+  // INSCRIPTION-CODE-4 (20/11, v2_09, planche V2 4.1) : « Mes groupes » hors sports collectifs
+  // et raquette ; le dessin et la destination de l'onglet ne changent pas.
+  const familleDesMots = familleAuxMotsPropres(userData?.preferredSport);
+  let teamTabLabel = familleDesMots
+    ? t(`familles.${familleDesMots}.accueil.mesEquipes`)
     : t('menu.myTeams');
+  if (canManageTeam && hasMultisportAccess && !isSectionScope) teamTabLabel = t('menu.myClub');
 
   /**
    * Render tab bar icon.

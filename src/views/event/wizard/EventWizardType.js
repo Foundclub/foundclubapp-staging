@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 
+import { familleAuxMotsPropres } from '@/domains/activity/familleDuSport';
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { withAlpha } from '@/theme/colors';
@@ -93,6 +94,12 @@ const getTypeDescription = (normalized) => {
   return motif ? DESCRIPTIONS_PAR_TYPE[motif] : '';
 };
 
+// INSCRIPTION-CODE-4 (20/11, v2_09 « surtout les types d'évènement », planche V2 4.2) — hors
+// sports collectifs et raquette, le TITRE et la description AFFICHÉS prennent les mots de la
+// famille (« Sortie », « Cours / Atelier »…). Le type reste l'objet du serveur : le choix, les
+// motifs `includes` et le grisage de « Réservation » ne changent pas.
+const MOTIFS_PAR_FAMILLE = ['detection', 'entrainement', 'match', 'stage', 'tournoi'];
+
 /** La rangee « Match amical » : une PORTE vers le tunnel League, pas un type. */
 const CLE_MATCH_AMICAL = 'porte-match-amical';
 
@@ -158,6 +165,7 @@ function EventWizardType({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
+  const famille = familleAuxMotsPropres(userData?.preferredSport);
   const { dispatch, state } = useEventWizard();
   const {
     data: eventTypes,
@@ -251,8 +259,11 @@ function EventWizardType({ navigation, route }) {
       // AA10 ① — le type serveur homonyme ne s'affiche pas : c'est la PORTE
       // ci-dessus qu'Adel garde. Voir `TYPE_SERVEUR_MATCH_AMICAL`.
       if (normalized === TYPE_SERVEUR_MATCH_AMICAL) return;
+      const motif = famille ? MOTIFS_PAR_FAMILLE.find((m) => normalized.includes(m)) : null;
       rows.push({
-        description: getTypeDescription(normalized),
+        description: motif
+          ? t(`familles.${famille}.evenements.${motif}.description`)
+          : getTypeDescription(normalized),
         // Le pack grise « Reservation » : la capacite existe cote serveur, mais
         // elle n'est pas ouverte au public. Le code de reservation de l'etape 3
         // n'est pas supprime, seule cette porte est fermee.
@@ -265,7 +276,7 @@ function EventWizardType({ navigation, route }) {
         tag: normalized.includes('reservation')
           ? t('eventWizard.steps.type.comingSoonTag', 'Bientôt disponible')
           : '',
-        title: type?.name,
+        title: motif ? t(`familles.${famille}.evenements.${motif}.titre`) : type?.name,
         tourTargetId: normalized === 'entrainement' ? 'eventWizard.type.training' : undefined,
       });
       // Une seule porte, meme si le serveur venait a servir deux types

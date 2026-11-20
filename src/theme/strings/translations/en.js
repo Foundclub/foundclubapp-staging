@@ -12746,11 +12746,39 @@ export default {
   // INSCRIPTION-CODE (19/11/2026, V2 2.1, v2_03 « ok ») : les mots de chaque famille d'activité.
   familles: {
     combat: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Trial sessions, classes, competitions…',
+        mesEquipes: 'My groups',
+        reservationsSousTitre: 'Book a hall or a dojo.',
+      },
       descriptions: {
         coach: 'I teach or coach one or more groups',
         parent: 'My child practises, I follow their classes',
         player: 'I practise in a club, or I am looking for one',
         president: 'I run the club: licences, schedule, halls',
+      },
+      evenements: {
+        detection: {
+          description: 'A trial class for new practitioners',
+          titre: 'Trial session',
+        },
+        entrainement: {
+          description: "Your group's class or training",
+          titre: 'Class / Training',
+        },
+        match: {
+          description: 'Bout or official competition',
+          titre: 'Bout / Competition',
+        },
+        stage: {
+          description: 'Several sessions over several days',
+          titre: 'Camp',
+        },
+        tournoi: {
+          description: 'Tournament, open or gala, over one or more days',
+          titre: 'Tournament / Gala',
+        },
       },
       roles: {
         coach: 'Teacher / Coach',
@@ -12760,11 +12788,39 @@ export default {
       },
     },
     culture: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Trial classes, workshops, shows…',
+        mesEquipes: 'My groups',
+        reservationsSousTitre: 'Book a hall, a studio or a stage.',
+      },
       descriptions: {
         coach: 'I give classes or run a workshop',
         parent: 'My child takes classes, I follow their schedule',
         player: 'I take classes, or I am looking for a school',
         president: 'I run the association: enrolments, rooms',
+      },
+      evenements: {
+        detection: {
+          description: 'A first class to discover the activity',
+          titre: 'Trial class',
+        },
+        entrainement: {
+          description: "Your group's class, workshop or rehearsal",
+          titre: 'Class / Workshop',
+        },
+        match: {
+          description: 'Show, performance or concert',
+          titre: 'Show / Performance',
+        },
+        stage: {
+          description: 'Several sessions over several days',
+          titre: 'Course / Masterclass',
+        },
+        tournoi: {
+          description: 'Several groups over one or more days',
+          titre: 'Festival / Gala',
+        },
       },
       roles: {
         coach: 'Teacher / Facilitator',
@@ -12788,11 +12844,39 @@ export default {
       },
     },
     individuel: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Tryouts, trial sessions, competitions…',
+        mesEquipes: 'My groups',
+        reservationsSousTitre: 'Book a facility slot.',
+      },
       descriptions: {
         coach: 'I coach one or more groups',
         parent: 'My child practises, I follow their competitions',
         player: 'I train in a club, or I am looking for one',
         president: 'I run the club: licences, schedule',
+      },
+      evenements: {
+        detection: {
+          description: 'Open your group to new athletes',
+          titre: 'Tryout / Trial session',
+        },
+        entrainement: {
+          description: 'Regular session for your group',
+          titre: 'Training',
+        },
+        match: {
+          description: 'Official competition or meet',
+          titre: 'Competition',
+        },
+        stage: {
+          description: 'Several sessions over several days',
+          titre: 'Camp',
+        },
+        tournoi: {
+          description: 'Several athletes over one or more days',
+          titre: 'Tournament',
+        },
       },
       roles: {
         coach: 'Coach',
@@ -12802,11 +12886,39 @@ export default {
       },
     },
     nature: {
+      // INSCRIPTION-CODE-4 (20/11, v2_09) : les mots de l'accueil et des événements.
+      accueil: {
+        evenementsSousTitre: 'Discovery sessions, outings, gatherings…',
+        mesEquipes: 'My groups',
+        reservationsSousTitre: 'Book a slot or a site.',
+      },
       descriptions: {
         coach: 'I lead outings or introductory sessions',
         parent: 'My child practises, I follow their outings',
         player: 'I practise in a club, or I am looking for one',
         president: 'I run the club: memberships, calendar',
+      },
+      evenements: {
+        detection: {
+          description: 'A first outing to discover the activity',
+          titre: 'Discovery session',
+        },
+        entrainement: {
+          description: "Your group's regular session",
+          titre: 'Session',
+        },
+        match: {
+          description: 'Field outing, with a meeting point',
+          titre: 'Outing',
+        },
+        stage: {
+          description: 'Several days, at one or more sites',
+          titre: 'Course / Camp',
+        },
+        tournoi: {
+          description: 'Several groups together over one or more days',
+          titre: 'Gathering',
+        },
       },
       roles: {
         coach: 'Instructor',
