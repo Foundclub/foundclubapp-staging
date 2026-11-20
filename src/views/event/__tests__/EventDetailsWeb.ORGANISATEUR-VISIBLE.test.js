@@ -1,4 +1,5 @@
-// ORGANISATEUR-VISIBLE (19/11, D258 « 2- A ») — « Proposé par Prénom N. » dans « Infos rapides » de la fiche du SITE.
+// ORGANISATEUR-VISIBLE (19/11, D258 « 2- A ») — « Proposé par Prénom N. » dans « Infos rapides »
+// de la fiche du SITE.
 // Socle (doublures, montage) repris de EventDetailsWeb.T-FICHE.organisateur.test.js.
 /* eslint-disable max-len -- les libellés et les témoins se lisent en entier. */
 import renderer, { act } from 'react-test-renderer';

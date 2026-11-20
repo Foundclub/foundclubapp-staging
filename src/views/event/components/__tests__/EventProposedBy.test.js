@@ -36,7 +36,7 @@ afterEach(() => {
   arbre = null;
 });
 
-test('une sortie proposée par une personne : « Proposé par Camille D. », sans e-mail ni nom complet', () => {
+test('une sortie proposée : « Proposé par Camille D. », sans e-mail ni nom complet', () => {
   const lignes = rendre(SORTIE).root.findAll((/** @type {any} */ n) => n.type === Text
     && n.props.testID === 'event-details-proposed-by');
   expect(lignes).toHaveLength(1);

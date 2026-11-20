@@ -7,11 +7,13 @@ const sortie = (organizer, extra = {}) => ({
 
 describe('libelleOrganisateur', () => {
   it('donne le prénom et l\'initiale du nom', () => {
-    expect(libelleOrganisateur(sortie({ firstname: 'Camille', lastname: 'durand' }))).toBe('Camille D.');
+    const organizer = { firstname: 'Camille', lastname: 'durand' };
+    expect(libelleOrganisateur(sortie(organizer))).toBe('Camille D.');
   });
 
   it('nettoie les espaces en trop', () => {
-    expect(libelleOrganisateur(sortie({ firstname: '  Camille ', lastname: '  Durand' }))).toBe('Camille D.');
+    const organizer = { firstname: '  Camille ', lastname: '  Durand' };
+    expect(libelleOrganisateur(sortie(organizer))).toBe('Camille D.');
   });
 
   it('se contente du prénom sans nom', () => {
@@ -38,8 +40,10 @@ describe('libelleOrganisateur', () => {
     expect(libelleOrganisateur(sortie(organizer, { tournamentScopeMode: 'autonomous' }))).toBe('');
   });
 
-  it('s\'affiche sur une sortie ordinaire, dont le serveur rend tournamentScopeMode « team » par défaut', () => {
+  // Le serveur rend tournamentScopeMode « team » par défaut sur une sortie ordinaire.
+  it('s\'affiche sur une sortie ordinaire (tournamentScopeMode « team »)', () => {
     const organizer = { firstname: 'Camille', lastname: 'Durand' };
-    expect(libelleOrganisateur(sortie(organizer, { tournamentScopeMode: 'team' }))).toBe('Camille D.');
+    const evenement = sortie(organizer, { tournamentScopeMode: 'team' });
+    expect(libelleOrganisateur(evenement)).toBe('Camille D.');
   });
 });

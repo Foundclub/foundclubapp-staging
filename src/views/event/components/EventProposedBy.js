@@ -6,8 +6,9 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 /**
- * ORGANISATEUR-VISIBLE (19/11, D258 « 2- A ») — « Proposé par Prénom N. » sous le bandeau de la fiche
- * (téléphone). Rien quand le serveur ne rend pas de prénom, ni sur un tournoi (voir `libelleOrganisateur`).
+ * ORGANISATEUR-VISIBLE (19/11, D258 « 2- A ») — « Proposé par Prénom N. » sous le bandeau de la
+ * fiche (téléphone). Rien quand le serveur ne rend pas de prénom, ni sur un tournoi
+ * (voir `libelleOrganisateur`).
  * @param {{ event: any }} props - l'événement de la fiche.
  * @returns {JSX.Element|null} La ligne, ou rien.
  */

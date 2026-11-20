@@ -1,4 +1,5 @@
-// ORGANISATEUR-VISIBLE (19/11, D258 « 2- A ») — la carte dit qui propose l'événement (« Proposé par Prénom N. »).
+// ORGANISATEUR-VISIBLE (19/11, D258 « 2- A ») — la carte dit qui propose l'événement
+// (« Proposé par Prénom N. »).
 // Doublures reprises de EventCardNew.EVTCLUB.toutLeClub.test.js.
 import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
@@ -83,7 +84,8 @@ const FETE = {
   validationMode: 'auto',
 };
 
-// eventService tire le module natif de téléchargement : doublure vide, seul le constructeur de populate est lu.
+// eventService tire le module natif de téléchargement : doublure vide, seul le constructeur
+// de populate est lu.
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('@/services/client', () => ({ __esModule: true, default: {} }));
 jest.mock('@/config/runtimeUrls', () => ({ getApiBaseUrl: () => 'http://api.test' }));
@@ -112,7 +114,9 @@ const rendre = (item) => {
   });
   return arbre.root;
 };
-const ligne = (racine) => racine.findAll((n) => n.props?.testID === 'event-card-proposed-by' && n.type === Text);
+const ligne = (racine) => racine.findAll(
+  (n) => n.props?.testID === 'event-card-proposed-by' && n.type === Text,
+);
 
 afterEach(() => {
   if (arbre) act(() => arbre.unmount());
@@ -120,7 +124,7 @@ afterEach(() => {
 });
 
 describe('ORGANISATEUR-VISIBLE — la carte', () => {
-  test('une sortie proposée par une personne : « Proposé par Camille D. », sans e-mail ni nom complet', () => {
+  test('une sortie proposée : « Proposé par Camille D. », sans e-mail ni nom complet', () => {
     const racine = rendre(SORTIE);
     expect(ligne(racine)).toHaveLength(1);
     expect(ligne(racine)[0].props.children).toBe('Proposé par Camille D.');
@@ -130,16 +134,19 @@ describe('ORGANISATEUR-VISIBLE — la carte', () => {
   });
 
   test('sans prénom (identité masquée) ou sans organisateur : aucune ligne', () => {
-    expect(ligne(rendre({ ...SORTIE, organizer: { firstname: '', lastname: '' } }))).toHaveLength(0);
+    const masque = { ...SORTIE, organizer: { firstname: '', lastname: '' } };
+    expect(ligne(rendre(masque))).toHaveLength(0);
     act(() => arbre.unmount());
     expect(ligne(rendre({ ...SORTIE, organizer: null }))).toHaveLength(0);
   });
 
   test('un tournoi : aucune ligne (il dit déjà « Organisé par » le complexe)', () => {
-    expect(ligne(rendre({ ...SORTIE, tournamentScopeMode: 'autonomous', type: { name: 'Tournoi' } }))).toHaveLength(0);
+    const tournoi = { ...SORTIE, tournamentScopeMode: 'autonomous', type: { name: 'Tournoi' } };
+    expect(ligne(rendre(tournoi))).toHaveLength(0);
   });
 
   test('la liste ne demande au serveur QUE le prénom et le nom de l organisateur', () => {
-    expect(buildCompactEventCardPopulate('moi').organizer).toEqual({ fields: ['documentId', 'firstname', 'lastname'] });
+    expect(buildCompactEventCardPopulate('moi').organizer)
+      .toEqual({ fields: ['documentId', 'firstname', 'lastname'] });
   });
 });

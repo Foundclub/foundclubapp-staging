@@ -1,8 +1,9 @@
 /**
  * ORGANISATEUR-VISIBLE (19/11, D258 « 2- A ») — qui propose l'événement, en « Prénom N. ».
  *
- * Besoin d'un club d'activité (spéléo) où chaque encadrant propose ses sorties : la fiche et la carte
- * ne disaient pas qui l'organise, alors que le serveur garde `event.organizer` (rempli à la création).
+ * Besoin d'un club d'activité (spéléo) où chaque encadrant propose ses sorties : la fiche et la
+ * carte ne disaient pas qui l'organise, alors que le serveur garde `event.organizer` (rempli à la
+ * création).
  *
  * Règles :
  * - prénom + initiale du nom, jamais le nom complet, jamais l'e-mail ni l'identifiant ;
@@ -14,7 +15,8 @@
 export const libelleOrganisateur = (event) => {
   if (!event) return '';
   const typeName = String(event?.type?.name || '').toLowerCase();
-  // `tournamentScopeMode` vaut « team » par défaut sur TOUT événement : seul « autonomous » dit tournoi.
+  // `tournamentScopeMode` vaut « team » par défaut sur TOUT événement :
+  // seul « autonomous » dit tournoi.
   if (typeName.includes('tournoi') || event?.tournamentScopeMode === 'autonomous') return '';
   const prenom = String(event?.organizer?.firstname || '').trim();
   if (!prenom) return '';
