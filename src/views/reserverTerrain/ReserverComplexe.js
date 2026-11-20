@@ -139,6 +139,10 @@ function ReserverComplexe() {
 
   const aujourdhui = jourDeParis();
   const complexe = complexeLu?.data;
+  // FC-4 PAGE (20/11, planches FICHES-COMPLEXES 1 et 2) : une page créée par FoundClub, sans gérant
+  // (calculé par le serveur FC-1). Faux ou absent (complexe réservable, serveur d'avant) : la page
+  // d'aujourd'hui, inchangée. Témoin : __tests__/FC4.pageFoundclub.test.js.
+  const pageFoundclub = complexe?.pageFoundclub === true;
   const terrains = Array.isArray(terrainsLus?.data) ? terrainsLus.data : [];
   const ageMinimum = Number(complexe?.rules?.minAge) || 18;
   const naissance = /** @type {any} */ (userData)?.birthdate;
@@ -320,7 +324,8 @@ function ReserverComplexe() {
         {String(complexe.name || '').toUpperCase()}
       </Text>
       <View style={[Alignments.row, Alignments.wrap, Alignments.justifyCenter, { gap: 8 }]}>
-        <BadgeComplexe />
+        {/* FC-4 : « Complexe » sur une page FoundClub (aucune réservation FoundClub). */}
+        <BadgeComplexe court={pageFoundclub} />
         {complexe.verified ? (
           <View
             style={{
@@ -505,7 +510,10 @@ function ReserverComplexe() {
   // (jamais la liste, E-P12) ; sinon, ce que le favori apporte.
   const canal = relation?.canal || null;
   let blocCanal = null;
-  if (communaute && complexe && canal?.membre && canal?.chatId) {
+  if (pageFoundclub) {
+    // FC-4 (planche 2, point 8) : personne n'écrit dans le canal d'une page sans gérant.
+    blocCanal = null;
+  } else if (communaute && complexe && canal?.membre && canal?.chatId) {
     blocCanal = (
       <TouchableOpacity
         accessibilityRole="button"
@@ -667,7 +675,18 @@ function ReserverComplexe() {
     </View>
   );
 
-  const regles = complexe ? (
+  const motDuComplexe = String(complexe?.playersNote || '').trim() ? (
+    <View style={{ gap: 4, marginTop: 4 }}>
+      <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+        {t('reserverTerrain.complexe.motDuComplexe', 'Le mot du complexe')}
+      </Text>
+      <Text style={[Fonts.p2, Fonts.neutral00]}>{String(complexe.playersNote).trim()}</Text>
+    </View>
+  ) : null;
+
+  // FC-4 (planche 2, point 7) : les règles d'une réservation FoundClub n'existent pas sur une page
+  // sans gérant ; « Le mot du complexe », qui vivait ici, passe dans son propre bloc (plus bas).
+  const regles = complexe && !pageFoundclub ? (
     <View style={carteDeBloc}>
       <Text style={titreDeBloc}>{t('reserverTerrain.complexe.regles', 'Règles')}</Text>
       {ligneDeRegle(
@@ -676,15 +695,11 @@ function ReserverComplexe() {
       )}
       {ligneDeRegle(texteAnnulation(t, complexe?.rules?.cancellationDelayHours))}
       {ligneDeRegle(t('reserverTerrain.regles.paiement', 'Paiement sur place'))}
-      {String(complexe.playersNote || '').trim() ? (
-        <View style={{ gap: 4, marginTop: 4 }}>
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-            {t('reserverTerrain.complexe.motDuComplexe', 'Le mot du complexe')}
-          </Text>
-          <Text style={[Fonts.p2, Fonts.neutral00]}>{String(complexe.playersNote).trim()}</Text>
-        </View>
-      ) : null}
+      {motDuComplexe}
     </View>
+  ) : null;
+  const blocMotDuComplexe = pageFoundclub && motDuComplexe ? (
+    <View style={carteDeBloc}>{motDuComplexe}</View>
   ) : null;
 
   const listeDesTerrains = (
@@ -697,7 +712,8 @@ function ReserverComplexe() {
           }}
         />
       ) : null}
-      {!terrainsLus?.isLoading && !terrains.length ? (
+      {/* FC-4 (planche 2, point 3) : pas de promesse de réservation sur une page FoundClub. */}
+      {!terrainsLus?.isLoading && !terrains.length && !pageFoundclub ? (
         <View style={carteDeBloc}>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {t(
@@ -731,8 +747,91 @@ function ReserverComplexe() {
   );
 
   const horaires = horairesLisibles(t, complexe?.openingHours);
+  // FC-4 (règle FC-6) : les horaires lisibles gagnent ; sinon leur texte (`openingHoursNote`) ;
+  // sinon, sur une page FoundClub, « Horaires : appelle le complexe ».
+  const horairesEnTexte = horaires.length ? '' : String(complexe?.openingHoursNote || '').trim();
   const adresse = complexe?.address?.label ? String(complexe.address.label) : '';
   const telephone = String(complexe?.phoneNumber || '').trim();
+  const lienDeReservation = String(complexe?.externalBookingUrl || '').trim();
+  const appeler = () => {
+    Linking.openURL(`tel:${telephone}`).catch(() => {});
+  };
+
+  // FC-4 (planche 1a) : le bandeau d'une page créée par FoundClub (le texte d'Adel, au vouvoiement).
+  // « C'est mon complexe » arrive avec le formulaire (2ᵉ partie du lot, route FC-3).
+  const bandeauPageFoundclub = pageFoundclub ? (
+    <View
+      style={{
+        backgroundColor: withAlpha(Colors.primary500, 0.12),
+        borderColor: withAlpha(Colors.primary500, 0.4),
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 12,
+      }}
+      testID="complexe-bandeau-foundclub"
+    >
+      <Text style={[Fonts.p2, Fonts.neutral00]}>
+        {t(
+          'reserverTerrain.complexe.pageFoundclub.bandeau',
+          'Page créée par FoundClub. Vous êtes le gérant ? Prenez-en le contrôle',
+        )}
+      </Text>
+    </View>
+  ) : null;
+
+  // FC-4 (planches 1a, 1c) : réserver chez le complexe. Un lien ⇒ « Réserver sur le site du
+  // complexe » en principal et « Appeler » en second ; sans lien ⇒ « Appeler » en principal ;
+  // ni l'un ni l'autre ⇒ pas de carte.
+  const carteReserver = pageFoundclub && (lienDeReservation || telephone) ? (
+    <View style={carteDeBloc} testID="complexe-carte-reserver">
+      <Text style={titreDeBloc}>{t('reserverTerrain.complexe.segmentReserver', 'Réserver')}</Text>
+      <Text style={[Fonts.p2, Fonts.neutral100]}>
+        {t(
+          'reserverTerrain.complexe.pageFoundclub.reserverChezLui',
+          'Tu réserves directement auprès du complexe, pas sur FoundClub.',
+        )}
+      </Text>
+      {lienDeReservation ? (
+        <Button
+          onPress={() => {
+            Linking.openURL(siteComplet(lienDeReservation)).catch(() => {});
+          }}
+          title={t(
+            'reserverTerrain.complexe.pageFoundclub.reserverSurLeSite',
+            'Réserver sur le site du complexe',
+          )}
+          variant="Primary"
+        />
+      ) : null}
+      {telephone ? (
+        <Button
+          icon="phone"
+          onPress={appeler}
+          title={t('reserverTerrain.complexe.appeler', 'Appeler')}
+          variant={lienDeReservation ? 'Secondary' : 'Primary'}
+        />
+      ) : null}
+    </View>
+  ) : null;
+
+  // FC-4 (planche 1b) : « Une info est fausse ? Signale-le », la même feuille que « … » (compte
+  // connecté, comme le menu).
+  const lienSignaler = pageFoundclub && communaute ? (
+    <View style={[Alignments.row, Alignments.alignCenter, { flexWrap: 'wrap', gap: 4 }]}>
+      <Text style={[Fonts.p2, Fonts.neutral100]}>
+        {t('reserverTerrain.complexe.pageFoundclub.infoFausse', 'Une info est fausse ?')}
+      </Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => setSignaler(true)}
+        style={{ justifyContent: 'center', minHeight: 44 }}
+      >
+        <Text style={[Fonts.p2Bold, Fonts.primary200]}>
+          {t('reserverTerrain.complexe.pageFoundclub.signaleLe', 'Signale-le')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  ) : null;
   const infos = complexe ? (
     <View style={{ gap: 12 }}>
       {String(complexe.description || '').trim() || photos.length > 1 ? (
@@ -779,6 +878,25 @@ function ReserverComplexe() {
           ))}
         </View>
       ) : null}
+      {!horaires.length && (horairesEnTexte || pageFoundclub) ? (
+        <View style={carteDeBloc}>
+          {horairesEnTexte ? (
+            <>
+              <Text style={titreDeBloc}>
+                {t('reserverTerrain.complexe.horaires', 'Horaires d’accueil')}
+              </Text>
+              <Text style={[Fonts.p2, Fonts.neutral100]}>{horairesEnTexte}</Text>
+            </>
+          ) : (
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                'reserverTerrain.complexe.pageFoundclub.horairesAppeler',
+                'Horaires : appelle le complexe',
+              )}
+            </Text>
+          )}
+        </View>
+      ) : null}
       {adresse ? (
         <View style={carteDeBloc}>
           <Text style={titreDeBloc}>{t('reserverTerrain.complexe.adresse', 'Adresse')}</Text>
@@ -808,9 +926,7 @@ function ReserverComplexe() {
           <View style={{ alignSelf: 'flex-start' }}>
             <Button
               icon="phone"
-              onPress={() => {
-                Linking.openURL(`tel:${telephone}`).catch(() => {});
-              }}
+              onPress={appeler}
               title={t('reserverTerrain.complexe.appeler', 'Appeler')}
               variant="Secondary"
             />
@@ -836,7 +952,40 @@ function ReserverComplexe() {
   ) : null;
 
   let page = etat;
-  if (!page && complexe && surOrdinateur) {
+  if (!page && complexe && pageFoundclub && surOrdinateur) {
+    // FC-4 (planche 1d) : la page que le mail ouvre ; la carte « Réserver » remplace la colonne
+    // « Réserver · aujourd'hui ». Les terrains (s'il y en a) et « Ils cherchent des joueurs » restent.
+    page = (
+      <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
+        <View style={{ flex: 1, gap: 16, minWidth: 0 }}>
+          {identite}
+          {blocEvenements}
+          {infos}
+          {blocMotDuComplexe}
+          {blocPartenaires}
+          {blocFidelite}
+          {listeDesTerrains}
+          {lienSignaler}
+        </View>
+        <View style={{ gap: 12, width: COLONNE_RESERVER }}>{carteReserver}</View>
+      </View>
+    );
+  } else if (!page && complexe && pageFoundclub) {
+    // FC-4 (planches 1a, 1b, 1c) : une seule page, sans onglets.
+    page = (
+      <View style={{ gap: 16 }}>
+        {identite}
+        {carteReserver}
+        {blocEvenements}
+        {infos}
+        {blocMotDuComplexe}
+        {blocPartenaires}
+        {blocFidelite}
+        {listeDesTerrains}
+        {lienSignaler}
+      </View>
+    );
+  } else if (!page && complexe && surOrdinateur) {
     // OR2 : la colonne principale (identité, infos, règles) et la colonne « Réserver » à droite.
     page = (
       <View style={[Alignments.row, { alignItems: 'flex-start', gap: 24 }]}>
@@ -917,6 +1066,7 @@ function ReserverComplexe() {
         style={[Alignments.fill]}
       >
         {bandeauApercu}
+        {etat ? null : bandeauPageFoundclub}
         {bandeauAffiche}
         {page}
       </ScrollView>
